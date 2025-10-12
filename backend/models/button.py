@@ -12,6 +12,7 @@ class ActionType(str, Enum):
     HOTKEY = 'hotkey'
     MULTI_ACTION = 'multi_action'
     SYSTEM_CONTROL = 'system_control'
+    CROSS_PLATFORM = 'cross_platform'
     FOLDER = 'folder'
     PLUGIN = 'plugin'
 

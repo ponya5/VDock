@@ -23,7 +23,7 @@
         <!-- FontAwesome Icon -->
         <FontAwesomeIcon 
           v-if="button.icon_type === 'fontawesome'" 
-          :icon="parseIcon(button.icon)" 
+          :icon="Array.isArray(button.icon) ? button.icon : parseIcon(button.icon)" 
           :style="iconStyle"
           class="fontawesome-icon"
         />

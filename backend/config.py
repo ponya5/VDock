@@ -30,6 +30,12 @@ class Config:
     SSL_CERT_PATH = os.environ.get('SSL_CERT_PATH', 'cert.pem')
     SSL_KEY_PATH = os.environ.get('SSL_KEY_PATH', 'key.pem')
     
+    # Spotify integration settings
+    SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID', '')
+    SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET', '')
+    SPOTIFY_REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI', 'http://localhost:3000/auth/spotify/callback')
+    SPOTIFY_SCOPE = os.environ.get('SPOTIFY_SCOPE', 'user-read-playback-state,user-modify-playback-state,user-read-currently-playing')
+    
     # Data storage
     DATA_DIR = Path(os.environ.get('DATA_DIR', 'data'))
     PROFILES_DIR = DATA_DIR / 'profiles'

@@ -132,6 +132,7 @@
             <option value="hotkey">Send Hotkey</option>
             <option value="multi_action">Multi-Action</option>
             <option value="system_control">System Control</option>
+            <option value="cross_platform">Cross-Platform Action</option>
           </select>
         </div>
 
@@ -172,6 +173,93 @@
             <option value="media_next">Next Track</option>
             <option value="media_previous">Previous Track</option>
           </select>
+        </div>
+
+        <div v-if="actionType === 'cross_platform'" class="form-group">
+          <label>Cross-Platform Action</label>
+          <select v-model="actionConfig.action" class="select">
+            <optgroup label="System Control">
+              <option value="shutdown">Shutdown</option>
+              <option value="restart">Restart</option>
+              <option value="sleep">Sleep</option>
+              <option value="lock_screen">Lock Screen</option>
+            </optgroup>
+            <optgroup label="Volume Control">
+              <option value="volume_up">Volume Up</option>
+              <option value="volume_down">Volume Down</option>
+              <option value="volume_mute">Mute</option>
+              <option value="volume_unmute">Unmute</option>
+            </optgroup>
+            <optgroup label="Brightness Control">
+              <option value="brightness_up">Brightness Up</option>
+              <option value="brightness_down">Brightness Down</option>
+              <option value="brightness_set">Set Brightness</option>
+            </optgroup>
+            <optgroup label="Media Control">
+              <option value="media_play_pause">Play/Pause</option>
+              <option value="media_next">Next Track</option>
+              <option value="media_previous">Previous Track</option>
+              <option value="media_stop">Stop</option>
+            </optgroup>
+            <optgroup label="Web & Apps">
+              <option value="open_url">Open URL</option>
+              <option value="open_app">Open Application</option>
+              <option value="open_folder">Open Folder</option>
+              <option value="open_file">Open File</option>
+              <option value="screenshot">Screenshot</option>
+            </optgroup>
+            <optgroup label="Spotify Integration">
+              <option value="spotify_play_pause">Spotify Play/Pause</option>
+              <option value="spotify_next">Spotify Next Track</option>
+              <option value="spotify_previous">Spotify Previous Track</option>
+              <option value="spotify_volume_up">Spotify Volume Up</option>
+              <option value="spotify_volume_down">Spotify Volume Down</option>
+              <option value="spotify_seek_forward">Spotify Seek Forward</option>
+              <option value="spotify_seek_backward">Spotify Seek Backward</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Cross-platform action specific configuration -->
+        <div v-if="actionType === 'cross_platform' && actionConfig.action === 'open_url'" class="form-group">
+          <label>URL</label>
+          <input v-model="actionConfig.url" type="text" class="input" placeholder="https://example.com" />
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && actionConfig.action === 'open_app'" class="form-group">
+          <label>Application Path/Name</label>
+          <input v-model="actionConfig.path" type="text" class="input" placeholder="notepad.exe" />
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && actionConfig.action === 'open_folder'" class="form-group">
+          <label>Folder Path</label>
+          <input v-model="actionConfig.path" type="text" class="input" placeholder="C:\" />
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && actionConfig.action === 'open_file'" class="form-group">
+          <label>File Path</label>
+          <input v-model="actionConfig.path" type="text" class="input" placeholder="C:\Windows\System32\notepad.exe" />
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && actionConfig.action === 'screenshot'" class="form-group">
+          <label>Screenshot Path</label>
+          <input v-model="actionConfig.path" type="text" class="input" placeholder="screenshot.png" />
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && ['volume_up', 'volume_down', 'brightness_up', 'brightness_down', 'spotify_volume_up', 'spotify_volume_down'].includes(actionConfig.action)" class="form-group">
+          <label>Step Size</label>
+          <input v-model.number="actionConfig.step" type="number" class="input" min="1" max="100" placeholder="10" />
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && ['spotify_seek_forward', 'spotify_seek_backward'].includes(actionConfig.action)" class="form-group">
+          <label>Seek Step (milliseconds)</label>
+          <input v-model.number="actionConfig.step" type="number" class="input" min="1000" max="60000" placeholder="10000" />
+          <div class="form-help">How many milliseconds to seek forward/backward (1000 = 1 second)</div>
+        </div>
+
+        <div v-if="actionType === 'cross_platform' && actionConfig.action === 'brightness_set'" class="form-group">
+          <label>Brightness Level (0-100)</label>
+          <input v-model.number="actionConfig.brightness" type="number" class="input" min="0" max="100" placeholder="50" />
         </div>
 
         <div class="form-group">

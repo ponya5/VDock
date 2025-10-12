@@ -183,16 +183,30 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  function checkButtonCollision(button1: Button, button2: Button): boolean {
+    const { row: row1, col: col1 } = button1.position
+    const { rows: rows1, cols: cols1 } = button1.size
+    const { row: row2, col: col2 } = button2.position
+    const { rows: rows2, cols: cols2 } = button2.size
+    
+    // Check if rectangles overlap
+    return !(
+      row1 + rows1 <= row2 ||
+      row2 + rows2 <= row1 ||
+      col1 + cols1 <= col2 ||
+      col2 + cols2 <= col1
+    )
+  }
+
   function addButton(button: Button) {
     if (!currentPage.value) return
     
-    // Check if position is already occupied
-    const existingButton = currentPage.value.buttons.find(b => 
-      b.position.row === button.position.row && 
-      b.position.col === button.position.col
-    )
+    // Check if position is already occupied (including multi-cell buttons)
+    const hasCollision = currentPage.value.buttons.some(existingButton => {
+      return checkButtonCollision(button, existingButton)
+    })
     
-    if (existingButton) {
+    if (hasCollision) {
       console.warn('Position already occupied:', button.position)
       return
     }
@@ -207,14 +221,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     const button = currentPage.value.buttons.find(b => b.id === buttonId)
     if (!button) return
     
-    // Check if new position is already occupied
-    const existingButton = currentPage.value.buttons.find(b => 
-      b.id !== buttonId &&
-      b.position.row === newPosition.row && 
-      b.position.col === newPosition.col
-    )
+    // Create a temporary button with the new position to check for collisions
+    const tempButton = { ...button, position: newPosition }
     
-    if (existingButton) {
+    // Check if new position is already occupied (including multi-cell buttons)
+    const hasCollision = currentPage.value.buttons.some(existingButton => {
+      if (existingButton.id === buttonId) return false
+      return checkButtonCollision(tempButton, existingButton)
+    })
+    
+    if (hasCollision) {
       console.warn('New position already occupied:', newPosition)
       return
     }

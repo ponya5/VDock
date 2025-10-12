@@ -7,6 +7,7 @@ export type ActionType =
   | 'hotkey'
   | 'multi_action'
   | 'system_control'
+  | 'cross_platform'
   | 'folder'
   | 'plugin'
 
@@ -42,7 +43,7 @@ export interface Button {
   id: string
   label: string
   secondary_label?: string
-  icon?: string
+  icon?: string | string[]
   icon_type?: 'fontawesome' | 'material' | 'custom'
   media_url?: string // For video/gif files
   media_type?: 'video' | 'gif' | 'image'
