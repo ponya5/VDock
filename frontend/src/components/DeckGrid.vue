@@ -25,10 +25,17 @@
       v-for="placeholder in emptySlots"
       :key="`placeholder-${placeholder.row}-${placeholder.col}`"
       class="button-placeholder"
+      :class="{ 
+        'is-edit-mode': isEditMode,
+        'is-highlighted': highlightedSlot?.row === placeholder.row && highlightedSlot?.col === placeholder.col
+      }"
       :style="placeholderStyle"
       @click="handlePlaceholderClick(placeholder.row, placeholder.col)"
+      @dragover="handlePlaceholderDragOver"
+      @dragenter="(e) => handlePlaceholderDragEnter(e, placeholder)"
+      @dragleave="(e) => handlePlaceholderDragLeave(e, placeholder)"
     >
-      <FontAwesomeIcon :icon="['fas', 'plus']" />
+      <FontAwesomeIcon :icon="isEditMode ? ['fas', 'arrows-alt'] : ['fas', 'plus']" />
     </div>
   </div>
 </template>
@@ -139,6 +146,7 @@ function handlePlaceholderClick(row: number, col: number) {
 let touchStartX = 0
 let touchStartY = 0
 const isDragOver = ref(false)
+const highlightedSlot = ref<{ row: number; col: number } | null>(null)
 
 function handleTouchStart(e: TouchEvent) {
   touchStartX = e.touches[0].clientX
@@ -183,6 +191,7 @@ function handleDragLeave(e: DragEvent) {
 function handleDrop(e: DragEvent) {
   e.preventDefault()
   isDragOver.value = false
+  highlightedSlot.value = null
   
   if (!props.isEditMode) return
   
@@ -224,6 +233,25 @@ function handleDrop(e: DragEvent) {
     }
   }
 }
+
+function handlePlaceholderDragOver(e: DragEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+function handlePlaceholderDragEnter(e: DragEvent, placeholder: { row: number; col: number }) {
+  e.preventDefault()
+  e.stopPropagation()
+  highlightedSlot.value = placeholder
+}
+
+function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; col: number }) {
+  e.preventDefault()
+  e.stopPropagation()
+  if (highlightedSlot.value?.row === placeholder.row && highlightedSlot.value?.col === placeholder.col) {
+    highlightedSlot.value = null
+  }
+}
 </script>
 
 <style scoped>
@@ -253,11 +281,25 @@ function handleDrop(e: DragEvent) {
   min-width: 60px;
 }
 
+.button-placeholder.is-edit-mode {
+  border-color: var(--color-primary-light);
+  background-color: rgba(var(--color-primary-rgb, 74, 144, 226), 0.05);
+}
+
 .button-placeholder:hover {
   background-color: var(--color-surface-hover);
   border-color: var(--color-primary);
   color: var(--color-primary);
   transform: scale(1.05);
+}
+
+.button-placeholder.is-highlighted {
+  background-color: rgba(var(--color-primary-rgb, 74, 144, 226), 0.2);
+  border-color: var(--color-primary);
+  border-style: solid;
+  color: var(--color-primary);
+  transform: scale(1.08);
+  box-shadow: 0 0 20px rgba(var(--color-primary-rgb, 74, 144, 226), 0.5);
 }
 
 .button-placeholder:active {
