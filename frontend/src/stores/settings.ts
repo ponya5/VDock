@@ -4,7 +4,7 @@ import type { Theme, ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const currentTheme = ref('dark')
+  const currentTheme = ref('default')
   const themes = ref<Theme[]>([])
   const serverConfig = ref<ServerConfig | null>(null)
   
@@ -20,6 +20,13 @@ export const useSettingsStore = defineStore('settings', () => {
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
   
+  // Grid settings
+  const defaultGridRows = ref(3)
+  const defaultGridCols = ref(3)
+  
+  // Authentication settings
+  const authEnabled = ref(false)
+  
   // Search settings
   const recentActions = ref<string[]>([])
   const maxRecentActions = 10
@@ -30,11 +37,14 @@ export const useSettingsStore = defineStore('settings', () => {
     if (stored) {
       try {
         const settings = JSON.parse(stored)
-        currentTheme.value = settings.currentTheme || 'dark'
+        currentTheme.value = settings.currentTheme || 'default'
         buttonSize.value = settings.buttonSize || 1.0
         showLabels.value = settings.showLabels !== false
         showTooltips.value = settings.showTooltips !== false
         animationsEnabled.value = settings.animationsEnabled !== false
+        defaultGridRows.value = settings.defaultGridRows || 3
+        defaultGridCols.value = settings.defaultGridCols || 3
+        authEnabled.value = settings.authEnabled || false
         recentActions.value = settings.recentActions || []
       } catch (err) {
         console.error('Failed to load settings:', err)
@@ -50,6 +60,9 @@ export const useSettingsStore = defineStore('settings', () => {
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
       animationsEnabled: animationsEnabled.value,
+      defaultGridRows: defaultGridRows.value,
+      defaultGridCols: defaultGridCols.value,
+      authEnabled: authEnabled.value,
       recentActions: recentActions.value
     }
     localStorage.setItem('vdock_settings', JSON.stringify(settings))
@@ -57,7 +70,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, recentActions],
+    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
     },
@@ -81,6 +94,8 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       const response = await apiClient.get('/config')
       serverConfig.value = response.data.config
+      // Sync authEnabled with server config
+      authEnabled.value = response.data.config.require_auth
     } catch (err) {
       console.error('Failed to load server config:', err)
     }
@@ -120,6 +135,20 @@ export const useSettingsStore = defineStore('settings', () => {
     recentActions.value = []
   }
 
+  async function updateAuthSetting(enabled: boolean): Promise<boolean> {
+    try {
+      const success = await updateServerConfig({ require_auth: enabled })
+      if (success) {
+        authEnabled.value = enabled
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Failed to update auth setting:', err)
+      return false
+    }
+  }
+
   // Initialize
   loadSettings()
 
@@ -135,6 +164,9 @@ export const useSettingsStore = defineStore('settings', () => {
     showLabels,
     showTooltips,
     animationsEnabled,
+    defaultGridRows,
+    defaultGridCols,
+    authEnabled,
     recentActions,
     setTheme,
     loadThemes,
@@ -142,6 +174,7 @@ export const useSettingsStore = defineStore('settings', () => {
     updateServerConfig,
     addRecentAction,
     clearRecentActions,
+    updateAuthSetting,
     saveSettings,
     loadSettings
   }

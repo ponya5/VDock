@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Profile, Page, Button } from '@/types'
 import apiClient from '@/api/client'
+import { useSettingsStore } from './settings'
 
-export const useDeckStore = defineStore('deck', () => {
+export const useDashboardStore = defineStore('dashboard', () => {
   const currentProfile = ref<Profile | null>(null)
   const currentPageIndex = ref(0)
   const isEditMode = ref(false)
@@ -80,8 +81,24 @@ export const useDeckStore = defineStore('deck', () => {
     }
   }
 
-  function addPage(page: Page) {
+  function addPage(page?: Page) {
     if (!currentProfile.value) return
+    
+    const settingsStore = useSettingsStore()
+    
+    if (!page) {
+      // Create a new page with default grid size from settings
+      page = {
+        id: `page_${Date.now()}`,
+        name: `Page ${currentProfile.value.pages.length + 1}`,
+        buttons: [],
+        grid_config: {
+          rows: settingsStore.defaultGridRows,
+          cols: settingsStore.defaultGridCols
+        }
+      }
+    }
+    
     currentProfile.value.pages.push(page)
     addToHistory()
   }
@@ -166,6 +183,46 @@ export const useDeckStore = defineStore('deck', () => {
     }
   }
 
+  function addButton(button: Button) {
+    if (!currentPage.value) return
+    
+    // Check if position is already occupied
+    const existingButton = currentPage.value.buttons.find(b => 
+      b.position.row === button.position.row && 
+      b.position.col === button.position.col
+    )
+    
+    if (existingButton) {
+      console.warn('Position already occupied:', button.position)
+      return
+    }
+    
+    currentPage.value.buttons.push(button)
+    console.log('Added button:', button)
+  }
+
+  function moveButton(buttonId: string, newPosition: { row: number; col: number }) {
+    if (!currentPage.value) return
+    
+    const button = currentPage.value.buttons.find(b => b.id === buttonId)
+    if (!button) return
+    
+    // Check if new position is already occupied
+    const existingButton = currentPage.value.buttons.find(b => 
+      b.id !== buttonId &&
+      b.position.row === newPosition.row && 
+      b.position.col === newPosition.col
+    )
+    
+    if (existingButton) {
+      console.warn('New position already occupied:', newPosition)
+      return
+    }
+    
+    button.position = newPosition
+    console.log('Moved button:', buttonId, 'to:', newPosition)
+  }
+
   return {
     currentProfile,
     currentPage,
@@ -185,6 +242,7 @@ export const useDeckStore = defineStore('deck', () => {
     updatePage,
     addButton,
     removeButton,
+    moveButton,
     updateButton,
     getButton,
     toggleEditMode,

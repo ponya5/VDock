@@ -28,7 +28,14 @@
         class="profile-card card"
       >
         <div class="profile-icon">
+          <img 
+            v-if="profile.avatar" 
+            :src="profile.avatar" 
+            :alt="profile.name"
+            class="profile-avatar"
+          />
           <FontAwesomeIcon 
+            v-else
             :icon="profile.icon ? parseIcon(profile.icon) : ['fas', 'folder']" 
           />
         </div>
@@ -40,16 +47,19 @@
         </div>
 
         <div class="profile-actions">
-          <button class="btn btn-primary" @click="loadProfile(profile.id)">
-            <FontAwesomeIcon :icon="['fas', 'play']" /> Load
+          <button class="btn btn-primary" @click="loadProfile(profile.id)" title="Load Profile">
+            <FontAwesomeIcon :icon="['fas', 'play']" />
           </button>
-          <button class="btn btn-secondary" @click="duplicateProfile(profile.id)">
+          <button class="btn btn-secondary" @click="editProfile(profile)" title="Edit Profile">
+            <FontAwesomeIcon :icon="['fas', 'edit']" />
+          </button>
+          <button class="btn btn-secondary" @click="duplicateProfile(profile.id)" title="Duplicate Profile">
             <FontAwesomeIcon :icon="['fas', 'copy']" />
           </button>
-          <button class="btn btn-secondary" @click="exportProfile(profile.id)">
+          <button class="btn btn-secondary" @click="exportProfile(profile.id)" title="Export Profile">
             <FontAwesomeIcon :icon="['fas', 'download']" />
           </button>
-          <button class="btn btn-danger" @click="confirmDelete(profile.id)">
+          <button class="btn btn-danger" @click="confirmDelete(profile.id)" title="Delete Profile">
             <FontAwesomeIcon :icon="['fas', 'trash']" />
           </button>
         </div>
@@ -58,24 +68,134 @@
 
     <!-- Create Profile Modal -->
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
-      <div class="modal">
-        <h2>Create New Profile</h2>
-        <div class="form-group">
-          <label>Name</label>
-          <input v-model="newProfileName" type="text" class="input" placeholder="Profile name" />
+      <div class="modal profile-creator">
+        <div class="modal-header">
+          <h2>Create New Profile</h2>
+          <button class="close-btn" @click="showCreateModal = false">
+            <FontAwesomeIcon :icon="['fas', 'times']" />
+          </button>
         </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea v-model="newProfileDescription" class="textarea" placeholder="Optional description"></textarea>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Profile Name</label>
+            <input v-model="newProfileName" type="text" class="input" placeholder="Enter profile name" />
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea v-model="newProfileDescription" class="textarea" placeholder="Optional description"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Avatar</label>
+            <div class="avatar-selection">
+              <div class="current-avatar" @click="showAvatarPicker = true">
+                <img 
+                  v-if="selectedAvatar" 
+                  :src="selectedAvatar.url" 
+                  :alt="selectedAvatar.name"
+                  class="avatar-preview"
+                />
+                <div v-else class="avatar-placeholder">
+                  <FontAwesomeIcon :icon="['fas', 'user']" />
+                  <span>Choose Avatar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Theme</label>
+            <select v-model="newProfileTheme" class="select">
+              <option value="default">Default (Colorful)</option>
+              <option value="light">Light Mode</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
         </div>
+
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showCreateModal = false">Cancel</button>
           <button class="btn btn-primary" @click="createProfile" :disabled="!newProfileName">
-            Create
+            Create Profile
           </button>
         </div>
       </div>
+
     </div>
+
+    <!-- Edit Profile Modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+      <div class="modal profile-creator">
+        <div class="modal-header">
+          <h2>Edit Profile</h2>
+          <button class="close-btn" @click="showEditModal = false">
+            <FontAwesomeIcon :icon="['fas', 'times']" />
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Profile Name</label>
+            <input v-model="editProfileName" type="text" class="input" placeholder="Enter profile name" />
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea v-model="editProfileDescription" class="textarea" placeholder="Optional description"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Avatar</label>
+            <div class="avatar-selection">
+              <div class="current-avatar" @click="showAvatarPicker = true">
+                <img 
+                  v-if="editSelectedAvatar" 
+                  :src="editSelectedAvatar.url" 
+                  :alt="editSelectedAvatar.name"
+                  class="avatar-preview"
+                />
+                <img 
+                  v-else-if="editingProfile?.avatar" 
+                  :src="editingProfile.avatar" 
+                  :alt="editingProfile.name"
+                  class="avatar-preview"
+                />
+                <div v-else class="avatar-placeholder">
+                  <FontAwesomeIcon :icon="['fas', 'user']" />
+                  <span>Choose Avatar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Theme</label>
+            <select v-model="editProfileTheme" class="select">
+              <option value="default">Default (Colorful)</option>
+              <option value="light">Light Mode</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showEditModal = false">Cancel</button>
+          <button class="btn btn-primary" @click="updateProfile" :disabled="!editProfileName">
+            Update Profile
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Avatar Picker Modal -->
+    <AvatarPicker 
+      v-if="showAvatarPicker" 
+      @select="handleAvatarPickerSelect" 
+      @close="showAvatarPicker = false" 
+    />
 
     <!-- Import Profile Button -->
     <div class="import-section">
@@ -97,16 +217,27 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProfilesStore } from '@/stores/profiles'
-import { useDeckStore } from '@/stores/deck'
+import { useDashboardStore } from '@/stores/dashboard'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import AvatarPicker from '@/components/AvatarPicker.vue'
+import type { Avatar } from '@/assets/avatars'
 
 const router = useRouter()
 const profilesStore = useProfilesStore()
-const deckStore = useDeckStore()
+const dashboardStore = useDashboardStore()
 
 const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showAvatarPicker = ref(false)
 const newProfileName = ref('')
 const newProfileDescription = ref('')
+const newProfileTheme = ref('default')
+const selectedAvatar = ref<Avatar | null>(null)
+const editProfileName = ref('')
+const editProfileDescription = ref('')
+const editProfileTheme = ref('default')
+const editSelectedAvatar = ref<Avatar | null>(null)
+const editingProfile = ref<any>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const profiles = computed(() => profilesStore.profiles)
@@ -128,7 +259,7 @@ function parseIcon(iconString: string) {
 async function loadProfile(profileId: string) {
   const profile = await profilesStore.getProfile(profileId)
   if (profile) {
-    deckStore.setProfile(profile)
+    dashboardStore.setProfile(profile)
     router.push('/')
   }
 }
@@ -138,17 +269,78 @@ async function createProfile() {
 
   const profile = await profilesStore.createProfile({
     name: newProfileName.value,
-    description: newProfileDescription.value
+    description: newProfileDescription.value,
+    avatar: selectedAvatar.value?.url,
+    theme: newProfileTheme.value
   })
 
   if (profile) {
     showCreateModal.value = false
     newProfileName.value = ''
     newProfileDescription.value = ''
+    newProfileTheme.value = 'default'
+    selectedAvatar.value = null
     
     // Optionally load the new profile
-    deckStore.setProfile(profile)
+    dashboardStore.setProfile(profile)
     router.push('/')
+  }
+}
+
+function handleAvatarPickerSelect(avatar: Avatar) {
+  // Determine which context we're in based on which modal is open
+  if (showCreateModal.value) {
+    selectedAvatar.value = avatar
+  } else if (showEditModal.value) {
+    editSelectedAvatar.value = avatar
+  }
+  showAvatarPicker.value = false
+}
+
+function editProfile(profile: any) {
+  editingProfile.value = profile
+  editProfileName.value = profile.name
+  editProfileDescription.value = profile.description || ''
+  editProfileTheme.value = profile.theme || 'default'
+  
+  // Set current avatar if exists
+  if (profile.avatar) {
+    editSelectedAvatar.value = {
+      id: 'current',
+      name: 'Current Avatar',
+      url: profile.avatar,
+      type: 'image',
+      category: 'characters'
+    }
+  } else {
+    editSelectedAvatar.value = null
+  }
+  
+  showEditModal.value = true
+}
+
+async function updateProfile() {
+  if (!editingProfile.value || !editProfileName.value) return
+
+  const avatarUrl = editSelectedAvatar.value?.url || editingProfile.value.avatar
+  console.log('Updating profile with avatar URL:', avatarUrl)
+  console.log('Selected avatar:', editSelectedAvatar.value)
+  console.log('Current profile avatar:', editingProfile.value.avatar)
+
+  const updatedProfile = await profilesStore.updateProfile(editingProfile.value.id, {
+    name: editProfileName.value,
+    description: editProfileDescription.value,
+    avatar: avatarUrl,
+    theme: editProfileTheme.value
+  })
+
+  if (updatedProfile) {
+    showEditModal.value = false
+    editingProfile.value = null
+    editProfileName.value = ''
+    editProfileDescription.value = ''
+    editProfileTheme.value = 'default'
+    editSelectedAvatar.value = null
   }
 }
 
@@ -264,6 +456,17 @@ async function handleFileImport(event: Event) {
   font-size: 3rem;
   color: var(--color-primary);
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-primary);
 }
 
 .profile-info h3 {
@@ -290,7 +493,20 @@ async function handleFileImport(event: Event) {
 .profile-actions {
   display: flex;
   gap: var(--spacing-xs);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.profile-actions .btn {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-xs);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .import-section {
@@ -307,6 +523,86 @@ async function handleFileImport(event: Event) {
   display: block;
   margin-bottom: var(--spacing-xs);
   font-weight: 500;
+}
+
+.profile-creator {
+  width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  transition: color var(--transition-fast);
+}
+
+.close-btn:hover {
+  color: var(--color-text);
+}
+
+.modal-body {
+  margin-bottom: var(--spacing-lg);
+}
+
+.avatar-selection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.current-avatar {
+  width: 80px;
+  height: 80px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background-color: var(--color-surface);
+}
+
+.current-avatar:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  width: 100%;
+  height: 100%;
+  text-align: center;
 }
 
 .modal-footer {

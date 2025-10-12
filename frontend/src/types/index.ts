@@ -44,6 +44,8 @@ export interface Button {
   secondary_label?: string
   icon?: string
   icon_type?: 'fontawesome' | 'material' | 'custom'
+  media_url?: string // For video/gif files
+  media_type?: 'video' | 'gif' | 'image'
   action?: ButtonAction
   shape: ButtonShape
   position: ButtonPosition
@@ -82,10 +84,21 @@ export interface Profile {
   name: string
   description: string
   icon?: string
+  avatar?: string // URL or path to avatar image/gif
   pages: Page[]
   theme: string
+  settings?: ProfileSettings
   created_at?: string
   updated_at?: string
+}
+
+export interface ProfileSettings {
+  defaultGridRows?: number
+  defaultGridCols?: number
+  buttonSize?: number
+  showLabels?: boolean
+  showTooltips?: boolean
+  animationsEnabled?: boolean
 }
 
 export interface Theme {

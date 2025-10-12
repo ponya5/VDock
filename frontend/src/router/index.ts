@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import DeckView from '@/views/DeckView.vue'
+import DashboardView from '@/views/DashboardView.vue'
 import EditView from '@/views/EditView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SettingsView from '@/views/SettingsView.vue'
@@ -17,8 +17,8 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'deck',
-      component: DeckView,
+      name: 'dashboard',
+      component: DashboardView,
       meta: { requiresAuth: true }
     },
     {
@@ -43,14 +43,21 @@ const router = createRouter({
 })
 
 // Navigation guard
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   const requiresAuth = to.meta.requiresAuth !== false
 
-  if (requiresAuth && !authStore.isAuthenticated) {
+  // Check if auth is enabled from settings
+  const settingsStore = await import('@/stores/settings').then(m => m.useSettingsStore())
+  const authEnabled = settingsStore.authEnabled
+
+  if (authEnabled && requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login' })
-  } else if (to.name === 'login' && authStore.isAuthenticated) {
-    next({ name: 'deck' })
+  } else if (authEnabled && to.name === 'login' && authStore.isAuthenticated) {
+    next({ name: 'dashboard' })
+  } else if (!authEnabled && to.name === 'login') {
+    // Skip login if auth is disabled
+    next({ name: 'dashboard' })
   } else {
     next()
   }
