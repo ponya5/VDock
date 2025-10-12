@@ -7,7 +7,7 @@ class SocketClient {
   private actionIdCounter = 0
 
   connect(token: string) {
-    const url = import.meta.env.VITE_WS_URL || 'http://localhost:5000'
+    const url = import.meta.env.VITE_WS_URL || 'http://127.0.0.1:5000'
     
     this.socket = io(url, {
       auth: {

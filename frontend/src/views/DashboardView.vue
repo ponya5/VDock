@@ -156,6 +156,7 @@
     <ButtonEditor
       v-if="editingButton"
       :button="editingButton"
+      :profile-id="currentProfile?.id || ''"
       @save="handleButtonSave"
       @close="editingButton = null"
     />

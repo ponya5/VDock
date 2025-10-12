@@ -9,6 +9,16 @@
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
   >
+    <!-- Video background for video media -->
+    <video
+      v-if="button.media_url && button.media_type === 'video'"
+      :src="button.media_url"
+      class="button-video-background"
+      autoplay
+      loop
+      muted
+      playsinline
+    />
     <div v-if="isEditMode" class="edit-overlay">
       <button class="edit-btn" @click.stop="emit('edit', button)" title="Edit">
         <FontAwesomeIcon :icon="['fas', 'edit']" />
@@ -115,7 +125,16 @@ const buttonStyle = computed(() => {
     borderColor: style?.borderColor || 'var(--color-border)',
     borderWidth: style?.borderWidth ? `${style.borderWidth}px` : '2px',
     opacity: style?.opacity || 1,
-    fontSize: style?.fontSize ? `${style.fontSize}px` : '0.875rem'
+    fontSize: style?.fontSize ? `${style.fontSize}px` : '0.875rem',
+    // Only use background image for non-video media
+    backgroundImage: (props.button.media_url && props.button.media_type !== 'video') 
+      ? `url(${props.button.media_url})` : undefined,
+    backgroundSize: (props.button.media_url && props.button.media_type !== 'video') 
+      ? 'cover' : undefined,
+    backgroundPosition: (props.button.media_url && props.button.media_type !== 'video') 
+      ? 'center' : undefined,
+    backgroundRepeat: (props.button.media_url && props.button.media_type !== 'video') 
+      ? 'no-repeat' : undefined
   }
 })
 
@@ -266,7 +285,20 @@ function handleDragEnd() {
   transform: scale(1.1);
 }
 
+.button-video-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  border-radius: inherit;
+}
+
 .button-content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -292,10 +324,12 @@ function handleDragEnd() {
 
 .fontawesome-icon {
   z-index: 2;
+  position: relative;
 }
 
 .custom-icon {
   z-index: 2;
+  position: relative;
 }
 
 .media-container {
@@ -335,6 +369,9 @@ function handleDragEnd() {
   font-weight: 600;
   word-wrap: break-word;
   max-width: 100%;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .button-secondary-label {
@@ -342,6 +379,9 @@ function handleDragEnd() {
   opacity: 0.8;
   word-wrap: break-word;
   max-width: 100%;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .button-tooltip {

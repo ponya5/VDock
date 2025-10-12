@@ -266,6 +266,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
     
     button.position = newPosition
+    addToHistory()
+    // Auto-save profile after moving button
+    saveProfile()
     console.log('Moved button:', buttonId, 'to:', newPosition)
   }
 

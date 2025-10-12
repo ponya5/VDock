@@ -66,6 +66,8 @@ class Button:
     secondary_label: str = ''
     icon: Optional[str] = None
     icon_type: str = 'fontawesome'  # fontawesome, material, custom
+    media_url: Optional[str] = None  # For video/gif/image backgrounds
+    media_type: Optional[str] = None  # video, gif, image
     action: Optional[ButtonAction] = None
     shape: ButtonShape = ButtonShape.ROUNDED
     position: Dict[str, int] = field(default_factory=lambda: {'row': 0, 'col': 0})
@@ -94,6 +96,8 @@ class Button:
             secondary_label=data.get('secondary_label', ''),
             icon=data.get('icon'),
             icon_type=data.get('icon_type', 'fontawesome'),
+            media_url=data.get('media_url'),
+            media_type=data.get('media_type'),
             action=action,
             shape=ButtonShape(data.get('shape', 'rounded')),
             position=data.get('position', {'row': 0, 'col': 0}),

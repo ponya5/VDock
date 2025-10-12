@@ -73,12 +73,11 @@
         </div>
 
         <div v-if="editedButton.media_type" class="form-group">
-          <label>Media URL</label>
-          <input 
-            v-model="editedButton.media_url" 
-            type="text" 
-            class="input" 
-            :placeholder="getMediaPlaceholder(editedButton.media_type)"
+          <label>Background Media</label>
+          <MediaPicker 
+            v-model="mediaValue"
+            :profile-id="profileId"
+            @update:modelValue="handleMediaChange"
           />
           <p class="form-help">
             {{ getMediaHelpText(editedButton.media_type) }}
@@ -295,9 +294,11 @@ import { ref, computed, watch } from 'vue'
 import type { Button, ButtonAction, ActionType } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
+import MediaPicker from './MediaPicker.vue'
 
 interface Props {
   button: Button
+  profileId: string
 }
 
 const props = defineProps<Props>()
@@ -312,6 +313,13 @@ const showIconPicker = ref(false)
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
+
+// Media picker value
+const mediaValue = ref<{ url: string; type: string } | null>(
+  props.button.media_url && props.button.media_type 
+    ? { url: props.button.media_url, type: props.button.media_type }
+    : null
+)
 
 watch(actionType, (newType) => {
   if (!newType) {
@@ -330,6 +338,14 @@ watch(actionConfig, (newConfig) => {
   }
 }, { deep: true })
 
+// Watch for media type changes to clear media when type is removed
+watch(() => editedButton.value.media_type, (newType) => {
+  if (!newType) {
+    editedButton.value.media_url = undefined
+    mediaValue.value = null
+  }
+})
+
 function handleActionTypeChange() {
   actionConfig.value = {}
   hotkeyString.value = ''
@@ -346,6 +362,16 @@ function handleIconSelect(icon: string) {
   editedButton.value.icon = icon
   editedButton.value.icon_type = 'fontawesome'
   showIconPicker.value = false
+}
+
+function handleMediaChange(value: { url: string; type: string } | null) {
+  if (value) {
+    editedButton.value.media_url = value.url
+    editedButton.value.media_type = value.type
+  } else {
+    editedButton.value.media_url = undefined
+    editedButton.value.media_type = undefined
+  }
 }
 
 function getMediaPlaceholder(mediaType: string) {

@@ -7,19 +7,23 @@ class ApiClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || '/api',
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      baseURL: '/api',
+      timeout: 30000
     })
 
-    // Request interceptor to add auth token
+    // Request interceptor to add auth token and handle content type
     this.client.interceptors.request.use(
       (config) => {
         if (this.authToken) {
           config.headers.Authorization = `Bearer ${this.authToken}`
         }
+        
+        // Set Content-Type to application/json for non-FormData requests
+        if (!(config.data instanceof FormData)) {
+          config.headers['Content-Type'] = 'application/json'
+        }
+        // For FormData, axios will automatically set the correct Content-Type with boundary
+        
         return config
       },
       (error) => {
@@ -50,8 +54,8 @@ class ApiClient {
     return this.client.get(url, { params })
   }
 
-  async post(url: string, data?: any) {
-    return this.client.post(url, data)
+  async post(url: string, data?: any, config?: any) {
+    return this.client.post(url, data, config)
   }
 
   async put(url: string, data?: any) {
@@ -67,9 +71,6 @@ class ApiClient {
     formData.append('file', file)
 
     return this.client.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
