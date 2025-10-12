@@ -1,3 +1,12 @@
+# VDock Production .gitignore
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+.venv/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,31 +28,28 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+
+# Virtual environments
 venv/
-ENV/
 env/
+ENV/
+env.bak/
+venv.bak/
 
-# Flask
-instance/
-.webassets-cache
-
-# Node
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
-yarn.lock
+lerna-debug.log*
 
-# Vue/Vite
-.DS_Store
-dist/
-dist-ssr/
-*.local
-
-# Electron
-frontend/electron/dist-electron/
-frontend/electron/node_modules/
+# Frontend build
+frontend/dist/
+frontend/build/
+frontend/.nuxt/
+frontend/.next/
+frontend/.vuepress/dist/
 
 # IDE
 .vscode/
@@ -54,40 +60,101 @@ frontend/electron/node_modules/
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Environment
-.env
-.env.local
-.env.*.local
-
 # Logs
-logs/
 *.log
+logs/
+backend/data/vdock.log
 
-# Data (keep structure, ignore content)
-backend/data/*.json
-backend/data/profiles/
-backend/data/uploads/
-backend/data/plugins/*.py
-!backend/data/plugins/example_*
+# Data directories (keep structure, ignore content)
+backend/data/profiles/*.json
+backend/data/uploads/*
+backend/data/plugins/*
+backend/data/themes/*
+!backend/data/profiles/.gitkeep
+!backend/data/uploads/.gitkeep
+!backend/data/plugins/.gitkeep
+!backend/data/themes/.gitkeep
 
 # SSL certificates
 *.pem
 *.key
 *.crt
+*.csr
 
-# Testing
-.coverage
+# Docker
+.dockerignore
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Coverage reports
 htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
 .pytest_cache/
-coverage/
 
-# Build files
-*.pyc
-*.pyo
-*.pyd
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
+# Jupyter Notebook
+.ipynb_checkpoints
 
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Electron
+frontend/electron/dist/
+frontend/electron/build/
+
+# Production build artifacts
+*.exe
+*.msi
+*.dmg
+*.deb
+*.rpm
