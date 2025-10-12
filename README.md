@@ -319,7 +319,7 @@ Place your plugin file in `backend/data/plugins/`.
 - **Command Execution**: Be cautious with the command action type. Only use trusted commands.
 - **Remote Access**: If enabling LAN access, use a strong password and consider using SSL/HTTPS.
 - **Plugins**: Only install plugins from trusted sources.
-- **Production Security**: See [SECURITY.md](SECURITY.md) for comprehensive security guidelines.
+- **Production Security**: See [docs/security/SECURITY.md](docs/security/SECURITY.md) for comprehensive security guidelines.
 - **Authentication**: Change default passwords immediately in production environments.
 
 ## Contributing
