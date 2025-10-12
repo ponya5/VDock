@@ -1,0 +1,2 @@
+# This file ensures the themes directory is tracked by git
+# Individual theme files are ignored but the directory structure is preserved

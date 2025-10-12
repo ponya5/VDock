@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  vdock-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=False
+      - REQUIRE_AUTH=True
+      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - ALLOW_LAN=False
+      - USE_SSL=False
+      - ENABLE_PLUGINS=True
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/Avatars:/app/Avatars
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  vdock-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000
+      - VITE_WS_URL=ws://localhost:5000
+    depends_on:
+      - vdock-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default:
+    name: vdock-network

@@ -172,32 +172,6 @@ export const useProfilesStore = defineStore('profiles', () => {
     }
   }
 
-  async function exportProfile(profileId: string): Promise<Profile | null> {
-    try {
-      const response = await apiClient.get(`/profiles/export/${profileId}`)
-      if (response.data.success) {
-        return response.data.profile
-      }
-      return null
-    } catch (err) {
-      console.error('Failed to export profile:', err)
-      return null
-    }
-  }
-
-  async function importProfile(profileData: Profile): Promise<Profile | null> {
-    try {
-      const response = await apiClient.post('/profiles/import', { profile: profileData })
-      if (response.data.success) {
-        await loadProfiles()
-        return response.data.profile
-      }
-      return null
-    } catch (err) {
-      console.error('Failed to import profile:', err)
-      return null
-    }
-  }
 
   return {
     profiles,

@@ -1,0 +1,2 @@
+# This file ensures the plugins directory is tracked by git
+# Individual plugin files are ignored but the directory structure is preserved

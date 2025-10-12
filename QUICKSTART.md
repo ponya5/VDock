@@ -83,7 +83,8 @@ npm run dev
 
 1. Open your browser to http://localhost:3000
 2. Login with the default password: `admin`
-3. **IMPORTANT**: Change the password in `backend/.env`
+3. **IMPORTANT**: Change the password in `backend/.env` or set `AUTH_PASSWORD` in your environment
+4. **SECURITY**: For production use, see [Production Deployment Guide](docs/deployment/PRODUCTION_DEPLOYMENT.md)
 
 ## Creating Your First Profile
 
