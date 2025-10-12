@@ -206,6 +206,7 @@ const actionCategories = ref([
       { id: 'restart', name: 'Restart', icon: ['fas', 'redo'] },
       { id: 'sleep', name: 'Sleep', icon: ['fas', 'moon'] },
       { id: 'lock', name: 'Lock Screen', icon: ['fas', 'lock'] },
+      { id: 'fullscreen', name: 'Full Screen', icon: ['fas', 'expand'] },
       { id: 'volume-up', name: 'Volume Up', icon: ['fas', 'volume-up'] },
       { id: 'volume-down', name: 'Volume Down', icon: ['fas', 'volume-down'] },
       { id: 'volume-mute', name: 'Mute', icon: ['fas', 'volume-mute'] },
@@ -526,6 +527,18 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         action: {
           type: 'cross_platform',
           config: { action: 'lock_screen' }
+        }
+      }
+
+    case 'fullscreen':
+      return {
+        ...baseButton,
+        label: 'Full Screen',
+        icon: ['fas', 'expand'],
+        style: { ...baseButton.style, backgroundColor: '#16a085' },
+        action: {
+          type: 'system_control',
+          config: { action: 'fullscreen' }
         }
       }
 

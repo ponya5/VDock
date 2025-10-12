@@ -281,6 +281,9 @@ async function createProfile() {
     newProfileTheme.value = 'default'
     selectedAvatar.value = null
     
+    // Force refresh profiles list to show new profile
+    await profilesStore.loadProfiles()
+    
     // Optionally load the new profile
     dashboardStore.setProfile(profile)
     router.push('/')
@@ -298,6 +301,9 @@ function handleAvatarPickerSelect(avatar: Avatar) {
 }
 
 function editProfile(profile: any) {
+  console.log('Editing profile:', profile)
+  console.log('Profile avatar:', profile.avatar)
+  
   editingProfile.value = profile
   editProfileName.value = profile.name
   editProfileDescription.value = profile.description || ''
@@ -305,6 +311,7 @@ function editProfile(profile: any) {
   
   // Set current avatar if exists
   if (profile.avatar) {
+    console.log('Setting editSelectedAvatar with:', profile.avatar)
     editSelectedAvatar.value = {
       id: 'current',
       name: 'Current Avatar',
@@ -313,6 +320,7 @@ function editProfile(profile: any) {
       category: 'characters'
     }
   } else {
+    console.log('No avatar found, setting editSelectedAvatar to null')
     editSelectedAvatar.value = null
   }
   
@@ -335,12 +343,17 @@ async function updateProfile() {
   })
 
   if (updatedProfile) {
+    console.log('Profile updated successfully:', updatedProfile)
     showEditModal.value = false
     editingProfile.value = null
     editProfileName.value = ''
     editProfileDescription.value = ''
     editProfileTheme.value = 'default'
     editSelectedAvatar.value = null
+    
+    // Force refresh profiles list to show updated avatar
+    await profilesStore.loadProfiles()
+    console.log('Profiles reloaded:', profilesStore.profiles)
   }
 }
 

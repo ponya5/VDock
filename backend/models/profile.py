@@ -62,18 +62,25 @@ class Profile:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        result = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'icon': self.icon,
-            'avatar': self.avatar,
             'pages': [page.to_dict() for page in self.pages],
             'theme': self.theme,
-            'settings': self.settings.__dict__ if self.settings else None,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
+        
+        # Only include optional fields if they have values
+        if self.icon is not None:
+            result['icon'] = self.icon
+        if self.avatar is not None:
+            result['avatar'] = self.avatar
+        if self.settings is not None:
+            result['settings'] = self.settings.__dict__
+            
+        return result
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Profile':

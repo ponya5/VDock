@@ -121,6 +121,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (page) {
       Object.assign(page, updates)
       addToHistory()
+      // Auto-save profile after updating page
+      saveProfile()
     }
   }
 
@@ -128,6 +130,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!currentPage.value) return
     currentPage.value.buttons.push(button)
     addToHistory()
+    // Auto-save profile after adding button
+    saveProfile()
   }
 
   function removeButton(buttonId: string) {
@@ -136,6 +140,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (index !== -1) {
       currentPage.value.buttons.splice(index, 1)
       addToHistory()
+      // Auto-save profile after removing button
+      saveProfile()
     }
   }
 
@@ -145,6 +151,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (button) {
       Object.assign(button, updates)
       addToHistory()
+      // Auto-save profile after updating button
+      saveProfile()
     }
   }
 
@@ -176,10 +184,32 @@ export const useDashboardStore = defineStore('dashboard', () => {
       const response = await apiClient.post('/actions/execute', {
         action: button.action
       })
+      
+      // Handle fullscreen action locally
+      if (button.action.type === 'system_control' && 
+          button.action.config?.action === 'fullscreen' && 
+          response.data.success) {
+        toggleFullscreen()
+      }
+      
       return response.data
     } catch (error) {
       console.error('Failed to execute action:', error)
       return { success: false, message: 'Failed to execute action' }
+    }
+  }
+
+  function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        document.documentElement.requestFullscreen()
+      } else {
+        // Exit fullscreen
+        document.exitFullscreen()
+      }
+    } catch (error) {
+      console.error('Failed to toggle fullscreen:', error)
     }
   }
 

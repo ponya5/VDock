@@ -172,6 +172,7 @@
             <option value="media_play_pause">Play/Pause</option>
             <option value="media_next">Next Track</option>
             <option value="media_previous">Previous Track</option>
+            <option value="fullscreen">Full Screen</option>
           </select>
         </div>
 

@@ -17,12 +17,12 @@ class Config:
     PORT = int(os.environ.get('PORT', 5000))
     
     # Security settings
-    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'True').lower() == 'true'
+    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'False').lower() == 'true'
     AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', '')
     TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
     
     # Network settings
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
     ALLOW_LAN = os.environ.get('ALLOW_LAN', 'False').lower() == 'true'
     
     # SSL/TLS settings

@@ -22,14 +22,21 @@ def get_profiles():
         if profile_data:
             try:
                 profile = Profile.from_dict(profile_data)
-                profiles.append({
+                profile_data = {
                     'id': profile.id,
                     'name': profile.name,
                     'description': profile.description,
-                    'icon': profile.icon,
                     'theme': profile.theme,
                     'page_count': len(profile.pages)
-                })
+                }
+                
+                # Only include optional fields if they have values
+                if profile.icon is not None:
+                    profile_data['icon'] = profile.icon
+                if profile.avatar is not None:
+                    profile_data['avatar'] = profile.avatar
+                    
+                profiles.append(profile_data)
             except Exception as e:
                 from utils import setup_logger
                 logger = setup_logger('vdock')
@@ -76,8 +83,8 @@ def create_profile():
         id=profile_id,
         name=data.get('name', 'New Profile'),
         description=data.get('description', ''),
-        icon=data.get('icon'),
-        avatar=data.get('avatar'),
+        icon=data.get('icon') if data.get('icon') else None,
+        avatar=data.get('avatar') if data.get('avatar') else None,
         pages=[default_page],
         theme=data.get('theme', 'default'),
         settings=ProfileSettings(),
