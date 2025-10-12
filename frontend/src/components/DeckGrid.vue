@@ -1,9 +1,14 @@
 <template>
   <div 
     class="deck-grid" 
+    :class="{ 'drag-over': isDragOver }"
     :style="gridStyle"
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
+    @dragover="handleDragOver"
+    @drop="handleDrop"
+    @dragenter="handleDragEnter"
+    @dragleave="handleDragLeave"
   >
     <DeckButton
       v-for="button in visibleButtons"
@@ -14,13 +19,25 @@
       @edit="handleButtonEdit"
       @delete="handleButtonDelete"
     />
+    
+    <!-- Button placeholders for empty slots -->
+    <div
+      v-for="placeholder in emptySlots"
+      :key="`placeholder-${placeholder.row}-${placeholder.col}`"
+      class="button-placeholder"
+      :style="placeholderStyle"
+      @click="handlePlaceholderClick(placeholder.row, placeholder.col)"
+    >
+      <FontAwesomeIcon :icon="['fas', 'plus']" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Button, Page } from '@/types'
 import DeckButton from './DeckButton.vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
   page: Page
@@ -37,6 +54,9 @@ const emit = defineEmits<{
   buttonDelete: [buttonId: string]
   swipeLeft: []
   swipeRight: []
+  actionDrop: [action: any, position: { row: number; col: number }]
+  placeholderClick: [position: { row: number; col: number }]
+  buttonMove: [buttonId: string, newPosition: { row: number; col: number }]
 }>()
 
 const gridStyle = computed(() => {
@@ -56,6 +76,40 @@ const visibleButtons = computed(() => {
   return props.page.buttons.filter(btn => btn.enabled)
 })
 
+const emptySlots = computed(() => {
+  const { rows, cols } = props.page.grid_config
+  const occupiedPositions = new Set()
+  
+  // Mark occupied positions
+  visibleButtons.value.forEach(button => {
+    const { row, col } = button.position
+    occupiedPositions.add(`${row}-${col}`)
+  })
+  
+  // Generate empty slots
+  const slots = []
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (!occupiedPositions.has(`${row}-${col}`)) {
+        slots.push({ row, col })
+      }
+    }
+  }
+  
+  return slots
+})
+
+const placeholderStyle = computed(() => {
+  const { rows, cols } = props.page.grid_config
+  const buttonSize = Math.min(100 / Math.max(rows, cols), 80) // Dynamic sizing
+  
+  return {
+    fontSize: `${buttonSize * 0.3}px`,
+    minHeight: `${buttonSize}px`,
+    minWidth: `${buttonSize}px`
+  }
+})
+
 function handleButtonClick(button: Button) {
   emit('buttonClick', button)
 }
@@ -68,9 +122,16 @@ function handleButtonDelete(buttonId: string) {
   emit('buttonDelete', buttonId)
 }
 
+function handlePlaceholderClick(row: number, col: number) {
+  if (props.isEditMode) {
+    emit('placeholderClick', { row, col })
+  }
+}
+
 // Touch gesture handling for page swiping
 let touchStartX = 0
 let touchStartY = 0
+const isDragOver = ref(false)
 
 function handleTouchStart(e: TouchEvent) {
   touchStartX = e.touches[0].clientX
@@ -95,6 +156,67 @@ function handleTouchEnd(e: TouchEvent) {
     }
   }
 }
+
+// Drag and drop handlers
+function handleDragOver(e: DragEvent) {
+  e.preventDefault()
+  e.dataTransfer!.dropEffect = 'copy'
+}
+
+function handleDragEnter(e: DragEvent) {
+  e.preventDefault()
+  isDragOver.value = true
+}
+
+function handleDragLeave(e: DragEvent) {
+  e.preventDefault()
+  isDragOver.value = false
+}
+
+function handleDrop(e: DragEvent) {
+  e.preventDefault()
+  isDragOver.value = false
+  
+  if (!props.isEditMode) return
+  
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  
+  // Calculate grid position
+  const { rows, cols } = props.page.grid_config
+  const cellWidth = rect.width / cols
+  const cellHeight = rect.height / rows
+  
+  const col = Math.floor(x / cellWidth)
+  const row = Math.floor(y / cellHeight)
+  
+  // Ensure position is within bounds
+  if (row < 0 || row >= rows || col < 0 || col >= cols) return
+  
+  // Check for button drop first
+  const buttonData = e.dataTransfer?.getData('application/vdock-button')
+  if (buttonData) {
+    try {
+      const button = JSON.parse(buttonData)
+      emit('buttonMove', button.id, { row, col })
+      return
+    } catch (error) {
+      console.error('Error handling button drop:', error)
+    }
+  }
+  
+  // Check for action drop
+  const actionData = e.dataTransfer?.getData('application/vdock-action')
+  if (actionData) {
+    try {
+      const action = JSON.parse(actionData)
+      emit('actionDrop', action, { row, col })
+    } catch (error) {
+      console.error('Error handling action drop:', error)
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -102,6 +224,37 @@ function handleTouchEnd(e: TouchEvent) {
   background-color: var(--color-background);
   user-select: none;
   touch-action: pan-y; /* Allow vertical scrolling but enable custom horizontal gestures */
+  transition: all var(--transition-fast);
+}
+
+.deck-grid.drag-over {
+  background-color: var(--color-primary-light);
+  border: 2px dashed var(--color-primary);
+}
+
+.button-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text-secondary);
+  min-height: 60px;
+  min-width: 60px;
+}
+
+.button-placeholder:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: scale(1.05);
+}
+
+.button-placeholder:active {
+  transform: scale(0.95);
 }
 </style>
 

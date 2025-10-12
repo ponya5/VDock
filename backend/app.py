@@ -1,15 +1,13 @@
 """Main Flask application for VDock backend."""
-import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from pathlib import Path
 import uuid
-from datetime import datetime
 
 from config import Config
 from auth import AuthManager, require_auth
-from models import Profile, Page, Button, ButtonAction, Theme, BUILTIN_THEMES
+from models import Profile, Page, Theme, BUILTIN_THEMES, ProfileSettings
 from actions import ActionExecutor
 from plugins import PluginManager
 from utils import FileManager, setup_logger
@@ -20,7 +18,7 @@ app.config.from_object(Config)
 
 # Initialize extensions
 CORS(app, origins=Config.CORS_ORIGINS)
-socketio = SocketIO(app, cors_allowed_origins=Config.CORS_ORIGINS)
+socketio = SocketIO(app, cors_allowed_origins=Config.CORS_ORIGINS, async_mode='threading')
 
 # Initialize services
 Config.init_app()
@@ -56,12 +54,54 @@ def verify_token():
     return jsonify({'valid': True})
 
 
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Get current server configuration."""
+    config = Config.load_config()
+    return jsonify({
+        'config': {
+            'host': Config.HOST,
+            'port': Config.PORT,
+            'require_auth': Config.REQUIRE_AUTH,
+            'allow_lan': Config.ALLOW_LAN,
+            'use_ssl': Config.USE_SSL,
+            'enable_plugins': Config.ENABLE_PLUGINS
+        }
+    })
+
+
+@app.route('/api/config', methods=['PUT'])
+def update_config():
+    """Update server configuration."""
+    data = request.json
+    if not data:
+        return jsonify({'error': 'No data provided', 'success': False}), 400
+    
+    # Load current config
+    config = Config.load_config()
+    
+    # Update config with new values
+    for key, value in data.items():
+        if key in ['require_auth', 'allow_lan', 'use_ssl', 'enable_plugins']:
+            config[key] = value
+    
+    # Save updated config
+    Config.save_config(config)
+    
+    # Update runtime config
+    Config.REQUIRE_AUTH = config.get('require_auth', Config.REQUIRE_AUTH)
+    Config.ALLOW_LAN = config.get('allow_lan', Config.ALLOW_LAN)
+    Config.USE_SSL = config.get('use_ssl', Config.USE_SSL)
+    Config.ENABLE_PLUGINS = config.get('enable_plugins', Config.ENABLE_PLUGINS)
+    
+    return jsonify({'success': True})
+
+
 # ============================================================================
 # Profile Routes
 # ============================================================================
 
 @app.route('/api/profiles', methods=['GET'])
-@require_auth
 def get_profiles():
     """Get all profiles."""
     profile_files = FileManager.list_files(Config.PROFILES_DIR, '*.json')
@@ -87,7 +127,6 @@ def get_profiles():
 
 
 @app.route('/api/profiles/<profile_id>', methods=['GET'])
-@require_auth
 def get_profile(profile_id):
     """Get a specific profile."""
     file_path = Config.PROFILES_DIR / f"{profile_id}.json"
@@ -104,7 +143,6 @@ def get_profile(profile_id):
 
 
 @app.route('/api/profiles', methods=['POST'])
-@require_auth
 def create_profile():
     """Create a new profile."""
     data = request.json
@@ -125,8 +163,10 @@ def create_profile():
         name=data.get('name', 'New Profile'),
         description=data.get('description', ''),
         icon=data.get('icon'),
+        avatar=data.get('avatar'),
         pages=[default_page],
-        theme=data.get('theme', 'dark'),
+        theme=data.get('theme', 'default'),
+        settings=ProfileSettings(),
         created_at=timestamp,
         updated_at=timestamp
     )
@@ -139,7 +179,6 @@ def create_profile():
 
 
 @app.route('/api/profiles/<profile_id>', methods=['PUT'])
-@require_auth
 def update_profile(profile_id):
     """Update an existing profile."""
     data = request.json
@@ -157,6 +196,7 @@ def update_profile(profile_id):
         profile.name = data.get('name', profile.name)
         profile.description = data.get('description', profile.description)
         profile.icon = data.get('icon', profile.icon)
+        profile.avatar = data.get('avatar', profile.avatar)
         profile.theme = data.get('theme', profile.theme)
         profile.updated_at = FileManager.get_timestamp()
         
@@ -169,6 +209,51 @@ def update_profile(profile_id):
             return jsonify({'profile': profile.to_dict(), 'success': True})
         
         return jsonify({'error': 'Failed to save profile', 'success': False}), 500
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
+@app.route('/api/profiles/<profile_id>/export', methods=['GET'])
+@require_auth
+def export_profile(profile_id):
+    """Export a profile as JSON."""
+    file_path = Config.PROFILES_DIR / f"{profile_id}.json"
+    
+    if not file_path.exists():
+        return jsonify({'error': 'Profile not found'}), 404
+    
+    try:
+        profile_data = FileManager.load_json(file_path)
+        return jsonify({'profile': profile_data, 'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
+@app.route('/api/profiles/import', methods=['POST'])
+@require_auth
+def import_profile():
+    """Import a profile from JSON data."""
+    data = request.json
+    
+    if not data or 'id' not in data:
+        return jsonify({'error': 'Invalid profile data', 'success': False}), 400
+    
+    try:
+        # Generate new ID to avoid conflicts
+        new_id = str(uuid.uuid4())
+        data['id'] = new_id
+        data['created_at'] = FileManager.get_timestamp()
+        data['updated_at'] = FileManager.get_timestamp()
+        
+        # Validate profile structure
+        profile = Profile.from_dict(data)
+        
+        # Save imported profile
+        file_path = Config.PROFILES_DIR / f"{new_id}.json"
+        if FileManager.save_json(file_path, profile.to_dict()):
+            return jsonify({'profile': profile.to_dict(), 'success': True}), 201
+        
+        return jsonify({'error': 'Failed to save imported profile', 'success': False}), 500
     except Exception as e:
         return jsonify({'error': str(e), 'success': False}), 500
 
@@ -220,47 +305,37 @@ def duplicate_profile(profile_id):
         return jsonify({'error': str(e), 'success': False}), 500
 
 
-@app.route('/api/profiles/export/<profile_id>', methods=['GET'])
-@require_auth
-def export_profile(profile_id):
-    """Export a profile as JSON."""
-    file_path = Config.PROFILES_DIR / f"{profile_id}.json"
-    profile_data = FileManager.load_json(file_path)
-    
-    if not profile_data:
-        return jsonify({'error': 'Profile not found'}), 404
-    
-    return jsonify({'profile': profile_data, 'success': True})
+# ============================================================================
+# Test Route
+# ============================================================================
 
+@app.route('/')
+def root():
+    """Root route."""
+    return jsonify({'message': 'VDock API is running', 'success': True})
 
-@app.route('/api/profiles/import', methods=['POST'])
-@require_auth
-def import_profile():
-    """Import a profile from JSON."""
-    data = request.json
-    
-    if 'profile' not in data:
-        return jsonify({'error': 'No profile data provided', 'success': False}), 400
-    
+@app.route('/api/test')
+def test_route():
+    """Test route to verify Flask routing works."""
+    return jsonify({'message': 'Test route works', 'success': True})
+
+# ============================================================================
+# Static File Serving
+# ============================================================================
+
+@app.route('/avatars/<filename>')
+def serve_avatar(filename):
+    """Serve avatar files from the Avatars directory."""
     try:
-        profile_data = data['profile']
-        
-        # Generate new ID and timestamps
-        new_id = str(uuid.uuid4())
-        profile_data['id'] = new_id
-        profile_data['created_at'] = FileManager.get_timestamp()
-        profile_data['updated_at'] = profile_data['created_at']
-        
-        # Validate by creating Profile object
-        profile = Profile.from_dict(profile_data)
-        
-        file_path = Config.PROFILES_DIR / f"{new_id}.json"
-        if FileManager.save_json(file_path, profile.to_dict()):
-            return jsonify({'profile': profile.to_dict(), 'success': True}), 201
-        
-        return jsonify({'error': 'Failed to import profile', 'success': False}), 500
+        avatars_dir = Path(__file__).parent / 'Avatars'
+        avatar_path = avatars_dir / filename
+
+        if not avatar_path.exists() or not avatar_path.is_file():
+            return jsonify({'error': 'Avatar not found'}), 404
+
+        return send_file(avatar_path)
     except Exception as e:
-        return jsonify({'error': f'Invalid profile data: {str(e)}', 'success': False}), 400
+        return jsonify({'error': str(e)}), 500
 
 
 # ============================================================================
@@ -416,27 +491,6 @@ def serve_upload(filename):
 # Configuration Routes
 # ============================================================================
 
-@app.route('/api/config', methods=['GET'])
-@require_auth
-def get_config():
-    """Get server configuration."""
-    config = Config.load_config()
-    # Remove sensitive information
-    config.pop('auth_password', None)
-    return jsonify({'config': config})
-
-
-@app.route('/api/config', methods=['PUT'])
-@require_auth
-def update_config():
-    """Update server configuration."""
-    data = request.json
-    
-    try:
-        Config.save_config(data)
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e), 'success': False}), 500
 
 
 # ============================================================================

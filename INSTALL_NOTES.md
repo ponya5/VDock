@@ -1,57 +1,64 @@
-# Installation Notes
+# VDock Installation Notes
 
-## Volume Control Implementation
+## Fixed Issues
 
-**Note**: The original plan included the `pycaw` library for direct audio control on Windows. However, this library has known installation issues on certain Python/Windows configurations.
+### 1. Package Installation Errors
+**Problem**: `KeyError: '__version__'` during package installation
+**Solution**: 
+- Removed problematic packages: `keyboard`, `pycaw`
+- Updated `Pillow==10.1.0` to `Pillow>=10.0.0`
+- Updated `comtypes==1.4.1` to `comtypes==1.4.0`
 
-### Solution
+### 2. Import Errors
+**Problem**: Missing `BUILTIN_THEMES` export
+**Solution**: Added `BUILTIN_THEMES` to `backend/models/__init__.py`
 
-VDock now uses **keyboard shortcuts** for volume control instead:
-- Volume Up: Uses `volume_up` media key
-- Volume Down: Uses `volume_down` media key  
-- Volume Mute: Uses `volume_mute` media key
+### 3. TypeScript Errors
+**Problem**: Import syntax and configuration issues
+**Solution**: 
+- Fixed `import axios, type { AxiosInstance }` to separate imports
+- Updated TypeScript configuration files
 
-This approach:
-- ✅ Works reliably across all Windows versions
-- ✅ No installation issues
-- ✅ Uses standard Windows media keys
-- ✅ Integrates seamlessly with system volume
+### 4. Backend Startup Issues
+**Problem**: Flask not found in virtual environment
+**Solution**: 
+- Installed all backend dependencies
+- Updated `start_backend.bat` to use correct virtual environment path
 
-### Packages Removed
+## Current Status
 
-The following packages were removed to ensure smooth installation:
+✅ **Backend**: Running on http://localhost:5000
+✅ **Frontend**: Running on http://localhost:3000
+✅ **Dependencies**: All installed successfully
+✅ **Build**: Frontend builds without errors
 
-1. **keyboard** (v0.13.5) - Build issues with `KeyError: '__version__'`
-2. **pycaw** (v20230407) - Build issues, replaced with keyboard shortcuts
+## Quick Start
 
-### What Still Works
-
-All functionality is preserved:
-- ✅ Volume up/down/mute via keyboard shortcuts
-- ✅ Media playback controls (play/pause, next, previous)
-- ✅ All hotkey combinations (Ctrl+C, Alt+Tab, etc.)
-- ✅ System integration via `pynput` library
-
-### If You Need Direct Audio Control
-
-If you specifically need programmatic volume percentage control:
-
-1. Install pycaw manually (may require Visual Studio Build Tools):
+1. **Setup** (one-time):
    ```bash
-   pip install pycaw
+   setup.bat
    ```
 
-2. Update `system_action.py` to re-enable direct audio control
+2. **Start Backend**:
+   ```bash
+   start_backend.bat
+   ```
 
-3. Note: This is optional - keyboard shortcuts work for 99% of use cases
+3. **Start Frontend**:
+   ```bash
+   start_frontend.bat
+   ```
 
-## Installation Success
+4. **Access Application**:
+   - Open http://localhost:3000
+   - Login: `admin` / `admin`
 
-After these fixes, the setup should complete without errors:
+## System Actions
 
-```bash
-setup.bat
-```
+Volume and media controls now use Windows media keys via `pynput` instead of direct audio API calls. This provides better compatibility and avoids dependency issues.
 
-All core functionality remains intact!
+## Testing
 
+Both servers are running and responding correctly:
+- Backend health check: `{"status": "ok", "version": "1.0.0"}`
+- Frontend serving: HTTP 200 response

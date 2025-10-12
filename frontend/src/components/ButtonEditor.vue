@@ -27,6 +27,16 @@
         <div class="form-group">
           <label>Icon</label>
           <div class="flex gap-sm">
+            <select v-model="editedButton.icon_type" class="select" style="flex: 1">
+              <option value="fontawesome">FontAwesome Icon</option>
+              <option value="custom">Custom Image</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-if="editedButton.icon_type === 'fontawesome'" class="form-group">
+          <label>FontAwesome Icon</label>
+          <div class="flex gap-sm">
             <input 
               v-model="editedButton.icon" 
               type="text" 
@@ -38,6 +48,41 @@
               <FontAwesomeIcon :icon="['fas', 'icons']" /> Pick Icon
             </button>
           </div>
+        </div>
+
+        <div v-if="editedButton.icon_type === 'custom'" class="form-group">
+          <label>Custom Image URL</label>
+          <input 
+            v-model="editedButton.icon" 
+            type="text" 
+            class="input" 
+            placeholder="https://example.com/image.png"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Background Media (Optional)</label>
+          <div class="flex gap-sm">
+            <select v-model="editedButton.media_type" class="select" style="flex: 1">
+              <option value="">No Background Media</option>
+              <option value="image">Static Image</option>
+              <option value="gif">GIF Animation</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-if="editedButton.media_type" class="form-group">
+          <label>Media URL</label>
+          <input 
+            v-model="editedButton.media_url" 
+            type="text" 
+            class="input" 
+            :placeholder="getMediaPlaceholder(editedButton.media_type)"
+          />
+          <p class="form-help">
+            {{ getMediaHelpText(editedButton.media_type) }}
+          </p>
         </div>
 
         <div class="form-group">
@@ -214,6 +259,32 @@ function handleIconSelect(icon: string) {
   showIconPicker.value = false
 }
 
+function getMediaPlaceholder(mediaType: string) {
+  switch (mediaType) {
+    case 'image':
+      return 'https://example.com/image.png'
+    case 'gif':
+      return 'https://example.com/animation.gif'
+    case 'video':
+      return 'https://example.com/video.mp4'
+    default:
+      return ''
+  }
+}
+
+function getMediaHelpText(mediaType: string) {
+  switch (mediaType) {
+    case 'image':
+      return 'Static image will be displayed as background behind the icon'
+    case 'gif':
+      return 'GIF animation will loop continuously behind the icon'
+    case 'video':
+      return 'Video will autoplay, loop, and be muted behind the icon'
+    default:
+      return ''
+  }
+}
+
 function handleSave() {
   // Update action if configured
   if (actionType.value && editedButton.value.action) {
@@ -297,6 +368,13 @@ function handleSave() {
   gap: var(--spacing-sm);
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+}
+
+.form-help {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+  margin-bottom: 0;
 }
 </style>
 

@@ -3,8 +3,11 @@
     class="deck-button"
     :class="buttonClasses"
     :style="buttonStyle"
+    :draggable="isEditMode"
     @click="handleClick"
     @contextmenu.prevent="handleRightClick"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
   >
     <div v-if="isEditMode" class="edit-overlay">
       <button class="edit-btn" @click.stop="emit('edit', button)" title="Edit">
@@ -16,18 +19,45 @@
     </div>
 
     <div class="button-content">
-      <div v-if="button.icon" class="button-icon">
+      <div v-if="button.icon || button.media_url" class="button-icon">
+        <!-- FontAwesome Icon -->
         <FontAwesomeIcon 
           v-if="button.icon_type === 'fontawesome'" 
           :icon="parseIcon(button.icon)" 
           :style="iconStyle"
+          class="fontawesome-icon"
         />
+        
+        <!-- Custom Image Icon -->
         <img 
-          v-else-if="button.icon_type === 'custom'" 
+          v-if="button.icon_type === 'custom'" 
           :src="button.icon" 
           :style="iconStyle"
           alt="Button icon"
+          class="custom-icon"
         />
+        
+        <!-- Media (Video/GIF/Image) -->
+        <div v-if="button.media_url" class="media-container">
+          <img 
+            v-if="button.media_type === 'gif' || button.media_type === 'image'" 
+            :src="button.media_url" 
+            :style="mediaStyle"
+            alt="Button media"
+            class="media-element"
+          />
+          <video 
+            v-else-if="button.media_type === 'video'" 
+            :src="button.media_url" 
+            :style="mediaStyle"
+            autoplay
+            loop
+            muted
+            playsinline
+            alt="Button video"
+            class="media-element"
+          />
+        </div>
       </div>
 
       <div v-if="button.label" class="button-label">
@@ -63,6 +93,7 @@ const emit = defineEmits<{
   click: [button: Button]
   edit: [button: Button]
   delete: [buttonId: string]
+  move: [buttonId: string, newPosition: { row: number; col: number }]
 }>()
 
 const buttonClasses = computed(() => ({
@@ -97,6 +128,14 @@ const iconStyle = computed(() => {
   }
 })
 
+const mediaStyle = computed(() => {
+  const size = props.button.style?.iconSize || 32
+  return {
+    width: `${size}px`,
+    height: `${size}px`
+  }
+})
+
 function parseIcon(iconString: string) {
   // Format: "fas fa-home" or "fab fa-twitter"
   const parts = iconString.split(' ')
@@ -117,6 +156,22 @@ function handleRightClick() {
     emit('edit', props.button)
   }
 }
+
+function handleDragStart(event: DragEvent) {
+  if (!props.isEditMode) return
+  
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('application/vdock-button', JSON.stringify({
+      id: props.button.id,
+      position: props.button.position
+    }))
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function handleDragEnd() {
+  // Clean up any drag state if needed
+}
 </script>
 
 <style scoped>
@@ -132,6 +187,16 @@ function handleRightClick() {
   transition: all var(--transition-fast);
   overflow: hidden;
   user-select: none;
+}
+
+.deck-button[draggable="true"] {
+  cursor: grab;
+}
+
+.deck-button[draggable="true"]:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 
 .deck-button.shape-rectangle {
@@ -215,10 +280,55 @@ function handleRightClick() {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 
-.button-icon img {
+.button-icon img,
+.button-icon video {
   object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.fontawesome-icon {
+  z-index: 2;
+}
+
+.custom-icon {
+  z-index: 2;
+}
+
+.media-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-element {
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  z-index: 1;
+}
+
+/* When both icon and media are present, overlay them */
+.button-icon:has(.fontawesome-icon):has(.media-container) {
+  position: relative;
+}
+
+.button-icon:has(.fontawesome-icon):has(.media-container) .fontawesome-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.button-icon:has(.fontawesome-icon):has(.media-container) .media-element {
+  opacity: 0.8;
 }
 
 .button-label {
