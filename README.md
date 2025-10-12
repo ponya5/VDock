@@ -35,8 +35,56 @@ A powerful, cross-platform virtual stream deck application that brings customiza
 - Python 3.8 or higher
 - Node.js 18 or higher
 - npm or yarn
+- Docker and Docker Compose (for production deployment)
 
-### Backend Setup
+### Quick Start (Development)
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd VDock
+```
+
+2. Run the setup script:
+```bash
+# Windows
+setup.bat
+
+# Linux/macOS
+./setup.sh
+```
+
+3. Start the application:
+```bash
+# Windows
+start_backend.bat
+start_frontend.bat
+
+# Linux/macOS
+./start_backend.sh
+./start_frontend.sh
+```
+
+### Production Deployment
+
+For production deployment, see [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for detailed instructions.
+
+Quick production setup:
+```bash
+# Copy environment template
+cp env.example .env
+
+# Edit .env with your configuration
+# Set SECRET_KEY and AUTH_PASSWORD
+
+# Deploy with Docker
+./deploy.sh  # Linux/macOS
+deploy.bat   # Windows
+```
+
+### Manual Setup (Development)
+
+#### Backend Setup
 
 1. Navigate to the backend directory:
 ```bash
@@ -271,6 +319,8 @@ Place your plugin file in `backend/data/plugins/`.
 - **Command Execution**: Be cautious with the command action type. Only use trusted commands.
 - **Remote Access**: If enabling LAN access, use a strong password and consider using SSL/HTTPS.
 - **Plugins**: Only install plugins from trusted sources.
+- **Production Security**: See [SECURITY.md](SECURITY.md) for comprehensive security guidelines.
+- **Authentication**: Change default passwords immediately in production environments.
 
 ## Contributing
 
@@ -286,11 +336,30 @@ Contributions are welcome! Please follow these guidelines:
 
 This project is open-source. See LICENSE file for details.
 
+## Documentation
+
+- **[Documentation Hub](docs/README.md)** - Complete documentation overview
+- **[User Guide](docs/USER_GUIDE.md)** - Complete user manual
+- **[Quick Start](docs/QUICKSTART.md)** - Get started quickly
+- **[API Documentation](docs/API.md)** - Backend API reference
+
+### For Developers
+- **[Developer Guide](docs/development/DEVELOPER_GUIDE.md)** - Development setup and contribution guidelines
+- **[Launcher Documentation](docs/development/LAUNCHER_README.md)** - Launcher system documentation
+
+### For Administrators
+- **[Production Deployment](docs/deployment/PRODUCTION_DEPLOYMENT.md)** - Complete production deployment guide
+- **[Security Policy](docs/security/SECURITY.md)** - Security policies and best practices
+- **[Maintenance Guide](docs/maintenance/MAINTENANCE.md)** - Maintenance and troubleshooting procedures
+- **[Installation Notes](docs/deployment/INSTALL_NOTES.md)** - Installation troubleshooting
+
 ## Support
 
-- Documentation: See `docs/` directory
-- Issues: Report bugs and feature requests on GitHub
-- Community: Join our Discord server (link TBD)
+- **Documentation**: See [docs/](docs/) directory for comprehensive guides
+- **Issues**: Report bugs and feature requests on GitHub
+- **Production Support**: See [Maintenance Guide](docs/maintenance/MAINTENANCE.md) for maintenance and troubleshooting
+- **Security**: See [Security Policy](docs/security/SECURITY.md) for security policies and reporting
+- **Community**: Join our Discord server (link TBD)
 
 ## Roadmap
 

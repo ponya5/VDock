@@ -9,7 +9,7 @@ class Config:
     """Application configuration."""
     
     # Flask settings
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(32).hex()
     DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
     
     # Server settings
@@ -17,8 +17,8 @@ class Config:
     PORT = int(os.environ.get('PORT', 5000))
     
     # Security settings
-    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'False').lower() == 'true'
-    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', 'admin')
+    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'True').lower() == 'true'
+    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', '')
     TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
     
     # Network settings
