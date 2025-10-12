@@ -80,10 +80,17 @@ const emptySlots = computed(() => {
   const { rows, cols } = props.page.grid_config
   const occupiedPositions = new Set()
   
-  // Mark occupied positions
+  // Mark occupied positions (including multi-cell buttons)
   visibleButtons.value.forEach(button => {
     const { row, col } = button.position
-    occupiedPositions.add(`${row}-${col}`)
+    const { rows: buttonRows, cols: buttonCols } = button.size
+    
+    // Mark all cells occupied by this button
+    for (let r = row; r < row + buttonRows; r++) {
+      for (let c = col; c < col + buttonCols; c++) {
+        occupiedPositions.add(`${r}-${c}`)
+      }
+    }
   })
   
   // Generate empty slots

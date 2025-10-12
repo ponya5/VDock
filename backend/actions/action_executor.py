@@ -7,6 +7,7 @@ from .command_action import CommandAction
 from .hotkey_action import HotkeyAction
 from .multi_action import MultiAction
 from .system_action import SystemAction
+from .cross_platform_action import CrossPlatformAction
 
 
 class ActionExecutor:
@@ -19,7 +20,8 @@ class ActionExecutor:
         'command': CommandAction,
         'hotkey': HotkeyAction,
         'multi_action': MultiAction,
-        'system_control': SystemAction
+        'system_control': SystemAction,
+        'cross_platform': CrossPlatformAction
     }
     
     def execute_action(self, action_data: Dict[str, Any]) -> ActionResult:

@@ -227,6 +227,19 @@ const actionCategories = ref([
     ]
   },
   {
+    id: 'spotify',
+    name: 'Spotify Control',
+    actions: [
+      { id: 'spotify-play-pause', name: 'Spotify Play/Pause', icon: ['fab', 'spotify'] },
+      { id: 'spotify-next', name: 'Spotify Next', icon: ['fas', 'forward'] },
+      { id: 'spotify-previous', name: 'Spotify Previous', icon: ['fas', 'backward'] },
+      { id: 'spotify-volume-up', name: 'Spotify Volume Up', icon: ['fas', 'volume-up'] },
+      { id: 'spotify-volume-down', name: 'Spotify Volume Down', icon: ['fas', 'volume-down'] },
+      { id: 'spotify-seek-forward', name: 'Spotify Seek Forward', icon: ['fas', 'fast-forward'] },
+      { id: 'spotify-seek-backward', name: 'Spotify Seek Backward', icon: ['fas', 'fast-backward'] },
+    ]
+  },
+  {
     id: 'web',
     name: 'Web & Apps',
     actions: [
@@ -391,28 +404,28 @@ function handlePlaceholderClick(position: { row: number; col: number }) {
   
   // Create a default button at the clicked position
   const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const button = {
+  const button: Button = {
     id: buttonId,
-    name: 'New Button',
-    icon_type: 'fontawesome' as const,
+    label: 'New Button',
+    icon_type: 'fontawesome',
     icon: ['fas', 'home'],
+    shape: 'rounded',
     position: {
       row: position.row,
       col: position.col
     },
     size: {
-      width: 1,
-      height: 1
+      rows: 1,
+      cols: 1
     },
     style: {
-      background_color: '#2c3e50',
-      text_color: '#ffffff',
-      border_radius: 8
+      backgroundColor: '#2c3e50',
+      textColor: '#ffffff'
     },
     enabled: true,
     action: {
       type: 'custom',
-      description: 'New button'
+      config: {}
     }
   }
   
@@ -424,28 +437,45 @@ function handleButtonMove(buttonId: string, newPosition: { row: number; col: num
   dashboardStore.moveButton(buttonId, newPosition)
 }
 
+function handleButtonEdit(button: Button) {
+  console.log('Editing button:', button)
+  editingButton.value = { ...button }
+}
+
+function handleButtonDelete(buttonId: string) {
+  console.log('Deleting button:', buttonId)
+  if (confirm('Are you sure you want to delete this button?')) {
+    dashboardStore.removeButton(buttonId)
+  }
+}
+
 // Preconfigured button templates
-function createPreconfiguredButton(action: any, position: { row: number; col: number }) {
+function createPreconfiguredButton(action: any, position: { row: number; col: number }): Button {
   const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   
   // Base button configuration
-  const baseButton = {
+  const baseButton: Button = {
     id: buttonId,
-    name: action.name,
-    icon_type: 'fontawesome' as const,
+    label: action.name,
+    icon_type: 'fontawesome',
     icon: action.icon,
+    shape: 'rounded',
     position: {
       row: position.row,
       col: position.col
     },
     size: {
-      width: 1,
-      height: 1
+      rows: 1,
+      cols: 1
     },
     style: {
-      background_color: '#2c3e50',
-      text_color: '#ffffff',
-      border_radius: 8
+      backgroundColor: '#2c3e50',
+      textColor: '#ffffff'
+    },
+    enabled: true,
+    action: {
+      type: 'custom',
+      config: {}
     }
   }
 
@@ -454,159 +484,315 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
     case 'shutdown':
       return {
         ...baseButton,
-        name: 'Shutdown',
+        label: 'Shutdown',
         icon: ['fas', 'power-off'],
-        style: { ...baseButton.style, background_color: '#e74c3c' },
+        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
         action: {
-          type: 'system',
-          command: 'shutdown /s /t 0'
+          type: 'cross_platform',
+          config: { action: 'shutdown' }
         }
       }
 
     case 'restart':
       return {
         ...baseButton,
-        name: 'Restart',
+        label: 'Restart',
         icon: ['fas', 'redo'],
-        style: { ...baseButton.style, background_color: '#f39c12' },
+        style: { ...baseButton.style, backgroundColor: '#f39c12' },
         action: {
-          type: 'system',
-          command: 'shutdown /r /t 0'
+          type: 'cross_platform',
+          config: { action: 'restart' }
         }
       }
 
     case 'sleep':
       return {
         ...baseButton,
-        name: 'Sleep',
+        label: 'Sleep',
         icon: ['fas', 'moon'],
-        style: { ...baseButton.style, background_color: '#9b59b6' },
+        style: { ...baseButton.style, backgroundColor: '#9b59b6' },
         action: {
-          type: 'system',
-          command: 'rundll32.exe powrprof.dll,SetSuspendState 0,1,0'
+          type: 'cross_platform',
+          config: { action: 'sleep' }
         }
       }
 
     case 'lock':
       return {
         ...baseButton,
-        name: 'Lock',
+        label: 'Lock',
         icon: ['fas', 'lock'],
-        style: { ...baseButton.style, background_color: '#34495e' },
+        style: { ...baseButton.style, backgroundColor: '#34495e' },
         action: {
-          type: 'system',
-          command: 'rundll32.exe user32.dll,LockWorkStation'
+          type: 'cross_platform',
+          config: { action: 'lock_screen' }
         }
       }
 
     case 'volume-up':
       return {
         ...baseButton,
-        name: 'Volume Up',
+        label: 'Volume Up',
         icon: ['fas', 'volume-up'],
-        style: { ...baseButton.style, background_color: '#27ae60' },
+        style: { ...baseButton.style, backgroundColor: '#27ae60' },
         action: {
-          type: 'hotkey',
-          keys: ['VolumeUp']
+          type: 'cross_platform',
+          config: { action: 'volume_up', step: 10 }
         }
       }
 
     case 'volume-down':
       return {
         ...baseButton,
-        name: 'Volume Down',
+        label: 'Volume Down',
         icon: ['fas', 'volume-down'],
-        style: { ...baseButton.style, background_color: '#27ae60' },
+        style: { ...baseButton.style, backgroundColor: '#27ae60' },
         action: {
-          type: 'hotkey',
-          keys: ['VolumeDown']
+          type: 'cross_platform',
+          config: { action: 'volume_down', step: 10 }
         }
       }
 
     case 'volume-mute':
       return {
         ...baseButton,
-        name: 'Mute',
+        label: 'Mute',
         icon: ['fas', 'volume-mute'],
-        style: { ...baseButton.style, background_color: '#e67e22' },
+        style: { ...baseButton.style, backgroundColor: '#e67e22' },
         action: {
-          type: 'hotkey',
-          keys: ['VolumeMute']
+          type: 'cross_platform',
+          config: { action: 'volume_mute' }
         }
       }
 
     case 'play-pause':
       return {
         ...baseButton,
-        name: 'Play/Pause',
+        label: 'Play/Pause',
         icon: ['fas', 'play'],
-        style: { ...baseButton.style, background_color: '#3498db' },
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
         action: {
-          type: 'hotkey',
-          keys: ['Space']
+          type: 'cross_platform',
+          config: { action: 'media_play_pause' }
         }
       }
 
     case 'next-track':
       return {
         ...baseButton,
-        name: 'Next Track',
+        label: 'Next Track',
         icon: ['fas', 'forward'],
-        style: { ...baseButton.style, background_color: '#3498db' },
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
         action: {
-          type: 'hotkey',
-          keys: ['MediaNext']
+          type: 'cross_platform',
+          config: { action: 'media_next' }
         }
       }
 
     case 'prev-track':
       return {
         ...baseButton,
-        name: 'Previous Track',
+        label: 'Previous Track',
         icon: ['fas', 'backward'],
-        style: { ...baseButton.style, background_color: '#3498db' },
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
         action: {
-          type: 'hotkey',
-          keys: ['MediaPrevious']
+          type: 'cross_platform',
+          config: { action: 'media_previous' }
+        }
+      }
+
+    case 'stop':
+      return {
+        ...baseButton,
+        label: 'Stop',
+        icon: ['fas', 'stop'],
+        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'media_stop' }
         }
       }
 
     case 'screenshot':
       return {
         ...baseButton,
-        name: 'Screenshot',
+        label: 'Screenshot',
         icon: ['fas', 'camera'],
-        style: { ...baseButton.style, background_color: '#8e44ad' },
+        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
         action: {
-          type: 'hotkey',
-          keys: ['PrintScreen']
+          type: 'cross_platform',
+          config: { action: 'screenshot', path: 'screenshot.png' }
         }
       }
 
     case 'open-url':
       return {
         ...baseButton,
-        name: 'Open URL',
+        label: 'Open URL',
         icon: ['fas', 'globe'],
-        style: { ...baseButton.style, background_color: '#16a085' },
+        style: { ...baseButton.style, backgroundColor: '#16a085' },
         action: {
-          type: 'url',
-          url: 'https://example.com'
+          type: 'cross_platform',
+          config: { action: 'open_url', url: 'https://example.com' }
+        }
+      }
+
+    case 'brightness-up':
+      return {
+        ...baseButton,
+        label: 'Brightness Up',
+        icon: ['fas', 'sun'],
+        style: { ...baseButton.style, backgroundColor: '#f1c40f' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'brightness_up', step: 10 }
+        }
+      }
+
+    case 'brightness-down':
+      return {
+        ...baseButton,
+        label: 'Brightness Down',
+        icon: ['fas', 'moon'],
+        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'brightness_down', step: 10 }
+        }
+      }
+
+    case 'open-app':
+      return {
+        ...baseButton,
+        label: 'Open App',
+        icon: ['fas', 'rocket'],
+        style: { ...baseButton.style, backgroundColor: '#e67e22' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'notepad.exe' }
+        }
+      }
+
+    case 'open-folder':
+      return {
+        ...baseButton,
+        label: 'Open Folder',
+        icon: ['fas', 'folder-open'],
+        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_folder', path: 'C:\\' }
+        }
+      }
+
+    case 'open-file':
+      return {
+        ...baseButton,
+        label: 'Open File',
+        icon: ['fas', 'file'],
+        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_file', path: 'C:\\Windows\\System32\\notepad.exe' }
+        }
+      }
+
+    case 'spotify-play-pause':
+      return {
+        ...baseButton,
+        label: 'Spotify Play/Pause',
+        icon: ['fab', 'spotify'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_play_pause' }
+        }
+      }
+
+    case 'spotify-next':
+      return {
+        ...baseButton,
+        label: 'Spotify Next',
+        icon: ['fas', 'forward'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_next' }
+        }
+      }
+
+    case 'spotify-previous':
+      return {
+        ...baseButton,
+        label: 'Spotify Previous',
+        icon: ['fas', 'backward'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_previous' }
+        }
+      }
+
+    case 'spotify-volume-up':
+      return {
+        ...baseButton,
+        label: 'Spotify Volume Up',
+        icon: ['fas', 'volume-up'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_volume_up', step: 10 }
+        }
+      }
+
+    case 'spotify-volume-down':
+      return {
+        ...baseButton,
+        label: 'Spotify Volume Down',
+        icon: ['fas', 'volume-down'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_volume_down', step: 10 }
+        }
+      }
+
+    case 'spotify-seek-forward':
+      return {
+        ...baseButton,
+        label: 'Spotify Seek Forward',
+        icon: ['fas', 'fast-forward'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_seek_forward', step: 10000 }
+        }
+      }
+
+    case 'spotify-seek-backward':
+      return {
+        ...baseButton,
+        label: 'Spotify Seek Backward',
+        icon: ['fas', 'fast-backward'],
+        style: { ...baseButton.style, backgroundColor: '#1db954' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'spotify_seek_backward', step: 10000 }
         }
       }
 
     case 'custom-icon':
       return {
         ...baseButton,
-        name: 'Custom Icon',
-        icon_type: 'custom' as const,
+        label: 'Custom Icon',
+        icon_type: 'custom',
         icon: '',
-        media_type: 'image' as const,
+        media_type: 'image',
         media_url: '',
-        style: { ...baseButton.style, background_color: '#2c3e50' },
+        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
         action: {
           type: 'custom',
-          description: 'Custom icon button'
+          config: {}
         }
       }
 
@@ -615,7 +801,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         ...baseButton,
         action: {
           type: 'custom',
-          description: `${action.name} action`
+          config: {}
         }
       }
   }
@@ -648,15 +834,6 @@ async function handleButtonClick(button: Button) {
   showActionResult(result)
 }
 
-function handleButtonEdit(button: Button) {
-  editingButton.value = { ...button }
-}
-
-function handleButtonDelete(buttonId: string) {
-  if (confirm('Delete this button?')) {
-    dashboardStore.removeButton(buttonId)
-  }
-}
 
 function handleButtonSave(button: Button) {
   dashboardStore.updateButton(button.id, button)
@@ -669,11 +846,15 @@ function addNewButton() {
     id: `btn_${Date.now()}`,
     label: 'New Button',
     icon_type: 'fontawesome',
-    icon: 'fas fa-home',
+    icon: ['fas', 'home'],
     shape: 'rounded',
     position: { row: 0, col: 0 },
     size: { rows: 1, cols: 1 },
-    enabled: true
+    enabled: true,
+    action: {
+      type: 'custom',
+      config: {}
+    }
   }
   dashboardStore.addButton(newButton)
   editingButton.value = newButton
