@@ -296,4 +296,4 @@ For production support:
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
+See [CHANGELOG.md](../CHANGELOG.md) for version history and updates.

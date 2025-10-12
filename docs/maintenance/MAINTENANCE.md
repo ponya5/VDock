@@ -458,7 +458,7 @@ echo "Update completed successfully"
 ### Internal Resources
 
 - [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md)
-- [Security Policy](SECURITY.md)
+- [Security Policy](../security/SECURITY.md)
 - [API Documentation](docs/API.md)
 - [Developer Guide](docs/DEVELOPER_GUIDE.md)
 
