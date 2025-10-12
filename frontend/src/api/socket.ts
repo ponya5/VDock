@@ -36,6 +36,11 @@ class SocketClient {
     this.socket.on('disconnect', () => {
       console.log('Disconnected from VDock server')
     })
+
+    this.socket.on('toggle_fullscreen', (data) => {
+      console.log('Fullscreen toggle requested:', data)
+      this.toggleFullscreen()
+    })
   }
 
   disconnect() {
@@ -81,6 +86,20 @@ class SocketClient {
   off(event: string, callback?: (...args: any[]) => void) {
     if (this.socket) {
       this.socket.off(event, callback)
+    }
+  }
+
+  toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        document.documentElement.requestFullscreen()
+      } else {
+        // Exit fullscreen
+        document.exitFullscreen()
+      }
+    } catch (error) {
+      console.error('Failed to toggle fullscreen:', error)
     }
   }
 }

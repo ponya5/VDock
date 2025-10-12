@@ -126,8 +126,23 @@ export const useProfilesStore = defineStore('profiles', () => {
         // Update local profile immediately
         const profileIndex = profiles.value.findIndex(p => p.id === profileId)
         if (profileIndex !== -1) {
-          profiles.value[profileIndex] = response.data.profile
+          // Convert full profile to summary format for consistency
+          const profileSummary = {
+            id: response.data.profile.id,
+            name: response.data.profile.name,
+            description: response.data.profile.description,
+            icon: response.data.profile.icon,
+            avatar: response.data.profile.avatar,
+            theme: response.data.profile.theme,
+            page_count: response.data.profile.pages?.length || 0
+          }
+          // Ensure reactivity by replacing the entire array
+          const updatedProfiles = [...profiles.value]
+          updatedProfiles[profileIndex] = profileSummary
+          profiles.value = updatedProfiles
         }
+        
+        // Always reload profiles to ensure consistency
         await loadProfiles()
         return response.data.profile
       }
@@ -143,7 +158,10 @@ export const useProfilesStore = defineStore('profiles', () => {
           updated_at: new Date().toISOString()
         }
         console.log('Updated profile:', updatedProfile)
-        profiles.value[profileIndex] = updatedProfile
+        // Ensure reactivity by replacing the entire array
+        const updatedProfiles = [...profiles.value]
+        updatedProfiles[profileIndex] = updatedProfile
+        profiles.value = updatedProfiles
         
         // Save to localStorage as backup
         try {
@@ -152,6 +170,8 @@ export const useProfilesStore = defineStore('profiles', () => {
           console.warn('Failed to save profile to localStorage:', storageErr)
         }
         
+        // Reload profiles even in fallback mode
+        await loadProfiles()
         return updatedProfile
       }
       return null

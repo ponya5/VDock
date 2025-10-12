@@ -8,6 +8,7 @@
 import { computed, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
+import socketClient from '@/api/socket'
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
@@ -17,6 +18,11 @@ const themeClass = computed(() => `theme-${settingsStore.currentTheme}`)
 onMounted(() => {
   // Check for saved auth token
   authStore.initAuth()
+  
+  // Initialize socket connection if authenticated
+  if (authStore.isAuthenticated && authStore.token) {
+    socketClient.connect(authStore.token)
+  }
 })
 </script>
 

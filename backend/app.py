@@ -5,7 +5,7 @@ from flask_socketio import SocketIO, emit
 from pathlib import Path
 
 from config import Config
-from auth import AuthManager, require_auth
+from auth import require_auth
 from models import BUILTIN_THEMES, Theme
 from actions import ActionExecutor
 from plugins import PluginManager
@@ -25,7 +25,11 @@ app.config.from_object(Config)
 
 # Initialize extensions
 CORS(app, origins=Config.CORS_ORIGINS)
-socketio = SocketIO(app, cors_allowed_origins=Config.CORS_ORIGINS, async_mode='threading')
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins=Config.CORS_ORIGINS, 
+    async_mode='threading'
+)
 
 # Initialize services
 Config.init_app()
@@ -136,9 +140,31 @@ def get_plugin_actions(plugin_id):
 # ============================================================================
 
 @socketio.on('connect')
-def handle_connect():
+def handle_connect(auth):
     """Handle client connection."""
-    logger.info(f"Client connected: {request.sid}")
+    # Check authentication if required
+    if Config.REQUIRE_AUTH:
+        if not auth or 'token' not in auth:
+            logger.warning(
+                f"Unauthenticated connection attempt: {request.sid}"
+            )
+            return False
+        
+        # Verify token
+        from auth import AuthManager
+        payload = AuthManager.verify_token(auth['token'])
+        if not payload:
+            logger.warning(
+                f"Invalid token for connection: {request.sid}"
+            )
+            return False
+        
+        logger.info(
+            f"Authenticated client connected: {request.sid}"
+        )
+    else:
+        logger.info(f"Client connected: {request.sid}")
+    
     emit('connected', {'message': 'Connected to VDock server'})
 
 

@@ -12,7 +12,8 @@ class SystemAction(BaseAction):
 
     VALID_ACTIONS = [
         'volume_up', 'volume_down', 'volume_mute', 'volume_set',
-        'media_play_pause', 'media_next', 'media_previous', 'media_stop'
+        'media_play_pause', 'media_next', 'media_previous', 'media_stop',
+        'fullscreen'
     ]
 
     def __init__(self, config: Dict[str, Any]):
@@ -71,6 +72,17 @@ class SystemAction(BaseAction):
         hotkey_action = HotkeyAction(hotkey_config)
         return hotkey_action.execute()
 
+    def _fullscreen(self) -> ActionResult:
+        """Toggle browser fullscreen mode."""
+        try:
+            # Use JavaScript injection to toggle fullscreen
+            # This will be handled by the frontend when the action result is received
+            return ActionResult(True, 'Fullscreen toggle requested - handled by frontend')
+        except Exception as e:
+            return ActionResult(
+                False, f'Failed to toggle fullscreen: {str(e)}'
+            )
+
     def execute(self) -> ActionResult:
         """Execute the system action."""
         if not self.validate():
@@ -91,6 +103,8 @@ class SystemAction(BaseAction):
             return self._volume_set()
         elif action.startswith('media_'):
             return self._media_control(action)
+        elif action == 'fullscreen':
+            return self._fullscreen()
         else:
             return ActionResult(False, f'Unknown action: {action}')
 
