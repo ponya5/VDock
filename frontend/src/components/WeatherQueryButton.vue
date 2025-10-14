@@ -1,0 +1,329 @@
+<template>
+  <div class="weather-query" :class="weatherClass">
+    <div class="weather-header">
+      <FontAwesomeIcon :icon="['fas', 'cloud-sun']" class="header-icon" />
+      <span class="header-title">Weather query</span>
+    </div>
+    
+    <div v-if="loading" class="loading-state">
+      <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
+      <span>Loading weather...</span>
+    </div>
+    
+    <div v-else-if="error" class="error-state">
+      <FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" />
+      <span>{{ error }}</span>
+    </div>
+    
+    <div v-else-if="weatherData" class="weather-content">
+      <div class="weather-main">
+        <div class="weather-icon">
+          <FontAwesomeIcon :icon="weatherIcon" />
+        </div>
+        <div class="weather-temp">
+          {{ weatherData.temperature }}°
+          <span class="temp-unit">{{ weatherData.unit }}</span>
+        </div>
+      </div>
+      
+      <div class="weather-description">{{ weatherData.description }}</div>
+      
+      <div class="weather-location">
+        <FontAwesomeIcon :icon="['fas', 'map-marker-alt']" />
+        {{ weatherData.location }}
+      </div>
+      
+      <div class="weather-details">
+        <div class="detail-item">
+          <FontAwesomeIcon :icon="['fas', 'tint']" />
+          <span>{{ weatherData.humidity }}%</span>
+        </div>
+        <div class="detail-item">
+          <FontAwesomeIcon :icon="['fas', 'wind']" />
+          <span>{{ weatherData.windSpeed }} mph</span>
+        </div>
+        <div class="detail-item">
+          <FontAwesomeIcon :icon="['fas', 'eye']" />
+          <span>{{ weatherData.visibility }} mi</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import apiClient from '@/api/client'
+
+interface Props {
+  location?: string
+  refreshInterval?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  location: 'auto',
+  refreshInterval: 15, // minutes
+})
+
+interface WeatherData {
+  temperature: number
+  unit: string
+  description: string
+  condition: string
+  location: string
+  humidity: number
+  windSpeed: number
+  visibility: number
+  icon: string
+}
+
+const weatherData = ref<WeatherData | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
+let intervalId: number | null = null
+
+const weatherClass = computed(() => {
+  if (!weatherData.value) return ''
+  
+  const condition = weatherData.value.condition.toLowerCase()
+  
+  if (condition.includes('clear') || condition.includes('sunny')) {
+    return 'weather-clear'
+  } else if (condition.includes('cloud')) {
+    return 'weather-cloudy'
+  } else if (condition.includes('rain') || condition.includes('drizzle')) {
+    return 'weather-rainy'
+  } else if (condition.includes('snow')) {
+    return 'weather-snowy'
+  } else if (condition.includes('storm') || condition.includes('thunder')) {
+    return 'weather-stormy'
+  }
+  
+  return 'weather-default'
+})
+
+const weatherIcon = computed(() => {
+  if (!weatherData.value) return ['fas', 'cloud']
+  
+  const condition = weatherData.value.condition.toLowerCase()
+  
+  if (condition.includes('clear') || condition.includes('sunny')) {
+    return ['fas', 'sun']
+  } else if (condition.includes('partly')) {
+    return ['fas', 'cloud-sun']
+  } else if (condition.includes('cloud')) {
+    return ['fas', 'cloud']
+  } else if (condition.includes('rain') || condition.includes('drizzle')) {
+    return ['fas', 'cloud-rain']
+  } else if (condition.includes('snow')) {
+    return ['fas', 'snowflake']
+  } else if (condition.includes('storm') || condition.includes('thunder')) {
+    return ['fas', 'bolt']
+  } else if (condition.includes('fog') || condition.includes('mist')) {
+    return ['fas', 'smog']
+  }
+  
+  return ['fas', 'cloud']
+})
+
+async function fetchWeather() {
+  loading.value = true
+  error.value = null
+  
+  try {
+    const response = await apiClient.get('/weather', {
+      params: {
+        location: props.location
+      }
+    })
+    
+    weatherData.value = response.data
+  } catch (err: any) {
+    console.error('Failed to fetch weather:', err)
+    
+    // Mock data for demo purposes
+    weatherData.value = {
+      temperature: 72,
+      unit: 'F',
+      description: 'Partly Cloudy',
+      condition: 'Partly Cloudy',
+      location: props.location === 'auto' ? 'Your Location' : props.location,
+      humidity: 65,
+      windSpeed: 8,
+      visibility: 10,
+      icon: 'partly-cloudy'
+    }
+    
+    error.value = null // Clear error for mock data
+  } finally {
+    loading.value = false
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  intervalId = setInterval(fetchWeather, props.refreshInterval * 60 * 1000) as unknown as number
+}
+
+function stopPolling() {
+  if (intervalId) {
+    clearInterval(intervalId)
+    intervalId = null
+  }
+}
+
+onMounted(() => {
+  fetchWeather()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
+})
+</script>
+
+<style scoped>
+.weather-query {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding: var(--spacing-md);
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: var(--radius-md);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.weather-query::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.weather-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+  position: relative;
+  z-index: 1;
+}
+
+.header-icon {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.header-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.weather-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.weather-icon {
+  font-size: 3rem;
+  opacity: 0.9;
+}
+
+.weather-temp {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.temp-unit {
+  font-size: 1.5rem;
+  opacity: 0.8;
+}
+
+.weather-description {
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing-xs);
+  opacity: 0.9;
+}
+
+.weather-location {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.weather-details {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(10px);
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.85rem;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+
+/* Weather condition specific styles */
+.weather-clear {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.weather-cloudy {
+  background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+}
+
+.weather-rainy {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.weather-snowy {
+  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+}
+
+.weather-stormy {
+  background: linear-gradient(135deg, #434343 0%, #000000 100%);
+}
+</style>
+

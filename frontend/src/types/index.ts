@@ -6,7 +6,28 @@ export type ActionType =
   | 'command'
   | 'hotkey'
   | 'multi_action'
+  | 'macro'
   | 'system_control'
+  | 'system_metric'
+  // Individual performance metrics
+  | 'metric_memory'
+  | 'metric_cpu_usage'
+  | 'metric_cpu_temperature'
+  | 'metric_cpu_frequency'
+  | 'metric_cpu_power'
+  | 'metric_internet_speed'
+  | 'metric_harddisk'
+  | 'metric_gpu_temperature'
+  | 'metric_gpu_frequency'
+  | 'metric_gpu_usage'
+  | 'metric_gpu_memory_freq'
+  | 'metric_gpu_memory_usage'
+  // Individual time options
+  | 'time_world_clock'
+  | 'time_timer'
+  | 'time_countdown'
+  // Weather
+  | 'weather'
   | 'cross_platform'
   | 'folder'
   | 'plugin'
@@ -17,9 +38,40 @@ export type ButtonEffect = 'none' | 'glass' | 'neumorphism' | 'gradient' | 'glow
 
 export type ButtonAnimation = 'none' | 'pulse' | 'shimmer' | 'bounce' | 'rotate'
 
+export interface MacroStep {
+  type: 'hotkey' | 'delay' | 'text' | 'click'
+  keys?: string[]
+  text?: string
+  delay?: number
+  position?: { x: number; y: number }
+}
+
+export type PerformanceMetric = 
+  | 'memory'
+  | 'cpu_usage'
+  | 'cpu_temperature'
+  | 'cpu_frequency'
+  | 'cpu_package_power'
+  | 'internet_speed'
+  | 'harddisk'
+  | 'gpu_temperature'
+  | 'gpu_core_frequency'
+  | 'gpu_core_usage'
+  | 'gpu_memory_frequency'
+  | 'gpu_memory_usage'
+
+export type TimeOptionType = 'world_time' | 'timer' | 'countdown'
+
 export interface ButtonAction {
   type: ActionType
   config: Record<string, any>
+  macro_steps?: MacroStep[]
+  performance_metrics?: PerformanceMetric[]
+  time_option?: TimeOptionType
+  timer_duration?: number
+  countdown_target?: string
+  timezone?: string
+  weather_location?: string
 }
 
 export interface ButtonPosition {
@@ -98,6 +150,8 @@ export interface Scene {
   pages: Page[]
   isActive?: boolean
   buttonSize?: number // Size multiplier for scene buttons
+  triggeredByApp?: string // App executable name that triggers this scene
+  autoCreated?: boolean // Whether this scene was auto-created by app integration
   created_at?: string
   updated_at?: string
 }
@@ -144,6 +198,31 @@ export interface ActionResult {
   success: boolean
   message: string
   data?: Record<string, any>
+}
+
+export interface RunningApp {
+  name: string
+  exe: string
+  pid: number
+  path?: string
+}
+
+export interface AppIntegration {
+  appExe: string
+  appName: string
+  enabled: boolean
+  sceneId?: string
+  sceneName?: string
+  autoCreateScene: boolean
+}
+
+export interface SystemMetricData {
+  type: 'cpu' | 'memory' | 'disk' | 'network' | 'temperature' | 'battery' | 'processes'
+  value?: number
+  unit?: string
+  status?: 'normal' | 'warning' | 'critical'
+  details?: any
+  timestamp?: string
 }
 
 export interface ServerConfig {

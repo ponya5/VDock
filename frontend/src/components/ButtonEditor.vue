@@ -9,6 +9,13 @@
       </div>
 
       <div class="modal-body">
+        <!-- Browse Actions Button -->
+        <div class="form-group">
+          <button class="btn btn-primary" @click="showActionsSidebar = true" style="width: 100%;">
+            <FontAwesomeIcon :icon="['fas', 'list']" />
+            Browse Button Actions
+          </button>
+        </div>
         <div class="form-group">
           <label>Label</label>
           <input v-model="editedButton.label" type="text" class="input" placeholder="Button label" />
@@ -231,7 +238,35 @@
             <option value="program">Launch Program</option>
             <option value="command">Run Command</option>
             <option value="hotkey">Send Hotkey</option>
+            <option value="macro">Macro (Multiple Actions)</option>
             <option value="multi_action">Multi-Action</option>
+            <option value="system_metric">System Metric Display</option>
+            
+            <optgroup label="📊 System Performance Monitor">
+              <option value="metric_memory">Memory</option>
+              <option value="metric_cpu_usage">CPU usage</option>
+              <option value="metric_cpu_temperature">CPU temperature</option>
+              <option value="metric_cpu_frequency">CPU frequency</option>
+              <option value="metric_cpu_power">CPU package power</option>
+              <option value="metric_internet_speed">Internet speed</option>
+              <option value="metric_harddisk">Harddisk</option>
+              <option value="metric_gpu_temperature">GPU temperature</option>
+              <option value="metric_gpu_frequency">GPU core frequency</option>
+              <option value="metric_gpu_usage">GPU Core Usage</option>
+              <option value="metric_gpu_memory_freq">GPU memory frequency</option>
+              <option value="metric_gpu_memory_usage">GPU Memory Usage</option>
+            </optgroup>
+            
+            <optgroup label="🕐 Time Options">
+              <option value="time_world_clock">World Time</option>
+              <option value="time_timer">Timer</option>
+              <option value="time_countdown">Countdown</option>
+            </optgroup>
+            
+            <optgroup label="🌤️ Weather query">
+              <option value="weather">Weather query</option>
+            </optgroup>
+            
             <option value="system_control">System Control</option>
             <option value="cross_platform">Cross-Platform Action</option>
           </select>
@@ -262,6 +297,234 @@
             placeholder="ctrl, c" 
             @input="updateHotkeyConfig"
           />
+        </div>
+
+        <!-- Macro Configuration -->
+        <div v-if="actionType === 'macro'" class="macro-editor">
+          <div class="form-group">
+            <div class="flex items-center justify-between">
+              <label>Macro Steps</label>
+              <button class="btn btn-sm btn-primary" @click="addMacroStep" type="button">
+                <FontAwesomeIcon :icon="['fas', 'plus']" /> Add Step
+              </button>
+            </div>
+            <p class="form-help">Execute multiple actions in sequence with delays</p>
+          </div>
+
+          <div v-if="macroSteps.length === 0" class="empty-state">
+            <p>No macro steps defined. Click "Add Step" to create your first macro step.</p>
+          </div>
+
+          <div v-for="(step, index) in macroSteps" :key="index" class="macro-step">
+            <div class="macro-step-header">
+              <span class="step-number">Step {{ index + 1 }}</span>
+              <div class="step-actions">
+                <button 
+                  class="btn-icon" 
+                  @click="moveMacroStep(index, -1)" 
+                  :disabled="index === 0"
+                  type="button"
+                  title="Move Up"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'arrow-up']" />
+                </button>
+                <button 
+                  class="btn-icon" 
+                  @click="moveMacroStep(index, 1)" 
+                  :disabled="index === macroSteps.length - 1"
+                  type="button"
+                  title="Move Down"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'arrow-down']" />
+                </button>
+                <button 
+                  class="btn-icon btn-danger" 
+                  @click="removeMacroStep(index)"
+                  type="button"
+                  title="Delete"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'trash']" />
+                </button>
+              </div>
+            </div>
+
+            <div class="macro-step-content">
+              <div class="form-group">
+                <label class="small-label">Step Type</label>
+                <select v-model="step.type" class="select">
+                  <option value="hotkey">Hotkey</option>
+                  <option value="delay">Delay</option>
+                  <option value="text">Type Text</option>
+                  <option value="click">Mouse Click</option>
+                </select>
+              </div>
+
+              <div v-if="step.type === 'hotkey'" class="form-group">
+                <label class="small-label">Keys (comma-separated)</label>
+                <input 
+                  v-model="step.keysString" 
+                  type="text" 
+                  class="input" 
+                  placeholder="ctrl, c"
+                  @input="updateMacroStepKeys(index)"
+                />
+                <p class="form-help-sm">Example: ctrl, c or alt, tab or win, d</p>
+              </div>
+
+              <div v-if="step.type === 'delay'" class="form-group">
+                <label class="small-label">Delay (milliseconds)</label>
+                <input 
+                  v-model.number="step.delay" 
+                  type="number" 
+                  class="input" 
+                  min="0" 
+                  step="100"
+                  placeholder="500"
+                />
+                <p class="form-help-sm">1000ms = 1 second</p>
+              </div>
+
+              <div v-if="step.type === 'text'" class="form-group">
+                <label class="small-label">Text to Type</label>
+                <textarea 
+                  v-model="step.text" 
+                  class="textarea" 
+                  rows="2"
+                  placeholder="Enter text to type automatically"
+                ></textarea>
+              </div>
+
+              <div v-if="step.type === 'click'" class="form-group">
+                <label class="small-label">Click Position (optional)</label>
+                <div class="flex gap-sm">
+                  <input 
+                    v-model.number="step.clickX" 
+                    type="number" 
+                    class="input" 
+                    placeholder="X coordinate"
+                    style="flex: 1"
+                  />
+                  <input 
+                    v-model.number="step.clickY" 
+                    type="number" 
+                    class="input" 
+                    placeholder="Y coordinate"
+                    style="flex: 1"
+                  />
+                </div>
+                <p class="form-help-sm">Leave empty to click at current mouse position</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Metric Configuration -->
+        <div v-if="actionType === 'system_metric'" class="form-group">
+          <label>Metric Type</label>
+          <select v-model="actionConfig.metric_type" class="select">
+            <option value="cpu">CPU Usage</option>
+            <option value="memory">Memory (RAM)</option>
+            <option value="disk">Disk Space</option>
+            <option value="network">Network Traffic</option>
+            <option value="temperature">Temperature</option>
+            <option value="battery">Battery</option>
+            <option value="processes">Processes</option>
+          </select>
+          <p class="form-help">Button will display live metrics with auto-refresh</p>
+        </div>
+
+        <div v-if="actionType === 'system_metric'" class="form-group">
+          <label>Refresh Interval (seconds)</label>
+          <input 
+            v-model.number="actionConfig.refresh_interval" 
+            type="number" 
+            class="input" 
+            min="1" 
+            max="60"
+            placeholder="2"
+          />
+          <p class="form-help">How often to update the metric (default: 2 seconds)</p>
+        </div>
+
+        <!-- Individual Metric Configuration -->
+        <div v-if="isMetricType" class="form-group">
+          <label>Refresh Interval (seconds)</label>
+          <input 
+            v-model.number="actionConfig.refresh_interval" 
+            type="number" 
+            class="input" 
+            min="1" 
+            max="60"
+            placeholder="2"
+          />
+          <p class="form-help">How often to update the metric (default: 2 seconds)</p>
+        </div>
+
+        <!-- World Clock Configuration -->
+        <div v-if="actionType === 'time_world_clock'" class="form-group">
+          <label>Timezone</label>
+          <select v-model="actionConfig.timezone" class="select">
+            <option value="local">Local Time</option>
+            <option value="America/New_York">New York (EST/EDT)</option>
+            <option value="America/Chicago">Chicago (CST/CDT)</option>
+            <option value="America/Denver">Denver (MST/MDT)</option>
+            <option value="America/Los_Angeles">Los Angeles (PST/PDT)</option>
+            <option value="Europe/London">London (GMT/BST)</option>
+            <option value="Europe/Paris">Paris (CET/CEST)</option>
+            <option value="Asia/Tokyo">Tokyo (JST)</option>
+            <option value="Asia/Shanghai">Shanghai (CST)</option>
+            <option value="Asia/Dubai">Dubai (GST)</option>
+            <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+          </select>
+        </div>
+
+        <!-- Timer Configuration -->
+        <div v-if="actionType === 'time_timer'" class="form-group">
+          <label>Timer Duration (seconds)</label>
+          <input 
+            v-model.number="actionConfig.timer_duration" 
+            type="number" 
+            class="input" 
+            min="0"
+            placeholder="0"
+          />
+          <p class="form-help">Initial duration (0 for stopwatch mode)</p>
+        </div>
+
+        <!-- Countdown Configuration -->
+        <div v-if="actionType === 'time_countdown'" class="form-group">
+          <label>Countdown Target Date/Time</label>
+          <input 
+            v-model="actionConfig.countdown_target" 
+            type="datetime-local" 
+            class="input"
+          />
+          <p class="form-help">Leave empty to countdown until tomorrow</p>
+        </div>
+
+        <!-- Weather Configuration -->
+        <div v-if="actionType === 'weather'" class="form-group">
+          <label>Location</label>
+          <input 
+            v-model="actionConfig.weather_location" 
+            type="text" 
+            class="input" 
+            placeholder="auto (or enter city name)"
+          />
+          <p class="form-help">Enter city name or "auto" for automatic location</p>
+        </div>
+
+        <div v-if="actionType === 'weather'" class="form-group">
+          <label>Refresh Interval (minutes)</label>
+          <input 
+            v-model.number="actionConfig.refresh_interval" 
+            type="number" 
+            class="input" 
+            min="5" 
+            max="120"
+            placeholder="15"
+          />
+          <p class="form-help">How often to update weather data (default: 15 minutes)</p>
         </div>
 
         <div v-if="actionType === 'system_control'" class="form-group">
@@ -382,6 +645,13 @@
       @close="showAssetPicker = null"
       @select="handleAssetSelect"
     />
+
+    <!-- Actions Sidebar -->
+    <ButtonActionsSidebar
+      :is-open="showActionsSidebar"
+      @close="showActionsSidebar = false"
+      @select-action="handleActionSelection"
+    />
   </div>
 </template>
 
@@ -392,6 +662,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
+import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
 
 interface Props {
@@ -408,10 +679,62 @@ const emit = defineEmits<{
 const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
 const showIconPicker = ref(false)
 const showAssetPicker = ref<'icon' | 'animation' | 'background' | null>(null)
+const showActionsSidebar = ref(false)
 
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
+
+// Macro steps management
+interface MacroStepUI {
+  type: 'hotkey' | 'delay' | 'text' | 'click'
+  keysString?: string
+  keys?: string[]
+  delay?: number
+  text?: string
+  clickX?: number
+  clickY?: number
+  position?: { x: number; y: number }
+}
+
+const macroSteps = ref<MacroStepUI[]>([])
+
+// Performance Monitor metrics
+const performanceMetricOptions = [
+  { value: 'memory', label: 'Memory' },
+  { value: 'cpu_usage', label: 'CPU usage' },
+  { value: 'cpu_temperature', label: 'CPU temperature' },
+  { value: 'cpu_frequency', label: 'CPU frequency' },
+  { value: 'cpu_package_power', label: 'CPU package power' },
+  { value: 'internet_speed', label: 'Internet speed' },
+  { value: 'harddisk', label: 'Harddisk' },
+  { value: 'gpu_temperature', label: 'GPU temperature' },
+  { value: 'gpu_core_frequency', label: 'GPU core frequency' },
+  { value: 'gpu_core_usage', label: 'Gpu Core Usage' },
+  { value: 'gpu_memory_frequency', label: 'GPU memory frequency' },
+  { value: 'gpu_memory_usage', label: 'Gpu Memory Usage' },
+]
+
+const selectedPerformanceMetrics = ref<string[]>([])
+
+// Check if action type is a metric type
+const isMetricType = computed(() => {
+  return actionType.value?.startsWith('metric_')
+})
+
+// Initialize macro steps from existing button action
+if (props.button.action?.type === 'macro' && props.button.action.macro_steps) {
+  macroSteps.value = props.button.action.macro_steps.map((step: any) => ({
+    type: step.type,
+    keysString: step.keys?.join(', ') || '',
+    keys: step.keys || [],
+    delay: step.delay,
+    text: step.text,
+    clickX: step.position?.x,
+    clickY: step.position?.y,
+    position: step.position
+  }))
+}
 
 // Color palette for background color selection
 const colorPalette = ref([
@@ -573,6 +896,70 @@ function updateIconSize(event: Event) {
   editedButton.value.style.iconSize = parseInt(target.value)
 }
 
+// Macro step functions
+function addMacroStep() {
+  macroSteps.value.push({
+    type: 'hotkey',
+    keysString: '',
+    keys: [],
+    delay: 500
+  })
+}
+
+function removeMacroStep(index: number) {
+  macroSteps.value.splice(index, 1)
+}
+
+function moveMacroStep(index: number, direction: number) {
+  const newIndex = index + direction
+  if (newIndex >= 0 && newIndex < macroSteps.value.length) {
+    const temp = macroSteps.value[index]
+    macroSteps.value[index] = macroSteps.value[newIndex]
+    macroSteps.value[newIndex] = temp
+  }
+}
+
+function updateMacroStepKeys(index: number) {
+  const step = macroSteps.value[index]
+  if (step.keysString) {
+    step.keys = step.keysString
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k.length > 0)
+  }
+}
+
+function handleActionSelection(selectedActionType: string) {
+  actionType.value = selectedActionType as ActionType
+  actionConfig.value = {}
+  hotkeyString.value = ''
+  showActionsSidebar.value = false
+  
+  // Set default labels based on action type
+  const actionLabels: Record<string, string> = {
+    'metric_memory': 'Memory',
+    'metric_cpu_usage': 'CPU',
+    'metric_cpu_temperature': 'CPU Temp',
+    'metric_cpu_frequency': 'CPU Freq',
+    'metric_cpu_power': 'CPU Power',
+    'metric_internet_speed': 'Internet',
+    'metric_harddisk': 'Disk',
+    'metric_gpu_temperature': 'GPU Temp',
+    'metric_gpu_frequency': 'GPU Freq',
+    'metric_gpu_usage': 'GPU Usage',
+    'metric_gpu_memory_freq': 'GPU Mem Freq',
+    'metric_gpu_memory_usage': 'GPU Mem',
+    'time_world_clock': 'World Clock',
+    'time_timer': 'Timer',
+    'time_countdown': 'Countdown',
+    'weather': 'Weather'
+  }
+  
+  if (actionLabels[selectedActionType]) {
+    editedButton.value.label = actionLabels[selectedActionType]
+  }
+}
+
 function handleSave() {
   // Ensure style object exists
   if (!editedButton.value.style) {
@@ -588,8 +975,57 @@ function handleSave() {
   }
   
   // Update action if configured
-  if (actionType.value && editedButton.value.action) {
+  if (actionType.value) {
+    if (!editedButton.value.action) {
+      editedButton.value.action = {
+        type: actionType.value,
+        config: {}
+      }
+    }
+    
+    editedButton.value.action.type = actionType.value
     editedButton.value.action.config = actionConfig.value
+    
+    // Handle macro steps
+    if (actionType.value === 'macro') {
+      editedButton.value.action.macro_steps = macroSteps.value.map(step => {
+        const macroStep: any = {
+          type: step.type
+        }
+        
+        if (step.type === 'hotkey' && step.keys) {
+          macroStep.keys = step.keys
+        } else if (step.type === 'delay') {
+          macroStep.delay = step.delay || 500
+        } else if (step.type === 'text') {
+          macroStep.text = step.text || ''
+        } else if (step.type === 'click') {
+          if (step.clickX !== undefined && step.clickY !== undefined) {
+            macroStep.position = { x: step.clickX, y: step.clickY }
+          }
+        }
+        
+        return macroStep
+      })
+    }
+    
+    // Handle performance monitor metrics
+    if (actionType.value === 'performance_monitor') {
+      editedButton.value.action.performance_metrics = selectedPerformanceMetrics.value
+    }
+    
+    // Handle time options
+    if (actionType.value === 'time_options') {
+      editedButton.value.action.time_option = actionConfig.value.time_option
+      editedButton.value.action.timezone = actionConfig.value.timezone
+      editedButton.value.action.timer_duration = actionConfig.value.timer_duration
+      editedButton.value.action.countdown_target = actionConfig.value.countdown_target
+    }
+    
+    // Handle weather query
+    if (actionType.value === 'weather_query') {
+      editedButton.value.action.weather_location = actionConfig.value.weather_location || 'auto'
+    }
   }
   
   emit('save', editedButton.value)
@@ -799,6 +1235,129 @@ function handleSave() {
   background-color: var(--color-surface-solid);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
+}
+
+/* Macro Editor Styles */
+.macro-editor {
+  margin: var(--spacing-md) 0;
+}
+
+.macro-step {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.macro-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.step-number {
+  font-weight: 600;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+}
+
+.step-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+  font-size: 0.75rem;
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon.btn-danger:hover:not(:disabled) {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.macro-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.small-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+  display: block;
+}
+
+.form-help-sm {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.checkbox-group .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.checkbox-group .checkbox-label:hover {
+  background-color: var(--color-background);
+}
+
+.checkbox-group input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.btn-sm {
+  font-size: 0.875rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
 }
 </style>
 

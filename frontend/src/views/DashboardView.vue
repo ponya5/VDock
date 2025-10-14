@@ -253,7 +253,7 @@ let actionResultTimeout: number | null = null
 
 // Sidebar state
 const actionSearch = ref('')
-const expandedCategories = ref<string[]>(['system', 'media', 'web'])
+const expandedCategories = ref<string[]>(['system', 'media', 'web', 'metrics', 'time', 'weather'])
 const selectedAction = ref<any>(null)
 
 const currentProfile = computed(() => dashboardStore.currentProfile)
@@ -350,6 +350,40 @@ const actionCategories = ref([
       { id: 'custom-gif', name: 'Custom GIF', icon: ['fas', 'film'] },
       { id: 'custom-video', name: 'Custom Video', icon: ['fas', 'video'] },
       { id: 'custom-sound', name: 'Custom Sound', icon: ['fas', 'volume-up'] }
+    ]
+  },
+  {
+    id: 'metrics',
+    name: 'Monitor Metrics',
+    actions: [
+      { id: 'metric_memory', name: 'Memory', icon: ['fas', 'memory'] },
+      { id: 'metric_cpu_usage', name: 'CPU usage', icon: ['fas', 'microchip'] },
+      { id: 'metric_cpu_temperature', name: 'CPU temperature', icon: ['fas', 'thermometer-half'] },
+      { id: 'metric_cpu_frequency', name: 'CPU frequency', icon: ['fas', 'wave-square'] },
+      { id: 'metric_cpu_power', name: 'CPU package power', icon: ['fas', 'bolt'] },
+      { id: 'metric_internet_speed', name: 'Internet speed', icon: ['fas', 'network-wired'] },
+      { id: 'metric_harddisk', name: 'Harddisk', icon: ['fas', 'hdd'] },
+      { id: 'metric_gpu_temperature', name: 'GPU temperature', icon: ['fas', 'thermometer-half'] },
+      { id: 'metric_gpu_frequency', name: 'GPU core frequency', icon: ['fas', 'wave-square'] },
+      { id: 'metric_gpu_usage', name: 'GPU Core Usage', icon: ['fas', 'grip-vertical'] },
+      { id: 'metric_gpu_memory_freq', name: 'GPU memory frequency', icon: ['fas', 'memory'] },
+      { id: 'metric_gpu_memory_usage', name: 'GPU Memory Usage', icon: ['fas', 'memory'] }
+    ]
+  },
+  {
+    id: 'time',
+    name: 'Time',
+    actions: [
+      { id: 'time_world_clock', name: 'World Time', icon: ['fas', 'globe'] },
+      { id: 'time_timer', name: 'Timer', icon: ['fas', 'stopwatch'] },
+      { id: 'time_countdown', name: 'Countdown', icon: ['fas', 'hourglass-half'] }
+    ]
+  },
+  {
+    id: 'weather',
+    name: 'Weather',
+    actions: [
+      { id: 'weather', name: 'Weather query', icon: ['fas', 'cloud-sun'] }
     ]
   }
 ])
@@ -778,6 +812,85 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         action: {
           type: 'custom',
           config: {}
+        }
+      }
+
+    // Monitor Metrics
+    case 'metric_memory':
+    case 'metric_cpu_usage':
+    case 'metric_cpu_temperature':
+    case 'metric_cpu_frequency':
+    case 'metric_cpu_power':
+    case 'metric_internet_speed':
+    case 'metric_harddisk':
+    case 'metric_gpu_temperature':
+    case 'metric_gpu_frequency':
+    case 'metric_gpu_usage':
+    case 'metric_gpu_memory_freq':
+    case 'metric_gpu_memory_usage':
+      return {
+        ...baseButton,
+        label: action.name,
+        icon: action.icon,
+        size: { rows: 1, cols: 1 },
+        style: { ...baseButton.style, backgroundColor: '#2980b9' },
+        action: {
+          type: action.id as any,
+          config: { refresh_interval: 2 }
+        }
+      }
+
+    // Time
+    case 'time_world_clock':
+      return {
+        ...baseButton,
+        label: 'World Clock',
+        icon: ['fas', 'globe'],
+        size: { rows: 2, cols: 2 },
+        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
+        action: {
+          type: 'time_world_clock',
+          config: { timezone: 'local' }
+        }
+      }
+
+    case 'time_timer':
+      return {
+        ...baseButton,
+        label: 'Timer',
+        icon: ['fas', 'stopwatch'],
+        size: { rows: 2, cols: 2 },
+        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
+        action: {
+          type: 'time_timer',
+          config: { timer_duration: 0 }
+        }
+      }
+
+    case 'time_countdown':
+      return {
+        ...baseButton,
+        label: 'Countdown',
+        icon: ['fas', 'hourglass-half'],
+        size: { rows: 2, cols: 2 },
+        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
+        action: {
+          type: 'time_countdown',
+          config: { countdown_target: '' }
+        }
+      }
+
+    // Weather
+    case 'weather':
+      return {
+        ...baseButton,
+        label: 'Weather',
+        icon: ['fas', 'cloud-sun'],
+        size: { rows: 2, cols: 2 },
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
+        action: {
+          type: 'weather',
+          config: { weather_location: 'auto', refresh_interval: 15 }
         }
       }
 
