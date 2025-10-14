@@ -168,106 +168,6 @@
         </section>
       </div>
 
-      <!-- Spotify Tab -->
-      <div v-if="activeTab === 'spotify'" class="tab-content">
-        <section class="settings-section card">
-          <h2>Spotify Integration</h2>
-          
-          <div class="form-group">
-            <label>Spotify Client ID</label>
-            <input 
-              v-model="spotifyConfig.clientId" 
-              type="text" 
-              class="input" 
-              placeholder="Enter your Spotify Client ID"
-            />
-            <p class="form-help">
-              Get your Client ID from the 
-              <a href="https://developer.spotify.com/dashboard" target="_blank" class="link">
-                Spotify Developer Dashboard
-              </a>
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label>Spotify Client Secret</label>
-            <input 
-              v-model="spotifyConfig.clientSecret" 
-              type="password" 
-              class="input" 
-              placeholder="Enter your Spotify Client Secret"
-            />
-            <p class="form-help">Keep this secret secure</p>
-          </div>
-
-          <div class="form-group">
-            <label>Redirect URI</label>
-            <input 
-              v-model="spotifyConfig.redirectUri" 
-              type="text" 
-              class="input" 
-              placeholder="http://localhost:3000/auth/spotify/callback"
-            />
-            <p class="form-help">
-              Add this exact URI to your Spotify app settings
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label>Scopes</label>
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input v-model="spotifyConfig.scopes" type="checkbox" value="user-read-playback-state" />
-                <span>Read Playback State</span>
-              </label>
-              <label class="checkbox-label">
-                <input v-model="spotifyConfig.scopes" type="checkbox" value="user-modify-playback-state" />
-                <span>Modify Playback State</span>
-              </label>
-              <label class="checkbox-label">
-                <input v-model="spotifyConfig.scopes" type="checkbox" value="user-read-currently-playing" />
-                <span>Read Currently Playing</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button class="btn btn-primary" @click="saveSpotifyConfig">
-              <FontAwesomeIcon :icon="['fas', 'save']" /> Save Configuration
-            </button>
-            <button class="btn btn-secondary" @click="testSpotifyConnection">
-              <FontAwesomeIcon :icon="['fab', 'spotify']" /> Test Connection
-            </button>
-          </div>
-        </section>
-
-        <section class="settings-section card">
-          <h2>Authentication Status</h2>
-          
-          <div v-if="spotifyAuthStatus.authenticated" class="auth-status authenticated">
-            <FontAwesomeIcon :icon="['fas', 'check-circle']" class="status-icon" />
-            <div class="status-content">
-              <h3>Connected to Spotify</h3>
-              <p>User: {{ spotifyAuthStatus.user?.display_name || 'Unknown' }}</p>
-              <p>Email: {{ spotifyAuthStatus.user?.email || 'Not available' }}</p>
-            </div>
-            <button class="btn btn-secondary" @click="disconnectSpotify">
-              <FontAwesomeIcon :icon="['fas', 'sign-out-alt']" /> Disconnect
-            </button>
-          </div>
-          
-          <div v-else class="auth-status not-authenticated">
-            <FontAwesomeIcon :icon="['fas', 'exclamation-circle']" class="status-icon" />
-            <div class="status-content">
-              <h3>Not Connected</h3>
-              <p>Connect to Spotify to use Spotify control buttons</p>
-            </div>
-            <button class="btn btn-primary" @click="connectSpotify">
-              <FontAwesomeIcon :icon="['fab', 'spotify']" /> Connect to Spotify
-            </button>
-          </div>
-        </section>
-      </div>
 
       <!-- About Tab -->
       <div v-if="activeTab === 'about'" class="tab-content">
@@ -312,7 +212,6 @@ const tabs = [
   { id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'] },
   { id: 'server', name: 'Server', icon: ['fas', 'server'] },
   { id: 'integration', name: 'Integration', icon: ['fas', 'plug'] },
-  { id: 'spotify', name: 'Spotify', icon: ['fab', 'spotify'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
 
@@ -340,107 +239,10 @@ function openGitHub() {
   window.open('https://github.com/ponya5/VDock', '_blank')
 }
 
-// Spotify configuration
-const spotifyConfig = ref({
-  clientId: '',
-  clientSecret: '',
-  redirectUri: 'http://localhost:3000/auth/spotify/callback',
-  scopes: ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing']
-})
 
-const spotifyAuthStatus = ref({
-  authenticated: false,
-  user: null,
-  accessToken: null,
-  refreshToken: null
-})
-
-async function saveSpotifyConfig() {
-  try {
-    // Save configuration to backend
-    const response = await fetch('/api/config', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        spotify_client_id: spotifyConfig.value.clientId,
-        spotify_client_secret: spotifyConfig.value.clientSecret,
-        spotify_redirect_uri: spotifyConfig.value.redirectUri,
-        spotify_scope: spotifyConfig.value.scopes.join(',')
-      })
-    })
-    
-    if (response.ok) {
-      alert('Spotify configuration saved successfully!')
-    } else {
-      alert('Failed to save Spotify configuration')
-    }
-  } catch (error) {
-    console.error('Error saving Spotify config:', error)
-    alert('Error saving Spotify configuration')
-  }
-}
-
-async function testSpotifyConnection() {
-  try {
-    const response = await fetch('/api/spotify/auth-url')
-    const data = await response.json()
-    
-    if (data.success) {
-      alert('Spotify connection test successful! You can now authenticate.')
-    } else {
-      alert('Spotify connection test failed: ' + data.error)
-    }
-  } catch (error) {
-    console.error('Error testing Spotify connection:', error)
-    alert('Error testing Spotify connection')
-  }
-}
-
-async function connectSpotify() {
-  try {
-    const response = await fetch('/api/spotify/auth-url')
-    const data = await response.json()
-    
-    if (data.success) {
-      // Open Spotify authorization in new window
-      window.open(data.auth_url, 'spotify-auth', 'width=500,height=600')
-    } else {
-      alert('Failed to get Spotify authorization URL: ' + data.error)
-    }
-  } catch (error) {
-    console.error('Error connecting to Spotify:', error)
-    alert('Error connecting to Spotify')
-  }
-}
-
-async function disconnectSpotify() {
-  spotifyAuthStatus.value = {
-    authenticated: false,
-    user: null,
-    accessToken: null,
-    refreshToken: null
-  }
-  alert('Disconnected from Spotify')
-}
-
-// Load Spotify configuration on mount
 onMounted(async () => {
   settingsStore.loadThemes()
   settingsStore.loadServerConfig()
-  
-  // Load Spotify config from localStorage
-  const savedConfig = localStorage.getItem('spotify-config')
-  if (savedConfig) {
-    spotifyConfig.value = { ...spotifyConfig.value, ...JSON.parse(savedConfig) }
-  }
-  
-  // Check authentication status
-  const savedAuth = localStorage.getItem('spotify-auth')
-  if (savedAuth) {
-    spotifyAuthStatus.value = JSON.parse(savedAuth)
-  }
 })
 </script>
 
@@ -643,64 +445,6 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-/* Spotify Configuration Styles */
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.form-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-}
-
-.auth-status {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-}
-
-.auth-status.authenticated {
-  background-color: var(--color-success-light);
-  border-color: var(--color-success);
-}
-
-.auth-status.not-authenticated {
-  background-color: var(--color-warning-light);
-  border-color: var(--color-warning);
-}
-
-.status-icon {
-  font-size: 1.5rem;
-}
-
-.auth-status.authenticated .status-icon {
-  color: var(--color-success);
-}
-
-.auth-status.not-authenticated .status-icon {
-  color: var(--color-warning);
-}
-
-.status-content {
-  flex: 1;
-}
-
-.status-content h3 {
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: 1.1rem;
-}
-
-.status-content p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
 
 .link {
   color: var(--color-primary);

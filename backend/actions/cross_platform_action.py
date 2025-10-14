@@ -24,9 +24,6 @@ class CrossPlatformAction(BaseAction):
         'media_play_pause', 'media_next', 'media_previous', 'media_stop',
         # Web & Apps
         'open_url', 'open_app', 'open_folder', 'open_file', 'screenshot',
-        # Spotify Integration
-        'spotify_play_pause', 'spotify_next', 'spotify_previous', 'spotify_volume_up', 
-        'spotify_volume_down', 'spotify_seek_forward', 'spotify_seek_backward'
     ]
 
     def __init__(self, config: Dict[str, Any]):
@@ -89,20 +86,6 @@ class CrossPlatformAction(BaseAction):
                 return self._open_file()
             elif action == 'screenshot':
                 return self._screenshot()
-            elif action == 'spotify_play_pause':
-                return self._spotify_play_pause()
-            elif action == 'spotify_next':
-                return self._spotify_next()
-            elif action == 'spotify_previous':
-                return self._spotify_previous()
-            elif action == 'spotify_volume_up':
-                return self._spotify_volume_up()
-            elif action == 'spotify_volume_down':
-                return self._spotify_volume_down()
-            elif action == 'spotify_seek_forward':
-                return self._spotify_seek_forward()
-            elif action == 'spotify_seek_backward':
-                return self._spotify_seek_backward()
             else:
                 return ActionResult(False, f'Unknown action: {action}')
         except Exception as e:
@@ -710,117 +693,6 @@ class CrossPlatformAction(BaseAction):
         else:
             return ActionResult(False, f'Screenshot not supported on {_SYSTEM}')
 
-    # Spotify Integration Actions
-    def _spotify_play_pause(self) -> ActionResult:
-        """Toggle Spotify playback."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            # Check if Spotify is configured
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured. Please set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.')
-            
-            # For now, return a message indicating Spotify integration needs frontend setup
-            return ActionResult(True, 'Spotify play/pause action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
-
-    def _spotify_next(self) -> ActionResult:
-        """Skip to next Spotify track."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured')
-            
-            return ActionResult(True, 'Spotify next track action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
-
-    def _spotify_previous(self) -> ActionResult:
-        """Skip to previous Spotify track."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured')
-            
-            return ActionResult(True, 'Spotify previous track action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
-
-    def _spotify_volume_up(self) -> ActionResult:
-        """Increase Spotify volume."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured')
-            
-            step = self.config.get('step', 10)
-            return ActionResult(True, f'Spotify volume up (+{step}%) action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
-
-    def _spotify_volume_down(self) -> ActionResult:
-        """Decrease Spotify volume."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured')
-            
-            step = self.config.get('step', 10)
-            return ActionResult(True, f'Spotify volume down (-{step}%) action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
-
-    def _spotify_seek_forward(self) -> ActionResult:
-        """Seek forward in Spotify track."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured')
-            
-            step = self.config.get('step', 10000)  # Default 10 seconds
-            return ActionResult(True, f'Spotify seek forward (+{step}ms) action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
-
-    def _spotify_seek_backward(self) -> ActionResult:
-        """Seek backward in Spotify track."""
-        try:
-            from integrations import SpotifyClient
-            spotify = SpotifyClient()
-            
-            if not spotify.client_id or not spotify.client_secret:
-                return ActionResult(False, 'Spotify not configured')
-            
-            step = self.config.get('step', 10000)  # Default 10 seconds
-            return ActionResult(True, f'Spotify seek backward (-{step}ms) action ready. Requires frontend authentication setup.')
-        except ImportError:
-            return ActionResult(False, 'Spotify integration not available')
-        except Exception as e:
-            return ActionResult(False, f'Spotify error: {str(e)}')
 
     def get_description(self) -> str:
         """Get action description."""

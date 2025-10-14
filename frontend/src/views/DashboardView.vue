@@ -229,19 +229,6 @@ const actionCategories = ref([
     ]
   },
   {
-    id: 'spotify',
-    name: 'Spotify Control',
-    actions: [
-      { id: 'spotify-play-pause', name: 'Spotify Play/Pause', icon: ['fab', 'spotify'] },
-      { id: 'spotify-next', name: 'Spotify Next', icon: ['fas', 'forward'] },
-      { id: 'spotify-previous', name: 'Spotify Previous', icon: ['fas', 'backward'] },
-      { id: 'spotify-volume-up', name: 'Spotify Volume Up', icon: ['fas', 'volume-up'] },
-      { id: 'spotify-volume-down', name: 'Spotify Volume Down', icon: ['fas', 'volume-down'] },
-      { id: 'spotify-seek-forward', name: 'Spotify Seek Forward', icon: ['fas', 'fast-forward'] },
-      { id: 'spotify-seek-backward', name: 'Spotify Seek Backward', icon: ['fas', 'fast-backward'] },
-    ]
-  },
-  {
     id: 'web',
     name: 'Web & Apps',
     actions: [
@@ -711,89 +698,6 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         }
       }
 
-    case 'spotify-play-pause':
-      return {
-        ...baseButton,
-        label: 'Spotify Play/Pause',
-        icon: ['fab', 'spotify'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_play_pause' }
-        }
-      }
-
-    case 'spotify-next':
-      return {
-        ...baseButton,
-        label: 'Spotify Next',
-        icon: ['fas', 'forward'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_next' }
-        }
-      }
-
-    case 'spotify-previous':
-      return {
-        ...baseButton,
-        label: 'Spotify Previous',
-        icon: ['fas', 'backward'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_previous' }
-        }
-      }
-
-    case 'spotify-volume-up':
-      return {
-        ...baseButton,
-        label: 'Spotify Volume Up',
-        icon: ['fas', 'volume-up'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_volume_up', step: 10 }
-        }
-      }
-
-    case 'spotify-volume-down':
-      return {
-        ...baseButton,
-        label: 'Spotify Volume Down',
-        icon: ['fas', 'volume-down'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_volume_down', step: 10 }
-        }
-      }
-
-    case 'spotify-seek-forward':
-      return {
-        ...baseButton,
-        label: 'Spotify Seek Forward',
-        icon: ['fas', 'fast-forward'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_seek_forward', step: 10000 }
-        }
-      }
-
-    case 'spotify-seek-backward':
-      return {
-        ...baseButton,
-        label: 'Spotify Seek Backward',
-        icon: ['fas', 'fast-backward'],
-        style: { ...baseButton.style, backgroundColor: '#1db954' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'spotify_seek_backward', step: 10000 }
-        }
-      }
 
     case 'custom-icon':
       return {
