@@ -1,27 +1,22 @@
 <template>
-  <div class="dashboard-view" :class="dashboardBackgroundClass">
+  <div class="dashboard-view" :class="dashboardBackgroundClass" :style="dashboardBackgroundStyle">
     <header class="deck-header enhanced-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
-          <div class="profile-header">
-            <div class="profile-avatar-container">
-              <img 
-                v-if="currentProfile?.avatar" 
-                :src="currentProfile.avatar" 
-                :alt="currentProfile.name"
-                class="profile-avatar enhanced-avatar"
-              />
-              <div v-else class="profile-avatar-placeholder enhanced-avatar">
-                <FontAwesomeIcon :icon="['fas', 'user']" />
-              </div>
-              <div class="avatar-status-indicator"></div>
+          <div class="profile-avatar-container">
+            <img 
+              v-if="currentProfile?.avatar" 
+              :src="currentProfile.avatar" 
+              :alt="currentProfile.name"
+              class="profile-avatar enhanced-avatar"
+            />
+            <div v-else class="profile-avatar-placeholder enhanced-avatar">
+              <FontAwesomeIcon :icon="['fas', 'user']" />
             </div>
-            <div class="profile-info">
-              <h1 class="profile-title">{{ currentProfile?.name || 'VDock' }}</h1>
-              <span class="profile-subtitle">{{ currentProfile?.description || 'Stream Deck Controller' }}</span>
-            </div>
+            <div class="avatar-status-indicator"></div>
           </div>
+          <h1 class="profile-title-inline">{{ currentProfile?.name || 'VDock' }}</h1>
           <SceneNavigation
             v-if="currentProfile && currentProfile.scenes.length > 0"
             :scenes="currentProfile.scenes"
@@ -272,7 +267,25 @@ const isEditingExistingScene = computed(() => {
 const dashboardBackgroundClass = computed(() => {
   const bg = settingsStore.dashboardBackground
   if (bg === 'default') return ''
+  // Check if it's a custom uploaded image (URL)
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
+    return 'dashboard-bg-custom'
+  }
   return `dashboard-bg-${bg}`
+})
+
+const dashboardBackgroundStyle = computed(() => {
+  const bg = settingsStore.dashboardBackground
+  // Handle custom image backgrounds
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
+    return {
+      backgroundImage: `url(${bg})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }
+  }
+  return {}
 })
 
 // Button action categories
@@ -1302,8 +1315,8 @@ function showActionResult(result: ActionResult) {
 }
 
 .header-left {
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
 }
 
 /* Enhanced Profile Header */
@@ -1311,6 +1324,14 @@ function showActionResult(result: ActionResult) {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+}
+
+.profile-title-inline {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  white-space: nowrap;
 }
 
 .profile-avatar-container {
@@ -1767,6 +1788,11 @@ function showActionResult(result: ActionResult) {
     linear-gradient(rgba(102, 126, 234, 0.3) 1px, transparent 1px),
     linear-gradient(90deg, rgba(102, 126, 234, 0.3) 1px, transparent 1px);
   background-size: 50px 50px;
+}
+
+/* Custom Background (applied via inline styles) */
+.dashboard-view.dashboard-bg-custom {
+  /* Styles are applied via computed backgroundStyle */
 }
 
 @keyframes gradientShift {

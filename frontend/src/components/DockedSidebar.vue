@@ -88,10 +88,9 @@ const dragOverSlot = ref<{ row: number; col: number } | null>(null)
 
 // Calculate sidebar width based on button size
 const sidebarWidth = computed(() => {
-  // Match main dashboard button dimensions
-  // Buttons in main dashboard typically render at 120-150px depending on grid
-  // We'll use a similar natural size
-  const baseButtonWidth = 120
+  // Match 5x5 grid button size - much smaller to avoid scrolling
+  // For a 5x5 grid, buttons are typically 100-120px
+  const baseButtonWidth = 110
   const scaledButtonWidth = baseButtonWidth * props.buttonSize
   const padding = 32 // Total horizontal padding (16px each side)
   const editModeExtra = props.isEditMode ? 20 : 0
@@ -99,9 +98,9 @@ const sidebarWidth = computed(() => {
 })
 
 const gridStyle = computed(() => {
-  // Set explicit cell heights to match main dashboard button appearance
-  // Main dashboard buttons typically render at 120-150px height
-  const baseCellHeight = 120 * props.buttonSize
+  // Set explicit cell heights to match 5x5 grid button size
+  // Smaller buttons to prevent scrolling and match grid layout
+  const baseCellHeight = 110 * props.buttonSize
   
   return {
     display: 'grid',
