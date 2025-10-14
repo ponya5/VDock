@@ -80,13 +80,24 @@ export interface Page {
   background?: Background
 }
 
+export interface Scene {
+  id: string
+  name: string
+  icon?: string
+  color?: string
+  pages: Page[]
+  isActive?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Profile {
   id: string
   name: string
   description: string
   icon?: string
   avatar?: string // URL or path to avatar image/gif
-  pages: Page[]
+  scenes: Scene[]
   theme: string
   settings?: ProfileSettings
   created_at?: string

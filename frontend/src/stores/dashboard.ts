@@ -1,31 +1,76 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Profile, Page, Button } from '@/types'
+import type { Profile, Page, Button, Scene } from '@/types'
 import apiClient from '@/api/client'
 import { useSettingsStore } from './settings'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const currentProfile = ref<Profile | null>(null)
+  const currentSceneIndex = ref(0)
   const currentPageIndex = ref(0)
   const isEditMode = ref(false)
   const history = ref<Profile[]>([])
   const historyIndex = ref(-1)
   const maxHistory = 50
 
+  const currentScene = computed(() => {
+    if (!currentProfile.value || !currentProfile.value.scenes.length) return null
+    return currentProfile.value.scenes[currentSceneIndex.value]
+  })
+
   const currentPage = computed(() => {
-    if (!currentProfile.value || !currentProfile.value.pages.length) return null
-    return currentProfile.value.pages[currentPageIndex.value]
+    if (!currentScene.value || !currentScene.value.pages.length) return null
+    return currentScene.value.pages[currentPageIndex.value]
   })
 
   const canUndo = computed(() => historyIndex.value > 0)
   const canRedo = computed(() => historyIndex.value < history.value.length - 1)
 
   function setProfile(profile: Profile) {
-    currentProfile.value = profile
+    // Migrate old profiles from pages to scenes structure
+    const migratedProfile = migrateProfileToScenes(profile)
+    
+    currentProfile.value = migratedProfile
+    currentSceneIndex.value = 0
     currentPageIndex.value = 0
     // Reset history when loading a new profile
-    history.value = [JSON.parse(JSON.stringify(profile))]
+    history.value = [JSON.parse(JSON.stringify(migratedProfile))]
     historyIndex.value = 0
+  }
+
+  function migrateProfileToScenes(profile: Profile): Profile {
+    // If profile already has scenes, return as-is
+    if (profile.scenes && profile.scenes.length > 0) {
+      return profile
+    }
+
+    // Migrate from old pages structure to scenes structure
+    const migratedProfile = { ...profile }
+    
+    if (profile.pages && profile.pages.length > 0) {
+      // Create a default scene with all existing pages
+      migratedProfile.scenes = [{
+        id: `scene_${Date.now()}`,
+        name: 'Default Scene',
+        pages: profile.pages
+      }]
+      // Remove old pages property
+      delete (migratedProfile as any).pages
+    } else {
+      // Create empty scene structure
+      migratedProfile.scenes = [{
+        id: `scene_${Date.now()}`,
+        name: 'Default Scene',
+        pages: [{
+          id: `page_${Date.now()}`,
+          name: 'Page 1',
+          buttons: [],
+          grid_config: { rows: 4, cols: 5 }
+        }]
+      }]
+    }
+
+    return migratedProfile
   }
 
   function addToHistory() {
@@ -61,16 +106,39 @@ export const useDashboardStore = defineStore('dashboard', () => {
     currentProfile.value = JSON.parse(JSON.stringify(history.value[historyIndex.value]))
   }
 
-  function setPage(index: number) {
+  function setScene(index: number) {
     if (!currentProfile.value) return
-    if (index >= 0 && index < currentProfile.value.pages.length) {
+    if (index >= 0 && index < currentProfile.value.scenes.length) {
+      currentSceneIndex.value = index
+      currentPageIndex.value = 0 // Reset to first page of new scene
+    }
+  }
+
+  function nextScene() {
+    if (!currentProfile.value) return
+    if (currentSceneIndex.value < currentProfile.value.scenes.length - 1) {
+      currentSceneIndex.value++
+      currentPageIndex.value = 0
+    }
+  }
+
+  function previousScene() {
+    if (currentSceneIndex.value > 0) {
+      currentSceneIndex.value--
+      currentPageIndex.value = 0
+    }
+  }
+
+  function setPage(index: number) {
+    if (!currentScene.value) return
+    if (index >= 0 && index < currentScene.value.pages.length) {
       currentPageIndex.value = index
     }
   }
 
   function nextPage() {
-    if (!currentProfile.value) return
-    if (currentPageIndex.value < currentProfile.value.pages.length - 1) {
+    if (!currentScene.value) return
+    if (currentPageIndex.value < currentScene.value.pages.length - 1) {
       currentPageIndex.value++
     }
   }
@@ -81,8 +149,60 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  function addPage(page?: Page) {
+  function addScene(scene?: Scene) {
     if (!currentProfile.value) return
+    
+    if (!scene) {
+      // Create a new scene with default page
+      const settingsStore = useSettingsStore()
+      scene = {
+        id: `scene_${Date.now()}`,
+        name: `Scene ${currentProfile.value.scenes.length + 1}`,
+        pages: [{
+          id: `page_${Date.now()}`,
+          name: 'Page 1',
+          buttons: [],
+          grid_config: {
+            rows: settingsStore.defaultGridRows,
+            cols: settingsStore.defaultGridCols
+          }
+        }]
+      }
+    }
+    
+    currentProfile.value.scenes.push(scene)
+    addToHistory()
+    // Auto-save profile after adding scene
+    saveProfile()
+  }
+
+  function removeScene(sceneId: string) {
+    if (!currentProfile.value) return
+    const index = currentProfile.value.scenes.findIndex(s => s.id === sceneId)
+    if (index !== -1) {
+      currentProfile.value.scenes.splice(index, 1)
+      if (currentSceneIndex.value >= currentProfile.value.scenes.length) {
+        currentSceneIndex.value = Math.max(0, currentProfile.value.scenes.length - 1)
+      }
+      addToHistory()
+      // Auto-save profile after removing scene
+      saveProfile()
+    }
+  }
+
+  function updateScene(sceneId: string, updates: Partial<Scene>) {
+    if (!currentProfile.value) return
+    const scene = currentProfile.value.scenes.find(s => s.id === sceneId)
+    if (scene) {
+      Object.assign(scene, updates)
+      addToHistory()
+      // Auto-save profile after updating scene
+      saveProfile()
+    }
+  }
+
+  function addPage(page?: Page) {
+    if (!currentScene.value) return
     
     const settingsStore = useSettingsStore()
     
@@ -90,7 +210,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       // Create a new page with default grid size from settings
       page = {
         id: `page_${Date.now()}`,
-        name: `Page ${currentProfile.value.pages.length + 1}`,
+        name: `Page ${currentScene.value.pages.length + 1}`,
         buttons: [],
         grid_config: {
           rows: settingsStore.defaultGridRows,
@@ -99,25 +219,25 @@ export const useDashboardStore = defineStore('dashboard', () => {
       }
     }
     
-    currentProfile.value.pages.push(page)
+    currentScene.value.pages.push(page)
     addToHistory()
   }
 
   function removePage(pageId: string) {
-    if (!currentProfile.value) return
-    const index = currentProfile.value.pages.findIndex(p => p.id === pageId)
+    if (!currentScene.value) return
+    const index = currentScene.value.pages.findIndex(p => p.id === pageId)
     if (index !== -1) {
-      currentProfile.value.pages.splice(index, 1)
-      if (currentPageIndex.value >= currentProfile.value.pages.length) {
-        currentPageIndex.value = Math.max(0, currentProfile.value.pages.length - 1)
+      currentScene.value.pages.splice(index, 1)
+      if (currentPageIndex.value >= currentScene.value.pages.length) {
+        currentPageIndex.value = Math.max(0, currentScene.value.pages.length - 1)
       }
       addToHistory()
     }
   }
 
   function updatePage(pageId: string, updates: Partial<Page>) {
-    if (!currentProfile.value) return
-    const page = currentProfile.value.pages.find(p => p.id === pageId)
+    if (!currentScene.value) return
+    const page = currentScene.value.pages.find(p => p.id === pageId)
     if (page) {
       Object.assign(page, updates)
       addToHistory()
@@ -274,7 +394,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   return {
     currentProfile,
+    currentScene,
     currentPage,
+    currentSceneIndex,
     currentPageIndex,
     isEditMode,
     canUndo,
@@ -283,6 +405,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     addToHistory,
     undo,
     redo,
+    setScene,
+    nextScene,
+    previousScene,
+    addScene,
+    removeScene,
+    updateScene,
     setPage,
     nextPage,
     previousPage,

@@ -3,12 +3,21 @@
     <header class="deck-header">
       <div class="header-left">
         <h1>{{ currentProfile?.name || 'VDock' }}</h1>
+        <SceneNavigation
+          v-if="currentProfile && currentProfile.scenes.length > 0"
+          :scenes="currentProfile.scenes"
+          :current-scene-index="currentSceneIndex"
+          :is-edit-mode="isEditMode"
+          @set-scene="setScene"
+          @add-scene="addScene"
+          @edit-scene="editScene"
+        />
       </div>
 
       <div class="header-center">
         <PageNavigation
-          v-if="currentProfile && currentProfile.pages.length > 1"
-          :pages="currentProfile.pages"
+          v-if="currentScene && currentScene.pages.length > 1"
+          :pages="currentScene.pages"
           :current-page="currentPageIndex"
           @previous="previousPage"
           @next="nextPage"
@@ -114,20 +123,6 @@
     </main>
 
     <footer v-if="isEditMode" class="deck-footer">
-      <div class="edit-mode-toolbar">
-        <button class="btn btn-secondary" @click="undo" :disabled="!canUndo">
-          <FontAwesomeIcon :icon="['fas', 'undo']" /> Undo
-        </button>
-        <button class="btn btn-secondary" @click="redo" :disabled="!canRedo">
-          <FontAwesomeIcon :icon="['fas', 'redo']" /> Redo
-        </button>
-        <button class="btn btn-primary" @click="addNewButton">
-          <FontAwesomeIcon :icon="['fas', 'plus']" /> Add Button
-        </button>
-        <button class="btn btn-success" @click="saveProfile">
-          <FontAwesomeIcon :icon="['fas', 'save']" /> Save
-        </button>
-      </div>
       <div class="footer-section">
         <label>Grid Size:</label>
         <div class="grid-controls">
@@ -161,6 +156,16 @@
       @close="editingButton = null"
     />
 
+    <!-- Scene Editor Modal -->
+    <SceneEditor
+      v-if="editingScene"
+      :scene="editingScene"
+      :is-editing="isEditingExistingScene"
+      @save="handleSceneSave"
+      @delete="handleSceneDelete"
+      @close="editingScene = null"
+    />
+
     <!-- Action Result Toast -->
     <div v-if="actionResult" class="action-toast" :class="actionResult.success ? 'success' : 'error'">
       {{ actionResult.message }}
@@ -173,10 +178,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useProfilesStore } from '@/stores/profiles'
-import type { Button, ActionResult } from '@/types'
+import type { Button, ActionResult, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
 import PageNavigation from '@/components/PageNavigation.vue'
+import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
+import SceneEditor from '@/components/SceneEditor.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const router = useRouter()
@@ -184,6 +191,7 @@ const dashboardStore = useDashboardStore()
 const profilesStore = useProfilesStore()
 
 const editingButton = ref<Button | null>(null)
+const editingScene = ref<Scene | null>(null)
 const actionResult = ref<ActionResult | null>(null)
 let actionResultTimeout: number | null = null
 
@@ -193,9 +201,16 @@ const expandedCategories = ref<string[]>(['system', 'media', 'web'])
 const selectedAction = ref<any>(null)
 
 const currentProfile = computed(() => dashboardStore.currentProfile)
+const currentScene = computed(() => dashboardStore.currentScene)
 const currentPage = computed(() => dashboardStore.currentPage)
+const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
 const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
 const isEditMode = computed(() => dashboardStore.isEditMode)
+
+const isEditingExistingScene = computed(() => {
+  if (!editingScene.value || !currentProfile.value) return false
+  return currentProfile.value.scenes.some(scene => scene.id === editingScene.value!.id)
+})
 
 // Button action categories
 const actionCategories = ref([
@@ -725,6 +740,33 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
   }
 }
 
+function setScene(index: number) {
+  dashboardStore.setScene(index)
+}
+
+function addScene() {
+  editingScene.value = {
+    id: `scene_${Date.now()}`,
+    name: 'New Scene',
+    icon: '',
+    color: '#3498db',
+    pages: [{
+      id: `page_${Date.now()}`,
+      name: 'Page 1',
+      buttons: [],
+      grid_config: {
+        rows: 4,
+        cols: 5
+      }
+    }],
+    isActive: false
+  }
+}
+
+function editScene(scene: Scene) {
+  editingScene.value = { ...scene }
+}
+
 function setPage(index: number) {
   dashboardStore.setPage(index)
 }
@@ -737,12 +779,20 @@ function previousPage() {
   dashboardStore.previousPage()
 }
 
-function undo() {
-  dashboardStore.undo()
+function handleSceneSave(scene: Scene) {
+  if (isEditingExistingScene.value) {
+    // Editing existing scene
+    dashboardStore.updateScene(scene.id, scene)
+  } else {
+    // Creating new scene
+    dashboardStore.addScene(scene)
+  }
+  editingScene.value = null
 }
 
-function redo() {
-  dashboardStore.redo()
+function handleSceneDelete(sceneId: string) {
+  dashboardStore.removeScene(sceneId)
+  editingScene.value = null
 }
 
 async function handleButtonClick(button: Button) {
@@ -758,34 +808,6 @@ function handleButtonSave(button: Button) {
   editingButton.value = null
 }
 
-function addNewButton() {
-  // Create a new empty button
-  const newButton: Button = {
-    id: `btn_${Date.now()}`,
-    label: 'New Button',
-    icon_type: 'fontawesome',
-    icon: ['fas', 'home'],
-    shape: 'rounded',
-    position: { row: 0, col: 0 },
-    size: { rows: 1, cols: 1 },
-    enabled: true,
-    action: {
-      type: 'custom',
-      config: {}
-    }
-  }
-  dashboardStore.addButton(newButton)
-  editingButton.value = newButton
-}
-
-async function saveProfile() {
-  const success = await dashboardStore.saveProfile()
-  if (success) {
-    showActionResult({ success: true, message: 'Profile saved successfully' })
-  } else {
-    showActionResult({ success: false, message: 'Failed to save profile' })
-  }
-}
 
 function showActionResult(result: ActionResult) {
   actionResult.value = result
@@ -822,12 +844,19 @@ function showActionResult(result: ActionResult) {
   flex: 1;
   display: flex;
   gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.header-left {
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .header-left h1 {
   font-size: 1.5rem;
   font-weight: bold;
   color: var(--color-text);
+  margin: 0;
 }
 
 .header-right {
@@ -863,7 +892,7 @@ function showActionResult(result: ActionResult) {
 .deck-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: var(--spacing-md);
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border);
@@ -898,12 +927,6 @@ function showActionResult(result: ActionResult) {
   border-color: var(--color-primary);
 }
 
-.edit-mode-toolbar {
-  display: flex;
-  gap: var(--spacing-sm);
-  justify-content: flex-start;
-  flex-wrap: wrap;
-}
 
 .action-toast {
   position: fixed;
