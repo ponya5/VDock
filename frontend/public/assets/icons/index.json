@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-10-14T22:18:00Z",
+  "description": "Icon repository index for VDock application",
+  "categories": {
+    "fontawesome-extended": {
+      "system": "icons/fontawesome-extended/system/index.json",
+      "media": "icons/fontawesome-extended/media/index.json",
+      "gaming": "icons/fontawesome-extended/gaming/index.json",
+      "productivity": "icons/fontawesome-extended/productivity/index.json",
+      "streaming": "icons/fontawesome-extended/streaming/index.json",
+      "social": "icons/fontawesome-extended/social/index.json"
+    },
+    "custom": {
+      "svg": "icons/custom/svg/index.json",
+      "png": "icons/custom/png/index.json"
+    },
+    "themed-sets": {
+      "gaming": "icons/themed-sets/gaming/index.json",
+      "productivity": "icons/themed-sets/productivity/index.json",
+      "streaming": "icons/themed-sets/streaming/index.json",
+      "creative": "icons/themed-sets/creative/index.json"
+    }
+  },
+  "totalIcons": 0
+}

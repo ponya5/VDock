@@ -1,0 +1,118 @@
+{
+  "category": "streaming",
+  "description": "Streaming and content creation icons",
+  "icons": [
+    {
+      "id": "obs",
+      "name": "OBS Studio",
+      "icon": ["fas", "video"],
+      "tags": ["obs", "streaming", "broadcast", "recording"],
+      "color": "#302e31"
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "icon": ["fab", "twitch"],
+      "tags": ["twitch", "streaming", "platform", "live"],
+      "color": "#9146ff"
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "icon": ["fab", "youtube"],
+      "tags": ["youtube", "streaming", "video", "platform"],
+      "color": "#ff0000"
+    },
+    {
+      "id": "facebook-live",
+      "name": "Facebook Live",
+      "icon": ["fab", "facebook"],
+      "tags": ["facebook", "live", "streaming", "social"],
+      "color": "#1877f2"
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "icon": ["fab", "discord"],
+      "tags": ["discord", "voice", "chat", "streaming"],
+      "color": "#5865f2"
+    },
+    {
+      "id": "microphone-live",
+      "name": "Live Microphone",
+      "icon": ["fas", "microphone"],
+      "tags": ["microphone", "live", "audio", "streaming"],
+      "color": "#e74c3c"
+    },
+    {
+      "id": "camera-live",
+      "name": "Live Camera",
+      "icon": ["fas", "video"],
+      "tags": ["camera", "live", "video", "streaming"],
+      "color": "#3498db"
+    },
+    {
+      "id": "screen-share",
+      "name": "Screen Share",
+      "icon": ["fas", "desktop"],
+      "tags": ["screen", "share", "display", "streaming"],
+      "color": "#9b59b6"
+    },
+    {
+      "id": "chat",
+      "name": "Chat",
+      "icon": ["fas", "comments"],
+      "tags": ["chat", "messages", "interaction", "streaming"],
+      "color": "#16a085"
+    },
+    {
+      "id": "donation",
+      "name": "Donation",
+      "icon": ["fas", "donate"],
+      "tags": ["donation", "tip", "support", "streaming"],
+      "color": "#f39c12"
+    },
+    {
+      "id": "subscriber",
+      "name": "Subscriber",
+      "icon": ["fas", "user-plus"],
+      "tags": ["subscriber", "follow", "fan", "streaming"],
+      "color": "#e67e22"
+    },
+    {
+      "id": "stream-deck",
+      "name": "Stream Deck",
+      "icon": ["fas", "th"],
+      "tags": ["deck", "control", "buttons", "streaming"],
+      "color": "#2c3e50"
+    },
+    {
+      "id": "scene",
+      "name": "Scene",
+      "icon": ["fas", "layer-group"],
+      "tags": ["scene", "layout", "composition", "streaming"],
+      "color": "#8e44ad"
+    },
+    {
+      "id": "filter",
+      "name": "Filter",
+      "icon": ["fas", "filter"],
+      "tags": ["filter", "effect", "video", "streaming"],
+      "color": "#27ae60"
+    },
+    {
+      "id": "recording",
+      "name": "Recording",
+      "icon": ["fas", "record-vinyl"],
+      "tags": ["recording", "record", "save", "streaming"],
+      "color": "#c0392b"
+    },
+    {
+      "id": "go-live",
+      "name": "Go Live",
+      "icon": ["fas", "broadcast-tower"],
+      "tags": ["live", "broadcast", "stream", "streaming"],
+      "color": "#e74c3c"
+    }
+  ]
+}

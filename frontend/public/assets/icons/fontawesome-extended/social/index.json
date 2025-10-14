@@ -1,0 +1,118 @@
+{
+  "category": "social",
+  "description": "Social media and communication icons",
+  "icons": [
+    {
+      "id": "facebook",
+      "name": "Facebook",
+      "icon": ["fab", "facebook"],
+      "tags": ["facebook", "social", "media", "platform"],
+      "color": "#1877f2"
+    },
+    {
+      "id": "twitter",
+      "name": "Twitter",
+      "icon": ["fab", "twitter"],
+      "tags": ["twitter", "social", "media", "platform"],
+      "color": "#1da1f2"
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "icon": ["fab", "instagram"],
+      "tags": ["instagram", "social", "media", "photos"],
+      "color": "#e4405f"
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "icon": ["fab", "linkedin"],
+      "tags": ["linkedin", "professional", "social", "network"],
+      "color": "#0077b5"
+    },
+    {
+      "id": "reddit",
+      "name": "Reddit",
+      "icon": ["fab", "reddit"],
+      "tags": ["reddit", "social", "community", "discussion"],
+      "color": "#ff4500"
+    },
+    {
+      "id": "snapchat",
+      "name": "Snapchat",
+      "icon": ["fab", "snapchat"],
+      "tags": ["snapchat", "social", "media", "messaging"],
+      "color": "#fffc00"
+    },
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "icon": ["fab", "tiktok"],
+      "tags": ["tiktok", "social", "video", "platform"],
+      "color": "#000000"
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "icon": ["fab", "whatsapp"],
+      "tags": ["whatsapp", "messaging", "chat", "social"],
+      "color": "#25d366"
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "icon": ["fab", "telegram"],
+      "tags": ["telegram", "messaging", "chat", "social"],
+      "color": "#0088cc"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "icon": ["fab", "slack"],
+      "tags": ["slack", "work", "communication", "team"],
+      "color": "#4a154b"
+    },
+    {
+      "id": "skype",
+      "name": "Skype",
+      "icon": ["fab", "skype"],
+      "tags": ["skype", "video", "call", "communication"],
+      "color": "#00aff0"
+    },
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "icon": ["fas", "video"],
+      "tags": ["zoom", "video", "conference", "meeting"],
+      "color": "#2d8cff"
+    },
+    {
+      "id": "teams",
+      "name": "Microsoft Teams",
+      "icon": ["fab", "microsoft"],
+      "tags": ["teams", "microsoft", "work", "collaboration"],
+      "color": "#6264a7"
+    },
+    {
+      "id": "pinterest",
+      "name": "Pinterest",
+      "icon": ["fab", "pinterest"],
+      "tags": ["pinterest", "social", "images", "inspiration"],
+      "color": "#bd081c"
+    },
+    {
+      "id": "tumblr",
+      "name": "Tumblr",
+      "icon": ["fab", "tumblr"],
+      "tags": ["tumblr", "social", "blog", "platform"],
+      "color": "#001935"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "icon": ["fab", "github"],
+      "tags": ["github", "code", "development", "social"],
+      "color": "#181717"
+    }
+  ]
+}

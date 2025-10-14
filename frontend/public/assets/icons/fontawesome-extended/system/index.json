@@ -1,0 +1,118 @@
+{
+  "category": "system",
+  "description": "System and OS related icons",
+  "icons": [
+    {
+      "id": "power-off",
+      "name": "Power Off",
+      "icon": ["fas", "power-off"],
+      "tags": ["power", "shutdown", "off", "system"],
+      "color": "#e74c3c"
+    },
+    {
+      "id": "restart",
+      "name": "Restart",
+      "icon": ["fas", "redo"],
+      "tags": ["restart", "reboot", "refresh", "system"],
+      "color": "#f39c12"
+    },
+    {
+      "id": "sleep",
+      "name": "Sleep",
+      "icon": ["fas", "moon"],
+      "tags": ["sleep", "suspend", "standby", "system"],
+      "color": "#9b59b6"
+    },
+    {
+      "id": "lock-screen",
+      "name": "Lock Screen",
+      "icon": ["fas", "lock"],
+      "tags": ["lock", "security", "screen", "system"],
+      "color": "#34495e"
+    },
+    {
+      "id": "settings",
+      "name": "Settings",
+      "icon": ["fas", "cog"],
+      "tags": ["settings", "configuration", "preferences", "system"],
+      "color": "#7f8c8d"
+    },
+    {
+      "id": "terminal",
+      "name": "Terminal",
+      "icon": ["fas", "terminal"],
+      "tags": ["terminal", "console", "command", "system"],
+      "color": "#2c3e50"
+    },
+    {
+      "id": "task-manager",
+      "name": "Task Manager",
+      "icon": ["fas", "tasks"],
+      "tags": ["tasks", "processes", "manager", "system"],
+      "color": "#3498db"
+    },
+    {
+      "id": "system-info",
+      "name": "System Information",
+      "icon": ["fas", "info-circle"],
+      "tags": ["info", "information", "about", "system"],
+      "color": "#16a085"
+    },
+    {
+      "id": "network",
+      "name": "Network",
+      "icon": ["fas", "network-wired"],
+      "tags": ["network", "connection", "ethernet", "system"],
+      "color": "#27ae60"
+    },
+    {
+      "id": "wifi",
+      "name": "WiFi",
+      "icon": ["fas", "wifi"],
+      "tags": ["wifi", "wireless", "network", "system"],
+      "color": "#3498db"
+    },
+    {
+      "id": "bluetooth",
+      "name": "Bluetooth",
+      "icon": ["fab", "bluetooth"],
+      "tags": ["bluetooth", "wireless", "connection", "system"],
+      "color": "#2980b9"
+    },
+    {
+      "id": "battery",
+      "name": "Battery",
+      "icon": ["fas", "battery-half"],
+      "tags": ["battery", "power", "charge", "system"],
+      "color": "#f1c40f"
+    },
+    {
+      "id": "display",
+      "name": "Display",
+      "icon": ["fas", "desktop"],
+      "tags": ["display", "monitor", "screen", "system"],
+      "color": "#8e44ad"
+    },
+    {
+      "id": "sound",
+      "name": "Sound",
+      "icon": ["fas", "volume-up"],
+      "tags": ["sound", "audio", "volume", "system"],
+      "color": "#e67e22"
+    },
+    {
+      "id": "keyboard",
+      "name": "Keyboard",
+      "icon": ["fas", "keyboard"],
+      "tags": ["keyboard", "input", "typing", "system"],
+      "color": "#95a5a6"
+    },
+    {
+      "id": "mouse",
+      "name": "Mouse",
+      "icon": ["fas", "mouse"],
+      "tags": ["mouse", "pointer", "cursor", "system"],
+      "color": "#34495e"
+    }
+  ]
+}

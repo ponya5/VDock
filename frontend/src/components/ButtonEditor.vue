@@ -44,8 +44,8 @@
               placeholder="fas fa-home"
               style="flex: 1"
             />
-            <button class="btn btn-secondary" @click="showIconPicker = true">
-              <FontAwesomeIcon :icon="['fas', 'icons']" /> Pick Icon
+            <button class="btn btn-secondary" @click="showAssetPicker = 'icon'">
+              <FontAwesomeIcon :icon="['fas', 'icons']" /> Browse Icons
             </button>
           </div>
         </div>
@@ -69,15 +69,23 @@
               <option value="gif">GIF Animation</option>
               <option value="video">Video</option>
             </select>
+            <button 
+              v-if="editedButton.media_type" 
+              class="btn btn-secondary" 
+              @click="showAssetPicker = 'animation'"
+            >
+              <FontAwesomeIcon :icon="['fas', 'film']" /> Browse Media
+            </button>
           </div>
         </div>
 
-        <div v-if="editedButton.media_type" class="form-group">
-          <label>Background Media</label>
-          <MediaPicker 
-            v-model="mediaValue"
-            :profile-id="profileId"
-            @update:modelValue="handleMediaChange"
+        <div v-if="editedButton.media_type && !showAssetPicker" class="form-group">
+          <label>Background Media URL</label>
+          <input 
+            v-model="editedButton.media_url" 
+            type="text" 
+            class="input" 
+            placeholder="Enter media URL or use Browse Media button"
           />
           <p class="form-help">
             {{ getMediaHelpText(editedButton.media_type) }}
@@ -139,6 +147,51 @@
             <option value="rectangle">Rectangle</option>
             <option value="rounded">Rounded</option>
             <option value="circle">Circle</option>
+            <option value="hexagon">Hexagon</option>
+            <option value="diamond">Diamond</option>
+            <option value="octagon">Octagon</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Visual Effects</label>
+          <div class="flex gap-sm">
+            <select v-model="editedButton.style.effect" class="select" style="flex: 1">
+              <option value="none">None</option>
+              <option value="glass">Glass Morphism</option>
+              <option value="neumorphism">Neumorphism</option>
+              <option value="gradient">Gradient</option>
+              <option value="glow">Glow Effect</option>
+              <option value="3d">3D Effect</option>
+            </select>
+            <button 
+              class="btn btn-secondary" 
+              @click="showAssetPicker = 'background'"
+              title="Browse Background Assets"
+            >
+              <FontAwesomeIcon :icon="['fas', 'palette']" /> Backgrounds
+            </button>
+          </div>
+        </div>
+
+        <div v-if="editedButton.style?.effect === 'gradient'" class="form-group">
+          <label>Custom Gradient</label>
+          <input 
+            v-model="editedButton.style.gradient" 
+            type="text" 
+            class="input" 
+            placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Animation</label>
+          <select v-model="editedButton.style.animation" class="select">
+            <option value="none">None</option>
+            <option value="pulse">Pulse</option>
+            <option value="shimmer">Shimmer</option>
+            <option value="bounce">Bounce</option>
+            <option value="rotate">Rotate</option>
           </select>
         </div>
 
@@ -320,6 +373,15 @@
       @select="handleIconSelect" 
       @close="showIconPicker = false" 
     />
+
+    <!-- Asset Picker Modal -->
+    <AssetPicker
+      v-if="showAssetPicker"
+      :type="showAssetPicker"
+      :title="getAssetPickerTitle(showAssetPicker)"
+      @close="showAssetPicker = null"
+      @select="handleAssetSelect"
+    />
   </div>
 </template>
 
@@ -329,6 +391,8 @@ import type { Button, ButtonAction, ActionType } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
+import AssetPicker from './AssetPicker.vue'
+import type { AssetMetadata } from '@/utils/assetManager'
 
 interface Props {
   button: Button
@@ -343,6 +407,7 @@ const emit = defineEmits<{
 
 const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
 const showIconPicker = ref(false)
+const showAssetPicker = ref<'icon' | 'animation' | 'background' | null>(null)
 
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
@@ -405,6 +470,48 @@ function handleIconSelect(icon: string) {
   editedButton.value.icon = icon
   editedButton.value.icon_type = 'fontawesome'
   showIconPicker.value = false
+}
+
+function getAssetPickerTitle(type: string): string {
+  switch (type) {
+    case 'icon': return 'Select Icon'
+    case 'animation': return 'Select Animation'
+    case 'background': return 'Select Background'
+    default: return 'Select Asset'
+  }
+}
+
+function handleAssetSelect(asset: AssetMetadata) {
+  switch (showAssetPicker.value) {
+    case 'icon':
+      if (asset.format === 'fontawesome') {
+        editedButton.value.icon_type = 'fontawesome'
+        editedButton.value.icon = asset.icon
+      } else {
+        editedButton.value.icon_type = 'custom'
+        editedButton.value.icon = asset.url
+      }
+      break
+    
+    case 'animation':
+      editedButton.value.media_url = asset.url
+      editedButton.value.media_type = asset.format === 'gif' ? 'gif' : 'video'
+      break
+    
+    case 'background':
+      if (asset.format === 'css') {
+        editedButton.value.style = editedButton.value.style || {}
+        editedButton.value.style.effect = 'gradient'
+        editedButton.value.style.gradient = asset.css
+      } else {
+        // Handle image backgrounds
+        editedButton.value.media_url = asset.url
+        editedButton.value.media_type = 'image'
+      }
+      break
+  }
+  
+  showAssetPicker.value = null
 }
 
 function handleMediaChange(value: { url: string; type: string } | null) {

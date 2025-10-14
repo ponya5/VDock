@@ -1,0 +1,76 @@
+{
+  "category": "gradients",
+  "description": "CSS gradient backgrounds for dashboard",
+  "gradients": [
+    {
+      "id": "ocean-breeze",
+      "name": "Ocean Breeze",
+      "css": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "colors": ["#667eea", "#764ba2"],
+      "tags": ["blue", "purple", "ocean", "calm"]
+    },
+    {
+      "id": "sunset-glow",
+      "name": "Sunset Glow",
+      "css": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      "colors": ["#f093fb", "#f5576c"],
+      "tags": ["pink", "red", "sunset", "warm"]
+    },
+    {
+      "id": "forest-mist",
+      "name": "Forest Mist",
+      "css": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      "colors": ["#4facfe", "#00f2fe"],
+      "tags": ["blue", "cyan", "forest", "fresh"]
+    },
+    {
+      "id": "royal-purple",
+      "name": "Royal Purple",
+      "css": "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+      "colors": ["#a8edea", "#fed6e3"],
+      "tags": ["purple", "pink", "royal", "elegant"]
+    },
+    {
+      "id": "golden-hour",
+      "name": "Golden Hour",
+      "css": "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+      "colors": ["#ffecd2", "#fcb69f"],
+      "tags": ["orange", "yellow", "golden", "warm"]
+    },
+    {
+      "id": "midnight-city",
+      "name": "Midnight City",
+      "css": "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+      "colors": ["#2c3e50", "#34495e"],
+      "tags": ["dark", "blue", "midnight", "urban"]
+    },
+    {
+      "id": "emerald-water",
+      "name": "Emerald Water",
+      "css": "linear-gradient(135deg, #348f50 0%, #56b4d3 100%)",
+      "colors": ["#348f50", "#56b4d3"],
+      "tags": ["green", "blue", "emerald", "water"]
+    },
+    {
+      "id": "cosmic-fusion",
+      "name": "Cosmic Fusion",
+      "css": "linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)",
+      "colors": ["#ff9a9e", "#fecfef"],
+      "tags": ["pink", "purple", "cosmic", "space"]
+    },
+    {
+      "id": "arctic-paradise",
+      "name": "Arctic Paradise",
+      "css": "linear-gradient(135deg, #b3ffab 0%, #12fff7 100%)",
+      "colors": ["#b3ffab", "#12fff7"],
+      "tags": ["green", "cyan", "arctic", "cool"]
+    },
+    {
+      "id": "velvet-sun",
+      "name": "Velvet Sun",
+      "css": "linear-gradient(135deg, #e1eec3 0%, #f05053 100%)",
+      "colors": ["#e1eec3", "#f05053"],
+      "tags": ["green", "red", "velvet", "contrast"]
+    }
+  ]
+}

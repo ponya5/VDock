@@ -1,51 +1,70 @@
 <template>
-  <div class="dashboard-view">
-    <header class="deck-header">
-      <div class="header-left">
-        <div class="profile-header">
-          <img 
-            v-if="currentProfile?.avatar" 
-            :src="currentProfile.avatar" 
-            :alt="currentProfile.name"
-            class="profile-avatar"
-          />
-          <div v-else class="profile-avatar-placeholder">
-            <FontAwesomeIcon :icon="['fas', 'user']" />
+  <div class="dashboard-view" :class="dashboardBackgroundClass">
+    <header class="deck-header enhanced-header">
+      <div class="header-background"></div>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="profile-header">
+            <div class="profile-avatar-container">
+              <img 
+                v-if="currentProfile?.avatar" 
+                :src="currentProfile.avatar" 
+                :alt="currentProfile.name"
+                class="profile-avatar enhanced-avatar"
+              />
+              <div v-else class="profile-avatar-placeholder enhanced-avatar">
+                <FontAwesomeIcon :icon="['fas', 'user']" />
+              </div>
+              <div class="avatar-status-indicator"></div>
+            </div>
+            <div class="profile-info">
+              <h1 class="profile-title">{{ currentProfile?.name || 'VDock' }}</h1>
+              <span class="profile-subtitle">{{ currentProfile?.description || 'Stream Deck Controller' }}</span>
+            </div>
           </div>
-          <h1>{{ currentProfile?.name || 'VDock' }}</h1>
+          <SceneNavigation
+            v-if="currentProfile && currentProfile.scenes.length > 0"
+            :scenes="currentProfile.scenes"
+            :current-scene-index="currentSceneIndex"
+            :is-edit-mode="isEditMode"
+            @set-scene="setScene"
+            @add-scene="addScene"
+            @edit-scene="editScene"
+            class="enhanced-scene-nav"
+          />
         </div>
-        <SceneNavigation
-          v-if="currentProfile && currentProfile.scenes.length > 0"
-          :scenes="currentProfile.scenes"
-          :current-scene-index="currentSceneIndex"
-          :is-edit-mode="isEditMode"
-          @set-scene="setScene"
-          @add-scene="addScene"
-          @edit-scene="editScene"
-        />
-      </div>
 
-      <div class="header-center">
-        <PageNavigation
-          v-if="currentScene && currentScene.pages.length > 1"
-          :pages="currentScene.pages"
-          :current-page="currentPageIndex"
-          @previous="previousPage"
-          @next="nextPage"
-          @go-to="setPage"
-        />
-      </div>
+        <div class="header-center">
+          <PageNavigation
+            v-if="currentScene && currentScene.pages.length > 1"
+            :pages="currentScene.pages"
+            :current-page="currentPageIndex"
+            @previous="previousPage"
+            @next="nextPage"
+            @go-to="setPage"
+            class="enhanced-page-nav"
+          />
+        </div>
 
-      <div class="header-right">
-        <button class="btn btn-secondary" @click="router.push('/profiles')" title="Profiles">
-          <FontAwesomeIcon :icon="['fas', 'users']" />
-        </button>
-        <button class="btn btn-secondary" @click="toggleEditMode" title="Toggle Edit Mode">
-          <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
-        </button>
-        <button class="btn btn-secondary" @click="router.push('/settings')" title="Settings">
-          <FontAwesomeIcon :icon="['fas', 'cog']" />
-        </button>
+        <div class="header-right">
+          <button class="btn btn-glass enhanced-btn" @click="router.push('/profiles')" title="Profiles">
+            <FontAwesomeIcon :icon="['fas', 'users']" />
+            <span class="btn-label">Profiles</span>
+          </button>
+          <button 
+            class="btn enhanced-btn" 
+            :class="isEditMode ? 'btn-glow edit-active' : 'btn-glass'"
+            @click="toggleEditMode" 
+            title="Toggle Edit Mode"
+          >
+            <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
+            <span class="btn-label">{{ isEditMode ? 'View' : 'Edit' }}</span>
+          </button>
+          <button class="btn btn-glass enhanced-btn" @click="router.push('/settings')" title="Settings">
+            <FontAwesomeIcon :icon="['fas', 'cog']" />
+            <span class="btn-label">Settings</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -247,6 +266,12 @@ const isEditMode = computed(() => dashboardStore.isEditMode)
 const isEditingExistingScene = computed(() => {
   if (!editingScene.value || !currentProfile.value) return false
   return currentProfile.value.scenes.some(scene => scene.id === editingScene.value!.id)
+})
+
+const dashboardBackgroundClass = computed(() => {
+  const bg = settingsStore.dashboardBackground
+  if (bg === 'default') return ''
+  return `dashboard-bg-${bg}`
 })
 
 // Button action categories
@@ -1098,6 +1123,7 @@ function showActionResult(result: ActionResult) {
   height: 100%;
 }
 
+/* Enhanced Header Styles */
 .deck-header {
   display: flex;
   align-items: center;
@@ -1105,6 +1131,52 @@ function showActionResult(result: ActionResult) {
   padding: var(--spacing-md);
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.enhanced-header {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.header-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(102, 126, 234, 0.05) 0%, 
+    rgba(118, 75, 162, 0.05) 50%, 
+    rgba(255, 107, 107, 0.05) 100%);
+  animation: headerGradientShift 10s ease-in-out infinite;
+}
+
+@keyframes headerGradientShift {
+  0%, 100% {
+    background: linear-gradient(135deg, 
+      rgba(102, 126, 234, 0.05) 0%, 
+      rgba(118, 75, 162, 0.05) 50%, 
+      rgba(255, 107, 107, 0.05) 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, 
+      rgba(255, 107, 107, 0.05) 0%, 
+      rgba(102, 126, 234, 0.05) 50%, 
+      rgba(118, 75, 162, 0.05) 100%);
+  }
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .header-left,
@@ -1120,42 +1192,132 @@ function showActionResult(result: ActionResult) {
   align-items: flex-start;
 }
 
+/* Enhanced Profile Header */
 .profile-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
-.profile-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 2px solid var(--color-border);
-}
-
-.profile-avatar-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background-color: var(--color-surface);
-  border: 2px solid var(--color-border);
+.profile-avatar-container {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary);
-  font-size: 1.2rem;
 }
 
-.header-left h1 {
-  font-size: 1.5rem;
-  font-weight: bold;
+.enhanced-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all var(--transition-normal);
+}
+
+.enhanced-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.profile-avatar-placeholder.enhanced-avatar {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  font-size: 1.4rem;
+}
+
+.avatar-status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-title {
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--color-text);
   margin: 0;
+  background: linear-gradient(135deg, var(--color-text), var(--color-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.profile-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
 }
 
 .header-right {
   justify-content: flex-end;
+}
+
+/* Enhanced Button Styles */
+.enhanced-btn {
+  position: relative;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  transition: all var(--transition-normal);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.enhanced-btn .btn-label {
+  margin-left: var(--spacing-xs);
+  font-size: 0.85rem;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all var(--transition-fast);
+}
+
+.enhanced-btn:hover .btn-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.edit-active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)) !important;
+  color: white !important;
+  box-shadow: 0 0 20px rgba(var(--color-primary-rgb, 255, 107, 107), 0.4);
+}
+
+.edit-active .btn-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Enhanced Navigation */
+.enhanced-scene-nav,
+.enhanced-page-nav {
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xs);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-center {

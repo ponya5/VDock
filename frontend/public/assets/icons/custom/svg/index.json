@@ -1,0 +1,78 @@
+{
+  "category": "custom-svg",
+  "description": "Custom SVG icons from open-source libraries",
+  "icons": [
+    {
+      "id": "heroicons-home",
+      "name": "Home (Heroicons)",
+      "url": "/assets/icons/custom/svg/heroicons-home.svg",
+      "source": "heroicons",
+      "license": "MIT",
+      "tags": ["home", "house", "main", "start"],
+      "color": "#374151"
+    },
+    {
+      "id": "heroicons-user",
+      "name": "User (Heroicons)",
+      "url": "/assets/icons/custom/svg/heroicons-user.svg",
+      "source": "heroicons",
+      "license": "MIT",
+      "tags": ["user", "person", "profile", "account"],
+      "color": "#6b7280"
+    },
+    {
+      "id": "lucide-settings",
+      "name": "Settings (Lucide)",
+      "url": "/assets/icons/custom/svg/lucide-settings.svg",
+      "source": "lucide",
+      "license": "MIT",
+      "tags": ["settings", "gear", "config", "preferences"],
+      "color": "#4b5563"
+    },
+    {
+      "id": "lucide-play",
+      "name": "Play (Lucide)",
+      "url": "/assets/icons/custom/svg/lucide-play.svg",
+      "source": "lucide",
+      "license": "MIT",
+      "tags": ["play", "start", "media", "video"],
+      "color": "#059669"
+    },
+    {
+      "id": "feather-heart",
+      "name": "Heart (Feather)",
+      "url": "/assets/icons/custom/svg/feather-heart.svg",
+      "source": "feather",
+      "license": "MIT",
+      "tags": ["heart", "love", "favorite", "like"],
+      "color": "#dc2626"
+    },
+    {
+      "id": "feather-star",
+      "name": "Star (Feather)",
+      "url": "/assets/icons/custom/svg/feather-star.svg",
+      "source": "feather",
+      "license": "MIT",
+      "tags": ["star", "favorite", "bookmark", "rating"],
+      "color": "#f59e0b"
+    },
+    {
+      "id": "phosphor-lightning",
+      "name": "Lightning (Phosphor)",
+      "url": "/assets/icons/custom/svg/phosphor-lightning.svg",
+      "source": "phosphor",
+      "license": "MIT",
+      "tags": ["lightning", "bolt", "energy", "power"],
+      "color": "#7c3aed"
+    },
+    {
+      "id": "phosphor-rocket",
+      "name": "Rocket (Phosphor)",
+      "url": "/assets/icons/custom/svg/phosphor-rocket.svg",
+      "source": "phosphor",
+      "license": "MIT",
+      "tags": ["rocket", "launch", "speed", "startup"],
+      "color": "#2563eb"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "category": "productivity",
+  "description": "Productivity and work-related icons",
+  "icons": [
+    {
+      "id": "calendar",
+      "name": "Calendar",
+      "icon": ["fas", "calendar"],
+      "tags": ["calendar", "date", "schedule", "productivity"],
+      "color": "#2196f3"
+    },
+    {
+      "id": "clock",
+      "name": "Clock",
+      "icon": ["fas", "clock"],
+      "tags": ["clock", "time", "schedule", "productivity"],
+      "color": "#ff9800"
+    },
+    {
+      "id": "calculator",
+      "name": "Calculator",
+      "icon": ["fas", "calculator"],
+      "tags": ["calculator", "math", "numbers", "productivity"],
+      "color": "#607d8b"
+    },
+    {
+      "id": "notepad",
+      "name": "Notepad",
+      "icon": ["fas", "sticky-note"],
+      "tags": ["notepad", "notes", "memo", "productivity"],
+      "color": "#ffeb3b"
+    },
+    {
+      "id": "document",
+      "name": "Document",
+      "icon": ["fas", "file-alt"],
+      "tags": ["document", "file", "text", "productivity"],
+      "color": "#4caf50"
+    },
+    {
+      "id": "spreadsheet",
+      "name": "Spreadsheet",
+      "icon": ["fas", "table"],
+      "tags": ["spreadsheet", "excel", "data", "productivity"],
+      "color": "#2e7d32"
+    },
+    {
+      "id": "presentation",
+      "name": "Presentation",
+      "icon": ["fas", "presentation"],
+      "tags": ["presentation", "slides", "powerpoint", "productivity"],
+      "color": "#d32f2f"
+    },
+    {
+      "id": "email",
+      "name": "Email",
+      "icon": ["fas", "envelope"],
+      "tags": ["email", "mail", "message", "productivity"],
+      "color": "#1976d2"
+    },
+    {
+      "id": "folder",
+      "name": "Folder",
+      "icon": ["fas", "folder"],
+      "tags": ["folder", "directory", "organize", "productivity"],
+      "color": "#ff9800"
+    },
+    {
+      "id": "archive",
+      "name": "Archive",
+      "icon": ["fas", "archive"],
+      "tags": ["archive", "storage", "backup", "productivity"],
+      "color": "#795548"
+    },
+    {
+      "id": "search",
+      "name": "Search",
+      "icon": ["fas", "search"],
+      "tags": ["search", "find", "lookup", "productivity"],
+      "color": "#9c27b0"
+    },
+    {
+      "id": "bookmark",
+      "name": "Bookmark",
+      "icon": ["fas", "bookmark"],
+      "tags": ["bookmark", "save", "favorite", "productivity"],
+      "color": "#f44336"
+    },
+    {
+      "id": "clipboard",
+      "name": "Clipboard",
+      "icon": ["fas", "clipboard"],
+      "tags": ["clipboard", "copy", "paste", "productivity"],
+      "color": "#607d8b"
+    },
+    {
+      "id": "printer",
+      "name": "Printer",
+      "icon": ["fas", "print"],
+      "tags": ["printer", "print", "document", "productivity"],
+      "color": "#424242"
+    },
+    {
+      "id": "scanner",
+      "name": "Scanner",
+      "icon": ["fas", "scanner"],
+      "tags": ["scanner", "scan", "digitize", "productivity"],
+      "color": "#37474f"
+    },
+    {
+      "id": "chart",
+      "name": "Chart",
+      "icon": ["fas", "chart-bar"],
+      "tags": ["chart", "graph", "analytics", "productivity"],
+      "color": "#00bcd4"
+    }
+  ]
+}

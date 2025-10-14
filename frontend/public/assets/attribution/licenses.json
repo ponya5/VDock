@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-10-14T22:18:00Z",
+  "description": "License information for all assets in the VDock repository",
+  "licenses": {
+    "MIT": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT",
+      "description": "A permissive license that allows commercial use, modification, distribution, and private use.",
+      "requiresAttribution": true
+    },
+    "Apache-2.0": {
+      "name": "Apache License 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0",
+      "description": "A permissive license that allows commercial use with patent protection.",
+      "requiresAttribution": true
+    },
+    "CC0": {
+      "name": "Creative Commons Zero",
+      "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "description": "Public domain dedication - no rights reserved.",
+      "requiresAttribution": false
+    },
+    "CC-BY-4.0": {
+      "name": "Creative Commons Attribution 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "description": "Allows sharing and adaptation with attribution required.",
+      "requiresAttribution": true
+    }
+  },
+  "assets": {}
+}

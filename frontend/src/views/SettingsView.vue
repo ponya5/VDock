@@ -77,6 +77,30 @@
             <p class="form-help">Display the left sidebar with persistent buttons</p>
           </div>
 
+          <div class="form-group">
+            <label>Dashboard Background</label>
+            <select v-model="settings.dashboardBackground" class="select">
+              <option value="default">Default (Gradient)</option>
+              <optgroup label="Static Gradients">
+                <option value="ocean-breeze">Ocean Breeze</option>
+                <option value="sunset-glow">Sunset Glow</option>
+                <option value="forest-mist">Forest Mist</option>
+                <option value="royal-purple">Royal Purple</option>
+                <option value="golden-hour">Golden Hour</option>
+              </optgroup>
+              <optgroup label="Animated Backgrounds">
+                <option value="floating-particles">Floating Particles</option>
+                <option value="gradient-waves">Gradient Waves</option>
+                <option value="geometric-patterns">Geometric Patterns</option>
+                <option value="aurora-borealis">Aurora Borealis</option>
+                <option value="starfield">Starfield</option>
+                <option value="bubble-float">Floating Bubbles</option>
+                <option value="neon-grid">Neon Grid</option>
+              </optgroup>
+            </select>
+            <p class="form-help">Choose a background style for your dashboard</p>
+          </div>
+
         </section>
       </div>
 

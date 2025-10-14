@@ -1,0 +1,54 @@
+{
+  "category": "patterns",
+  "description": "Geometric and organic patterns for dashboard backgrounds",
+  "patterns": [
+    {
+      "id": "circuit-board",
+      "name": "Circuit Board",
+      "css": "radial-gradient(circle at 25% 25%, #00f5ff 0%, transparent 50%), radial-gradient(circle at 75% 75%, #ff00f5 0%, transparent 50%), linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "tags": ["tech", "circuit", "electronic", "modern"]
+    },
+    {
+      "id": "hexagon-grid",
+      "name": "Hexagon Grid",
+      "css": "linear-gradient(135deg, #667eea 0%, #764ba2 100%), repeating-linear-gradient(30deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)",
+      "tags": ["geometric", "hexagon", "grid", "pattern"]
+    },
+    {
+      "id": "wave-pattern",
+      "name": "Wave Pattern",
+      "css": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%), repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px)",
+      "tags": ["wave", "organic", "flow", "smooth"]
+    },
+    {
+      "id": "diamond-grid",
+      "name": "Diamond Grid",
+      "css": "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%), repeating-linear-gradient(45deg, transparent, transparent 15px, rgba(0,0,0,0.1) 15px, rgba(0,0,0,0.1) 30px)",
+      "tags": ["diamond", "geometric", "grid", "elegant"]
+    },
+    {
+      "id": "dot-matrix",
+      "name": "Dot Matrix",
+      "css": "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.2) 2px, transparent 2px), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2) 2px, transparent 2px), linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+      "tags": ["dots", "matrix", "retro", "digital"]
+    },
+    {
+      "id": "triangular-mesh",
+      "name": "Triangular Mesh",
+      "css": "linear-gradient(135deg, #348f50 0%, #56b4d3 100%), repeating-linear-gradient(60deg, transparent, transparent 25px, rgba(255,255,255,0.1) 25px, rgba(255,255,255,0.1) 50px)",
+      "tags": ["triangle", "mesh", "geometric", "modern"]
+    },
+    {
+      "id": "crosshatch",
+      "name": "Crosshatch",
+      "css": "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%), repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px), repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)",
+      "tags": ["crosshatch", "texture", "artistic", "sketch"]
+    },
+    {
+      "id": "spiral-pattern",
+      "name": "Spiral Pattern",
+      "css": "conic-gradient(from 0deg at 50% 50%, #b3ffab, #12fff7, #b3ffab, #12fff7), linear-gradient(135deg, rgba(179,255,171,0.8) 0%, rgba(18,255,247,0.8) 100%)",
+      "tags": ["spiral", "radial", "hypnotic", "dynamic"]
+    }
+  ]
+}

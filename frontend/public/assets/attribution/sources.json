@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-10-14T22:18:00Z",
+  "description": "Source information for all assets in the VDock repository",
+  "sources": {
+    "heroicons": {
+      "name": "Heroicons",
+      "url": "https://heroicons.com/",
+      "description": "Beautiful hand-crafted SVG icons, by the makers of Tailwind CSS.",
+      "license": "MIT",
+      "assets": []
+    },
+    "lucide": {
+      "name": "Lucide",
+      "url": "https://lucide.dev/",
+      "description": "Beautiful & consistent icon toolkit made by the community.",
+      "license": "MIT",
+      "assets": []
+    },
+    "feather": {
+      "name": "Feather Icons",
+      "url": "https://feathericons.com/",
+      "description": "Simply beautiful open source icons.",
+      "license": "MIT",
+      "assets": []
+    },
+    "iconoir": {
+      "name": "Iconoir",
+      "url": "https://iconoir.com/",
+      "description": "A high-quality selection of free icons.",
+      "license": "MIT",
+      "assets": []
+    },
+    "phosphor": {
+      "name": "Phosphor Icons",
+      "url": "https://phosphoricons.com/",
+      "description": "A flexible icon family for interfaces, diagrams, presentations.",
+      "license": "MIT",
+      "assets": []
+    }
+  }
+}

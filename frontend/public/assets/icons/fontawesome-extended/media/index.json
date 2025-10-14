@@ -1,0 +1,118 @@
+{
+  "category": "media",
+  "description": "Media control and entertainment icons",
+  "icons": [
+    {
+      "id": "play",
+      "name": "Play",
+      "icon": ["fas", "play"],
+      "tags": ["play", "start", "media", "control"],
+      "color": "#27ae60"
+    },
+    {
+      "id": "pause",
+      "name": "Pause",
+      "icon": ["fas", "pause"],
+      "tags": ["pause", "stop", "media", "control"],
+      "color": "#f39c12"
+    },
+    {
+      "id": "stop",
+      "name": "Stop",
+      "icon": ["fas", "stop"],
+      "tags": ["stop", "end", "media", "control"],
+      "color": "#e74c3c"
+    },
+    {
+      "id": "previous",
+      "name": "Previous",
+      "icon": ["fas", "backward"],
+      "tags": ["previous", "back", "media", "control"],
+      "color": "#3498db"
+    },
+    {
+      "id": "next",
+      "name": "Next",
+      "icon": ["fas", "forward"],
+      "tags": ["next", "forward", "media", "control"],
+      "color": "#3498db"
+    },
+    {
+      "id": "shuffle",
+      "name": "Shuffle",
+      "icon": ["fas", "random"],
+      "tags": ["shuffle", "random", "media", "control"],
+      "color": "#9b59b6"
+    },
+    {
+      "id": "repeat",
+      "name": "Repeat",
+      "icon": ["fas", "redo"],
+      "tags": ["repeat", "loop", "media", "control"],
+      "color": "#16a085"
+    },
+    {
+      "id": "volume-mute",
+      "name": "Mute",
+      "icon": ["fas", "volume-mute"],
+      "tags": ["mute", "silent", "volume", "media"],
+      "color": "#e74c3c"
+    },
+    {
+      "id": "volume-down",
+      "name": "Volume Down",
+      "icon": ["fas", "volume-down"],
+      "tags": ["volume", "down", "quiet", "media"],
+      "color": "#f39c12"
+    },
+    {
+      "id": "volume-up",
+      "name": "Volume Up",
+      "icon": ["fas", "volume-up"],
+      "tags": ["volume", "up", "loud", "media"],
+      "color": "#27ae60"
+    },
+    {
+      "id": "music",
+      "name": "Music",
+      "icon": ["fas", "music"],
+      "tags": ["music", "audio", "song", "media"],
+      "color": "#e91e63"
+    },
+    {
+      "id": "video",
+      "name": "Video",
+      "icon": ["fas", "video"],
+      "tags": ["video", "camera", "record", "media"],
+      "color": "#2196f3"
+    },
+    {
+      "id": "microphone",
+      "name": "Microphone",
+      "icon": ["fas", "microphone"],
+      "tags": ["microphone", "mic", "audio", "media"],
+      "color": "#ff5722"
+    },
+    {
+      "id": "headphones",
+      "name": "Headphones",
+      "icon": ["fas", "headphones"],
+      "tags": ["headphones", "audio", "listen", "media"],
+      "color": "#607d8b"
+    },
+    {
+      "id": "speaker",
+      "name": "Speaker",
+      "icon": ["fas", "volume-up"],
+      "tags": ["speaker", "audio", "sound", "media"],
+      "color": "#795548"
+    },
+    {
+      "id": "equalizer",
+      "name": "Equalizer",
+      "icon": ["fas", "sliders-h"],
+      "tags": ["equalizer", "eq", "audio", "media"],
+      "color": "#4caf50"
+    }
+  ]
+}
