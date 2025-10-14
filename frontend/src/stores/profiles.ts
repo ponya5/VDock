@@ -10,7 +10,7 @@ interface ProfileSummary {
   icon?: string
   avatar?: string
   theme: string
-  page_count: number
+  scene_count: number
 }
 
 export const useProfilesStore = defineStore('profiles', () => {
@@ -134,7 +134,7 @@ export const useProfilesStore = defineStore('profiles', () => {
             icon: response.data.profile.icon,
             avatar: response.data.profile.avatar,
             theme: response.data.profile.theme,
-            page_count: response.data.profile.pages?.length || 0
+            scene_count: response.data.profile.scenes?.length || 0
           }
           // Ensure reactivity by replacing the entire array
           const updatedProfiles = [...profiles.value]

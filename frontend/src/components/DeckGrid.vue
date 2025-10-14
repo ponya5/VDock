@@ -73,7 +73,7 @@ const gridStyle = computed(() => {
     display: 'grid',
     gridTemplateRows: `repeat(${rows}, 1fr)`,
     gridTemplateColumns: `repeat(${cols}, 1fr)`,
-    gap: props.isEditMode ? 'var(--spacing-sm)' : '0',
+    gap: 'var(--spacing-xs)', // Always show small spacing between buttons
     width: '100%',
     height: '100%',
     padding: 'var(--spacing-md)'
