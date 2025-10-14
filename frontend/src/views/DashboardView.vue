@@ -77,6 +77,7 @@
         :is-edit-mode="isEditMode"
         :show-labels="settingsStore.showLabels"
         :show-tooltips="settingsStore.showTooltips"
+        :button-size="settingsStore.buttonSize"
         @button-click="handleButtonClick"
         @button-edit="handleButtonEdit"
         @button-copy="handleButtonCopy"
@@ -1701,6 +1702,85 @@ function showActionResult(result: ActionResult) {
 .btn-sm {
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 0.8rem;
+}
+
+/* Dashboard Background Styles */
+.dashboard-view.dashboard-bg-ocean-breeze {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.dashboard-view.dashboard-bg-sunset-glow {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.dashboard-view.dashboard-bg-forest-mist {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.dashboard-view.dashboard-bg-royal-purple {
+  background: linear-gradient(135deg, #b721ff 0%, #21d4fd 100%);
+}
+
+.dashboard-view.dashboard-bg-golden-hour {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Animated Backgrounds */
+.dashboard-view.dashboard-bg-floating-particles {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-view.dashboard-bg-gradient-waves {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.dashboard-view.dashboard-bg-geometric-patterns {
+  background: 
+    linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%),
+    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.05) 10px, rgba(255,255,255,.05) 20px);
+}
+
+.dashboard-view.dashboard-bg-aurora-borealis {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background-size: 400% 400%;
+  animation: aurora 20s ease infinite;
+}
+
+.dashboard-view.dashboard-bg-starfield {
+  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+  position: relative;
+}
+
+.dashboard-view.dashboard-bg-bubble-float {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-view.dashboard-bg-neon-grid {
+  background: #0a0a0a;
+  background-image: 
+    linear-gradient(rgba(102, 126, 234, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102, 126, 234, 0.3) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
 }
 </style>
 

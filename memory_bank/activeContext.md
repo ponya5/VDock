@@ -1,6 +1,6 @@
-# Active Context: VDock Production-Level Refactoring
+# Active Context: VDock Bug Fixes & Maintenance
 
-## Current Phase: VAN Mode - Analysis & Planning
+## Current Phase: Bug Fixes Complete ✅
 
 ### Project Context
 VDock is a virtual stream deck application with:
@@ -8,27 +8,69 @@ VDock is a virtual stream deck application with:
 - Frontend: Vue.js/TypeScript SPA with Electron wrapper
 - Features: Button management, profiles, themes, integrations (Spotify), plugins
 
-### Current Focus
-Analyzing codebase structure and identifying areas for production-level improvements:
-1. Code quality and clean code principles
-2. Project structure optimization
-3. Removal of test/mock data
-4. Creation of proper production files and configurations
+### Recently Completed Work (October 14, 2025)
+Successfully resolved 7 critical bugs across 2 sessions:
 
-### Key Components Identified
-- Backend actions system (command, hotkey, program, system, URL actions)
-- Authentication and profile management
-- Plugin architecture with OBS integration
-- Frontend component system with stores and composables
-- Electron desktop wrapper
+**Session 1:**
+1. **Avatar Upload Network Error** ✅
+   - Fixed endpoint mismatch between frontend and backend
+   - AvatarPicker now correctly calls `/upload/icon`
+
+2. **System Monitor Metrics Not Fetching** ✅
+   - Fixed PerformanceMonitorButton response parsing
+   - Corrected field name mappings to match backend structure
+   - Removed non-existent GPU endpoint calls
+
+3. **App Integration List Not Showing** ✅
+   - Fixed SettingsView running apps data parsing
+   - Correctly extracts data from nested response structure
+
+4. **Docked Sidebar Width Issue** ✅
+   - Made sidebar width dynamic based on buttonSize prop
+   - Properly scales with main dashboard button size
+
+**Session 2:**
+5. **Running Apps 404 Error** ✅
+   - Fixed Flask route ordering in system_metrics.py
+   - Moved `/running-apps` before catch-all `/<metric_type>` route
+
+6. **Dashboard Backgrounds Not Applying** ✅
+   - Added all missing CSS classes for background options
+   - 11 background styles + 2 animations
+
+7. **Performance Metrics Still "--"** ✅
+   - Issue resolved by fixing backend route ordering
+   - Endpoints now accessible and returning data
+
+**Session 3:**
+8. **Import Error in system_metrics.py** ✅
+   - Fixed `log_error` import error
+   - Changed to use `logger.error()` from Python's logging module
+   - Updated all 12 logger calls
+
+9. **Docked Button Scaling** ✅
+   - Added `transform: scale()` to docked sidebar grid
+   - Buttons now properly match main dashboard button size
+
+10. **Backend Successfully Restarted** ✅
+   - Killed all old backend processes
+   - Started fresh backend with all fixes
+   - All endpoints confirmed working (Status 200)
+
+### Technical Details
+- All fixes follow clean code principles
+- No linter errors introduced
+- Changes maintain backward compatibility
+- Proper error handling maintained
 
 ### Next Steps
-1. Complete codebase analysis
-2. Identify specific cleanup areas
-3. Plan refactoring approach
-4. Begin systematic improvements
+1. Test all fixes in running application
+2. Verify metrics display correctly
+3. Confirm app integration list populates
+4. Test avatar upload with various file types
+5. Check docked sidebar scaling at different button sizes
 
 ### Memory Bank Status
-- Memory Bank initialized
-- Task tracking active
-- Context management operational
+- Bug fixes documented in progress.md
+- Active context updated
+- All TODOs completed

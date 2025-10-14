@@ -110,19 +110,19 @@ function getMetricValue(metric: PerformanceMetric): string {
   
   switch (metric) {
     case 'memory':
-      return data.used_percent?.toFixed(1) || '--'
+      return data.usage_percent?.toFixed(1) || '--'
     case 'cpu_usage':
-      return data.percent?.toFixed(1) || '--'
+      return data.usage_percent?.toFixed(1) || '--'
     case 'cpu_temperature':
       return data.current?.toFixed(1) || '--'
     case 'cpu_frequency':
-      return data.current_mhz?.toFixed(0) || '--'
+      return data.frequency_current?.toFixed(0) || '--'
     case 'cpu_package_power':
-      return data.watts?.toFixed(1) || '--'
+      return data.power_watts?.toFixed(1) || '--'
     case 'internet_speed':
-      return data.download_mbps?.toFixed(1) || '--'
+      return data.bytes_recv_mb?.toFixed(1) || '--'
     case 'harddisk':
-      return data[0]?.percent?.toFixed(1) || '--'
+      return data[0]?.usage_percent?.toFixed(1) || '--'
     case 'gpu_temperature':
       return data[0]?.temperature_celsius?.toFixed(1) || '--'
     case 'gpu_core_frequency':
@@ -177,22 +177,28 @@ async function fetchMetrics() {
       apiClient.get('/metrics/disk').catch(() => null),
       apiClient.get('/metrics/network').catch(() => null),
       apiClient.get('/metrics/temperature').catch(() => null),
-      apiClient.get('/metrics/gpu').catch(() => null),
     ])
     
+    const cpuData = responses[0]?.data?.data || {}
+    const memoryData = responses[1]?.data?.data || {}
+    const diskData = responses[2]?.data?.data || {}
+    const networkData = responses[3]?.data?.data || {}
+    const tempData = responses[4]?.data?.data || {}
+    
     metricsData.value = {
-      cpu_usage: responses[0]?.data || {},
-      cpu_frequency: responses[0]?.data || {},
-      cpu_package_power: responses[0]?.data || {},
-      memory: responses[1]?.data || {},
-      harddisk: responses[2]?.data || [],
-      internet_speed: responses[3]?.data || {},
-      cpu_temperature: responses[4]?.data?.cpu_temp?.[0] || {},
-      gpu_temperature: responses[5]?.data || [],
-      gpu_core_frequency: responses[5]?.data || [],
-      gpu_core_usage: responses[5]?.data || [],
-      gpu_memory_frequency: responses[5]?.data || [],
-      gpu_memory_usage: responses[5]?.data || [],
+      cpu_usage: cpuData,
+      cpu_frequency: cpuData,
+      cpu_package_power: cpuData,
+      memory: memoryData,
+      harddisk: diskData.partitions || [],
+      internet_speed: networkData,
+      cpu_temperature: tempData.sensors?.[0] || {},
+      // GPU metrics not supported yet
+      gpu_temperature: [],
+      gpu_core_frequency: [],
+      gpu_core_usage: [],
+      gpu_memory_frequency: [],
+      gpu_memory_usage: [],
     }
   } catch (err: any) {
     console.error('Failed to fetch performance metrics:', err)

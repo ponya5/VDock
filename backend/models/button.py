@@ -15,6 +15,7 @@ class ActionType(str, Enum):
     CROSS_PLATFORM = 'cross_platform'
     FOLDER = 'folder'
     PLUGIN = 'plugin'
+    CALENDAR = 'calendar'
 
 
 class SystemControlType(str, Enum):

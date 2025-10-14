@@ -67,6 +67,11 @@
         :refresh-interval="button.action?.config?.refresh_interval || 15"
       />
       
+      <!-- Calendar -->
+      <CalendarButton
+        v-else-if="button.action?.type === 'calendar'"
+      />
+      
       <div v-else-if="button.icon || button.media_url" class="button-icon">
         <!-- FontAwesome Icon -->
         <FontAwesomeIcon 
@@ -130,6 +135,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
+import CalendarButton from './CalendarButton.vue'
 
 interface Props {
   button: Button

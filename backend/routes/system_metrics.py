@@ -2,11 +2,15 @@
 System Metrics API Routes
 Endpoints for fetching real-time system metrics
 """
+import logging
 from flask import Blueprint, jsonify, request
 from utils.system_metrics import SystemMetrics
-from utils.logger import log_info, log_error
 
-system_metrics_bp = Blueprint('system_metrics', __name__, url_prefix='/api/metrics')
+logger = logging.getLogger(__name__)
+
+system_metrics_bp = Blueprint(
+    'system_metrics', __name__, url_prefix='/api/metrics'
+)
 
 
 @system_metrics_bp.route('/cpu', methods=['GET'])
@@ -16,7 +20,7 @@ def get_cpu_metrics():
         metrics = SystemMetrics.get_cpu_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching CPU metrics: {e}")
+        logger.error(f"Error fetching CPU metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -27,7 +31,7 @@ def get_memory_metrics():
         metrics = SystemMetrics.get_memory_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching memory metrics: {e}")
+        logger.error(f"Error fetching memory metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -38,7 +42,7 @@ def get_disk_metrics():
         metrics = SystemMetrics.get_disk_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching disk metrics: {e}")
+        logger.error(f"Error fetching disk metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -49,7 +53,7 @@ def get_network_metrics():
         metrics = SystemMetrics.get_network_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching network metrics: {e}")
+        logger.error(f"Error fetching network metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -60,7 +64,7 @@ def get_temperature_metrics():
         metrics = SystemMetrics.get_temperature_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching temperature metrics: {e}")
+        logger.error(f"Error fetching temperature metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -71,7 +75,7 @@ def get_battery_metrics():
         metrics = SystemMetrics.get_battery_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching battery metrics: {e}")
+        logger.error(f"Error fetching battery metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -83,7 +87,7 @@ def get_process_metrics():
         metrics = SystemMetrics.get_process_metrics(limit=limit)
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching process metrics: {e}")
+        logger.error(f"Error fetching process metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -94,7 +98,7 @@ def get_system_info():
         info = SystemMetrics.get_system_info()
         return jsonify({'success': True, 'data': info})
     except Exception as e:
-        log_error(f"Error fetching system info: {e}")
+        logger.error(f"Error fetching system info: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -105,7 +109,44 @@ def get_all_metrics():
         metrics = SystemMetrics.get_all_metrics()
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching all metrics: {e}")
+        logger.error(f"Error fetching all metrics: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@system_metrics_bp.route('/running-apps', methods=['GET'])
+def get_running_apps():
+    """Get list of currently running applications"""
+    try:
+        import psutil
+        apps = []
+        seen_names = set()
+
+        for proc in psutil.process_iter(['pid', 'name', 'exe', 'create_time']):
+            try:
+                info = proc.info
+                name = info['name']
+
+                # Skip system processes and duplicates
+                if (name and name not in seen_names and
+                        not name.startswith('System')):
+                    apps.append({
+                        'name': name,
+                        'exe': name.lower(),
+                        'pid': info['pid'],
+                        'path': info['exe'] if info['exe'] else '',
+                        'running_since': info['create_time']
+                    })
+                    seen_names.add(name)
+            except (psutil.NoSuchProcess, psutil.AccessDenied,
+                    psutil.ZombieProcess):
+                continue
+
+        # Sort by name
+        apps.sort(key=lambda x: x['name'].lower())
+
+        return jsonify({'success': True, 'data': apps})
+    except Exception as e:
+        logger.error(f"Error fetching running apps: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -118,41 +159,5 @@ def get_metric_by_type(metric_type):
             return jsonify({'success': False, 'error': metrics['error']}), 400
         return jsonify({'success': True, 'data': metrics})
     except Exception as e:
-        log_error(f"Error fetching metric {metric_type}: {e}")
+        logger.error(f"Error fetching metric {metric_type}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@system_metrics_bp.route('/running-apps', methods=['GET'])
-def get_running_apps():
-    """Get list of currently running applications"""
-    try:
-        import psutil
-        apps = []
-        seen_names = set()
-        
-        for proc in psutil.process_iter(['pid', 'name', 'exe', 'create_time']):
-            try:
-                info = proc.info
-                name = info['name']
-                
-                # Skip system processes and duplicates
-                if name and name not in seen_names and not name.startswith('System'):
-                    apps.append({
-                        'name': name,
-                        'exe': name.lower(),
-                        'pid': info['pid'],
-                        'path': info['exe'] if info['exe'] else '',
-                        'running_since': info['create_time']
-                    })
-                    seen_names.add(name)
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
-        
-        # Sort by name
-        apps.sort(key=lambda x: x['name'].lower())
-        
-        return jsonify({'success': True, 'data': apps})
-    except Exception as e:
-        log_error(f"Error fetching running apps: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
