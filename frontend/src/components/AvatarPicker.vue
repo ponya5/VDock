@@ -9,6 +9,36 @@
       </div>
 
       <div class="modal-body">
+        <!-- Upload Custom Avatar Section -->
+        <div class="upload-section">
+          <h3>Upload Custom Avatar</h3>
+          <div class="upload-area">
+            <input 
+              ref="fileInput"
+              type="file" 
+              accept="image/png,image/jpeg,image/jpg,image/gif"
+              @change="handleFileUpload"
+              style="display: none"
+            />
+            <button class="btn btn-primary upload-btn" @click="triggerFileInput">
+              <FontAwesomeIcon :icon="['fas', 'upload']" />
+              Upload Photo
+            </button>
+            <p class="upload-help">PNG, JPG, GIF - Max 5MB</p>
+          </div>
+          
+          <div v-if="uploadedAvatar" class="uploaded-preview">
+            <img :src="uploadedAvatar.url" alt="Uploaded avatar" class="uploaded-image" />
+            <button class="btn btn-sm btn-danger" @click="removeUploadedAvatar">
+              <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
+            </button>
+          </div>
+        </div>
+
+        <div class="divider">
+          <span>OR CHOOSE FROM PRESETS</span>
+        </div>
+
         <div v-if="loading" class="loading-state">
           <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
           <span>Loading avatars...</span>
@@ -78,6 +108,8 @@ const emit = defineEmits<{
 const selectedAvatar = ref<Avatar | null>(null)
 const avatars = ref<Avatar[]>([])
 const loading = ref(true)
+const uploadedAvatar = ref<Avatar | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 async function loadAvatars() {
   try {
@@ -111,11 +143,88 @@ function parseIcon(iconString: string) {
 
 function selectAvatar(avatar: Avatar) {
   selectedAvatar.value = avatar
+  // Clear uploaded avatar selection if selecting preset
+  if (uploadedAvatar.value && avatar.id !== uploadedAvatar.value.id) {
+    // Keep uploaded avatar but mark preset as selected
+  }
+}
+
+function triggerFileInput() {
+  fileInput.value?.click()
+}
+
+async function handleFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  // Validate file type
+  if (!file.type.match(/^image\/(png|jpeg|jpg|gif)$/)) {
+    alert('Please upload a valid image file (PNG, JPG, or GIF)')
+    return
+  }
+  
+  // Validate file size (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('File size must be less than 5MB')
+    return
+  }
+  
+  try {
+    // Create FormData for upload
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'avatar')
+    
+    // Upload to backend
+    const response = await apiClient.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    if (response.data.success) {
+      const uploadedUrl = response.data.url
+      
+      // Create avatar object
+      uploadedAvatar.value = {
+        id: 'custom-uploaded',
+        name: 'Custom Avatar',
+        url: uploadedUrl,
+        type: 'image',
+        category: 'custom'
+      }
+      
+      // Auto-select the uploaded avatar
+      selectedAvatar.value = uploadedAvatar.value
+    } else {
+      alert('Failed to upload avatar: ' + (response.data.error || 'Unknown error'))
+    }
+  } catch (error: any) {
+    console.error('Avatar upload error:', error)
+    alert('Failed to upload avatar: ' + (error.message || 'Network error'))
+  }
+  
+  // Reset file input
+  if (target) {
+    target.value = ''
+  }
+}
+
+function removeUploadedAvatar() {
+  uploadedAvatar.value = null
+  if (selectedAvatar.value?.id === 'custom-uploaded') {
+    selectedAvatar.value = null
+  }
 }
 
 function confirmSelection() {
-  if (selectedAvatar.value) {
-    emit('select', selectedAvatar.value)
+  // Prioritize uploaded avatar if selected
+  const avatarToSelect = selectedAvatar.value || uploadedAvatar.value
+  
+  if (avatarToSelect) {
+    emit('select', avatarToSelect)
   }
 }
 
@@ -273,5 +382,96 @@ onMounted(() => {
   gap: var(--spacing-sm);
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+}
+
+/* Upload Section Styles */
+.upload-section {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--color-border);
+}
+
+.upload-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+}
+
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.upload-help {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.uploaded-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+}
+
+.uploaded-image {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-primary);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: var(--spacing-lg) 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.divider span {
+  padding: 0 var(--spacing-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
 }
 </style>

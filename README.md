@@ -1,22 +1,43 @@
-# VDock - Virtual Stream Deck
+# VDock - Virtual Stream Interface
 
-A powerful, cross-platform virtual stream deck application that brings customizable control buttons to your computer. Control applications, execute commands, send hotkeys, and automate workflows with a beautiful, modern interface.
+A powerful, cross-platform virtual stream interface that brings customizable control buttons to your computer. Control applications, execute commands, send hotkeys, automate workflows, monitor system metrics, and seamlessly integrate with your favorite applications—all with a beautiful, modern interface.
 
 ## Features
 
+### 🎨 **Customization & Styling**
 - **Fully Customizable Buttons**: Create unlimited buttons with custom icons, labels, and actions
+- **Modern Visual Effects**: Glass-morphism, neumorphism, gradients, glow, and 3D effects
+- **Button Animations**: Pulse, shimmer, bounce, and rotate animations
+- **Custom Shapes**: Rectangle, rounded, circle, hexagon, diamond, and octagon buttons
+- **Dashboard Backgrounds**: 26+ built-in backgrounds plus support for custom images, GIFs, and videos
+- **Custom Avatars**: Upload your own photos as profile avatars
+
+### ⚡ **Automation & Actions**
 - **Multiple Action Types**: 
   - Open URLs in your browser
   - Launch programs and applications
   - Execute shell commands
   - Send keyboard shortcuts/hotkeys
   - Control system functions (volume, media playback)
-  - Chain multiple actions together
+- **Advanced Macro System**: Create multi-step automation sequences with hotkeys, delays, text typing, and mouse clicks
+- **System Metrics Display**: Monitor CPU, RAM, disk, network, temperature, battery, and GPU in real-time
+
+### 🔗 **Smart Integration**
+- **App Detection**: Automatically detect running applications
+- **App Integration**: Map applications to dedicated scenes
+- **Auto Scene Switching**: Automatically switch scenes when monitored apps become active
+- **Multi-Platform Support**: Windows, macOS, and Linux
+
+### 📊 **Organization & Management**
 - **Multi-Page Layouts**: Organize buttons across multiple pages with folder navigation
-- **Beautiful Themes**: Choose from built-in themes (dark, light, high contrast) or create your own
+- **Scene System**: Multiple scenes per page for different contexts
 - **Profile Management**: Create multiple profiles for different workflows (streaming, work, gaming)
+- **Asset Management**: Organized folder structure for icons, GIFs, videos, and backgrounds
+
+### 🎯 **User Experience**
+- **Beautiful Themes**: Choose from built-in themes (dark, light, high contrast) or create your own
 - **Plugin System**: Extend functionality with plugins (OBS Studio, Spotify, Discord, and more)
-- **Cross-Platform**: Runs on Windows, with planned support for Linux and macOS
+- **Cross-Platform**: Runs on Windows, with support for Linux and macOS
 - **PWA Support**: Access from any device with a web browser
 - **Desktop App**: Native desktop application with system tray and global hotkeys
 - **Touch-Friendly**: Optimized for touchscreens and tablets

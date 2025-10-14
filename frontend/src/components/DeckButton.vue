@@ -32,7 +32,42 @@
     </div>
 
     <div class="button-content">
-      <div v-if="button.icon || button.media_url" class="button-icon">
+      <!-- Individual Metric Displays -->
+      <PerformanceMonitorButton 
+        v-if="isMetricActionType"
+        :metrics="[getMetricFromActionType]"
+        :refresh-interval="button.action?.config?.refresh_interval || 2"
+      />
+      
+      <!-- World Clock -->
+      <TimeOptionsButton
+        v-else-if="button.action?.type === 'time_world_clock'"
+        time-option="world_time"
+        :timezone="button.action?.config?.timezone || 'local'"
+      />
+      
+      <!-- Timer -->
+      <TimeOptionsButton
+        v-else-if="button.action?.type === 'time_timer'"
+        time-option="timer"
+        :timer-duration="button.action?.config?.timer_duration || 0"
+      />
+      
+      <!-- Countdown -->
+      <TimeOptionsButton
+        v-else-if="button.action?.type === 'time_countdown'"
+        time-option="countdown"
+        :countdown-target="button.action?.config?.countdown_target"
+      />
+      
+      <!-- Weather -->
+      <WeatherQueryButton
+        v-else-if="button.action?.type === 'weather'"
+        :location="button.action?.config?.weather_location || 'auto'"
+        :refresh-interval="button.action?.config?.refresh_interval || 15"
+      />
+      
+      <div v-else-if="button.icon || button.media_url" class="button-icon">
         <!-- FontAwesome Icon -->
         <FontAwesomeIcon 
           v-if="button.icon_type === 'fontawesome'" 
@@ -73,11 +108,11 @@
         </div>
       </div>
 
-      <div v-if="button.label && showLabels" class="button-label">
+      <div v-if="button.label && showLabels && !isSpecialActionType" class="button-label">
         {{ button.label }}
       </div>
 
-      <div v-if="button.secondary_label && showLabels" class="button-secondary-label">
+      <div v-if="button.secondary_label && showLabels && !isSpecialActionType" class="button-secondary-label">
         {{ button.secondary_label }}
       </div>
     </div>
@@ -92,6 +127,9 @@
 import { computed } from 'vue'
 import type { Button } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
+import TimeOptionsButton from './TimeOptionsButton.vue'
+import WeatherQueryButton from './WeatherQueryButton.vue'
 
 interface Props {
   button: Button
@@ -113,6 +151,40 @@ const emit = defineEmits<{
   delete: [buttonId: string]
   move: [buttonId: string, newPosition: { row: number; col: number }]
 }>()
+
+// Check if this is a special action type that renders its own content
+const isSpecialActionType = computed(() => {
+  const type = props.button.action?.type
+  return type?.startsWith('metric_') || type?.startsWith('time_') || type === 'weather'
+})
+
+// Check if this is a metric action type
+const isMetricActionType = computed(() => {
+  return props.button.action?.type?.startsWith('metric_')
+})
+
+// Convert action type to metric name
+const getMetricFromActionType = computed(() => {
+  const type = props.button.action?.type
+  if (!type || !type.startsWith('metric_')) return ''
+  
+  const metricMap: Record<string, string> = {
+    'metric_memory': 'memory',
+    'metric_cpu_usage': 'cpu_usage',
+    'metric_cpu_temperature': 'cpu_temperature',
+    'metric_cpu_frequency': 'cpu_frequency',
+    'metric_cpu_power': 'cpu_package_power',
+    'metric_internet_speed': 'internet_speed',
+    'metric_harddisk': 'harddisk',
+    'metric_gpu_temperature': 'gpu_temperature',
+    'metric_gpu_frequency': 'gpu_core_frequency',
+    'metric_gpu_usage': 'gpu_core_usage',
+    'metric_gpu_memory_freq': 'gpu_memory_frequency',
+    'metric_gpu_memory_usage': 'gpu_memory_usage',
+  }
+  
+  return metricMap[type] || ''
+})
 
 const buttonClasses = computed(() => ({
   'shape-rectangle': props.button.shape === 'rectangle',
@@ -365,6 +437,16 @@ function handleDragEnd() {
   gap: var(--spacing-sm);
   text-align: center;
   width: 100%;
+  height: 100%;
+}
+
+/* Special action types that render full content */
+.button-content > .performance-monitor,
+.button-content > .time-options,
+.button-content > .weather-query {
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
 }
 
 .button-icon {

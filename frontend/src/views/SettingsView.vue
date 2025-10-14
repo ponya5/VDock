@@ -148,6 +148,139 @@
 
       <!-- Integration Tab -->
       <div v-if="activeTab === 'integration'" class="tab-content">
+        <!-- Auto Scene Switching Section -->
+        <section class="settings-section card">
+          <div class="section-header">
+            <h2>Auto Scene Switching</h2>
+            <label class="toggle-switch-inline">
+              <input 
+                type="checkbox" 
+                :checked="autoSwitchingEnabled"
+                @change="toggleAutoSwitching"
+              />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">{{ autoSwitchingEnabled ? 'Enabled' : 'Disabled' }}</span>
+            </label>
+          </div>
+          <p class="section-description">
+            Automatically switch scenes when monitored applications become active. Enable app integrations below to use this feature.
+          </p>
+          
+          <div v-if="autoSwitchingEnabled" class="auto-switch-status">
+            <FontAwesomeIcon :icon="['fas', 'check-circle']" class="status-icon success" />
+            <span>Monitoring active application and switching scenes automatically</span>
+          </div>
+        </section>
+
+        <!-- App Integration Section -->
+        <section class="settings-section card">
+          <div class="section-header">
+            <h2>App Integration</h2>
+            <button class="btn btn-sm btn-primary" @click="refreshRunningApps">
+              <FontAwesomeIcon :icon="['fas', 'sync']" :spin="loadingApps" />
+              Refresh Apps
+            </button>
+          </div>
+          <p class="section-description">
+            Configure which applications trigger automatic scene switching.
+          </p>
+
+          <div v-if="loadingApps" class="loading-state">
+            <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
+            <span>Loading running applications...</span>
+          </div>
+
+          <div v-else-if="runningApps.length === 0" class="empty-state">
+            <FontAwesomeIcon :icon="['fas', 'desktop']" />
+            <p>No applications detected</p>
+            <button class="btn btn-secondary" @click="refreshRunningApps">
+              Refresh
+            </button>
+          </div>
+
+          <div v-else class="app-integration-list">
+            <div class="list-header">
+              <span class="header-col-app">Application</span>
+              <span class="header-col-status">Status</span>
+              <span class="header-col-scene">Scene</span>
+              <span class="header-col-actions">Actions</span>
+            </div>
+
+            <div 
+              v-for="app in runningApps" 
+              :key="app.exe"
+              class="app-item"
+            >
+              <div class="app-info">
+                <FontAwesomeIcon :icon="['fas', 'window-maximize']" class="app-icon" />
+                <div class="app-details">
+                  <span class="app-name">{{ app.name }}</span>
+                  <span class="app-exe">{{ app.exe }}</span>
+                </div>
+              </div>
+
+              <div class="app-status">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    :checked="isAppIntegrationEnabled(app.exe)"
+                    @change="toggleAppIntegration(app)"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="status-text">
+                  {{ isAppIntegrationEnabled(app.exe) ? 'Enabled' : 'Disabled' }}
+                </span>
+              </div>
+
+              <div class="app-scene">
+                <select 
+                  v-if="isAppIntegrationEnabled(app.exe)"
+                  :value="getAppScene(app.exe)"
+                  @change="updateAppScene(app.exe, ($event.target as HTMLSelectElement).value)"
+                  class="select-sm"
+                >
+                  <option value="">Create New Scene</option>
+                  <option 
+                    v-for="scene in availableScenes" 
+                    :key="scene.id"
+                    :value="scene.id"
+                  >
+                    {{ scene.name }}
+                  </option>
+                </select>
+                <span v-else class="scene-placeholder">—</span>
+              </div>
+
+              <div class="app-actions">
+                <button 
+                  v-if="isAppIntegrationEnabled(app.exe)"
+                  class="btn-icon btn-sm"
+                  @click="configureAppIntegration(app)"
+                  title="Configure"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'cog']" />
+                </button>
+                <button 
+                  v-if="isAppIntegrationEnabled(app.exe) && !getAppScene(app.exe)"
+                  class="btn-icon btn-sm btn-primary"
+                  @click="createSceneForApp(app)"
+                  title="Create Scene"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'plus']" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="appIntegrations.length > 0" class="integration-summary">
+            <FontAwesomeIcon :icon="['fas', 'info-circle']" />
+            <span>
+              {{ appIntegrations.length }} app{{ appIntegrations.length > 1 ? 's' : '' }} integrated
+            </span>
+          </div>
+        </section>
+
         <section class="settings-section card">
           <h2>Recent Actions</h2>
           
@@ -182,11 +315,24 @@
           
           <div class="about-info">
             <h3>VDock</h3>
-            <p>Virtual Stream Deck v1.0.0</p>
+            <p>Virtual Stream Interface v1.0.0</p>
             <p class="mt-md">
-              A customizable virtual stream deck application for controlling your computer
-              with buttons and actions.
+              A powerful virtual stream interface for controlling your computer with customizable 
+              buttons, macros, system metrics, and intelligent app integration.
             </p>
+            
+            <div class="feature-highlights mt-md">
+              <h4>Key Features</h4>
+              <ul>
+                <li>✨ Real-time System Metrics Monitoring</li>
+                <li>🎬 Advanced Macro Automation</li>
+                <li>🔗 Smart App Integration</li>
+                <li>🎨 Customizable Buttons & Backgrounds</li>
+                <li>🤖 Automatic Scene Switching</li>
+                <li>📊 Professional Dashboard Interface</li>
+              </ul>
+            </div>
+            
             <div class="mt-lg">
               <button class="btn btn-secondary" @click="openGitHub">
                 <FontAwesomeIcon :icon="['fab', 'github']" /> GitHub
@@ -200,19 +346,46 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
+import { useProfilesStore } from '@/stores/profiles'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import apiClient from '@/api/client'
+import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
+import type { RunningApp, AppIntegration, Scene } from '@/types'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const profilesStore = useProfilesStore()
 
 const settings = computed(() => settingsStore)
 const themes = computed(() => settingsStore.themes)
 const serverConfig = computed(() => settingsStore.serverConfig)
 
 const activeTab = ref('appearance')
+
+// App Integration State
+const runningApps = ref<RunningApp[]>([])
+const loadingApps = ref(false)
+const appIntegrations = ref<AppIntegration[]>([])
+const autoSwitchingEnabled = ref(false)
+
+// Get all scenes from current profile
+const availableScenes = computed(() => {
+  const profile = profilesStore.currentProfile
+  if (!profile) return []
+  
+  // Return all scenes from the profile
+  return profile.pages.flatMap(page => 
+    page.scenes.map(scene => ({
+      id: scene.id,
+      name: scene.name,
+      pageId: page.id,
+      pageName: page.name
+    }))
+  )
+})
 
 const tabs = [
   { id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'] },
@@ -245,10 +418,204 @@ function openGitHub() {
   window.open('https://github.com/ponya5/VDock', '_blank')
 }
 
+// App Integration Functions
+async function refreshRunningApps() {
+  loadingApps.value = true
+  try {
+    const response = await apiClient.get('/metrics/running-apps')
+    runningApps.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch running apps:', error)
+    runningApps.value = []
+  } finally {
+    loadingApps.value = false
+  }
+}
+
+function isAppIntegrationEnabled(appExe: string): boolean {
+  return appIntegrations.value.some(integration => integration.appExe === appExe && integration.enabled)
+}
+
+function getAppScene(appExe: string): string {
+  const integration = appIntegrations.value.find(i => i.appExe === appExe)
+  return integration?.sceneId || ''
+}
+
+function toggleAppIntegration(app: RunningApp) {
+  const existingIndex = appIntegrations.value.findIndex(i => i.appExe === app.exe)
+  
+  if (existingIndex >= 0) {
+    // Toggle existing integration
+    appIntegrations.value[existingIndex].enabled = !appIntegrations.value[existingIndex].enabled
+  } else {
+    // Create new integration
+    appIntegrations.value.push({
+      appExe: app.exe,
+      appName: app.name,
+      sceneId: '',
+      enabled: true,
+      autoSwitch: true
+    })
+  }
+  
+  saveAppIntegrations()
+}
+
+function updateAppScene(appExe: string, sceneId: string) {
+  const integration = appIntegrations.value.find(i => i.appExe === appExe)
+  if (integration) {
+    integration.sceneId = sceneId
+    saveAppIntegrations()
+  }
+}
+
+async function createSceneForApp(app: RunningApp) {
+  const profile = profilesStore.currentProfile
+  if (!profile || !profile.pages || profile.pages.length === 0) {
+    alert('No pages available. Please create a page first.')
+    return
+  }
+  
+  // Get the first page
+  const firstPage = profile.pages[0]
+  
+  // Create a new scene named after the app
+  const sceneName = app.name.replace('.exe', '')
+  
+  try {
+    const newScene: Scene = {
+      id: `scene-${Date.now()}`,
+      name: sceneName,
+      buttons: [],
+      triggeredByApp: app.exe,
+      autoCreated: true
+    }
+    
+    // Add scene to the first page
+    firstPage.scenes.push(newScene)
+    
+    // Save profile
+    await profilesStore.saveProfile(profile)
+    
+    // Update the integration with the new scene
+    updateAppScene(app.exe, newScene.id)
+    
+    alert(`Scene "${sceneName}" created successfully!`)
+  } catch (error) {
+    console.error('Failed to create scene:', error)
+    alert('Failed to create scene')
+  }
+}
+
+function configureAppIntegration(app: RunningApp) {
+  // TODO: Open configuration modal
+  alert(`Configuration for ${app.name} coming soon...`)
+}
+
+function saveAppIntegrations() {
+  // Save to localStorage
+  localStorage.setItem('appIntegrations', JSON.stringify(appIntegrations.value))
+}
+
+function loadAppIntegrations() {
+  const stored = localStorage.getItem('appIntegrations')
+  if (stored) {
+    try {
+      appIntegrations.value = JSON.parse(stored)
+      // Update auto scene switcher with loaded integrations
+      autoSceneSwitcher.updateIntegrations(appIntegrations.value)
+    } catch (error) {
+      console.error('Failed to load app integrations:', error)
+    }
+  }
+  
+  // Load auto switching state
+  const autoSwitchStored = localStorage.getItem('autoSceneSwitching')
+  if (autoSwitchStored) {
+    autoSwitchingEnabled.value = autoSwitchStored === 'true'
+  }
+}
+
+async function toggleAutoSwitching() {
+  const newValue = !autoSwitchingEnabled.value
+  
+  try {
+    if (newValue) {
+      // Enable auto switching
+      autoSceneSwitcher.initialize(appIntegrations.value)
+      const success = await autoSceneSwitcher.enable()
+      
+      if (success) {
+        autoSwitchingEnabled.value = true
+        localStorage.setItem('autoSceneSwitching', 'true')
+        
+        // Register scene switch callback
+        autoSceneSwitcher.onSceneSwitch(handleAutoSceneSwitch)
+      } else {
+        alert('Failed to enable auto scene switching')
+      }
+    } else {
+      // Disable auto switching
+      const success = await autoSceneSwitcher.disable()
+      
+      if (success) {
+        autoSwitchingEnabled.value = false
+        localStorage.setItem('autoSceneSwitching', 'false')
+      } else {
+        alert('Failed to disable auto scene switching')
+      }
+    }
+  } catch (error) {
+    console.error('Error toggling auto switching:', error)
+    alert('Error toggling auto scene switching')
+  }
+}
+
+function handleAutoSceneSwitch(sceneId: string, appExe: string) {
+  console.log(`Auto switching to scene ${sceneId} for app ${appExe}`)
+  
+  // Find the scene and switch to it
+  const profile = profilesStore.currentProfile
+  if (!profile) return
+  
+  // Find which page contains this scene
+  for (const page of profile.pages) {
+    const scene = page.scenes.find(s => s.id === sceneId)
+    if (scene) {
+      // Switch to this page and scene
+      profilesStore.setCurrentPage(page.id)
+      profilesStore.setCurrentScene(sceneId)
+      
+      // Show notification
+      console.log(`Switched to scene "${scene.name}" for ${appExe}`)
+      break
+    }
+  }
+}
 
 onMounted(async () => {
   settingsStore.loadThemes()
   settingsStore.loadServerConfig()
+  loadAppIntegrations()
+  
+  // Load running apps if on integration tab
+  if (activeTab.value === 'integration') {
+    await refreshRunningApps()
+  }
+  
+  // Re-enable auto switching if it was enabled before
+  if (autoSwitchingEnabled.value) {
+    autoSceneSwitcher.initialize(appIntegrations.value)
+    await autoSceneSwitcher.enable()
+    autoSceneSwitcher.onSceneSwitch(handleAutoSceneSwitch)
+  }
+})
+
+onUnmounted(() => {
+  // Clean up auto scene switcher
+  if (autoSwitchingEnabled.value) {
+    autoSceneSwitcher.offSceneSwitch(handleAutoSceneSwitch)
+  }
 })
 </script>
 
@@ -441,7 +808,7 @@ onMounted(async () => {
 }
 
 .about-info h3 {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: bold;
   color: var(--color-primary);
   margin-bottom: var(--spacing-xs);
@@ -449,6 +816,36 @@ onMounted(async () => {
 
 .about-info p {
   color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.feature-highlights {
+  background: var(--color-surface);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.feature-highlights h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.feature-highlights ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.feature-highlights li {
+  padding: var(--spacing-xs) 0;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 
@@ -459,6 +856,264 @@ onMounted(async () => {
 
 .link:hover {
   text-decoration: underline;
+}
+
+/* App Integration Styles */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.section-description {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+.app-integration-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 0.5fr;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.app-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 0.5fr;
+  gap: var(--spacing-md);
+  align-items: center;
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.app-item:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.app-icon {
+  font-size: 1.5rem;
+  color: var(--color-primary);
+}
+
+.app-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.app-exe {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-family: 'Courier New', monospace;
+}
+
+.app-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--color-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.status-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.app-scene {
+  display: flex;
+  align-items: center;
+}
+
+.select-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  cursor: pointer;
+  width: 100%;
+}
+
+.select-sm:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.scene-placeholder {
+  color: var(--color-text-secondary);
+  font-size: 1.25rem;
+}
+
+.app-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  justify-content: flex-end;
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.btn-icon:hover {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-icon.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.btn-icon.btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.integration-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: var(--spacing-md);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+}
+
+/* Auto Switching Styles */
+.toggle-switch-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.toggle-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.auto-switch-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  border-radius: var(--radius-md);
+  color: #065f46;
+  font-size: 0.875rem;
+  margin-top: var(--spacing-md);
+}
+
+.status-icon {
+  font-size: 1.25rem;
+}
+
+.status-icon.success {
+  color: #10b981;
 }
 </style>
 

@@ -6,6 +6,7 @@ from .program_action import ProgramAction
 from .command_action import CommandAction
 from .hotkey_action import HotkeyAction
 from .multi_action import MultiAction
+from .macro_action import MacroAction
 from .system_action import SystemAction
 from .cross_platform_action import CrossPlatformAction
 
@@ -20,6 +21,7 @@ class ActionExecutor:
         'command': CommandAction,
         'hotkey': HotkeyAction,
         'multi_action': MultiAction,
+        'macro': MacroAction,
         'system_control': SystemAction,
         'cross_platform': CrossPlatformAction
     }
