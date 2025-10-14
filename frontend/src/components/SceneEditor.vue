@@ -62,6 +62,30 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label>Scene Button Size</label>
+          <div class="size-controls">
+            <input 
+              v-model.number="editedScene.buttonSize" 
+              type="range" 
+              class="size-slider"
+              min="0.5" 
+              max="2" 
+              step="0.1"
+              @input="updateButtonSize"
+            />
+            <div class="size-display">
+              <span>{{ (editedScene.buttonSize || 1.0).toFixed(1) }}x</span>
+              <div class="size-preview">
+                <div class="preview-button" :style="{ transform: `scale(${editedScene.buttonSize || 1.0})` }">
+                  <FontAwesomeIcon :icon="editedScene.icon || ['fas', 'home']" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="form-help">Adjust the size of scene navigation buttons</p>
+        </div>
+
         <div v-if="isEditing" class="form-group">
           <label class="checkbox-label">
             <input v-model="editedScene.isActive" type="checkbox" />
@@ -122,7 +146,8 @@ const editedScene = ref<Scene>(props.scene ? { ...props.scene } : {
   icon: '',
   color: '#3498db',
   pages: [],
-  isActive: false
+  isActive: false,
+  buttonSize: 1.0
 })
 
 // Color palette for scene colors
@@ -141,6 +166,11 @@ function selectColor(color: string) {
 function updateSceneColor(event: Event) {
   const target = event.target as HTMLInputElement
   editedScene.value.color = target.value
+}
+
+function updateButtonSize(event: Event) {
+  const target = event.target as HTMLInputElement
+  editedScene.value.buttonSize = parseFloat(target.value)
 }
 
 function handleIconSelect(icon: string) {
@@ -307,5 +337,81 @@ function deleteScene() {
   border-color: var(--color-primary);
   border-width: 3px;
   box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+/* Size Controls */
+.size-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.size-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: var(--shadow-sm);
+}
+
+.size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: var(--shadow-sm);
+}
+
+.size-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.size-display span {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  min-width: 40px;
+}
+
+.size-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.preview-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
 }
 </style>

@@ -39,15 +39,31 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   function migrateProfileToScenes(profile: Profile): Profile {
+    console.log('DashboardStore: migrating profile', profile)
+    
     // If profile already has scenes, return as-is
     if (profile.scenes && profile.scenes.length > 0) {
+      console.log('DashboardStore: profile already has scenes')
+      // Ensure dockedButtons exists - preserve existing if present
+      if (!profile.dockedButtons) {
+        profile.dockedButtons = []
+        console.log('DashboardStore: added empty dockedButtons array')
+      } else {
+        console.log('DashboardStore: profile already has dockedButtons', profile.dockedButtons.length)
+      }
       return profile
     }
 
+    console.log('DashboardStore: migrating from pages to scenes')
     // Migrate from old pages structure to scenes structure
     const migratedProfile = { ...profile }
     
+    // PRESERVE existing dockedButtons or create empty array
+    migratedProfile.dockedButtons = profile.dockedButtons || []
+    console.log('DashboardStore: preserved/initialized dockedButtons', migratedProfile.dockedButtons.length)
+    
     if (profile.pages && profile.pages.length > 0) {
+      console.log('DashboardStore: creating scene from existing pages', profile.pages.length)
       // Create a default scene with all existing pages
       migratedProfile.scenes = [{
         id: `scene_${Date.now()}`,
@@ -57,6 +73,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       // Remove old pages property
       delete (migratedProfile as any).pages
     } else {
+      console.log('DashboardStore: creating empty scene structure')
       // Create empty scene structure
       migratedProfile.scenes = [{
         id: `scene_${Date.now()}`,
@@ -70,6 +87,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       }]
     }
 
+    console.log('DashboardStore: migrated profile', migratedProfile)
     return migratedProfile
   }
 

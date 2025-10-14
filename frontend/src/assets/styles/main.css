@@ -42,19 +42,19 @@
 
 /* Light Theme */
 .theme-light {
-  --color-background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-  --color-surface: rgba(255, 255, 255, 0.9);
+  --color-background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  --color-surface: rgba(255, 255, 255, 0.95);
   --color-surface-solid: #ffffff;
-  --color-primary: #ff6b6b;
-  --color-primary-light: rgba(255, 107, 107, 0.1);
-  --color-secondary: #4ecdc4;
-  --color-text: #2c3e50;
-  --color-text-secondary: #7f8c8d;
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-accent: #f39c12;
-  --color-success: #27ae60;
-  --color-error: #e74c3c;
-  --color-warning: #f39c12;
+  --color-primary: #007bff;
+  --color-primary-light: rgba(0, 123, 255, 0.1);
+  --color-secondary: #6c757d;
+  --color-text: #212529;
+  --color-text-secondary: #495057;
+  --color-border: rgba(0, 0, 0, 0.15);
+  --color-accent: #fd7e14;
+  --color-success: #28a745;
+  --color-error: #dc3545;
+  --color-warning: #ffc107;
 }
 
 /* Dark Theme */

@@ -119,7 +119,7 @@ export const useProfilesStore = defineStore('profiles', () => {
     }
   }
 
-  async function updateProfile(profileId: string, data: { name: string; description?: string; avatar?: string; theme?: string }): Promise<Profile | null> {
+  async function updateProfile(profileId: string, data: Partial<Profile>): Promise<Profile | null> {
     try {
       const response = await apiClient.put(`/profiles/${profileId}`, data)
       if (response.data.success) {

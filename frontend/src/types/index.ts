@@ -87,6 +87,7 @@ export interface Scene {
   color?: string
   pages: Page[]
   isActive?: boolean
+  buttonSize?: number // Size multiplier for scene buttons
   created_at?: string
   updated_at?: string
 }
@@ -98,6 +99,7 @@ export interface Profile {
   icon?: string
   avatar?: string // URL or path to avatar image/gif
   scenes: Scene[]
+  dockedButtons?: Button[] // Buttons that persist across all scenes
   theme: string
   settings?: ProfileSettings
   created_at?: string

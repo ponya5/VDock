@@ -8,7 +8,10 @@
       >
         <button
           :class="['scene-tab', { active: index === currentSceneIndex }]"
-          :style="{ backgroundColor: scene.color || '#3498db' }"
+          :style="{ 
+            backgroundColor: scene.color || '#3498db',
+            transform: `scale(${scene.buttonSize || 1.0})`
+          }"
           @click="setScene(index)"
           :title="scene.name"
         >

@@ -2,7 +2,18 @@
   <div class="dashboard-view">
     <header class="deck-header">
       <div class="header-left">
-        <h1>{{ currentProfile?.name || 'VDock' }}</h1>
+        <div class="profile-header">
+          <img 
+            v-if="currentProfile?.avatar" 
+            :src="currentProfile.avatar" 
+            :alt="currentProfile.name"
+            class="profile-avatar"
+          />
+          <div v-else class="profile-avatar-placeholder">
+            <FontAwesomeIcon :icon="['fas', 'user']" />
+          </div>
+          <h1>{{ currentProfile?.name || 'VDock' }}</h1>
+        </div>
         <SceneNavigation
           v-if="currentProfile && currentProfile.scenes.length > 0"
           :scenes="currentProfile.scenes"
@@ -27,7 +38,7 @@
 
       <div class="header-right">
         <button class="btn btn-secondary" @click="router.push('/profiles')" title="Profiles">
-          <FontAwesomeIcon :icon="['fas', 'folder-open']" />
+          <FontAwesomeIcon :icon="['fas', 'users']" />
         </button>
         <button class="btn btn-secondary" @click="toggleEditMode" title="Toggle Edit Mode">
           <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
@@ -39,13 +50,35 @@
     </header>
 
     <main class="deck-main" :style="mainStyle">
-      <div class="main-content" :class="{ 'with-sidebar': isEditMode }">
+      <!-- Docked Sidebar -->
+      <DockedSidebar
+        v-if="settingsStore.dockedSidebarEnabled && currentPage"
+        :docked-buttons="currentProfile?.dockedButtons || []"
+        :grid-rows="currentPage.grid_config.rows"
+        :is-edit-mode="isEditMode"
+        :show-labels="settingsStore.showLabels"
+        :show-tooltips="settingsStore.showTooltips"
+        @button-click="handleButtonClick"
+        @button-edit="handleButtonEdit"
+        @button-copy="handleButtonCopy"
+        @button-delete="handleDockedButtonDelete"
+        @button-drop="handleDockedButtonDrop"
+        @add-button="handleAddDockedButton"
+        @placeholder-click="handleDockedPlaceholderClick"
+      />
+      
+      
+      <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
         <DeckGrid
           v-if="currentPage"
           :page="currentPage"
           :is-edit-mode="isEditMode"
+          :button-size="settingsStore.buttonSize"
+          :show-labels="settingsStore.showLabels"
+          :show-tooltips="settingsStore.showTooltips"
           @button-click="handleButtonClick"
           @button-edit="handleButtonEdit"
+          @button-copy="handleButtonCopy"
           @button-delete="handleButtonDelete"
           @swipe-left="nextPage"
           @swipe-right="previousPage"
@@ -122,7 +155,7 @@
       </aside>
     </main>
 
-    <footer v-if="isEditMode" class="deck-footer">
+    <footer v-if="isEditMode" class="deck-footer" :class="{ 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
       <div class="footer-section">
         <label>Grid Size:</label>
         <div class="grid-controls">
@@ -174,25 +207,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useProfilesStore } from '@/stores/profiles'
+import { useSettingsStore } from '@/stores/settings'
 import type { Button, ActionResult, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
 import PageNavigation from '@/components/PageNavigation.vue'
 import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
+import DockedSidebar from '@/components/DockedSidebar.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
 const profilesStore = useProfilesStore()
+const settingsStore = useSettingsStore()
 
 const editingButton = ref<Button | null>(null)
 const editingScene = ref<Scene | null>(null)
 const actionResult = ref<ActionResult | null>(null)
+const clipboardButton = ref<Button | null>(null)
 let actionResultTimeout: number | null = null
 
 // Sidebar state
@@ -345,6 +382,28 @@ onMounted(async () => {
       dashboardStore.setProfile(profile)
     }
   }
+  
+  // Add keyboard shortcuts
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      if (event.key === 'v' && clipboardButton.value) {
+        // Ctrl+V to paste at current position (if in edit mode)
+        if (isEditMode.value) {
+          event.preventDefault()
+          showActionResult({
+            success: true,
+            message: 'Click on a placeholder to paste the button'
+          })
+        }
+      }
+    }
+  }
+  
+  document.addEventListener('keydown', handleKeyDown)
+  
+  onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyDown)
+  })
 })
 
 watch(currentProfile, (profile) => {
@@ -403,38 +462,6 @@ function handleActionDrop(action: any, position: { row: number; col: number }) {
   }
 }
 
-function handlePlaceholderClick(position: { row: number; col: number }) {
-  console.log('Placeholder clicked at:', position)
-  
-  // Create a default button at the clicked position
-  const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const button: Button = {
-    id: buttonId,
-    label: 'New Button',
-    icon_type: 'fontawesome',
-    icon: ['fas', 'home'],
-    shape: 'rounded',
-    position: {
-      row: position.row,
-      col: position.col
-    },
-    size: {
-      rows: 1,
-      cols: 1
-    },
-    style: {
-      backgroundColor: '#2c3e50',
-      textColor: '#ffffff'
-    },
-    enabled: true,
-    action: {
-      type: 'custom',
-      config: {}
-    }
-  }
-  
-  dashboardStore.addButton(button)
-}
 
 function handleButtonMove(buttonId: string, newPosition: { row: number; col: number }) {
   console.log('Moving button:', buttonId, 'to:', newPosition)
@@ -759,7 +786,8 @@ function addScene() {
         cols: 5
       }
     }],
-    isActive: false
+    isActive: false,
+    buttonSize: 1.0
   }
 }
 
@@ -803,9 +831,249 @@ async function handleButtonClick(button: Button) {
 }
 
 
-function handleButtonSave(button: Button) {
-  dashboardStore.updateButton(button.id, button)
+async function handleButtonSave(button: Button) {
+  console.log('DashboardView: handleButtonSave', button.id)
+  // Check if this is a docked button
+  const isDockedButton = currentProfile.value?.dockedButtons?.some(btn => btn.id === button.id)
+  
+  if (isDockedButton) {
+    console.log('DashboardView: saving docked button')
+    // Update docked button
+    const updatedDockedButtons = currentProfile.value?.dockedButtons?.map(btn => 
+      btn.id === button.id ? button : btn
+    ) || []
+    
+    if (currentProfile.value) {
+      // Create updated profile and set directly to avoid backend round-trip
+      const updatedProfile = {
+        ...currentProfile.value,
+        dockedButtons: updatedDockedButtons
+      }
+      
+      dashboardStore.setProfile(updatedProfile)
+      
+      showActionResult({
+        success: true,
+        message: 'Docked button updated'
+      })
+    }
+  } else {
+    // Update regular button
+    console.log('DashboardView: saving regular button')
+    dashboardStore.updateButton(button.id, button)
+  }
+  
   editingButton.value = null
+}
+
+async function handleDockedButtonDelete(buttonId: string) {
+  console.log('DashboardView: deleting docked button', buttonId)
+  if (currentProfile.value) {
+    const updatedDockedButtons = currentProfile.value.dockedButtons?.filter(btn => btn.id !== buttonId) || []
+    
+    // Create updated profile and set directly
+    const updatedProfile = {
+      ...currentProfile.value,
+      dockedButtons: updatedDockedButtons
+    }
+    
+    dashboardStore.setProfile(updatedProfile)
+    
+    showActionResult({
+      success: true,
+      message: 'Docked button deleted'
+    })
+  }
+}
+
+async function handleAddDockedButton(position: { row: number; col: number }) {
+  console.log('DashboardView: handleAddDockedButton at', position)
+  const newButton: Button = {
+    id: `docked_${Date.now()}`,
+    label: 'New Button',
+    secondary_label: '',
+    icon: ['fas', 'star'],
+    icon_type: 'fontawesome',
+    media_url: null,
+    media_type: null,
+    shape: 'rounded',
+    position: { row: position.row, col: position.col },
+    size: { rows: 1, cols: 1 },
+    style: {
+      backgroundColor: '#3498db',
+      textColor: '#ffffff'
+    },
+    tooltip: '',
+    enabled: true,
+    action: {
+      type: 'custom',
+      config: {}
+    }
+  }
+  
+  console.log('DashboardView: creating new docked button', newButton)
+  
+  if (currentProfile.value) {
+    // Create updated profile with new docked button
+    const updatedProfile = {
+      ...currentProfile.value,
+      dockedButtons: [...(currentProfile.value.dockedButtons || []), newButton]
+    }
+    
+    console.log('DashboardView: setting updated profile with', updatedProfile.dockedButtons.length, 'docked buttons')
+    
+    // Use setProfile to trigger reactivity properly
+    dashboardStore.setProfile(updatedProfile)
+    
+    showActionResult({
+      success: true,
+      message: `Button added to docked sidebar`
+    })
+  }
+}
+
+async function handleDockedButtonDrop(event: DragEvent, position: { row: number; col: number }) {
+  console.log('DashboardView: handleDockedButtonDrop called at', position)
+  if (!event.dataTransfer) {
+    console.log('DashboardView: no dataTransfer')
+    return
+  }
+  
+  try {
+    const buttonData = event.dataTransfer.getData('application/vdock-button')
+    console.log('DashboardView: button data', buttonData)
+    if (buttonData) {
+      const button = JSON.parse(buttonData)
+      console.log('DashboardView: parsed button', button)
+      
+      // Create a copy of the button for docking at the specific position
+      const dockedButton: Button = {
+        ...button,
+        id: `docked_${Date.now()}`,
+        position: { row: position.row, col: position.col },
+        size: { rows: 1, cols: 1 }
+      }
+      
+      console.log('DashboardView: created docked button', dockedButton)
+      
+      if (currentProfile.value) {
+        // Create updated profile with new docked button
+        const updatedProfile = {
+          ...currentProfile.value,
+          dockedButtons: [...(currentProfile.value.dockedButtons || []), dockedButton]
+        }
+        
+        console.log('DashboardView: setting updated profile with', updatedProfile.dockedButtons.length, 'docked buttons')
+        
+        // Use setProfile to trigger reactivity properly
+        dashboardStore.setProfile(updatedProfile)
+        
+        showActionResult({
+          success: true,
+          message: `Button docked successfully`
+        })
+      } else {
+        console.log('DashboardView: no current profile')
+      }
+    } else {
+      console.log('DashboardView: no button data found')
+    }
+  } catch (err) {
+    console.error('Failed to handle docked drop:', err)
+    showActionResult({
+      success: false,
+      message: `Failed to dock button: ${err}`
+    })
+  }
+}
+
+function handleButtonCopy(button: Button) {
+  clipboardButton.value = { ...button }
+  showActionResult({
+    success: true,
+    message: `Button "${button.label}" copied to clipboard`
+  })
+}
+
+function handleDockedPlaceholderClick(position: { row: number; col: number }) {
+  console.log('DashboardView: docked placeholder clicked at', position)
+  if (clipboardButton.value && currentProfile.value) {
+    // Paste the copied button to the docked sidebar
+    const pastedButton: Button = {
+      ...clipboardButton.value,
+      id: `docked_${Date.now()}`,
+      position: { row: position.row, col: position.col },
+      size: { rows: 1, cols: 1 }
+    }
+    
+    console.log('DashboardView: pasting button to docked sidebar', pastedButton)
+    
+    // Create updated profile with pasted button
+    const updatedProfile = {
+      ...currentProfile.value,
+      dockedButtons: [...(currentProfile.value.dockedButtons || []), pastedButton]
+    }
+    
+    dashboardStore.setProfile(updatedProfile)
+    
+    showActionResult({
+      success: true,
+      message: 'Button pasted to docked sidebar'
+    })
+  } else {
+    // No clipboard, add a new button
+    handleAddDockedButton(position)
+  }
+}
+
+function handlePlaceholderClick(position: { row: number; col: number }) {
+  console.log('Placeholder clicked at:', position)
+  
+  if (clipboardButton.value) {
+    // Paste the button at the clicked position
+    const newButton: Button = {
+      ...clipboardButton.value,
+      id: `button_${Date.now()}`,
+      label: `${clipboardButton.value.label} (Copy)`,
+      position: { row: position.row, col: position.col }
+    }
+    
+    dashboardStore.addButton(newButton)
+    showActionResult({
+      success: true,
+      message: `Button "${newButton.label}" pasted`
+    })
+  } else {
+    // Create a default button at the clicked position
+    const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const button: Button = {
+      id: buttonId,
+      label: 'New Button',
+      icon_type: 'fontawesome',
+      icon: ['fas', 'home'],
+      shape: 'rounded',
+      position: {
+        row: position.row,
+        col: position.col
+      },
+      size: {
+        rows: 1,
+        cols: 1
+      },
+      style: {
+        backgroundColor: '#2c3e50',
+        textColor: '#ffffff'
+      },
+      enabled: true,
+      action: {
+        type: 'custom',
+        config: {}
+      }
+    }
+    
+    dashboardStore.addButton(button)
+    console.log('Created button:', button)
+  }
 }
 
 
@@ -852,6 +1120,33 @@ function showActionResult(result: ActionResult) {
   align-items: flex-start;
 }
 
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-border);
+}
+
+.profile-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 1.2rem;
+}
+
 .header-left h1 {
   font-size: 1.5rem;
   font-weight: bold;
@@ -872,6 +1167,7 @@ function showActionResult(result: ActionResult) {
 .deck-main {
   flex: 1;
   overflow: hidden;
+  display: flex;
 }
 
 .no-profile {
@@ -896,7 +1192,11 @@ function showActionResult(result: ActionResult) {
   padding: var(--spacing-md);
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border);
-  margin-right: 350px; /* Account for sidebar width */
+  margin-right: 350px; /* Account for edit sidebar width */
+}
+
+.deck-footer.with-docked-sidebar {
+  margin-left: 280px; /* Account for docked sidebar width */
 }
 
 .footer-section {
@@ -970,9 +1270,20 @@ function showActionResult(result: ActionResult) {
 .main-content {
   flex: 1;
   transition: all var(--transition-medium);
+  display: flex;
+  flex-direction: column;
 }
 
 .main-content.with-sidebar {
+  margin-right: 350px;
+}
+
+.main-content.with-docked-sidebar {
+  margin-left: 120px;
+}
+
+.main-content.with-sidebar.with-docked-sidebar {
+  margin-left: 120px;
   margin-right: 350px;
 }
 
