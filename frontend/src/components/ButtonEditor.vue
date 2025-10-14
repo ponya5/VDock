@@ -258,6 +258,7 @@
             </optgroup>
             
             <optgroup label="🕐 Time Options">
+              <option value="calendar">Calendar</option>
               <option value="time_world_clock">World Time</option>
               <option value="time_timer">Timer</option>
               <option value="time_countdown">Countdown</option>
@@ -949,6 +950,7 @@ function handleActionSelection(selectedActionType: string) {
     'metric_gpu_usage': 'GPU Usage',
     'metric_gpu_memory_freq': 'GPU Mem Freq',
     'metric_gpu_memory_usage': 'GPU Mem',
+    'calendar': 'Calendar',
     'time_world_clock': 'World Clock',
     'time_timer': 'Timer',
     'time_countdown': 'Countdown',

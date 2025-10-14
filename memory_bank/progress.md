@@ -38,6 +38,53 @@
 - Missing rate limiting
 - No input sanitization for command execution
 
+## Recent Bug Fixes ✅ (October 14, 2025)
+
+### Session 1 - Initial Fixes:
+1. **Avatar Upload Error** - Fixed network error when uploading custom avatars
+   - Changed endpoint from `/upload` to `/upload/icon` in AvatarPicker.vue
+   - Now properly calls the correct backend endpoint
+
+2. **System Metrics Not Displaying** - Fixed monitor buttons not fetching machine metrics
+   - Updated PerformanceMonitorButton.vue to correctly parse backend response structure
+   - Fixed field name mappings (usage_percent, frequency_current, etc.)
+   - Removed non-existent GPU endpoint calls
+   - Properly handles partitions array for disk metrics
+
+3. **App Integration List Empty** - Fixed running apps not appearing in settings
+   - Updated SettingsView.vue to correctly parse response data structure
+   - Changed from `response.data` to `response.data.data` to match backend format
+
+4. **Docked Sidebar Width** - Fixed sidebar width to match main dashboard button size
+   - Made DockedSidebar width dynamic based on buttonSize prop
+   - Calculates width as: base (100px) × buttonSize + padding + edit mode extra
+   - Passes buttonSize from DashboardView to DockedSidebar component
+
+### Session 2 - Backend & Frontend Fixes:
+1. **Running Apps Endpoint 404 Error** - Fixed Flask route ordering issue
+   - Moved `/running-apps` route BEFORE catch-all `/<metric_type>` route in system_metrics.py
+   - Flask was treating "running-apps" as a metric type parameter
+   - Route now correctly accessible at `/api/metrics/running-apps`
+
+2. **Dashboard Backgrounds Not Working** - Added missing CSS classes
+   - Added all background gradient classes to DashboardView.vue
+   - Static gradients: ocean-breeze, sunset-glow, forest-mist, royal-purple, golden-hour
+   - Animated backgrounds: floating-particles, gradient-waves, geometric-patterns, aurora-borealis, starfield, bubble-float, neon-grid
+   - Added CSS animations: gradientShift, aurora
+
+3. **Performance Metrics Still Showing "--"** - Verified fix from Session 1
+   - Backend endpoints now accessible after route reordering
+   - Frontend properly parses nested response structure
+   - All metrics should now display correctly
+
+### Files Modified:
+- `frontend/src/components/AvatarPicker.vue`
+- `frontend/src/components/PerformanceMonitorButton.vue`
+- `frontend/src/components/DockedSidebar.vue`
+- `frontend/src/views/SettingsView.vue`
+- `frontend/src/views/DashboardView.vue` (added 80+ lines of background CSS)
+- `backend/routes/system_metrics.py` (fixed route ordering + linting)
+
 ## Next Phase: Clean Code Implementation
 
 ### Priority Tasks:

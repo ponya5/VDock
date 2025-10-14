@@ -423,7 +423,7 @@ async function refreshRunningApps() {
   loadingApps.value = true
   try {
     const response = await apiClient.get('/metrics/running-apps')
-    runningApps.value = response.data
+    runningApps.value = response.data.success ? response.data.data : []
   } catch (error) {
     console.error('Failed to fetch running apps:', error)
     runningApps.value = []

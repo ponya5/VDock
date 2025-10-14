@@ -1,5 +1,5 @@
 <template>
-  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode }">
+  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode }" :style="{ width: sidebarWidth }">
     <div class="sidebar-header">
       <h3>Docked Buttons</h3>
       <button 
@@ -63,12 +63,14 @@ interface Props {
   isEditMode?: boolean
   showLabels?: boolean
   showTooltips?: boolean
+  buttonSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   showLabels: true,
-  showTooltips: true
+  showTooltips: true,
+  buttonSize: 1.0
 })
 
 const emit = defineEmits<{
@@ -84,15 +86,33 @@ const emit = defineEmits<{
 const gridCols = 1 // Docked sidebar is always 1 column
 const dragOverSlot = ref<{ row: number; col: number } | null>(null)
 
-const gridStyle = computed(() => ({
-  display: 'grid',
-  gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-  gridTemplateRows: `repeat(${props.gridRows}, 1fr)`,
-  gap: '8px',
-  padding: '12px',
-  height: '100%',
-  overflow: 'auto'
-}))
+// Calculate sidebar width based on button size
+const sidebarWidth = computed(() => {
+  // Match main dashboard button dimensions
+  // Buttons in main dashboard typically render at 120-150px depending on grid
+  // We'll use a similar natural size
+  const baseButtonWidth = 120
+  const scaledButtonWidth = baseButtonWidth * props.buttonSize
+  const padding = 32 // Total horizontal padding (16px each side)
+  const editModeExtra = props.isEditMode ? 20 : 0
+  return `${scaledButtonWidth + padding + editModeExtra}px`
+})
+
+const gridStyle = computed(() => {
+  // Set explicit cell heights to match main dashboard button appearance
+  // Main dashboard buttons typically render at 120-150px height
+  const baseCellHeight = 120 * props.buttonSize
+  
+  return {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: `repeat(${props.gridRows}, ${baseCellHeight}px)`,
+    gap: '8px',
+    padding: '16px',
+    height: '100%',
+    overflow: 'auto'
+  }
+})
 
 function getButtonAt(row: number, col: number): Button | undefined {
   return props.dockedButtons.find(
@@ -168,7 +188,6 @@ function handlePlaceholderClick(row: number, col: number) {
 
 <style scoped>
 .docked-sidebar {
-  width: 120px;
   height: 100%;
   background-color: var(--color-surface-solid);
   border-right: 1px solid var(--color-border);
@@ -178,10 +197,6 @@ function handlePlaceholderClick(row: number, col: number) {
   position: relative;
   z-index: 100;
   flex-shrink: 0;
-}
-
-.docked-sidebar.is-edit-mode {
-  width: 140px;
 }
 
 .sidebar-header {

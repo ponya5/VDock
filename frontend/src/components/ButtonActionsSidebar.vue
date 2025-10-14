@@ -190,10 +190,14 @@
       <div v-show="shouldShowCategory('time')" class="action-category">
         <button class="category-header" @click="toggleCategory('time')">
           <FontAwesomeIcon :icon="expandedCategories.includes('time') ? ['fas', 'chevron-down'] : ['fas', 'chevron-right']" />
-          <span>Time</span>
-          <span class="count">(3)</span>
+          <span>Time & Date</span>
+          <span class="count">(4)</span>
         </button>
         <div v-show="expandedCategories.includes('time')" class="category-items">
+          <button v-show="matchesSearch('Calendar')" class="action-item" @click="selectAction('calendar')">
+            <FontAwesomeIcon :icon="['fas', 'calendar-days']" />
+            <span>Calendar</span>
+          </button>
           <button v-show="matchesSearch('World Time')" class="action-item" @click="selectAction('time_world_clock')">
             <FontAwesomeIcon :icon="['fas', 'globe']" />
             <span>World Time</span>
@@ -353,7 +357,7 @@ function shouldShowCategory(category: string): boolean {
     media: ['Play/Pause', 'Next Track', 'Previous Track', 'Stop', 'Volume Up', 'Volume Down', 'Mute'],
     web: ['Open URL', 'Open Application', 'Open Folder', 'Open File', 'Screenshot', 'Copy to Clipboard'],
     metrics: ['Memory', 'CPU usage', 'CPU temperature', 'CPU frequency', 'CPU package power', 'Internet speed', 'Harddisk', 'GPU temperature', 'GPU core frequency', 'GPU Core Usage', 'GPU memory frequency', 'GPU Memory Usage'],
-    time: ['World Time', 'Timer', 'Countdown'],
+    time: ['Calendar', 'World Time', 'Timer', 'Countdown'],
     weather: ['Weather query'],
     text: ['Send Hotkey', 'Type Text', 'Copy to Clipboard', 'Paste from Clipboard', 'Macro'],
     streaming: ['OBS Start Recording', 'OBS Start Streaming', 'OBS Switch Scene', 'Toggle Microphone', 'Toggle Camera'],

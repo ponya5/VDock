@@ -178,7 +178,7 @@ async function handleFileUpload(event: Event) {
     formData.append('type', 'avatar')
     
     // Upload to backend
-    const response = await apiClient.post('/upload', formData, {
+    const response = await apiClient.post('/upload/icon', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
