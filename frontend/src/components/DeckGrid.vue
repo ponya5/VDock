@@ -20,8 +20,9 @@
       @delete="handleButtonDelete"
     />
     
-    <!-- Button placeholders for empty slots -->
+    <!-- Button placeholders for empty slots - only show in edit mode -->
     <div
+      v-if="isEditMode"
       v-for="placeholder in emptySlots"
       :key="`placeholder-${placeholder.row}-${placeholder.col}`"
       class="button-placeholder"
@@ -35,7 +36,7 @@
       @dragenter="(e) => handlePlaceholderDragEnter(e, placeholder)"
       @dragleave="(e) => handlePlaceholderDragLeave(e, placeholder)"
     >
-      <FontAwesomeIcon :icon="isEditMode ? ['fas', 'arrows-alt'] : ['fas', 'plus']" />
+      <FontAwesomeIcon :icon="['fas', 'plus']" />
     </div>
   </div>
 </template>
@@ -72,7 +73,7 @@ const gridStyle = computed(() => {
     display: 'grid',
     gridTemplateRows: `repeat(${rows}, 1fr)`,
     gridTemplateColumns: `repeat(${cols}, 1fr)`,
-    gap: 'var(--spacing-sm)',
+    gap: props.isEditMode ? 'var(--spacing-sm)' : '0',
     width: '100%',
     height: '100%',
     padding: 'var(--spacing-md)'

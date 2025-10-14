@@ -85,6 +85,55 @@
         </div>
 
         <div class="form-group">
+          <label>Background Color</label>
+          <div class="color-picker-section">
+            <div class="current-color" :style="{ backgroundColor: editedButton.style?.backgroundColor || '#2c3e50' }">
+              <input 
+                v-model="editedButton.style.backgroundColor" 
+                type="color" 
+                class="color-input"
+                @input="updateBackgroundColor"
+              />
+            </div>
+            <div class="color-palette">
+              <div 
+                v-for="color in colorPalette" 
+                :key="color"
+                class="color-swatch"
+                :class="{ active: editedButton.style?.backgroundColor === color }"
+                :style="{ backgroundColor: color }"
+                @click="selectColor(color)"
+                :title="color"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Icon Size</label>
+          <div class="icon-size-controls">
+            <input 
+              v-model.number="editedButton.style.iconSize" 
+              type="range" 
+              class="icon-size-slider"
+              min="16" 
+              max="64" 
+              step="4"
+              @input="updateIconSize"
+            />
+            <div class="icon-size-display">
+              <span>{{ editedButton.style?.iconSize || 32 }}px</span>
+              <div class="icon-preview">
+                <FontAwesomeIcon 
+                  :icon="editedButton.icon || ['fas', 'home']" 
+                  :style="{ fontSize: `${editedButton.style?.iconSize || 32}px` }"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label>Shape</label>
           <select v-model="editedButton.shape" class="select">
             <option value="rectangle">Rectangle</option>
@@ -208,15 +257,6 @@
               <option value="open_file">Open File</option>
               <option value="screenshot">Screenshot</option>
             </optgroup>
-            <optgroup label="Spotify Integration">
-              <option value="spotify_play_pause">Spotify Play/Pause</option>
-              <option value="spotify_next">Spotify Next Track</option>
-              <option value="spotify_previous">Spotify Previous Track</option>
-              <option value="spotify_volume_up">Spotify Volume Up</option>
-              <option value="spotify_volume_down">Spotify Volume Down</option>
-              <option value="spotify_seek_forward">Spotify Seek Forward</option>
-              <option value="spotify_seek_backward">Spotify Seek Backward</option>
-            </optgroup>
           </select>
         </div>
 
@@ -246,15 +286,9 @@
           <input v-model="actionConfig.path" type="text" class="input" placeholder="screenshot.png" />
         </div>
 
-        <div v-if="actionType === 'cross_platform' && ['volume_up', 'volume_down', 'brightness_up', 'brightness_down', 'spotify_volume_up', 'spotify_volume_down'].includes(actionConfig.action)" class="form-group">
+        <div v-if="actionType === 'cross_platform' && ['volume_up', 'volume_down', 'brightness_up', 'brightness_down'].includes(actionConfig.action)" class="form-group">
           <label>Step Size</label>
           <input v-model.number="actionConfig.step" type="number" class="input" min="1" max="100" placeholder="10" />
-        </div>
-
-        <div v-if="actionType === 'cross_platform' && ['spotify_seek_forward', 'spotify_seek_backward'].includes(actionConfig.action)" class="form-group">
-          <label>Seek Step (milliseconds)</label>
-          <input v-model.number="actionConfig.step" type="number" class="input" min="1000" max="60000" placeholder="10000" />
-          <div class="form-help">How many milliseconds to seek forward/backward (1000 = 1 second)</div>
         </div>
 
         <div v-if="actionType === 'cross_platform' && actionConfig.action === 'brightness_set'" class="form-group">
@@ -313,6 +347,15 @@ const showIconPicker = ref(false)
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
+
+// Color palette for background color selection
+const colorPalette = ref([
+  '#2c3e50', '#34495e', '#7f8c8d', '#95a5a6', '#bdc3c7', '#ecf0f1',
+  '#e74c3c', '#c0392b', '#e67e22', '#d35400', '#f39c12', '#f1c40f',
+  '#27ae60', '#16a085', '#2ecc71', '#1abc9c', '#3498db', '#2980b9',
+  '#9b59b6', '#8e44ad', '#e91e63', '#ad1457', '#673ab7', '#512da8',
+  '#795548', '#5d4037', '#607d8b', '#455a64', '#000000', '#ffffff'
+])
 
 // Media picker value
 const mediaValue = ref<{ url: string; type: string } | null>(
@@ -400,7 +443,43 @@ function getMediaHelpText(mediaType: string) {
   }
 }
 
+function selectColor(color: string) {
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.backgroundColor = color
+}
+
+function updateBackgroundColor(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.backgroundColor = target.value
+}
+
+function updateIconSize(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.iconSize = parseInt(target.value)
+}
+
 function handleSave() {
+  // Ensure style object exists
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  
+  // Set default values if not provided
+  if (!editedButton.value.style.backgroundColor) {
+    editedButton.value.style.backgroundColor = '#2c3e50'
+  }
+  if (!editedButton.value.style.iconSize) {
+    editedButton.value.style.iconSize = 32
+  }
+  
   // Update action if configured
   if (actionType.value && editedButton.value.action) {
     editedButton.value.action.config = actionConfig.value
@@ -490,6 +569,129 @@ function handleSave() {
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
   margin-bottom: 0;
+}
+
+/* Color Picker Styles */
+.color-picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.current-color {
+  width: 60px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.color-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--spacing-xs);
+  max-width: 300px;
+}
+
+.color-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  border-color: var(--color-primary);
+}
+
+.color-swatch.active {
+  border-color: var(--color-primary);
+  border-width: 3px;
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+/* Icon Size Controls */
+.icon-size-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.icon-size-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.icon-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-surface-solid);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-surface-solid);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-size-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.icon-size-display span {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.icon-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: var(--color-surface-solid);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
 }
 </style>
 
