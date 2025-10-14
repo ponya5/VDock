@@ -70,31 +70,13 @@
           </div>
 
           <div class="form-group">
-            <label>Default Grid Size</label>
-            <div class="flex gap-sm">
-              <div style="flex: 1">
-                <label class="small-label">Rows</label>
-                <input 
-                  v-model.number="settings.defaultGridRows" 
-                  type="number" 
-                  class="input" 
-                  min="1" 
-                  max="10" 
-                />
-              </div>
-              <div style="flex: 1">
-                <label class="small-label">Columns</label>
-                <input 
-                  v-model.number="settings.defaultGridCols" 
-                  type="number" 
-                  class="input" 
-                  min="1" 
-                  max="10" 
-                />
-              </div>
-            </div>
-            <p class="form-help">This will be the default grid size for new pages</p>
+            <label class="checkbox-label">
+              <input v-model="settings.dockedSidebarEnabled" type="checkbox" />
+              <span>Show docked sidebar</span>
+            </label>
+            <p class="form-help">Display the left sidebar with persistent buttons</p>
           </div>
+
         </section>
       </div>
 

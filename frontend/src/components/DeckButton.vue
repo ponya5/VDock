@@ -23,6 +23,9 @@
       <button class="edit-btn" @click.stop="emit('edit', button)" title="Edit">
         <FontAwesomeIcon :icon="['fas', 'edit']" />
       </button>
+      <button class="copy-btn" @click.stop="emit('copy', button)" title="Copy">
+        <FontAwesomeIcon :icon="['fas', 'copy']" />
+      </button>
       <button class="delete-btn" @click.stop="emit('delete', button.id)" title="Delete">
         <FontAwesomeIcon :icon="['fas', 'trash']" />
       </button>
@@ -70,16 +73,16 @@
         </div>
       </div>
 
-      <div v-if="button.label" class="button-label">
+      <div v-if="button.label && showLabels" class="button-label">
         {{ button.label }}
       </div>
 
-      <div v-if="button.secondary_label" class="button-secondary-label">
+      <div v-if="button.secondary_label && showLabels" class="button-secondary-label">
         {{ button.secondary_label }}
       </div>
     </div>
 
-    <div v-if="button.tooltip && !isEditMode" class="button-tooltip">
+    <div v-if="button.tooltip && !isEditMode && showTooltips" class="button-tooltip">
       {{ button.tooltip }}
     </div>
   </div>
@@ -93,15 +96,20 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 interface Props {
   button: Button
   isEditMode?: boolean
+  showLabels?: boolean
+  showTooltips?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isEditMode: false
+  isEditMode: false,
+  showLabels: true,
+  showTooltips: true
 })
 
 const emit = defineEmits<{
   click: [button: Button]
   edit: [button: Button]
+  copy: [button: Button]
   delete: [buttonId: string]
   move: [buttonId: string, newPosition: { row: number; col: number }]
 }>()
@@ -177,14 +185,13 @@ function handleRightClick() {
 }
 
 function handleDragStart(event: DragEvent) {
+  console.log('DeckButton: drag start', props.button.label, 'edit mode:', props.isEditMode)
   if (!props.isEditMode) return
   
   if (event.dataTransfer) {
-    event.dataTransfer.setData('application/vdock-button', JSON.stringify({
-      id: props.button.id,
-      position: props.button.position
-    }))
-    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('application/vdock-button', JSON.stringify(props.button))
+    event.dataTransfer.effectAllowed = 'copyMove' // Allow both copy and move
+    console.log('DeckButton: drag data set', props.button)
   }
 }
 
@@ -261,6 +268,7 @@ function handleDragEnd() {
 }
 
 .edit-btn,
+.copy-btn,
 .delete-btn {
   padding: var(--spacing-sm);
   border: none;
@@ -275,12 +283,18 @@ function handleDragEnd() {
   color: white;
 }
 
+.copy-btn {
+  background-color: var(--color-accent);
+  color: white;
+}
+
 .delete-btn {
   background-color: var(--color-error);
   color: white;
 }
 
 .edit-btn:hover,
+.copy-btn:hover,
 .delete-btn:hover {
   transform: scale(1.1);
 }

@@ -19,6 +19,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const showLabels = ref(true)
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
+  const dockedSidebarEnabled = ref(true)
   
   // Grid settings
   const defaultGridRows = ref(3)
@@ -42,6 +43,7 @@ export const useSettingsStore = defineStore('settings', () => {
         showLabels.value = settings.showLabels !== false
         showTooltips.value = settings.showTooltips !== false
         animationsEnabled.value = settings.animationsEnabled !== false
+        dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
         defaultGridRows.value = settings.defaultGridRows || 3
         defaultGridCols.value = settings.defaultGridCols || 3
         authEnabled.value = settings.authEnabled || false
@@ -60,6 +62,7 @@ export const useSettingsStore = defineStore('settings', () => {
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
       animationsEnabled: animationsEnabled.value,
+      dockedSidebarEnabled: dockedSidebarEnabled.value,
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
       authEnabled: authEnabled.value,
@@ -70,7 +73,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
     },
@@ -164,6 +167,7 @@ export const useSettingsStore = defineStore('settings', () => {
     showLabels,
     showTooltips,
     animationsEnabled,
+    dockedSidebarEnabled,
     defaultGridRows,
     defaultGridCols,
     authEnabled,

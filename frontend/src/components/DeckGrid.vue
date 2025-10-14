@@ -15,9 +15,12 @@
       :key="button.id"
       :button="button"
       :is-edit-mode="isEditMode"
-      @click="handleButtonClick"
-      @edit="handleButtonEdit"
-      @delete="handleButtonDelete"
+      :show-labels="showLabels"
+      :show-tooltips="showTooltips"
+          @click="handleButtonClick"
+          @edit="handleButtonEdit"
+          @copy="handleButtonCopy"
+          @delete="handleButtonDelete"
     />
     
     <!-- Button placeholders for empty slots - only show in edit mode -->
@@ -50,15 +53,22 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 interface Props {
   page: Page
   isEditMode?: boolean
+  buttonSize?: number
+  showLabels?: boolean
+  showTooltips?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isEditMode: false
+  isEditMode: false,
+  buttonSize: 1.0,
+  showLabels: true,
+  showTooltips: true
 })
 
 const emit = defineEmits<{
   buttonClick: [button: Button]
   buttonEdit: [button: Button]
+  buttonCopy: [button: Button]
   buttonDelete: [buttonId: string]
   swipeLeft: []
   swipeRight: []
@@ -76,7 +86,9 @@ const gridStyle = computed(() => {
     gap: 'var(--spacing-xs)', // Always show small spacing between buttons
     width: '100%',
     height: '100%',
-    padding: 'var(--spacing-md)'
+    padding: 'var(--spacing-md)',
+    transform: `scale(${props.buttonSize})`,
+    transformOrigin: 'center'
   }
 })
 
@@ -133,6 +145,10 @@ function handleButtonEdit(button: Button) {
   emit('buttonEdit', button)
 }
 
+function handleButtonCopy(button: Button) {
+  emit('buttonCopy', button)
+}
+
 function handleButtonDelete(buttonId: string) {
   emit('buttonDelete', buttonId)
 }
@@ -176,16 +192,19 @@ function handleTouchEnd(e: TouchEvent) {
 // Drag and drop handlers
 function handleDragOver(e: DragEvent) {
   e.preventDefault()
+  // Don't stop propagation - let the event bubble to parent containers like DockedSidebar
   e.dataTransfer!.dropEffect = 'copy'
 }
 
 function handleDragEnter(e: DragEvent) {
   e.preventDefault()
+  // Don't stop propagation - let the event bubble to parent containers like DockedSidebar
   isDragOver.value = true
 }
 
 function handleDragLeave(e: DragEvent) {
   e.preventDefault()
+  // Don't stop propagation - let the event bubble to parent containers like DockedSidebar
   isDragOver.value = false
 }
 
@@ -217,6 +236,7 @@ function handleDrop(e: DragEvent) {
     try {
       const button = JSON.parse(buttonData)
       emit('buttonMove', button.id, { row, col })
+      e.stopPropagation() // Only stop propagation if we handled the drop
       return
     } catch (error) {
       console.error('Error handling button drop:', error)
@@ -229,6 +249,7 @@ function handleDrop(e: DragEvent) {
     try {
       const action = JSON.parse(actionData)
       emit('actionDrop', action, { row, col })
+      e.stopPropagation() // Only stop propagation if we handled the drop
     } catch (error) {
       console.error('Error handling action drop:', error)
     }

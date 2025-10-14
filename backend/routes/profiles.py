@@ -1,12 +1,14 @@
 """Profile management routes."""
 from flask import Blueprint, request, jsonify
-from pathlib import Path
 import uuid
+import logging
 
 from config import Config
-from models import Profile, Page, ProfileSettings
+from models import Profile, Page, ProfileSettings, Scene, Button
 from utils import FileManager
 from auth import require_auth
+
+logger = logging.getLogger('vdock')
 
 profiles_bp = Blueprint('profiles', __name__)
 
@@ -96,7 +98,10 @@ def create_profile():
     if FileManager.save_json(file_path, profile.to_dict()):
         return jsonify({'profile': profile.to_dict(), 'success': True}), 201
     
-    return jsonify({'error': 'Failed to create profile', 'success': False}), 500
+    return jsonify({
+        'error': 'Failed to create profile',
+        'success': False
+    }), 500
 
 
 @profiles_bp.route('/api/profiles/<profile_id>', methods=['PUT'])
@@ -105,6 +110,12 @@ def update_profile(profile_id):
     data = request.json
     if not data:
         return jsonify({'error': 'No data provided', 'success': False}), 400
+    
+    logger.info(f"Updating profile {profile_id}")
+    logger.info(f"Received data keys: {list(data.keys())}")
+    logger.info(f"dockedButtons in data: {'dockedButtons' in data}")
+    if 'dockedButtons' in data:
+        logger.info(f"dockedButtons count: {len(data['dockedButtons'])}")
     
     file_path = Config.PROFILES_DIR / f"{profile_id}.json"
     
@@ -115,6 +126,10 @@ def update_profile(profile_id):
     
     try:
         profile = Profile.from_dict(profile_data)
+        logger.info(
+            f"Loaded profile, existing dockedButtons: "
+            f"{len(profile.dockedButtons)}"
+        )
         
         # Update fields
         profile.name = data.get('name', profile.name)
@@ -124,16 +139,44 @@ def update_profile(profile_id):
         profile.theme = data.get('theme', profile.theme)
         profile.updated_at = FileManager.get_timestamp()
         
-        # Update pages if provided
+        # Update pages if provided (backward compatibility)
         if 'pages' in data:
             profile.pages = [Page.from_dict(p) for p in data['pages']]
         
-        # Save
-        if FileManager.save_json(file_path, profile.to_dict()):
-            return jsonify({'profile': profile.to_dict(), 'success': True})
+        # Update scenes if provided
+        if 'scenes' in data:
+            profile.scenes = [Scene.from_dict(s) for s in data['scenes']]
+            logger.info(f"Updated scenes, count: {len(profile.scenes)}")
         
-        return jsonify({'error': 'Failed to save profile', 'success': False}), 500
+        # Update docked buttons if provided
+        if 'dockedButtons' in data:
+            profile.dockedButtons = [
+                Button.from_dict(b) for b in data['dockedButtons']
+            ]
+            logger.info(
+                f"Updated dockedButtons, count: {len(profile.dockedButtons)}"
+            )
+        
+        # Save
+        profile_dict = profile.to_dict()
+        docked_count = len(profile_dict.get('dockedButtons', []))
+        scenes_count = len(profile_dict.get('scenes', []))
+        logger.info(f"Profile dict dockedButtons count: {docked_count}")
+        logger.info(f"Profile dict scenes count: {scenes_count}")
+        
+        if FileManager.save_json(file_path, profile_dict):
+            logger.info("Profile saved successfully")
+            return jsonify({
+                'profile': profile_dict,
+                'success': True
+            })
+        
+        return jsonify({
+            'error': 'Failed to save profile',
+            'success': False
+        }), 500
     except Exception as e:
+        logger.error(f"Error updating profile: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
 
