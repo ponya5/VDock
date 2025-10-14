@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-10-14T22:18:00Z",
+  "description": "Background repository index for VDock application",
+  "categories": {
+    "dashboard": {
+      "gradients": "backgrounds/dashboard/gradients/index.json",
+      "patterns": "backgrounds/dashboard/patterns/index.json",
+      "images": "backgrounds/dashboard/images/index.json",
+      "animated": "backgrounds/dashboard/animated/index.json",
+      "dynamic": "backgrounds/dashboard/dynamic/index.json"
+    },
+    "buttons": {
+      "static": "backgrounds/buttons/static/index.json",
+      "animated": "backgrounds/buttons/animated/index.json",
+      "video": "backgrounds/buttons/video/index.json"
+    }
+  },
+  "totalBackgrounds": 0
+}

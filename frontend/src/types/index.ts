@@ -11,7 +11,11 @@ export type ActionType =
   | 'folder'
   | 'plugin'
 
-export type ButtonShape = 'rectangle' | 'rounded' | 'circle'
+export type ButtonShape = 'rectangle' | 'rounded' | 'circle' | 'hexagon' | 'diamond' | 'octagon'
+
+export type ButtonEffect = 'none' | 'glass' | 'neumorphism' | 'gradient' | 'glow' | '3d'
+
+export type ButtonAnimation = 'none' | 'pulse' | 'shimmer' | 'bounce' | 'rotate'
 
 export interface ButtonAction {
   type: ActionType
@@ -36,6 +40,12 @@ export interface ButtonStyle {
   fontSize?: number
   iconSize?: number
   opacity?: number
+  enhanced?: boolean
+  effect?: ButtonEffect
+  animation?: ButtonAnimation
+  gradient?: string
+  glowColor?: string
+  shadowIntensity?: number
   [key: string]: any
 }
 

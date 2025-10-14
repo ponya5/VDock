@@ -1,0 +1,77 @@
+{
+  "category": "productivity",
+  "description": "Productivity and work-focused icon collection",
+  "theme": "Productivity & Work",
+  "icons": [
+    {
+      "id": "prod-calendar-check",
+      "name": "Calendar Schedule",
+      "icon": ["fas", "calendar-check"],
+      "tags": ["calendar", "schedule", "appointment", "time"],
+      "color": "#2196f3"
+    },
+    {
+      "id": "prod-tasks-list",
+      "name": "Task List",
+      "icon": ["fas", "tasks"],
+      "tags": ["tasks", "todo", "checklist", "organize"],
+      "color": "#4caf50"
+    },
+    {
+      "id": "prod-clock-time",
+      "name": "Time Management",
+      "icon": ["fas", "clock"],
+      "tags": ["time", "clock", "schedule", "deadline"],
+      "color": "#ff9800"
+    },
+    {
+      "id": "prod-chart-analytics",
+      "name": "Analytics Chart",
+      "icon": ["fas", "chart-line"],
+      "tags": ["chart", "analytics", "growth", "data"],
+      "color": "#9c27b0"
+    },
+    {
+      "id": "prod-briefcase-work",
+      "name": "Work Briefcase",
+      "icon": ["fas", "briefcase"],
+      "tags": ["work", "business", "professional", "career"],
+      "color": "#795548"
+    },
+    {
+      "id": "prod-lightbulb-idea",
+      "name": "Creative Ideas",
+      "icon": ["fas", "lightbulb"],
+      "tags": ["idea", "creative", "innovation", "inspiration"],
+      "color": "#ffeb3b"
+    },
+    {
+      "id": "prod-target-goals",
+      "name": "Goal Target",
+      "icon": ["fas", "bullseye"],
+      "tags": ["target", "goal", "objective", "focus"],
+      "color": "#f44336"
+    },
+    {
+      "id": "prod-cog-settings",
+      "name": "Configuration",
+      "icon": ["fas", "cogs"],
+      "tags": ["settings", "configuration", "setup", "tools"],
+      "color": "#607d8b"
+    },
+    {
+      "id": "prod-folder-organize",
+      "name": "File Organization",
+      "icon": ["fas", "folder-open"],
+      "tags": ["folder", "organize", "files", "structure"],
+      "color": "#ff9800"
+    },
+    {
+      "id": "prod-search-find",
+      "name": "Search & Find",
+      "icon": ["fas", "search-plus"],
+      "tags": ["search", "find", "discover", "explore"],
+      "color": "#3f51b5"
+    }
+  ]
+}

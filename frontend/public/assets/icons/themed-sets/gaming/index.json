@@ -1,0 +1,77 @@
+{
+  "category": "gaming",
+  "description": "Gaming-themed icon collection",
+  "theme": "Gaming & Entertainment",
+  "icons": [
+    {
+      "id": "game-controller-xbox",
+      "name": "Xbox Controller",
+      "icon": ["fab", "xbox"],
+      "tags": ["xbox", "controller", "gaming", "console"],
+      "color": "#107c10"
+    },
+    {
+      "id": "game-controller-ps",
+      "name": "PlayStation Controller",
+      "icon": ["fab", "playstation"],
+      "tags": ["playstation", "controller", "gaming", "console"],
+      "color": "#003087"
+    },
+    {
+      "id": "steam-gaming",
+      "name": "Steam Platform",
+      "icon": ["fab", "steam"],
+      "tags": ["steam", "pc", "gaming", "platform"],
+      "color": "#171a21"
+    },
+    {
+      "id": "twitch-streaming",
+      "name": "Twitch Stream",
+      "icon": ["fab", "twitch"],
+      "tags": ["twitch", "streaming", "live", "broadcast"],
+      "color": "#9146ff"
+    },
+    {
+      "id": "discord-voice",
+      "name": "Discord Chat",
+      "icon": ["fab", "discord"],
+      "tags": ["discord", "voice", "chat", "communication"],
+      "color": "#5865f2"
+    },
+    {
+      "id": "game-dice",
+      "name": "Gaming Dice",
+      "icon": ["fas", "dice"],
+      "tags": ["dice", "random", "tabletop", "rpg"],
+      "color": "#ff6b35"
+    },
+    {
+      "id": "game-trophy",
+      "name": "Achievement Trophy",
+      "icon": ["fas", "trophy"],
+      "tags": ["trophy", "achievement", "winner", "success"],
+      "color": "#ffd700"
+    },
+    {
+      "id": "game-target",
+      "name": "Crosshair Target",
+      "icon": ["fas", "crosshairs"],
+      "tags": ["crosshair", "target", "aim", "shooter"],
+      "color": "#ff4444"
+    },
+    {
+      "id": "game-rocket",
+      "name": "Rocket Launch",
+      "icon": ["fas", "rocket"],
+      "tags": ["rocket", "launch", "space", "speed"],
+      "color": "#ff5722"
+    },
+    {
+      "id": "game-puzzle",
+      "name": "Puzzle Piece",
+      "icon": ["fas", "puzzle-piece"],
+      "tags": ["puzzle", "piece", "solve", "strategy"],
+      "color": "#4caf50"
+    }
+  ]
+}

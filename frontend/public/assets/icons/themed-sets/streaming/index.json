@@ -1,0 +1,77 @@
+{
+  "category": "streaming",
+  "description": "Streaming and content creation icon collection",
+  "theme": "Streaming & Content Creation",
+  "icons": [
+    {
+      "id": "stream-broadcast-live",
+      "name": "Live Broadcast",
+      "icon": ["fas", "broadcast-tower"],
+      "tags": ["broadcast", "live", "streaming", "transmission"],
+      "color": "#e74c3c"
+    },
+    {
+      "id": "stream-video-camera",
+      "name": "Video Camera",
+      "icon": ["fas", "video"],
+      "tags": ["video", "camera", "recording", "content"],
+      "color": "#2196f3"
+    },
+    {
+      "id": "stream-microphone-audio",
+      "name": "Microphone Audio",
+      "icon": ["fas", "microphone-alt"],
+      "tags": ["microphone", "audio", "voice", "podcast"],
+      "color": "#ff5722"
+    },
+    {
+      "id": "stream-obs-studio",
+      "name": "OBS Studio",
+      "icon": ["fas", "desktop"],
+      "tags": ["obs", "studio", "streaming", "software"],
+      "color": "#302e31"
+    },
+    {
+      "id": "stream-chat-messages",
+      "name": "Chat Messages",
+      "icon": ["fas", "comments"],
+      "tags": ["chat", "messages", "interaction", "community"],
+      "color": "#4caf50"
+    },
+    {
+      "id": "stream-donation-support",
+      "name": "Donation Support",
+      "icon": ["fas", "hand-holding-usd"],
+      "tags": ["donation", "support", "tip", "monetization"],
+      "color": "#4caf50"
+    },
+    {
+      "id": "stream-subscriber-follow",
+      "name": "Subscriber Follow",
+      "icon": ["fas", "user-plus"],
+      "tags": ["subscriber", "follow", "fan", "community"],
+      "color": "#9c27b0"
+    },
+    {
+      "id": "stream-scene-layout",
+      "name": "Scene Layout",
+      "icon": ["fas", "th-large"],
+      "tags": ["scene", "layout", "composition", "design"],
+      "color": "#607d8b"
+    },
+    {
+      "id": "stream-filter-effects",
+      "name": "Filter Effects",
+      "icon": ["fas", "magic"],
+      "tags": ["filter", "effects", "enhancement", "visual"],
+      "color": "#673ab7"
+    },
+    {
+      "id": "stream-record-save",
+      "name": "Record & Save",
+      "icon": ["fas", "save"],
+      "tags": ["record", "save", "archive", "content"],
+      "color": "#795548"
+    }
+  ]
+}

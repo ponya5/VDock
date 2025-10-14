@@ -1,0 +1,118 @@
+{
+  "category": "gaming",
+  "description": "Gaming and entertainment icons",
+  "icons": [
+    {
+      "id": "gamepad",
+      "name": "Gamepad",
+      "icon": ["fas", "gamepad"],
+      "tags": ["gamepad", "controller", "gaming", "play"],
+      "color": "#e91e63"
+    },
+    {
+      "id": "steam",
+      "name": "Steam",
+      "icon": ["fab", "steam"],
+      "tags": ["steam", "gaming", "platform", "valve"],
+      "color": "#171a21"
+    },
+    {
+      "id": "xbox",
+      "name": "Xbox",
+      "icon": ["fab", "xbox"],
+      "tags": ["xbox", "microsoft", "gaming", "console"],
+      "color": "#107c10"
+    },
+    {
+      "id": "playstation",
+      "name": "PlayStation",
+      "icon": ["fab", "playstation"],
+      "tags": ["playstation", "sony", "gaming", "console"],
+      "color": "#003087"
+    },
+    {
+      "id": "nintendo",
+      "name": "Nintendo",
+      "icon": ["fas", "gamepad"],
+      "tags": ["nintendo", "gaming", "console", "switch"],
+      "color": "#e60012"
+    },
+    {
+      "id": "dice",
+      "name": "Dice",
+      "icon": ["fas", "dice"],
+      "tags": ["dice", "random", "gaming", "chance"],
+      "color": "#ff9800"
+    },
+    {
+      "id": "trophy",
+      "name": "Trophy",
+      "icon": ["fas", "trophy"],
+      "tags": ["trophy", "achievement", "gaming", "win"],
+      "color": "#ffc107"
+    },
+    {
+      "id": "medal",
+      "name": "Medal",
+      "icon": ["fas", "medal"],
+      "tags": ["medal", "award", "gaming", "achievement"],
+      "color": "#ff5722"
+    },
+    {
+      "id": "target",
+      "name": "Target",
+      "icon": ["fas", "crosshairs"],
+      "tags": ["target", "aim", "gaming", "shooter"],
+      "color": "#f44336"
+    },
+    {
+      "id": "sword",
+      "name": "Sword",
+      "icon": ["fas", "sword"],
+      "tags": ["sword", "weapon", "gaming", "rpg"],
+      "color": "#9c27b0"
+    },
+    {
+      "id": "shield",
+      "name": "Shield",
+      "icon": ["fas", "shield-alt"],
+      "tags": ["shield", "defense", "gaming", "protection"],
+      "color": "#3f51b5"
+    },
+    {
+      "id": "magic",
+      "name": "Magic",
+      "icon": ["fas", "magic"],
+      "tags": ["magic", "spell", "gaming", "fantasy"],
+      "color": "#673ab7"
+    },
+    {
+      "id": "puzzle",
+      "name": "Puzzle",
+      "icon": ["fas", "puzzle-piece"],
+      "tags": ["puzzle", "piece", "gaming", "solve"],
+      "color": "#009688"
+    },
+    {
+      "id": "rocket",
+      "name": "Rocket",
+      "icon": ["fas", "rocket"],
+      "tags": ["rocket", "space", "gaming", "launch"],
+      "color": "#ff5722"
+    },
+    {
+      "id": "joystick",
+      "name": "Joystick",
+      "icon": ["fas", "gamepad"],
+      "tags": ["joystick", "controller", "gaming", "arcade"],
+      "color": "#795548"
+    },
+    {
+      "id": "vr-headset",
+      "name": "VR Headset",
+      "icon": ["fas", "vr-cardboard"],
+      "tags": ["vr", "virtual", "reality", "gaming"],
+      "color": "#607d8b"
+    }
+  ]
+}

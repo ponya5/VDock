@@ -1,0 +1,79 @@
+{
+  "category": "animated-dashboard-backgrounds",
+  "description": "Animated CSS and GIF dashboard backgrounds",
+  "backgrounds": [
+    {
+      "id": "floating-particles",
+      "name": "Floating Particles",
+      "type": "background",
+      "format": "css",
+      "css": "floating-particles",
+      "tags": ["particles", "animated", "subtle", "professional"],
+      "description": "Subtle floating particles animation"
+    },
+    {
+      "id": "gradient-waves",
+      "name": "Gradient Waves",
+      "type": "background",
+      "format": "css",
+      "css": "gradient-waves",
+      "tags": ["gradient", "waves", "animated", "smooth"],
+      "description": "Flowing gradient wave animation"
+    },
+    {
+      "id": "geometric-patterns",
+      "name": "Geometric Patterns",
+      "type": "background",
+      "format": "css",
+      "css": "geometric-patterns",
+      "tags": ["geometric", "patterns", "animated", "modern"],
+      "description": "Animated geometric pattern background"
+    },
+    {
+      "id": "aurora-borealis",
+      "name": "Aurora Borealis",
+      "type": "background",
+      "format": "css",
+      "css": "aurora-borealis",
+      "tags": ["aurora", "northern lights", "colorful", "animated"],
+      "description": "Northern lights inspired animation"
+    },
+    {
+      "id": "matrix-rain",
+      "name": "Matrix Rain",
+      "type": "background",
+      "format": "css",
+      "css": "matrix-rain",
+      "tags": ["matrix", "code", "rain", "tech"],
+      "description": "Matrix-style falling code animation"
+    },
+    {
+      "id": "starfield",
+      "name": "Starfield",
+      "type": "background",
+      "format": "css",
+      "css": "starfield",
+      "tags": ["stars", "space", "animated", "cosmic"],
+      "description": "Animated starfield background"
+    },
+    {
+      "id": "bubble-float",
+      "name": "Floating Bubbles",
+      "type": "background",
+      "format": "css",
+      "css": "bubble-float",
+      "tags": ["bubbles", "float", "animated", "playful"],
+      "description": "Floating bubbles animation"
+    },
+    {
+      "id": "neon-grid",
+      "name": "Neon Grid",
+      "type": "background",
+      "format": "css",
+      "css": "neon-grid",
+      "tags": ["neon", "grid", "retro", "animated"],
+      "description": "Retro neon grid animation"
+    }
+  ]
+}
+

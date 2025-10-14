@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-10-14T22:18:00Z",
+  "description": "VDock Asset Repository - Comprehensive collection of icons, animations, and backgrounds",
+  "categories": {
+    "icons": {
+      "fontawesome-extended": {
+        "description": "Extended FontAwesome icon categories",
+        "categories": ["system", "media", "gaming", "productivity", "streaming", "social"],
+        "totalIcons": 0
+      },
+      "custom": {
+        "description": "Custom SVG and PNG icons from open-source libraries",
+        "formats": ["svg", "png"],
+        "totalIcons": 0
+      },
+      "themed-sets": {
+        "description": "Specialized themed icon collections",
+        "themes": ["gaming", "productivity", "streaming", "creative"],
+        "totalIcons": 0
+      }
+    },
+    "animations": {
+      "gifs": {
+        "description": "High-quality animated GIF assets",
+        "categories": ["buttons", "backgrounds", "effects"],
+        "maxSize": "5MB",
+        "totalAssets": 0
+      },
+      "videos": {
+        "description": "Premium video assets for backgrounds and buttons",
+        "categories": ["buttons", "backgrounds"],
+        "maxSize": "5MB",
+        "formats": ["mp4", "webm"],
+        "totalAssets": 0
+      }
+    },
+    "backgrounds": {
+      "dashboard": {
+        "description": "Dashboard background options",
+        "types": ["gradients", "patterns", "images", "animated", "dynamic"],
+        "totalAssets": 0
+      },
+      "buttons": {
+        "description": "Button background assets",
+        "types": ["static", "animated", "video"],
+        "totalAssets": 0
+      }
+    }
+  },
+  "attribution": {
+    "licensesFile": "attribution/licenses.json",
+    "sourcesFile": "attribution/sources.json"
+  }
+}

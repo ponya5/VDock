@@ -1,0 +1,106 @@
+{
+  "category": "button-animations",
+  "description": "Animated GIF icons for buttons",
+  "animations": [
+    {
+      "id": "loading-spinner",
+      "name": "Loading Spinner",
+      "url": "/assets/animations/gifs/buttons/loading-spinner.gif",
+      "tags": ["loading", "spinner", "circular", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "pulse-circle",
+      "name": "Pulse Circle",
+      "url": "/assets/animations/gifs/buttons/pulse-circle.gif",
+      "tags": ["pulse", "circle", "glow", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "bouncing-arrow",
+      "name": "Bouncing Arrow",
+      "url": "/assets/animations/gifs/buttons/bouncing-arrow.gif",
+      "tags": ["arrow", "bounce", "direction", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "rotating-gear",
+      "name": "Rotating Gear",
+      "url": "/assets/animations/gifs/buttons/rotating-gear.gif",
+      "tags": ["gear", "settings", "rotate", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "wave-ripple",
+      "name": "Wave Ripple",
+      "url": "/assets/animations/gifs/buttons/wave-ripple.gif",
+      "tags": ["wave", "ripple", "water", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "check-success",
+      "name": "Check Success",
+      "url": "/assets/animations/gifs/buttons/check-success.gif",
+      "tags": ["check", "success", "done", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "heart-beat",
+      "name": "Heart Beat",
+      "url": "/assets/animations/gifs/buttons/heart-beat.gif",
+      "tags": ["heart", "beat", "love", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "star-sparkle",
+      "name": "Star Sparkle",
+      "url": "/assets/animations/gifs/buttons/star-sparkle.gif",
+      "tags": ["star", "sparkle", "shine", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "fire-flame",
+      "name": "Fire Flame",
+      "url": "/assets/animations/gifs/buttons/fire-flame.gif",
+      "tags": ["fire", "flame", "hot", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    },
+    {
+      "id": "lightning-bolt",
+      "name": "Lightning Bolt",
+      "url": "/assets/animations/gifs/buttons/lightning-bolt.gif",
+      "tags": ["lightning", "bolt", "power", "animated"],
+      "format": "gif",
+      "dimensions": { "width": 128, "height": 128 },
+      "source": "custom",
+      "license": "CC0"
+    }
+  ]
+}

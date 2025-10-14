@@ -118,20 +118,26 @@ const buttonClasses = computed(() => ({
   'shape-rectangle': props.button.shape === 'rectangle',
   'shape-rounded': props.button.shape === 'rounded',
   'shape-circle': props.button.shape === 'circle',
+  'shape-hexagon': props.button.shape === 'hexagon',
+  'shape-diamond': props.button.shape === 'diamond',
+  'shape-octagon': props.button.shape === 'octagon',
   'edit-mode': props.isEditMode,
-  'has-action': !!props.button.action
+  'has-action': !!props.button.action,
+  'deck-button-enhanced': props.button.style?.enhanced,
+  'deck-button-glass': props.button.style?.effect === 'glass',
+  'deck-button-neumorphism': props.button.style?.effect === 'neumorphism',
+  'deck-button-gradient': props.button.style?.effect === 'gradient',
+  'deck-button-glow': props.button.style?.effect === 'glow',
+  'btn-pulse': props.button.style?.animation === 'pulse',
+  'btn-shimmer': props.button.style?.animation === 'shimmer'
 }))
 
 const buttonStyle = computed(() => {
   const { position, size, style } = props.button
   
-  return {
+  const baseStyle = {
     gridRow: `${position.row + 1} / span ${size.rows}`,
     gridColumn: `${position.col + 1} / span ${size.cols}`,
-    backgroundColor: style?.backgroundColor || 'var(--color-surface)',
-    color: style?.textColor || 'var(--color-text)',
-    borderColor: style?.borderColor || 'var(--color-border)',
-    borderWidth: style?.borderWidth ? `${style.borderWidth}px` : '2px',
     opacity: style?.opacity || 1,
     fontSize: style?.fontSize ? `${style.fontSize}px` : '0.875rem',
     // Only use background image for non-video media
@@ -143,6 +149,45 @@ const buttonStyle = computed(() => {
       ? 'center' : undefined,
     backgroundRepeat: (props.button.media_url && props.button.media_type !== 'video') 
       ? 'no-repeat' : undefined
+  }
+
+  // Apply enhanced styling based on effect type
+  if (style?.effect === 'glass') {
+    // Glass effect styles are handled by CSS classes
+    return {
+      ...baseStyle,
+      color: style?.textColor || 'rgba(255, 255, 255, 0.9)'
+    }
+  } else if (style?.effect === 'neumorphism') {
+    // Neumorphism styles are handled by CSS classes
+    return {
+      ...baseStyle,
+      color: style?.textColor || 'var(--color-text)'
+    }
+  } else if (style?.effect === 'gradient') {
+    // Custom gradient or default
+    const gradient = style?.gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    return {
+      ...baseStyle,
+      background: gradient,
+      color: style?.textColor || '#ffffff'
+    }
+  } else if (style?.effect === 'glow') {
+    return {
+      ...baseStyle,
+      backgroundColor: style?.backgroundColor || 'var(--color-primary)',
+      color: style?.textColor || '#ffffff',
+      borderColor: 'transparent'
+    }
+  } else {
+    // Default styling
+    return {
+      ...baseStyle,
+      backgroundColor: style?.backgroundColor || 'var(--color-surface)',
+      color: style?.textColor || 'var(--color-text)',
+      borderColor: style?.borderColor || 'var(--color-border)',
+      borderWidth: style?.borderWidth ? `${style.borderWidth}px` : '2px'
+    }
   }
 })
 

@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-10-14T22:18:00Z",
+  "description": "Animation repository index for VDock application",
+  "categories": {
+    "gifs": {
+      "buttons": "animations/gifs/buttons/index.json",
+      "backgrounds": "animations/gifs/backgrounds/index.json",
+      "effects": "animations/gifs/effects/index.json"
+    },
+    "videos": {
+      "buttons": "animations/videos/buttons/index.json",
+      "backgrounds": "animations/videos/backgrounds/index.json"
+    }
+  },
+  "totalAnimations": 0
+}
