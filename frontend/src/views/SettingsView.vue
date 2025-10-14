@@ -81,6 +81,9 @@
             <label>Dashboard Background</label>
             <select v-model="settings.dashboardBackground" class="select">
               <option value="default">Default (Gradient)</option>
+              <optgroup label="Custom Background" v-if="customBackgroundUrl">
+                <option :value="customBackgroundUrl">Custom Uploaded Image</option>
+              </optgroup>
               <optgroup label="Static Gradients">
                 <option value="ocean-breeze">Ocean Breeze</option>
                 <option value="sunset-glow">Sunset Glow</option>
@@ -99,6 +102,40 @@
               </optgroup>
             </select>
             <p class="form-help">Choose a background style for your dashboard</p>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Custom Background</label>
+            <div class="upload-section">
+              <input 
+                ref="backgroundFileInput"
+                type="file" 
+                accept="image/*,.gif" 
+                @change="handleBackgroundUpload"
+                class="file-input"
+                style="display: none"
+              />
+              <button 
+                class="btn btn-secondary upload-btn" 
+                @click="$refs.backgroundFileInput.click()"
+              >
+                <FontAwesomeIcon :icon="['fas', 'upload']" />
+                Choose Image or GIF
+              </button>
+              <button 
+                v-if="customBackgroundUrl"
+                class="btn btn-danger"
+                @click="removeCustomBackground"
+                title="Remove Custom Background"
+              >
+                <FontAwesomeIcon :icon="['fas', 'trash']" />
+                Remove
+              </button>
+            </div>
+            <div v-if="customBackgroundUrl" class="background-preview">
+              <img :src="customBackgroundUrl" alt="Custom Background" />
+            </div>
+            <p class="form-help">Upload your own image or GIF as a dashboard background (supports PNG, JPG, GIF)</p>
           </div>
 
         </section>
@@ -365,6 +402,87 @@ const serverConfig = computed(() => settingsStore.serverConfig)
 
 const activeTab = ref('appearance')
 
+// Custom Background State
+const customBackgroundUrl = ref<string | null>(null)
+const backgroundFileInput = ref<HTMLInputElement | null>(null)
+
+// Load custom background from localStorage
+const loadCustomBackground = () => {
+  const stored = localStorage.getItem('customBackgroundUrl')
+  if (stored) {
+    customBackgroundUrl.value = stored
+  }
+}
+
+// Save custom background to localStorage
+const saveCustomBackground = (url: string) => {
+  customBackgroundUrl.value = url
+  localStorage.setItem('customBackgroundUrl', url)
+  // Don't auto-select - let user choose from dropdown
+}
+
+// Handle background file upload
+const handleBackgroundUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  // Validate file type
+  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+  if (!validTypes.includes(file.type)) {
+    alert('Please upload a valid image file (PNG, JPG, or GIF)')
+    return
+  }
+  
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024
+  if (file.size > maxSize) {
+    alert('File size must be less than 10MB')
+    return
+  }
+  
+  try {
+    // Create form data
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'background')
+    
+    // Upload to backend
+    const response = await apiClient.post('/upload/icon', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    if (response.data.success) {
+      const imageUrl = response.data.url
+      saveCustomBackground(imageUrl)
+      alert('Background uploaded successfully! Select "Custom Uploaded Image" from the Dashboard Background dropdown above to use it.')
+    } else {
+      alert('Failed to upload background: ' + (response.data.error || 'Unknown error'))
+    }
+  } catch (error: any) {
+    console.error('Error uploading background:', error)
+    alert('Failed to upload background: ' + (error.message || 'Unknown error'))
+  } finally {
+    // Reset file input
+    if (target) target.value = ''
+  }
+}
+
+// Remove custom background
+const removeCustomBackground = () => {
+  if (confirm('Are you sure you want to remove the custom background?')) {
+    customBackgroundUrl.value = null
+    localStorage.removeItem('customBackgroundUrl')
+    // Reset to default background
+    if (settings.value.dashboardBackground.startsWith('/api/uploads/')) {
+      settings.value.dashboardBackground = 'default'
+    }
+  }
+}
+
 // App Integration State
 const runningApps = ref<RunningApp[]>([])
 const loadingApps = ref(false)
@@ -597,6 +715,7 @@ onMounted(async () => {
   settingsStore.loadThemes()
   settingsStore.loadServerConfig()
   loadAppIntegrations()
+  loadCustomBackground()
   
   // Load running apps if on integration tab
   if (activeTab.value === 'integration') {
@@ -1114,6 +1233,33 @@ onUnmounted(() => {
 
 .status-icon.success {
   color: #10b981;
+}
+
+/* Custom Background Upload Styles */
+.upload-section {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.background-preview {
+  margin-top: var(--spacing-md);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+  max-width: 400px;
+}
+
+.background-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 </style>
 

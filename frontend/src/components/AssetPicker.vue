@@ -32,7 +32,7 @@
           <select v-model="selectedCategory" class="category-select">
             <option value="">All Categories</option>
             <option 
-              v-for="category in categories" 
+              v-for="category in nonEmptyCategories" 
               :key="category.id" 
               :value="category.id"
             >
@@ -74,7 +74,7 @@
               <span class="asset-count">{{ totalAssets }}</span>
             </button>
             <button 
-              v-for="category in categories" 
+              v-for="category in nonEmptyCategories" 
               :key="category.id"
               class="category-item" 
               :class="{ active: selectedCategory === category.id }"
@@ -242,6 +242,11 @@ const allAssets = ref<AssetMetadata[]>([])
 
 // Computed
 const totalAssets = computed(() => allAssets.value.length)
+
+// Filter out empty categories
+const nonEmptyCategories = computed(() => {
+  return categories.value.filter(category => category.assets.length > 0)
+})
 
 const filteredAssets = computed(() => {
   let assets = allAssets.value
