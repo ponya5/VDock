@@ -73,24 +73,7 @@
       />
       
       <div v-else-if="button.icon || button.media_url" class="button-icon">
-        <!-- FontAwesome Icon -->
-        <FontAwesomeIcon 
-          v-if="button.icon_type === 'fontawesome'" 
-          :icon="Array.isArray(button.icon) ? button.icon : parseIcon(button.icon)" 
-          :style="iconStyle"
-          class="fontawesome-icon"
-        />
-        
-        <!-- Custom Image Icon -->
-        <img 
-          v-if="button.icon_type === 'custom'" 
-          :src="button.icon" 
-          :style="iconStyle"
-          alt="Button icon"
-          class="custom-icon"
-        />
-        
-        <!-- Media (Video/GIF/Image) -->
+        <!-- Media (Video/GIF/Image) - Priority over icons -->
         <div v-if="button.media_url" class="media-container">
           <img 
             v-if="button.media_type === 'gif' || button.media_type === 'image'" 
@@ -111,6 +94,23 @@
             class="media-element"
           />
         </div>
+        
+        <!-- FontAwesome Icon - Only show if no media -->
+        <FontAwesomeIcon 
+          v-else-if="button.icon_type === 'fontawesome'" 
+          :icon="Array.isArray(button.icon) ? button.icon : parseIcon(button.icon)" 
+          :style="iconStyle"
+          class="fontawesome-icon"
+        />
+        
+        <!-- Custom Image Icon - Only show if no media -->
+        <img 
+          v-else-if="button.icon_type === 'custom'" 
+          :src="button.icon" 
+          :style="iconStyle"
+          alt="Button icon"
+          class="custom-icon"
+        />
       </div>
 
       <div v-if="button.label && showLabels && !isSpecialActionType" class="button-label">

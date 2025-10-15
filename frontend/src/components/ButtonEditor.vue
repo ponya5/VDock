@@ -132,7 +132,7 @@
               type="range" 
               class="icon-size-slider"
               min="16" 
-              max="64" 
+              max="128" 
               step="4"
               @input="updateIconSize"
             />
@@ -1232,11 +1232,12 @@ function handleSave() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   background-color: var(--color-surface-solid);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
+  overflow: hidden;
 }
 
 /* Macro Editor Styles */
