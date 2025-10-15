@@ -8,7 +8,7 @@ echo ========================================
 echo.
 
 echo [1/5] Checking virtual environment...
-if not exist ".venv\Scripts\activate.bat" (
+if not exist "backend\venv\Scripts\activate.bat" (
     echo ERROR: Virtual environment not found!
     echo Please run setup.bat first.
     pause
@@ -24,7 +24,7 @@ if not exist "frontend\node_modules" (
 )
 
 echo [3/5] Starting Backend Server...
-start "VDock Backend" cmd /k "cd backend && call ..\.venv\Scripts\activate.bat && python app.py"
+start "VDock Backend" cmd /k "cd backend && call venv\Scripts\activate.bat && python app.py"
 
 echo [4/5] Waiting for backend to initialize...
 timeout /t 5 /nobreak >nul
