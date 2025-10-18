@@ -295,14 +295,29 @@
         </div>
 
         <div v-if="actionType === 'hotkey'" class="form-group">
-          <label>Keys (comma-separated)</label>
-          <input 
-            v-model="hotkeyString" 
-            type="text" 
-            class="input" 
-            placeholder="ctrl, c" 
-            @input="updateHotkeyConfig"
-          />
+          <label>Key Combination</label>
+          <div class="key-recorder-container">
+            <input 
+              v-model="hotkeyString" 
+              type="text" 
+              class="input key-recorder-input" 
+              placeholder="Click here and press keys to record combination"
+              readonly
+              @click="startKeyRecording"
+              @keydown="handleKeyDown"
+              @keyup="handleKeyUp"
+              ref="keyRecorderInput"
+            />
+            <button 
+              class="btn btn-secondary key-recorder-btn" 
+              @click="toggleKeyRecording"
+              :class="{ 'recording': isRecording }"
+            >
+              <FontAwesomeIcon :icon="['fas', isRecording ? 'stop' : 'keyboard']" />
+              {{ isRecording ? 'Stop Recording' : 'Record Keys' }}
+            </button>
+          </div>
+          <p class="form-help">Click the input field or press "Record Keys" and then press your desired key combination (e.g., Ctrl+V, Alt+Tab)</p>
         </div>
 
         <!-- Macro Configuration -->
@@ -670,7 +685,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import type { Button, ButtonAction, ActionType } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
@@ -699,6 +714,13 @@ const showActionsSidebar = ref(false)
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
+
+// Key recorder state
+const isRecording = ref(false)
+const keyRecorderInput = ref<HTMLInputElement | null>(null)
+const recordedKeys = ref<string[]>([])
+const keyDownListener = ref<((e: KeyboardEvent) => void) | null>(null)
+const keyUpListener = ref<((e: KeyboardEvent) => void) | null>(null)
 
 // Macro steps management
 interface MacroStepUI {
@@ -802,6 +824,144 @@ function updateHotkeyConfig() {
     .split(',')
     .map(k => k.trim())
     .filter(k => k.length > 0)
+}
+
+// Key recorder functions
+function startKeyRecording() {
+  if (isRecording.value) return
+  
+  isRecording.value = true
+  recordedKeys.value = []
+  
+  // Focus the input to capture key events
+  if (keyRecorderInput.value) {
+    keyRecorderInput.value.focus()
+  }
+  
+  // Add global key listeners
+  keyDownListener.value = (e: KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const key = getKeyName(e)
+    if (key && !recordedKeys.value.includes(key)) {
+      recordedKeys.value.push(key)
+      updateHotkeyFromRecordedKeys()
+    }
+  }
+  
+  keyUpListener.value = (e: KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // Stop recording after a short delay to allow for key combinations
+    setTimeout(() => {
+      if (isRecording.value) {
+        stopKeyRecording()
+      }
+    }, 500)
+  }
+  
+  document.addEventListener('keydown', keyDownListener.value)
+  document.addEventListener('keyup', keyUpListener.value)
+}
+
+function stopKeyRecording() {
+  isRecording.value = false
+  
+  if (keyDownListener.value) {
+    document.removeEventListener('keydown', keyDownListener.value)
+    keyDownListener.value = null
+  }
+  
+  if (keyUpListener.value) {
+    document.removeEventListener('keyup', keyUpListener.value)
+    keyUpListener.value = null
+  }
+  
+  // Blur the input
+  if (keyRecorderInput.value) {
+    keyRecorderInput.value.blur()
+  }
+}
+
+function toggleKeyRecording() {
+  if (isRecording.value) {
+    stopKeyRecording()
+  } else {
+    startKeyRecording()
+  }
+}
+
+function getKeyName(e: KeyboardEvent): string {
+  const modifiers = []
+  
+  if (e.ctrlKey) modifiers.push('ctrl')
+  if (e.altKey) modifiers.push('alt')
+  if (e.shiftKey) modifiers.push('shift')
+  if (e.metaKey) modifiers.push('win')
+  
+  // Get the actual key pressed (excluding modifiers)
+  let key = e.key.toLowerCase()
+  
+  // Handle special keys
+  const specialKeys: Record<string, string> = {
+    ' ': 'space',
+    'arrowup': 'up',
+    'arrowdown': 'down',
+    'arrowleft': 'left',
+    'arrowright': 'right',
+    'enter': 'enter',
+    'tab': 'tab',
+    'escape': 'escape',
+    'backspace': 'backspace',
+    'delete': 'delete',
+    'home': 'home',
+    'end': 'end',
+    'pageup': 'pageup',
+    'pagedown': 'pagedown',
+    'insert': 'insert',
+    'f1': 'f1', 'f2': 'f2', 'f3': 'f3', 'f4': 'f4',
+    'f5': 'f5', 'f6': 'f6', 'f7': 'f7', 'f8': 'f8',
+    'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12'
+  }
+  
+  if (specialKeys[key]) {
+    key = specialKeys[key]
+  }
+  
+  // Skip modifier keys themselves
+  if (['control', 'alt', 'shift', 'meta'].includes(key)) {
+    return ''
+  }
+  
+  // Combine modifiers with the key
+  if (modifiers.length > 0) {
+    return [...modifiers, key].join('+')
+  }
+  
+  return key
+}
+
+function updateHotkeyFromRecordedKeys() {
+  if (recordedKeys.value.length > 0) {
+    hotkeyString.value = recordedKeys.value.join(', ')
+    updateHotkeyConfig()
+  }
+}
+
+function handleKeyDown(e: KeyboardEvent) {
+  if (isRecording.value) {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+}
+
+function handleKeyUp(e: KeyboardEvent) {
+  if (isRecording.value) {
+    e.preventDefault()
+    e.stopPropagation()
+  }
 }
 
 function handleIconSelect(icon: string) {
@@ -1052,6 +1212,16 @@ function handleSave() {
   
   emit('save', editedButton.value)
 }
+
+// Cleanup key recorder listeners on unmount
+onUnmounted(() => {
+  if (keyDownListener.value) {
+    document.removeEventListener('keydown', keyDownListener.value)
+  }
+  if (keyUpListener.value) {
+    document.removeEventListener('keyup', keyUpListener.value)
+  }
+})
 </script>
 
 <style scoped>
@@ -1428,6 +1598,56 @@ function handleSave() {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+/* Key Recorder Styles */
+.key-recorder-container {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: stretch;
+}
+
+.key-recorder-input {
+  flex: 1;
+  cursor: pointer;
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.key-recorder-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.key-recorder-input.recording {
+  border-color: var(--color-success);
+  background-color: rgba(46, 204, 113, 0.1);
+  animation: pulse 1s infinite;
+}
+
+.key-recorder-btn {
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.key-recorder-btn.recording {
+  background-color: var(--color-success);
+  color: white;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.form-help {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+  line-height: 1.4;
 }
 </style>
 

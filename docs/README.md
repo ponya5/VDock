@@ -5,45 +5,65 @@ Welcome to the VDock documentation! This directory contains comprehensive guides
 ## 📚 Documentation Structure
 
 ### 🚀 Getting Started
-- **[User Guide](USER_GUIDE.md)** - Complete guide for end users
 - **[Quick Start](QUICKSTART.md)** - Get up and running quickly
-- **[API Documentation](API.md)** - Backend API reference
+- **[Installation Guide](guides/INSTALLATION.md)** - Complete installation instructions
+- **[User Guide](guides/USER_GUIDE.md)** - Complete guide for end users
 
 ### 🛠️ Development
 - **[Developer Guide](development/DEVELOPER_GUIDE.md)** - Guide for developers and contributors
 - **[Launcher Documentation](development/LAUNCHER_README.md)** - Launcher system documentation
+- **[API Documentation](API.md)** - Backend API reference
+- **[Architecture](ARCHITECTURE.md)** - System architecture and design
 
-### 🚀 Deployment
+### 🚀 Deployment & Operations
 - **[Production Deployment](deployment/PRODUCTION_DEPLOYMENT.md)** - Complete production deployment guide
 - **[Installation Notes](deployment/INSTALL_NOTES.md)** - Installation troubleshooting and fixes
+- **[Production Checklist](technical/PRODUCTION_CHECKLIST.md)** - Pre-deployment verification
 
-### 🔒 Security
+### 🔒 Security & Maintenance
 - **[Security Policy](security/SECURITY.md)** - Security policies, best practices, and vulnerability reporting
-
-### 🔧 Maintenance
 - **[Maintenance Guide](maintenance/MAINTENANCE.md)** - Routine maintenance, monitoring, and troubleshooting
 
+### 📋 Guides & Features
+- **[App Integration Guide](APP_INTEGRATION_GUIDE.md)** - Integrating VDock with other applications
+- **[Asset System Guide](ASSET_SYSTEM_GUIDE.md)** - Managing assets and uploads
+- **[Asset Upload Guide](ASSET_UPLOAD_GUIDE.md)** - Uploading and managing files
+- **[New Action Types Guide](NEW_ACTION_TYPES_GUIDE.md)** - Creating custom action types
+- **[Feature Guide: Drag & Drop](FEATURE_DRAG_AND_DROP.md)** - Drag and drop functionality
+- **[GIF Download Instructions](GIF_DOWNLOAD_INSTRUCTIONS.md)** - Downloading animated assets
+- **[Sourcing Animated Assets](SOURCING_ANIMATED_ASSETS.md)** - Finding and adding animations
+
 ### 📄 Project Information
-- **[Architecture](ARCHITECTURE.md)** - System architecture and design
 - **[Changelog](CHANGELOG.md)** - Version history and updates
 - **[License](LICENSE.md)** - Project license information
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines
+- **[Contributing](CONTRIBUTING.md)** - How to contribute to VDock
+
+### 📁 Archive
+- **[Action Test Report](archive/ACTION_TEST_REPORT.md)** - Testing results
+- **[Cleanup Summary](archive/CLEANUP_SUMMARY.md)** - Project cleanup documentation
+- **[Media Controls Fix Summary](archive/MEDIA_CONTROLS_FIX_SUMMARY.md)** - Media controls fixes
+- **[Next Steps](archive/NEXT_STEPS.md)** - Future development plans
 
 ## 📖 Quick Navigation
 
 ### For Users
 1. Start with [Quick Start](QUICKSTART.md) to get VDock running
-2. Read [User Guide](USER_GUIDE.md) for comprehensive usage instructions
-3. Check [API Documentation](API.md) for advanced integrations
+2. Follow [Installation Guide](guides/INSTALLATION.md) for setup
+3. Read [User Guide](guides/USER_GUIDE.md) for comprehensive usage instructions
+4. Check [Asset System Guide](ASSET_SYSTEM_GUIDE.md) for managing files
 
 ### For Developers
 1. Review [Developer Guide](development/DEVELOPER_GUIDE.md) for development setup
 2. Check [Launcher Documentation](development/LAUNCHER_README.md) for launcher system
 3. See [API Documentation](API.md) for backend integration
+4. Review [Architecture](ARCHITECTURE.md) for system design
 
 ### For Administrators
 1. Follow [Production Deployment](deployment/PRODUCTION_DEPLOYMENT.md) for production setup
-2. Review [Security Policy](security/SECURITY.md) for security best practices
-3. Use [Maintenance Guide](maintenance/MAINTENANCE.md) for ongoing operations
+2. Use [Production Checklist](technical/PRODUCTION_CHECKLIST.md) for verification
+3. Review [Security Policy](security/SECURITY.md) for security best practices
+4. Use [Maintenance Guide](maintenance/MAINTENANCE.md) for ongoing operations
 
 ## 🎯 Documentation Categories
 
