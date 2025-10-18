@@ -23,7 +23,7 @@
         <button class="category-header" @click="toggleCategory('system')">
           <FontAwesomeIcon :icon="expandedCategories.includes('system') ? ['fas', 'chevron-down'] : ['fas', 'chevron-right']" />
           <span>System</span>
-          <span class="count">(10)</span>
+          <span class="count">(6)</span>
         </button>
         <div v-show="expandedCategories.includes('system')" class="category-items">
           <button v-show="matchesSearch('Launch Program')" class="action-item" @click="selectAction('program')">
@@ -49,6 +49,29 @@
           <button v-show="matchesSearch('Screenshot')" class="action-item" @click="selectAction('screenshot')">
             <FontAwesomeIcon :icon="['fas', 'camera']" />
             <span>Screenshot</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Category -->
+      <div v-show="shouldShowCategory('navigation')" class="action-category">
+        <button class="category-header" @click="toggleCategory('navigation')">
+          <FontAwesomeIcon :icon="expandedCategories.includes('navigation') ? ['fas', 'chevron-down'] : ['fas', 'chevron-right']" />
+          <span>Navigation</span>
+          <span class="count">(3)</span>
+        </button>
+        <div v-show="expandedCategories.includes('navigation')" class="category-items">
+          <button v-show="matchesSearch('Next Page')" class="action-item" @click="selectAction('next_page')">
+            <FontAwesomeIcon :icon="['fas', 'chevron-right']" />
+            <span>Next Page</span>
+          </button>
+          <button v-show="matchesSearch('Previous Page')" class="action-item" @click="selectAction('previous_page')">
+            <FontAwesomeIcon :icon="['fas', 'chevron-left']" />
+            <span>Previous Page</span>
+          </button>
+          <button v-show="matchesSearch('Home')" class="action-item" @click="selectAction('home_page')">
+            <FontAwesomeIcon :icon="['fas', 'home']" />
+            <span>Home</span>
           </button>
         </div>
       </div>
@@ -332,7 +355,7 @@ const emit = defineEmits<{
 }>()
 
 const searchQuery = ref('')
-const expandedCategories = ref<string[]>(['metrics', 'time', 'weather']) // Auto-expand new categories
+const expandedCategories = ref<string[]>(['navigation', 'metrics', 'time', 'weather']) // Auto-expand new categories
 
 function toggleCategory(category: string) {
   const index = expandedCategories.value.indexOf(category)
@@ -354,6 +377,7 @@ function shouldShowCategory(category: string): boolean {
   // If searching, show category if any of its items match
   const categoryItems: Record<string, string[]> = {
     system: ['Launch Program', 'Run Command', 'Send Hotkey', 'Macro', 'Open Folder', 'Screenshot'],
+    navigation: ['Next Page', 'Previous Page', 'Home'],
     media: ['Play/Pause', 'Next Track', 'Previous Track', 'Stop', 'Volume Up', 'Volume Down', 'Mute'],
     web: ['Open URL', 'Open Application', 'Open Folder', 'Open File', 'Screenshot', 'Copy to Clipboard'],
     metrics: ['Memory', 'CPU usage', 'CPU temperature', 'CPU frequency', 'CPU package power', 'Internet speed', 'Harddisk', 'GPU temperature', 'GPU core frequency', 'GPU Core Usage', 'GPU memory frequency', 'GPU Memory Usage'],

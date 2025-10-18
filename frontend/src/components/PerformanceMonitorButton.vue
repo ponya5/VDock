@@ -5,7 +5,7 @@
       <span class="header-title">System Performance Monitor</span>
     </div>
     
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading && isInitialLoad" class="loading-state">
       <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
       <span>Loading metrics...</span>
     </div>
@@ -19,8 +19,11 @@
         <div class="metric-icon">
           <FontAwesomeIcon :icon="getMetricIcon(metric)" />
         </div>
-        <div class="metric-content">
-          <div class="metric-label">{{ getMetricLabel(metric) }}</div>
+          <div class="metric-content">
+          <div class="metric-label">
+            {{ getMetricLabel(metric) }}
+            <FontAwesomeIcon v-if="isRefreshing" :icon="['fas', 'circle-notch']" spin class="refresh-indicator" />
+          </div>
           <div class="metric-value">
             {{ getMetricValue(metric) }}
             <span class="metric-unit">{{ getMetricUnit(metric) }}</span>
@@ -51,13 +54,15 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  refreshInterval: 2,
+  refreshInterval: 5,
 })
 
 const metricsData = ref<Record<string, any>>({})
-const loading = ref(false)
+const loading = ref(true) // Only true on initial load
+const isRefreshing = ref(false) // For subtle refresh indicator
 const error = ref<string | null>(null)
 let intervalId: number | null = null
+let isInitialLoad = true
 
 const selectedMetrics = computed(() => props.metrics || [])
 
@@ -166,7 +171,12 @@ function getMetricPercent(metric: PerformanceMetric): number {
 }
 
 async function fetchMetrics() {
-  loading.value = true
+  // Only show full loading on initial load
+  if (isInitialLoad) {
+    loading.value = true
+  } else {
+    isRefreshing.value = true
+  }
   error.value = null
   
   try {
@@ -200,11 +210,18 @@ async function fetchMetrics() {
       gpu_memory_frequency: [],
       gpu_memory_usage: [],
     }
+    
+    if (isInitialLoad) {
+      isInitialLoad = false
+    }
   } catch (err: any) {
     console.error('Failed to fetch performance metrics:', err)
-    error.value = 'Failed to load metrics'
+    if (isInitialLoad) {
+      error.value = 'Failed to load metrics'
+    }
   } finally {
     loading.value = false
+    isRefreshing.value = false
   }
 }
 
@@ -301,6 +318,20 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.refresh-indicator {
+  font-size: 0.6rem;
+  opacity: 0.6;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 0.6; }
 }
 
 .metric-value {

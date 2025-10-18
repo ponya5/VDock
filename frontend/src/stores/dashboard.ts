@@ -40,10 +40,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   function migrateProfileToScenes(profile: Profile): Profile {
     console.log('DashboardStore: migrating profile', profile)
+    console.log('DashboardStore: scenes count:', profile.scenes?.length)
+    console.log('DashboardStore: scenes data:', JSON.stringify(profile.scenes, null, 2))
     
     // If profile already has scenes, return as-is
     if (profile.scenes && profile.scenes.length > 0) {
       console.log('DashboardStore: profile already has scenes')
+      console.log('DashboardStore: scene 0 pages:', profile.scenes[0]?.pages?.length)
+      console.log('DashboardStore: scene 0 page 0 buttons:', profile.scenes[0]?.pages?.[0]?.buttons?.length)
       // Ensure dockedButtons exists - preserve existing if present
       if (!profile.dockedButtons) {
         profile.dockedButtons = []
@@ -158,12 +162,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!currentScene.value) return
     if (currentPageIndex.value < currentScene.value.pages.length - 1) {
       currentPageIndex.value++
+    } else {
+      // Circular navigation: go back to first page
+      currentPageIndex.value = 0
     }
   }
 
   function previousPage() {
     if (currentPageIndex.value > 0) {
       currentPageIndex.value--
+    } else {
+      // Circular navigation: go to last page
+      if (currentScene.value) {
+        currentPageIndex.value = currentScene.value.pages.length - 1
+      }
     }
   }
 
@@ -221,9 +233,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   function addPage(page?: Page) {
     if (!currentScene.value) return
-    
+
     const settingsStore = useSettingsStore()
-    
+
     if (!page) {
       // Create a new page with default grid size from settings
       page = {
@@ -236,9 +248,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
         }
       }
     }
-    
+
     currentScene.value.pages.push(page)
     addToHistory()
+    // Auto-save profile after adding page
+    saveProfile()
   }
 
   function removePage(pageId: string) {
@@ -307,7 +321,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!currentProfile.value) return false
     
     try {
+      console.log('DashboardStore: Saving profile...', {
+        id: currentProfile.value.id,
+        scenes: currentProfile.value.scenes.length,
+        dockedButtons: currentProfile.value.dockedButtons?.length || 0
+      })
       const response = await apiClient.put(`/profiles/${currentProfile.value.id}`, currentProfile.value)
+      console.log('DashboardStore: Profile saved successfully', response.data.success)
       return response.data.success
     } catch (error) {
       console.error('Failed to save profile:', error)
@@ -317,6 +337,22 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   async function executeButtonAction(button: Button) {
     if (!button.action) return
+    
+    // Handle page navigation actions locally (frontend-only)
+    if (button.action.type === 'next_page') {
+      nextPage()
+      return { success: true, message: 'Navigated to next page' }
+    }
+    
+    if (button.action.type === 'previous_page') {
+      previousPage()
+      return { success: true, message: 'Navigated to previous page' }
+    }
+    
+    if (button.action.type === 'home_page') {
+      setPage(0)
+      return { success: true, message: 'Navigated to home page' }
+    }
     
     try {
       const response = await apiClient.post('/actions/execute', {

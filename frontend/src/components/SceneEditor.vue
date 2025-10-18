@@ -86,6 +86,61 @@
           <p class="form-help">Adjust the size of scene navigation buttons</p>
         </div>
 
+        <!-- Pages Management -->
+        <div class="form-group">
+          <label>
+            Pages in Scene
+            <span class="page-count-badge">{{ pages.length }}</span>
+          </label>
+          <div class="pages-list">
+            <div 
+              v-for="(page, index) in pages" 
+              :key="page.id"
+              class="page-item"
+            >
+              <div class="page-info">
+                <FontAwesomeIcon :icon="['fas', 'file']" class="page-icon" />
+                <input
+                  v-if="editingPageIndex === index"
+                  v-model="editingPageName"
+                  type="text"
+                  class="page-name-input"
+                  @blur="savePageName(index)"
+                  @keyup.enter="savePageName(index)"
+                  @keyup.esc="cancelPageEdit"
+                  autofocus
+                />
+                <span v-else class="page-name">{{ page.name }}</span>
+              </div>
+              <div class="page-actions">
+                <button
+                  class="btn-icon btn-sm"
+                  @click="startEditPageName(index, page.name)"
+                  title="Edit page name"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'edit']" />
+                </button>
+                <button
+                  v-if="pages.length > 1"
+                  class="btn-icon btn-sm btn-danger"
+                  @click="deletePage(index)"
+                  title="Delete page"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'trash']" />
+                </button>
+              </div>
+            </div>
+          </div>
+          <button 
+            class="btn btn-secondary btn-sm add-page-btn"
+            @click="addPage"
+          >
+            <FontAwesomeIcon :icon="['fas', 'plus']" />
+            Add Page
+          </button>
+          <p class="form-help">Manage pages within this scene. Each scene must have at least one page.</p>
+        </div>
+
         <div v-if="isEditing" class="form-group">
           <label class="checkbox-label">
             <input v-model="editedScene.isActive" type="checkbox" />
@@ -138,6 +193,8 @@ const emit = defineEmits<{
 }>()
 
 const showIconPicker = ref(false)
+const editingPageIndex = ref<number | null>(null)
+const editingPageName = ref('')
 
 // Initialize edited scene
 const editedScene = ref<Scene>(props.scene ? { ...props.scene } : {
@@ -145,9 +202,32 @@ const editedScene = ref<Scene>(props.scene ? { ...props.scene } : {
   name: 'New Scene',
   icon: '',
   color: '#3498db',
-  pages: [],
+  pages: [{
+    id: `page_${Date.now()}`,
+    name: 'Page 1',
+    buttons: [],
+    grid_config: { rows: 4, cols: 5 }
+  }],
   isActive: false,
   buttonSize: 1.0
+})
+
+// Ensure pages array exists and has at least one page
+const pages = computed({
+  get: () => {
+    if (!editedScene.value.pages || editedScene.value.pages.length === 0) {
+      editedScene.value.pages = [{
+        id: `page_${Date.now()}`,
+        name: 'Page 1',
+        buttons: [],
+        grid_config: { rows: 4, cols: 5 }
+      }]
+    }
+    return editedScene.value.pages
+  },
+  set: (value) => {
+    editedScene.value.pages = value
+  }
 })
 
 // Color palette for scene colors
@@ -191,6 +271,47 @@ function handleSave() {
 function deleteScene() {
   if (confirm(`Are you sure you want to delete "${editedScene.value.name}"? This action cannot be undone.`)) {
     emit('delete', editedScene.value.id)
+  }
+}
+
+// Page management functions
+function addPage() {
+  const newPageNumber = pages.value.length + 1
+  pages.value.push({
+    id: `page_${Date.now()}`,
+    name: `Page ${newPageNumber}`,
+    buttons: [],
+    grid_config: { rows: 4, cols: 5 }
+  })
+}
+
+function startEditPageName(index: number, currentName: string) {
+  editingPageIndex.value = index
+  editingPageName.value = currentName
+}
+
+function savePageName(index: number) {
+  if (editingPageName.value.trim()) {
+    pages.value[index].name = editingPageName.value.trim()
+  }
+  editingPageIndex.value = null
+  editingPageName.value = ''
+}
+
+function cancelPageEdit() {
+  editingPageIndex.value = null
+  editingPageName.value = ''
+}
+
+function deletePage(index: number) {
+  if (pages.value.length === 1) {
+    alert('Cannot delete the last page. A scene must have at least one page.')
+    return
+  }
+  
+  const pageName = pages.value[index].name
+  if (confirm(`Delete page "${pageName}"? This action cannot be undone.`)) {
+    pages.value.splice(index, 1)
   }
 }
 </script>
@@ -413,5 +534,126 @@ function deleteScene() {
   color: var(--color-text-secondary);
   font-size: 0.875rem;
   transition: all var(--transition-fast);
+}
+
+/* Pages Management Styles */
+.page-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--spacing-xs);
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: var(--spacing-xs);
+}
+
+.pages-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--spacing-xs);
+  background-color: var(--color-background);
+  border-radius: var(--radius-md);
+}
+
+.page-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.page-item:hover {
+  border-color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.page-icon {
+  color: var(--color-primary);
+  font-size: 1rem;
+}
+
+.page-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.page-name-input {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.page-name-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.page-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.btn-icon:hover {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-icon.btn-danger {
+  color: var(--color-error);
+}
+
+.btn-icon.btn-danger:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: white;
+}
+
+.add-page-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
 }
 </style>

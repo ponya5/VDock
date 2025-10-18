@@ -1,5 +1,11 @@
 <template>
   <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode }" :style="{ width: sidebarWidth }">
+    <div 
+      v-if="isEditMode"
+      class="resize-handle"
+      @mousedown="startResize"
+      title="Drag to resize"
+    ></div>
     <div class="sidebar-header">
       <h3>Docked Buttons</h3>
       <button 
@@ -56,6 +62,7 @@ import { computed, ref } from 'vue'
 import type { Button } from '@/types'
 import DeckButton from './DeckButton.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useSettingsStore } from '@/stores/settings'
 
 interface Props {
   dockedButtons: Button[]
@@ -85,22 +92,21 @@ const emit = defineEmits<{
 
 const gridCols = 1 // Docked sidebar is always 1 column
 const dragOverSlot = ref<{ row: number; col: number } | null>(null)
+const settingsStore = useSettingsStore()
+const isResizing = ref(false)
+const startX = ref(0)
+const startWidth = ref(0)
 
-// Calculate sidebar width based on button size
+// Use sidebar width from settings
 const sidebarWidth = computed(() => {
-  // Match 5x5 grid button size - much smaller to avoid scrolling
-  // For a 5x5 grid, buttons are typically 100-120px
-  const baseButtonWidth = 110
-  const scaledButtonWidth = baseButtonWidth * props.buttonSize
-  const padding = 32 // Total horizontal padding (16px each side)
-  const editModeExtra = props.isEditMode ? 20 : 0
-  return `${scaledButtonWidth + padding + editModeExtra}px`
+  return `${settingsStore.dockedSidebarWidth}px`
 })
 
 const gridStyle = computed(() => {
-  // Set explicit cell heights to match 5x5 grid button size
-  // Smaller buttons to prevent scrolling and match grid layout
-  const baseCellHeight = 110 * props.buttonSize
+  // Calculate cell height based on sidebar width
+  // Make buttons roughly square based on the sidebar width
+  const cellWidth = settingsStore.dockedSidebarWidth - 32 // Subtract padding
+  const baseCellHeight = cellWidth * props.buttonSize
   
   return {
     display: 'grid',
@@ -183,6 +189,36 @@ function handleAddButton() {
 function handlePlaceholderClick(row: number, col: number) {
   emit('placeholderClick', { row, col })
 }
+
+// Resize functionality
+function startResize(event: MouseEvent) {
+  if (!props.isEditMode) return
+  
+  isResizing.value = true
+  startX.value = event.clientX
+  startWidth.value = settingsStore.dockedSidebarWidth
+  
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function handleResize(event: MouseEvent) {
+  if (!isResizing.value) return
+  
+  const delta = event.clientX - startX.value
+  const newWidth = Math.max(80, Math.min(300, startWidth.value + delta))
+  settingsStore.dockedSidebarWidth = newWidth
+}
+
+function stopResize() {
+  isResizing.value = false
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 </script>
 
 <style scoped>
@@ -192,10 +228,36 @@ function handlePlaceholderClick(row: number, col: number) {
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  transition: all var(--transition-normal);
+  transition: none; /* Disable transition during resize */
   position: relative;
   z-index: 100;
   flex-shrink: 0;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 101;
+  background-color: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.resize-handle:hover {
+  background-color: var(--color-primary);
+  opacity: 0.5;
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 12px;
+  height: 100%;
 }
 
 .sidebar-header {

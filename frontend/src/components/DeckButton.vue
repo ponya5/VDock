@@ -336,6 +336,11 @@ function handleDragEnd() {
   transition: all var(--transition-fast);
   overflow: hidden;
   user-select: none;
+  /* Enhanced shadow for more alive UI */
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .deck-button[draggable="true"] {
@@ -346,6 +351,10 @@ function handleDragEnd() {
   cursor: grabbing;
   transform: scale(0.95);
   opacity: 0.8;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .deck-button.shape-rectangle {
@@ -362,12 +371,20 @@ function handleDragEnd() {
 
 .deck-button.has-action:hover:not(.edit-mode) {
   transform: scale(1.05);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.25),
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(var(--color-primary-rgb, 255, 107, 107), 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   border-color: var(--color-primary);
 }
 
 .deck-button:active:not(.edit-mode) {
   transform: scale(0.95);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .edit-overlay {
@@ -550,6 +567,39 @@ function handleDragEnd() {
 
 .deck-button:hover .button-tooltip {
   opacity: 1;
+}
+
+/* Enhanced shadows for different button states */
+.deck-button.edit-mode {
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.deck-button.edit-mode:hover {
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.15),
+    0 2px 5px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Special shadow effects for different shapes */
+.deck-button.shape-circle {
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.deck-button.shape-hexagon,
+.deck-button.shape-diamond,
+.deck-button.shape-octagon {
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Ripple animation */

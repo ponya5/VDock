@@ -3,6 +3,7 @@
     <div class="metric-header">
       <FontAwesomeIcon v-if="metricIcon" :icon="metricIcon" class="metric-icon" />
       <span class="metric-label">{{ metricLabel }}</span>
+      <FontAwesomeIcon v-if="isRefreshing && !isLoading" :icon="['fas', 'circle-notch']" spin class="refresh-indicator" />
     </div>
     
     <div class="metric-value">
@@ -36,14 +37,16 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  refreshInterval: 2000,
+  refreshInterval: 5000,
   showProgressBar: true
 })
 
 const metricData = ref<any>(null)
-const isLoading = ref(false)
+const isLoading = ref(true) // Only true on initial load
+const isRefreshing = ref(false) // For subtle refresh indicator
 const error = ref<string | null>(null)
 let intervalId: number | null = null
+let isInitialLoad = true
 
 const metricIcons: Record<string, any> = {
   cpu: ['fas', 'microchip'],
@@ -203,9 +206,14 @@ const details = computed(() => {
 })
 
 async function fetchMetric() {
-  if (isLoading.value) return
-  
-  isLoading.value = true
+  // Only show full loading on initial load
+  if (isInitialLoad) {
+    isLoading.value = true
+  } else {
+    // Prevent concurrent fetches
+    if (isRefreshing.value) return
+    isRefreshing.value = true
+  }
   error.value = null
   
   try {
@@ -213,13 +221,22 @@ async function fetchMetric() {
     if (response.data.success) {
       metricData.value = response.data.data
     } else {
-      error.value = response.data.error || 'Failed to fetch metric'
+      if (isInitialLoad) {
+        error.value = response.data.error || 'Failed to fetch metric'
+      }
+    }
+    
+    if (isInitialLoad) {
+      isInitialLoad = false
     }
   } catch (err: any) {
-    error.value = err.message || 'Network error'
+    if (isInitialLoad) {
+      error.value = err.message || 'Network error'
+    }
     console.error(`Error fetching ${props.metricType} metric:`, err)
   } finally {
     isLoading.value = false
+    isRefreshing.value = false
   }
 }
 
@@ -262,6 +279,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+}
+
+.refresh-indicator {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  margin-left: auto;
 }
 
 .metric-icon {

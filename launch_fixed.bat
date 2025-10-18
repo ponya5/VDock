@@ -1,5 +1,5 @@
 @echo off
-REM VDock Single Launch Button
+REM VDock Single Launch Button - Fixed Version
 REM Starts both backend and frontend servers
 
 echo ========================================
@@ -24,6 +24,7 @@ if not exist "frontend\node_modules" (
 )
 
 echo [3/5] Starting Backend Server...
+REM Fixed: Use cmd /c to ensure proper command execution
 start "VDock Backend" cmd /c "cd /d %~dp0backend && call venv\Scripts\activate.bat && python app.py && pause"
 
 echo [4/5] Waiting for backend to initialize...

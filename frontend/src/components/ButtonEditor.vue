@@ -3,9 +3,14 @@
     <div class="modal button-editor">
       <div class="modal-header">
         <h2>Edit Button</h2>
-        <button class="close-btn" @click="emit('close')">
-          <FontAwesomeIcon :icon="['fas', 'times']" />
-        </button>
+        <div class="header-actions">
+          <button class="save-profile-btn" @click="handleSaveProfile" title="Save Profile">
+            <FontAwesomeIcon :icon="['fas', 'save']" />
+          </button>
+          <button class="close-btn" @click="emit('close')">
+            <FontAwesomeIcon :icon="['fas', 'times']" />
+          </button>
+        </div>
       </div>
 
       <div class="modal-body">
@@ -442,9 +447,9 @@
             class="input" 
             min="1" 
             max="60"
-            placeholder="2"
+            placeholder="5"
           />
-          <p class="form-help">How often to update the metric (default: 2 seconds)</p>
+          <p class="form-help">How often to update the metric (default: 5 seconds)</p>
         </div>
 
         <!-- Individual Metric Configuration -->
@@ -456,9 +461,9 @@
             class="input" 
             min="1" 
             max="60"
-            placeholder="2"
+            placeholder="5"
           />
-          <p class="form-help">How often to update the metric (default: 2 seconds)</p>
+          <p class="form-help">How often to update the metric (default: 5 seconds)</p>
         </div>
 
         <!-- World Clock Configuration -->
@@ -613,6 +618,14 @@
           <input v-model.number="actionConfig.brightness" type="number" class="input" min="0" max="100" placeholder="50" />
         </div>
 
+        <!-- Page Navigation Actions -->
+        <div v-if="actionType === 'next_page' || actionType === 'previous_page'" class="form-group">
+          <div class="info-message">
+            <FontAwesomeIcon :icon="['fas', 'info-circle']" />
+            <p>This button will navigate to the {{ actionType === 'next_page' ? 'next' : 'previous' }} page in the current scene.</p>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Tooltip (optional)</label>
           <input v-model="editedButton.tooltip" type="text" class="input" placeholder="Button description" />
@@ -675,6 +688,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   save: [button: Button]
   close: []
+  saveProfile: []
 }>()
 
 const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
@@ -954,12 +968,18 @@ function handleActionSelection(selectedActionType: string) {
     'time_world_clock': 'World Clock',
     'time_timer': 'Timer',
     'time_countdown': 'Countdown',
-    'weather': 'Weather'
+    'weather': 'Weather',
+    'next_page': 'Next Page',
+    'previous_page': 'Previous Page'
   }
   
   if (actionLabels[selectedActionType]) {
     editedButton.value.label = actionLabels[selectedActionType]
   }
+}
+
+function handleSaveProfile() {
+  emit('saveProfile')
 }
 
 function handleSave() {
@@ -1051,6 +1071,31 @@ function handleSave() {
 .modal-header h2 {
   font-size: 1.5rem;
   font-weight: bold;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.save-profile-btn {
+  background: var(--color-success);
+  border: none;
+  font-size: 1.25rem;
+  color: white;
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.save-profile-btn:hover {
+  background: var(--color-success-dark);
+  transform: scale(1.05);
 }
 
 .close-btn {
@@ -1361,6 +1406,28 @@ function handleSave() {
   background: var(--color-surface);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
+}
+
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+}
+
+.info-message svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.info-message p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 </style>
 

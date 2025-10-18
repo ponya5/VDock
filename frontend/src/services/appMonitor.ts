@@ -21,7 +21,7 @@ class AppMonitorService {
   /**
    * Start monitoring the active application
    */
-  async start(pollInterval: number = 2000): Promise<boolean> {
+  async start(pollInterval: number = 5000): Promise<boolean> {
     if (this.isMonitoring) {
       console.log('App monitoring already running')
       return true

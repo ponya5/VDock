@@ -82,7 +82,7 @@
             >
               <FontAwesomeIcon :icon="getCategoryIcon(category.id)" />
               <span>{{ category.name }}</span>
-              <span class="asset-count">{{ category.assets.length }}</span>
+              <span class="asset-count">{{ getCategoryAssetCount(category) }}</span>
             </button>
           </div>
         </div>
@@ -243,9 +243,16 @@ const allAssets = ref<AssetMetadata[]>([])
 // Computed
 const totalAssets = computed(() => allAssets.value.length)
 
-// Filter out empty categories
+// Filter out empty categories based on current type filter
 const nonEmptyCategories = computed(() => {
-  return categories.value.filter(category => category.assets.length > 0)
+  return categories.value.filter(category => {
+    // If type filter is active, only count assets matching the type
+    if (props.type) {
+      const matchingAssets = category.assets.filter(asset => asset.type === props.type)
+      return matchingAssets.length > 0
+    }
+    return category.assets.length > 0
+  })
 })
 
 const filteredAssets = computed(() => {
@@ -283,6 +290,14 @@ const paginatedAssets = computed(() => {
 })
 
 // Methods
+function getCategoryAssetCount(category: AssetCategory): number {
+  // If type filter is active, only count assets matching the type
+  if (props.type) {
+    return category.assets.filter(asset => asset.type === props.type).length
+  }
+  return category.assets.length
+}
+
 function getCategoryIcon(categoryId: string): string[] {
   if (categoryId.includes('system')) return ['fas', 'cog']
   if (categoryId.includes('media')) return ['fas', 'play']
@@ -329,9 +344,20 @@ onMounted(async () => {
     await new Promise(resolve => setTimeout(resolve, 100))
     
     categories.value = assetManager.getCategories()
+    
+    // Load all assets, then filter if needed
+    const allCategorizedAssets = Array.from(assetManager.getCategories()).flatMap(cat => cat.assets)
     allAssets.value = props.type ? 
-      assetManager.getAssetsByType(props.type) : 
-      Array.from(assetManager.getCategories()).flatMap(cat => cat.assets)
+      allCategorizedAssets.filter(asset => asset.type === props.type) : 
+      allCategorizedAssets
+    
+    // Debug log to help troubleshoot
+    console.log('AssetPicker initialized:', {
+      categoriesCount: categories.value.length,
+      totalAssets: allAssets.value.length,
+      typeFilter: props.type,
+      nonEmptyCategories: nonEmptyCategories.value.length
+    })
     
     loading.value = false
   } catch (error) {

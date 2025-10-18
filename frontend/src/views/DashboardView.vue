@@ -42,14 +42,18 @@
         </div>
 
         <div class="header-right">
+          <button class="btn btn-glass enhanced-btn" @click="showHelp = true" title="Help & Guide">
+            <FontAwesomeIcon :icon="['fas', 'question-circle']" />
+            <span class="btn-label">Help</span>
+          </button>
           <button class="btn btn-glass enhanced-btn" @click="router.push('/profiles')" title="Profiles">
             <FontAwesomeIcon :icon="['fas', 'users']" />
             <span class="btn-label">Profiles</span>
           </button>
-          <button 
-            class="btn enhanced-btn" 
+          <button
+            class="btn enhanced-btn"
             :class="isEditMode ? 'btn-glow edit-active' : 'btn-glass'"
-            @click="toggleEditMode" 
+            @click="toggleEditMode"
             title="Toggle Edit Mode"
           >
             <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
@@ -174,24 +178,48 @@
       <div class="footer-section">
         <label>Grid Size:</label>
         <div class="grid-controls">
-          <input 
-            v-model.number="currentPage.grid_config.rows" 
-            type="number" 
-            min="1" 
-            max="10" 
+          <input
+            v-model.number="currentPage.grid_config.rows"
+            type="number"
+            min="1"
+            max="10"
             class="grid-input"
             title="Rows"
           />
           <span>×</span>
-          <input 
-            v-model.number="currentPage.grid_config.cols" 
-            type="number" 
-            min="1" 
-            max="10" 
+          <input
+            v-model.number="currentPage.grid_config.cols"
+            type="number"
+            min="1"
+            max="10"
             class="grid-input"
             title="Columns"
           />
         </div>
+      </div>
+
+      <div class="footer-section">
+        <button
+          class="btn btn-primary btn-sm"
+          @click="addPageToCurrentScene"
+          title="Add new page to current scene"
+        >
+          <FontAwesomeIcon :icon="['fas', 'plus']" />
+          Add Page
+        </button>
+      </div>
+
+      <div class="footer-section footer-spacer"></div>
+
+      <div class="footer-section">
+        <button
+          class="btn btn-success btn-sm"
+          @click="saveProfile"
+          title="Save all changes to profile"
+        >
+          <FontAwesomeIcon :icon="['fas', 'save']" />
+          Save Profile
+        </button>
       </div>
     </footer>
 
@@ -201,6 +229,7 @@
       :button="editingButton"
       :profile-id="currentProfile?.id || ''"
       @save="handleButtonSave"
+      @save-profile="handleSaveProfileFromEditor"
       @close="editingButton = null"
     />
 
@@ -217,6 +246,83 @@
     <!-- Action Result Toast -->
     <div v-if="actionResult" class="action-toast" :class="actionResult.success ? 'success' : 'error'">
       {{ actionResult.message }}
+    </div>
+
+    <!-- Help Modal -->
+    <div v-if="showHelp" class="modal-overlay" @click.self="showHelp = false">
+      <div class="help-modal modal">
+        <div class="modal-header">
+          <h2><FontAwesomeIcon :icon="['fas', 'question-circle']" /> VDock User Guide</h2>
+          <button class="close-btn" @click="showHelp = false">
+            <FontAwesomeIcon :icon="['fas', 'times']" />
+          </button>
+        </div>
+        <div class="help-content">
+          <div class="help-section">
+            <h3><FontAwesomeIcon :icon="['fas', 'rocket']" /> Quick Start</h3>
+            <ol>
+              <li><strong>Toggle Edit Mode</strong>: Click the Edit button to add/modify buttons</li>
+              <li><strong>Add Buttons</strong>: Click empty cells or use the Actions sidebar</li>
+              <li><strong>Configure Actions</strong>: Choose what each button does (Hotkey, Program, URL, etc.)</li>
+              <li><strong>Save Changes</strong>: Click "Save Profile" button in footer</li>
+            </ol>
+          </div>
+
+          <div class="help-section">
+            <h3><FontAwesomeIcon :icon="['fas', 'keyboard']" /> Button Actions</h3>
+            <ul>
+              <li><strong>Hotkey</strong>: Send keyboard shortcuts (e.g., Ctrl+C, Ctrl+V)</li>
+              <li><strong>Program</strong>: Launch applications</li>
+              <li><strong>URL</strong>: Open websites in browser</li>
+              <li><strong>Command</strong>: Run shell commands</li>
+              <li><strong>Macro</strong>: Multi-step automation</li>
+              <li><strong>System</strong>: Volume, brightness, media controls</li>
+              <li><strong>Navigation</strong>: Navigate between pages</li>
+              <li><strong>Metrics</strong>: Display system stats (CPU, RAM, GPU)</li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <h3><FontAwesomeIcon :icon="['fas', 'layer-group']" /> Scenes & Pages</h3>
+            <ul>
+              <li><strong>Scenes</strong>: Different button layouts (Work, Gaming, Streaming)</li>
+              <li><strong>Pages</strong>: Multiple pages within each scene</li>
+              <li><strong>Add Page</strong>: Click "Add Page" button in footer</li>
+              <li><strong>Navigate</strong>: Use Next/Previous buttons (loops around)</li>
+              <li><strong>Edit Scene</strong>: Click edit icon next to scene name</li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <h3><FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" /> Troubleshooting</h3>
+            <ul>
+              <li><strong>Hotkeys not working?</strong> Restart backend server (see docs/)</li>
+              <li><strong>Changes not saving?</strong> Click "Save Profile" button</li>
+              <li><strong>Buttons disappeared?</strong> Hard refresh browser (Ctrl+Shift+R)</li>
+              <li><strong>Backend not responding?</strong> Check if running at localhost:5000</li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <h3><FontAwesomeIcon :icon="['fas', 'book']" /> Documentation</h3>
+            <p>For detailed documentation, see:</p>
+            <ul>
+              <li><code>docs/USER_GUIDE.md</code> - Complete user guide</li>
+              <li><code>docs/CHANGELOG.md</code> - Version history</li>
+              <li><code>README.md</code> - Project overview</li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <h3><FontAwesomeIcon :icon="['fas', 'envelope']" /> Support</h3>
+            <p>Need help?</p>
+            <ul>
+              <li><strong>Email</strong>: <a href="mailto:ponya81@gmail.com">ponya81@gmail.com</a></li>
+              <li><strong>GitHub</strong>: <a href="https://github.com/ponya5/VDock" target="_blank">Report Issues</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -245,11 +351,12 @@ const editingButton = ref<Button | null>(null)
 const editingScene = ref<Scene | null>(null)
 const actionResult = ref<ActionResult | null>(null)
 const clipboardButton = ref<Button | null>(null)
+const showHelp = ref(false)
 let actionResultTimeout: number | null = null
 
 // Sidebar state
 const actionSearch = ref('')
-const expandedCategories = ref<string[]>(['system', 'media', 'web', 'metrics', 'time', 'weather'])
+const expandedCategories = ref<string[]>(['system', 'media', 'web', 'metrics', 'time', 'weather', 'navigation'])
 const selectedAction = ref<any>(null)
 
 const currentProfile = computed(() => dashboardStore.currentProfile)
@@ -398,6 +505,15 @@ const actionCategories = ref([
     name: 'Weather',
     actions: [
       { id: 'weather', name: 'Weather query', icon: ['fas', 'cloud-sun'] }
+    ]
+  },
+  {
+    id: 'navigation',
+    name: 'Navigation',
+    actions: [
+      { id: 'next-page', name: 'Next Page', icon: ['fas', 'arrow-right'] },
+      { id: 'previous-page', name: 'Previous Page', icon: ['fas', 'arrow-left'] },
+      { id: 'home-page', name: 'Home Page', icon: ['fas', 'home'] }
     ]
   }
 ])
@@ -908,6 +1024,43 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         }
       }
 
+    // Navigation
+    case 'next-page':
+      return {
+        ...baseButton,
+        label: 'Next Page',
+        icon: ['fas', 'arrow-right'],
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
+        action: {
+          type: 'next_page',
+          config: {}
+        }
+      }
+
+    case 'previous-page':
+      return {
+        ...baseButton,
+        label: 'Previous Page',
+        icon: ['fas', 'arrow-left'],
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
+        action: {
+          type: 'previous_page',
+          config: {}
+        }
+      }
+
+    case 'home-page':
+      return {
+        ...baseButton,
+        label: 'Home',
+        icon: ['fas', 'home'],
+        style: { ...baseButton.style, backgroundColor: '#16a085' },
+        action: {
+          type: 'home_page',
+          config: {}
+        }
+      }
+
     default:
       return {
         ...baseButton,
@@ -982,6 +1135,11 @@ async function handleButtonClick(button: Button) {
   showActionResult(result)
 }
 
+
+async function handleSaveProfileFromEditor() {
+  console.log('DashboardView: saving profile from editor')
+  await saveProfile()
+}
 
 async function handleButtonSave(button: Button) {
   console.log('DashboardView: handleButtonSave', button.id)
@@ -1229,13 +1387,63 @@ function handlePlaceholderClick(position: { row: number; col: number }) {
 }
 
 
+function addPageToCurrentScene() {
+  if (!currentScene.value) {
+    showActionResult({
+      success: false,
+      message: 'No scene selected'
+    })
+    return
+  }
+
+  const pageNumber = currentScene.value.pages.length + 1
+  dashboardStore.addPage({
+    id: `page_${Date.now()}`,
+    name: `Page ${pageNumber}`,
+    buttons: [],
+    grid_config: {
+      rows: settingsStore.defaultGridRows || 4,
+      cols: settingsStore.defaultGridCols || 5
+    }
+  })
+
+  showActionResult({
+    success: true,
+    message: `Page ${pageNumber} added to ${currentScene.value.name}`
+  })
+}
+
+async function saveProfile() {
+  if (!currentProfile.value) {
+    showActionResult({
+      success: false,
+      message: 'No profile loaded'
+    })
+    return
+  }
+
+  const success = await dashboardStore.saveProfile()
+
+  if (success) {
+    showActionResult({
+      success: true,
+      message: 'Profile saved successfully'
+    })
+  } else {
+    showActionResult({
+      success: false,
+      message: 'Failed to save profile'
+    })
+  }
+}
+
 function showActionResult(result: ActionResult) {
   actionResult.value = result
-  
+
   if (actionResultTimeout) {
     clearTimeout(actionResultTimeout)
   }
-  
+
   actionResultTimeout = setTimeout(() => {
     actionResult.value = null
   }, 3000)
@@ -1413,7 +1621,8 @@ function showActionResult(result: ActionResult) {
 /* Enhanced Button Styles */
 .enhanced-btn {
   position: relative;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 0.75rem var(--spacing-md); /* Increased vertical padding for better touch targets */
+  min-height: 44px; /* Minimum 44px for accessibility */
   border-radius: var(--radius-lg);
   font-weight: 500;
   transition: all var(--transition-normal);
@@ -1485,11 +1694,12 @@ function showActionResult(result: ActionResult) {
 .deck-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: var(--spacing-md);
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border);
   margin-right: 350px; /* Account for edit sidebar width */
+  gap: var(--spacing-md);
 }
 
 .deck-footer.with-docked-sidebar {
@@ -1500,6 +1710,10 @@ function showActionResult(result: ActionResult) {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+}
+
+.footer-spacer {
+  flex: 1;
 }
 
 .grid-controls {
@@ -1576,11 +1790,11 @@ function showActionResult(result: ActionResult) {
 }
 
 .main-content.with-docked-sidebar {
-  margin-left: 120px;
+  margin-left: 16px;
 }
 
 .main-content.with-sidebar.with-docked-sidebar {
-  margin-left: 120px;
+  margin-left: 16px;
   margin-right: 350px;
 }
 
@@ -1807,6 +2021,65 @@ function showActionResult(result: ActionResult) {
   50% { background-position: 100% 50%; }
   75% { background-position: 50% 0%; }
   100% { background-position: 0% 50%; }
+}
+
+/* Help Modal */
+.help-modal {
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.help-content {
+  padding: var(--spacing-lg);
+}
+
+.help-section {
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-primary);
+}
+
+.help-section h3 {
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-md);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.help-section ul,
+.help-section ol {
+  margin-left: var(--spacing-lg);
+  line-height: 1.8;
+}
+
+.help-section li {
+  margin-bottom: var(--spacing-sm);
+}
+
+.help-section li strong {
+  color: var(--color-text);
+}
+
+.help-section code {
+  background: var(--color-background);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  color: var(--color-primary);
+}
+
+.help-section a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.help-section a:hover {
+  text-decoration: underline;
 }
 </style>
 

@@ -93,6 +93,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
+  min-height: 36px; /* Increased for better touch targets */
 }
 
 .btn:disabled {
@@ -397,6 +398,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 
     0 8px 32px 0 rgba(31, 38, 135, 0.37),
+    0 4px 12px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
@@ -404,7 +406,8 @@ body {
   background: var(--color-surface) !important;
   box-shadow: 
     12px 12px 24px rgba(0, 0, 0, 0.1),
-    -12px -12px 24px rgba(255, 255, 255, 0.1) !important;
+    -12px -12px 24px rgba(255, 255, 255, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.05) !important;
   border: none !important;
 }
 
@@ -412,18 +415,26 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   border: none !important;
   position: relative;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .deck-button-glow {
   box-shadow: 
     0 0 20px rgba(102, 126, 234, 0.4),
-    0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    0 4px 15px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 .deck-button-glow:hover {
   box-shadow: 
     0 0 30px rgba(102, 126, 234, 0.6),
-    0 8px 25px rgba(0, 0, 0, 0.2) !important;
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Button Shape Variants */
