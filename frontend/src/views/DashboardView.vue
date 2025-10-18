@@ -307,9 +307,21 @@
             <h3><FontAwesomeIcon :icon="['fas', 'book']" /> Documentation</h3>
             <p>For detailed documentation, see:</p>
             <ul>
-              <li><code>docs/USER_GUIDE.md</code> - Complete user guide</li>
-              <li><code>docs/CHANGELOG.md</code> - Version history</li>
-              <li><code>README.md</code> - Project overview</li>
+              <li><strong>Getting Started:</strong></li>
+              <li>• <code>docs/QUICKSTART.md</code> - Quick setup guide</li>
+              <li>• <code>docs/guides/INSTALLATION.md</code> - Complete installation</li>
+              <li>• <code>docs/guides/USER_GUIDE.md</code> - Complete user guide</li>
+              <li><strong>Advanced Features:</strong></li>
+              <li>• <code>docs/ASSET_SYSTEM_GUIDE.md</code> - Managing files & assets</li>
+              <li>• <code>docs/NEW_ACTION_TYPES_GUIDE.md</code> - Creating custom actions</li>
+              <li>• <code>docs/APP_INTEGRATION_GUIDE.md</code> - App integration</li>
+              <li><strong>Development & Deployment:</strong></li>
+              <li>• <code>docs/development/DEVELOPER_GUIDE.md</code> - Developer guide</li>
+              <li>• <code>docs/deployment/PRODUCTION_DEPLOYMENT.md</code> - Production setup</li>
+              <li>• <code>docs/CHANGELOG.md</code> - Version history</li>
+              <li><strong>Project Info:</strong></li>
+              <li>• <code>README.md</code> - Project overview</li>
+              <li>• <code>docs/README.md</code> - Documentation index</li>
             </ul>
           </div>
 
@@ -444,10 +456,7 @@ const actionCategories = ref([
     actions: [
       { id: 'type-text', name: 'Type Text', icon: ['fas', 'keyboard'] },
       { id: 'hotkey', name: 'Hotkey', icon: ['fas', 'keyboard'] },
-      { id: 'delay', name: 'Delay', icon: ['fas', 'clock'] },
-      { id: 'enter-key', name: 'Enter Key', icon: ['fas', 'arrow-down'] },
-      { id: 'tab-key', name: 'Tab Key', icon: ['fas', 'arrow-right'] },
-      { id: 'escape-key', name: 'Escape Key', icon: ['fas', 'times'] }
+      { id: 'delay', name: 'Delay', icon: ['fas', 'clock'] }
     ]
   },
   {
