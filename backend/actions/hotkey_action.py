@@ -108,7 +108,7 @@ class HotkeyAction(BaseAction):
         """Parse a key string to a Key or character.
 
         Args:
-            key_str: Key string (e.g., 'ctrl', 'a', 'f1')
+            key_str: Key string (e.g., 'ctrl', 'Ctrl', 'a', 'f1')
 
         Returns:
             pynput Key or character
