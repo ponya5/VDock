@@ -456,6 +456,7 @@ const actionCategories = ref([
     actions: [
       { id: 'type-text', name: 'Type Text', icon: ['fas', 'keyboard'] },
       { id: 'hotkey', name: 'Hotkey', icon: ['fas', 'keyboard'] },
+      { id: 'macro', name: 'Macro (Multiple Actions)', icon: ['fas', 'list-ol'] },
       { id: 'delay', name: 'Delay', icon: ['fas', 'clock'] }
     ]
   },

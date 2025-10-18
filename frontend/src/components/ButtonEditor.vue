@@ -21,6 +21,392 @@
             Browse Button Actions
           </button>
         </div>
+
+        <!-- FUNCTIONALITY SETTINGS (Top Priority) -->
+        <div class="form-group">
+          <label>Position</label>
+          <div class="flex gap-sm">
+            <div style="flex: 1">
+              <label class="small-label">Row</label>
+              <input v-model.number="editedButton.position.row" type="number" class="input" min="0" />
+            </div>
+            <div style="flex: 1">
+              <label class="small-label">Column</label>
+              <input v-model.number="editedButton.position.col" type="number" class="input" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Size</label>
+          <div class="flex gap-sm">
+            <div style="flex: 1">
+              <label class="small-label">Rows</label>
+              <input v-model.number="editedButton.size.rows" type="number" class="input" min="1" max="3" />
+            </div>
+            <div style="flex: 1">
+              <label class="small-label">Columns</label>
+              <input v-model.number="editedButton.size.cols" type="number" class="input" min="1" max="3" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Action Type</label>
+          <div class="action-type-display">
+            <span class="action-type-text">{{ getActionTypeDisplayName(actionType) }}</span>
+            <span class="action-type-badge" :class="actionType || 'no-action'">
+              {{ actionType || 'No Action' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Macro Configuration -->
+        <div v-if="actionType === 'macro'" class="macro-editor">
+          <div class="form-group">
+            <label>Macro Steps</label>
+            <div class="macro-builder-container">
+              <!-- Visual Macro Builder -->
+              <div class="macro-builder">
+                <div class="macro-steps-display">
+                  <div 
+                    v-for="(step, index) in macroSteps" 
+                    :key="index" 
+                    class="macro-step-chip"
+                    @click="editMacroStep(index)"
+                  >
+                    <span class="step-number">{{ index + 1 }}</span>
+                    <span class="step-content">
+                      <FontAwesomeIcon :icon="getStepIcon(step.type)" />
+                      {{ getStepDescription(step) }}
+                    </span>
+                    <button class="remove-step" @click.stop="removeMacroStep(index)">
+                      <FontAwesomeIcon :icon="['fas', 'times']" />
+                    </button>
+                  </div>
+                  
+                  <button class="add-step-btn" @click="showMacroStepSelector = true">
+                    <FontAwesomeIcon :icon="['fas', 'plus']" />
+                    Add Step
+                  </button>
+                </div>
+              </div>
+
+              <!-- Macro Step Selector -->
+              <div v-if="showMacroStepSelector" class="macro-step-selector">
+                <div class="selector-header">
+                  <h4>Add Macro Step</h4>
+                  <button class="close-selector" @click="showMacroStepSelector = false">
+                    <FontAwesomeIcon :icon="['fas', 'times']" />
+                  </button>
+                </div>
+                
+                <div class="step-types">
+                  <button 
+                    class="step-type-btn"
+                    @click="addMacroStep('hotkey')"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'keyboard']" />
+                    <span>Hotkey</span>
+                    <small>Send key combination</small>
+                  </button>
+                  
+                  <button 
+                    class="step-type-btn"
+                    @click="addMacroStep('delay')"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'clock']" />
+                    <span>Delay</span>
+                    <small>Wait between actions</small>
+                  </button>
+                  
+                  <button 
+                    class="step-type-btn"
+                    @click="addMacroStep('text')"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'keyboard']" />
+                    <span>Type Text</span>
+                    <small>Type text content</small>
+                  </button>
+                  
+                  <button 
+                    class="step-type-btn"
+                    @click="addMacroStep('click')"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'mouse-pointer']" />
+                    <span>Mouse Click</span>
+                    <small>Click at coordinates</small>
+                  </button>
+                  
+                  <button 
+                    class="step-type-btn"
+                    @click="addMacroStep('button')"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'square']" />
+                    <span>Button Action</span>
+                    <small>Execute existing button</small>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Macro Step Editor -->
+              <div v-if="editingStepIndex !== null" class="macro-step-editor">
+                <div class="editor-header">
+                  <h4>Edit Step {{ editingStepIndex + 1 }}</h4>
+                  <button class="close-editor" @click="closeStepEditor">
+                    <FontAwesomeIcon :icon="['fas', 'times']" />
+                  </button>
+                </div>
+                
+                <div class="step-editor-content">
+                  <div v-if="macroSteps[editingStepIndex]?.type === 'hotkey'" class="form-group">
+                    <label>Key Combination</label>
+                    <div class="hotkey-selector-container">
+                      <div class="hotkey-input-wrapper">
+                        <input 
+                          v-model="editingStep.keysString" 
+                          type="text" 
+                          class="input hotkey-input" 
+                          placeholder="Click To Assign Via Keyboard Input"
+                          readonly
+                          @click="toggleMacroHotkeyDropdown"
+                        />
+                        <button 
+                          class="dropdown-arrow" 
+                          @click="toggleMacroHotkeyDropdown"
+                          :class="{ 'open': showMacroHotkeyDropdown }"
+                        >
+                          <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
+                        </button>
+                      </div>
+                      
+                      <!-- Same hotkey dropdown as main hotkey editor -->
+                      <div v-if="showMacroHotkeyDropdown" class="hotkey-dropdown">
+                        <div class="hotkey-dropdown-header">
+                          <h4>Manually Select Hotkeys</h4>
+                        </div>
+                        
+                        <div class="hotkey-categories">
+                          <!-- Letters and Numbers -->
+                          <div class="hotkey-category">
+                            <div class="category-header" @click="toggleMacroCategory('letters')">
+                              <span>Letters And Numbers</span>
+                              <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedMacroCategories.includes('letters') }" />
+                            </div>
+                            <div v-if="expandedMacroCategories.includes('letters')" class="category-content">
+                              <div class="key-grid">
+                                <button 
+                                  v-for="key in letterKeys" 
+                                  :key="key" 
+                                  class="key-button"
+                                  @click="addKeyToMacroCombination(key)"
+                                >
+                                  {{ key.toUpperCase() }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Navigation Keys -->
+                          <div class="hotkey-category">
+                            <div class="category-header" @click="toggleMacroCategory('navigation')">
+                              <span>Navigation Keys</span>
+                              <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedMacroCategories.includes('navigation') }" />
+                            </div>
+                            <div v-if="expandedMacroCategories.includes('navigation')" class="category-content">
+                              <div class="key-list">
+                                <button 
+                                  v-for="key in navigationKeys" 
+                                  :key="key.value" 
+                                  class="key-button"
+                                  @click="addKeyToMacroCombination(key.value)"
+                                >
+                                  <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                                  {{ key.label }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Function Keys -->
+                          <div class="hotkey-category">
+                            <div class="category-header" @click="toggleMacroCategory('function')">
+                              <span>Function Keys</span>
+                              <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedMacroCategories.includes('function') }" />
+                            </div>
+                            <div v-if="expandedMacroCategories.includes('function')" class="category-content">
+                              <div class="key-grid">
+                                <button 
+                                  v-for="key in functionKeys" 
+                                  :key="key" 
+                                  class="key-button"
+                                  @click="addKeyToMacroCombination(key)"
+                                >
+                                  {{ key.toUpperCase() }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Modifier Keys -->
+                          <div class="hotkey-category">
+                            <div class="category-header" @click="toggleMacroCategory('modifiers')">
+                              <span>Modifier Keys</span>
+                              <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedMacroCategories.includes('modifiers') }" />
+                            </div>
+                            <div v-if="expandedMacroCategories.includes('modifiers')" class="category-content">
+                              <div class="key-list">
+                                <button 
+                                  v-for="key in modifierKeys" 
+                                  :key="key.value" 
+                                  class="key-button modifier-key"
+                                  @click="addKeyToMacroCombination(key.value)"
+                                >
+                                  <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                                  {{ key.label }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Other Keys -->
+                          <div class="hotkey-category">
+                            <div class="category-header" @click="toggleMacroCategory('other')">
+                              <span>Other Keys</span>
+                              <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedMacroCategories.includes('other') }" />
+                            </div>
+                            <div v-if="expandedMacroCategories.includes('other')" class="category-content">
+                              <div class="key-list">
+                                <button 
+                                  v-for="key in otherKeys" 
+                                  :key="key.value" 
+                                  class="key-button"
+                                  @click="addKeyToMacroCombination(key.value)"
+                                >
+                                  <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                                  {{ key.label }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Current Combination Display -->
+                        <div class="current-combination">
+                          <div class="combination-label">Current Combination:</div>
+                          <div class="combination-display">
+                            <span 
+                              v-for="(key, index) in currentMacroKeyCombination" 
+                              :key="index" 
+                              class="key-chip"
+                            >
+                              {{ key }}
+                              <button class="remove-key" @click="removeKeyFromMacroCombination(index)">
+                                <FontAwesomeIcon :icon="['fas', 'times']" />
+                              </button>
+                            </span>
+                          </div>
+                          <div class="combination-actions">
+                            <button class="btn btn-secondary btn-sm" @click="clearMacroCombination">Clear All</button>
+                            <button class="btn btn-primary btn-sm" @click="applyMacroCombination">Apply</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-if="macroSteps[editingStepIndex]?.type === 'delay'" class="form-group">
+                    <label>Delay (milliseconds)</label>
+                    <input 
+                      v-model.number="editingStep.delay" 
+                      type="number" 
+                      class="input" 
+                      placeholder="500"
+                      min="0"
+                      step="100"
+                    />
+                  </div>
+
+                  <div v-if="macroSteps[editingStepIndex]?.type === 'text'" class="form-group">
+                    <label>Text to Type</label>
+                    <textarea 
+                      v-model="editingStep.text" 
+                      class="textarea" 
+                      placeholder="Hello World"
+                      rows="3"
+                    ></textarea>
+                  </div>
+
+                  <div v-if="macroSteps[editingStepIndex]?.type === 'click'" class="form-group">
+                    <label>Click Position</label>
+                    <div class="flex gap-sm">
+                      <input 
+                        v-model.number="editingStep.clickX" 
+                        type="number" 
+                        class="input" 
+                        placeholder="X coordinate"
+                        min="0"
+                      />
+                      <input 
+                        v-model.number="editingStep.clickY" 
+                        type="number" 
+                        class="input" 
+                        placeholder="Y coordinate"
+                        min="0"
+                      />
+                    </div>
+                    <p class="form-help">Screen coordinates for mouse click</p>
+                  </div>
+
+                  <div v-if="macroSteps[editingStepIndex]?.type === 'button'" class="form-group">
+                    <label>Select Button</label>
+                    <div class="button-selector-container">
+                      <div class="button-grid">
+                        <div 
+                          v-for="button in availableButtons" 
+                          :key="button.id" 
+                          class="button-option"
+                          :class="{ 'selected': editingStep.buttonId === button.id }"
+                          @click="selectButtonForMacro(button)"
+                        >
+                          <div class="button-preview">
+                            <FontAwesomeIcon 
+                              v-if="button.icon_type === 'fontawesome'" 
+                              :icon="button.icon" 
+                            />
+                            <img 
+                              v-else-if="button.icon_type === 'custom'" 
+                              :src="button.icon" 
+                              :alt="button.label"
+                              class="custom-icon"
+                            />
+                          </div>
+                          <div class="button-info">
+                            <div class="button-label">{{ button.label }}</div>
+                            <div class="button-action">{{ getButtonActionDescription(button) }}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div v-if="availableButtons.length === 0" class="empty-state">
+                        <FontAwesomeIcon :icon="['fas', 'info-circle']" />
+                        <p>No buttons available to select. Create some buttons first.</p>
+                      </div>
+                    </div>
+                    <p class="form-help">Click on a button to select it for this macro step</p>
+                  </div>
+
+                  <div class="editor-actions">
+                    <button class="btn btn-secondary" @click="closeStepEditor">Cancel</button>
+                    <button class="btn btn-primary" @click="saveStepEditor">Save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- UI AND APPEARANCE SETTINGS (Bottom Priority) -->
         <div class="form-group">
           <label>Label</label>
           <input v-model="editedButton.label" type="text" class="input" placeholder="Button label" />
@@ -207,75 +593,177 @@
           </select>
         </div>
 
-        <div class="form-group">
-          <label>Position</label>
-          <div class="flex gap-sm">
-            <div style="flex: 1">
-              <label class="small-label">Row</label>
-              <input v-model.number="editedButton.position.row" type="number" class="input" min="0" />
-            </div>
-            <div style="flex: 1">
-              <label class="small-label">Column</label>
-              <input v-model.number="editedButton.position.col" type="number" class="input" min="0" />
-            </div>
-          </div>
+        <!-- Action-specific configuration -->
+        <div v-if="actionType === 'url'" class="form-group">
+          <label>URL</label>
+          <input v-model="actionConfig.url" type="text" class="input" placeholder="https://example.com" />
         </div>
 
-        <div class="form-group">
-          <label>Size</label>
-          <div class="flex gap-sm">
-            <div style="flex: 1">
-              <label class="small-label">Rows</label>
-              <input v-model.number="editedButton.size.rows" type="number" class="input" min="1" max="3" />
-            </div>
-            <div style="flex: 1">
-              <label class="small-label">Columns</label>
-              <input v-model.number="editedButton.size.cols" type="number" class="input" min="1" max="3" />
-            </div>
-          </div>
+        <div v-if="actionType === 'program'" class="form-group">
+          <label>Program Path</label>
+          <input v-model="actionConfig.path" type="text" class="input" placeholder="C:\\Program Files\\..." />
         </div>
 
-        <div class="form-group">
-          <label>Action Type</label>
-          <select v-model="actionType" class="select" @change="handleActionTypeChange">
-            <option value="">No Action</option>
-            <option value="url">Open URL</option>
-            <option value="program">Launch Program</option>
-            <option value="command">Run Command</option>
-            <option value="hotkey">Send Hotkey</option>
-            <option value="macro">Macro (Multiple Actions)</option>
-            <option value="multi_action">Multi-Action</option>
-            <option value="system_metric">System Metric Display</option>
+        <div v-if="actionType === 'command'" class="form-group">
+          <label>Command</label>
+          <textarea v-model="actionConfig.command" class="textarea" placeholder="echo Hello"></textarea>
+        </div>
+
+        <div v-if="actionType === 'hotkey'" class="form-group">
+          <label>Hotkey Combination</label>
+          <div class="hotkey-selector-container">
+            <div class="hotkey-input-wrapper">
+              <input 
+                v-model="hotkeyString" 
+                type="text" 
+                class="input hotkey-input" 
+                placeholder="Click To Assign Via Keyboard Input"
+                readonly
+                @click="toggleHotkeyDropdown"
+              />
+              <button 
+                class="dropdown-arrow" 
+                @click="toggleHotkeyDropdown"
+                :class="{ 'open': showHotkeyDropdown }"
+              >
+                <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
+              </button>
+            </div>
             
-            <optgroup label="📊 System Performance Monitor">
-              <option value="metric_memory">Memory</option>
-              <option value="metric_cpu_usage">CPU usage</option>
-              <option value="metric_cpu_temperature">CPU temperature</option>
-              <option value="metric_cpu_frequency">CPU frequency</option>
-              <option value="metric_cpu_power">CPU package power</option>
-              <option value="metric_internet_speed">Internet speed</option>
-              <option value="metric_harddisk">Harddisk</option>
-              <option value="metric_gpu_temperature">GPU temperature</option>
-              <option value="metric_gpu_frequency">GPU core frequency</option>
-              <option value="metric_gpu_usage">GPU Core Usage</option>
-              <option value="metric_gpu_memory_freq">GPU memory frequency</option>
-              <option value="metric_gpu_memory_usage">GPU Memory Usage</option>
-            </optgroup>
-            
-            <optgroup label="🕐 Time Options">
-              <option value="calendar">Calendar</option>
-              <option value="time_world_clock">World Time</option>
-              <option value="time_timer">Timer</option>
-              <option value="time_countdown">Countdown</option>
-            </optgroup>
-            
-            <optgroup label="🌤️ Weather query">
-              <option value="weather">Weather query</option>
-            </optgroup>
-            
-            <option value="system_control">System Control</option>
-            <option value="cross_platform">Cross-Platform Action</option>
-          </select>
+            <!-- Hotkey Dropdown -->
+            <div v-if="showHotkeyDropdown" class="hotkey-dropdown">
+              <div class="hotkey-dropdown-header">
+                <h4>Manually Select Hotkeys</h4>
+              </div>
+              
+              <div class="hotkey-categories">
+                <!-- Letters and Numbers -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('letters')">
+                    <span>Letters And Numbers</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('letters') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('letters')" class="category-content">
+                    <div class="key-grid">
+                      <button 
+                        v-for="key in letterKeys" 
+                        :key="key" 
+                        class="key-button"
+                        @click="addKeyToCombination(key)"
+                      >
+                        {{ key.toUpperCase() }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Navigation Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('navigation')">
+                    <span>Navigation Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('navigation') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('navigation')" class="category-content">
+                    <div class="key-list">
+                      <button 
+                        v-for="key in navigationKeys" 
+                        :key="key.value" 
+                        class="key-button"
+                        @click="addKeyToCombination(key.value)"
+                      >
+                        <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                        {{ key.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Function Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('function')">
+                    <span>Function Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('function') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('function')" class="category-content">
+                    <div class="key-grid">
+                      <button 
+                        v-for="key in functionKeys" 
+                        :key="key" 
+                        class="key-button"
+                        @click="addKeyToCombination(key)"
+                      >
+                        {{ key.toUpperCase() }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modifier Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('modifiers')">
+                    <span>Modifier Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('modifiers') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('modifiers')" class="category-content">
+                    <div class="key-list">
+                      <button 
+                        v-for="key in modifierKeys" 
+                        :key="key.value" 
+                        class="key-button modifier-key"
+                        @click="addKeyToCombination(key.value)"
+                      >
+                        <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                        {{ key.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Other Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('other')">
+                    <span>Other Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('other') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('other')" class="category-content">
+                    <div class="key-list">
+                      <button 
+                        v-for="key in otherKeys" 
+                        :key="key.value" 
+                        class="key-button"
+                        @click="addKeyToCombination(key.value)"
+                      >
+                        <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                        {{ key.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Current Combination Display -->
+              <div class="current-combination">
+                <div class="combination-label">Current Combination:</div>
+                <div class="combination-display">
+                  <span 
+                    v-for="(key, index) in currentKeyCombination" 
+                    :key="index" 
+                    class="key-chip"
+                  >
+                    {{ key }}
+                    <button class="remove-key" @click="removeKeyFromCombination(index)">
+                      <FontAwesomeIcon :icon="['fas', 'times']" />
+                    </button>
+                  </span>
+                </div>
+                <div class="combination-actions">
+                  <button class="btn btn-secondary btn-sm" @click="clearCombination">Clear All</button>
+                  <button class="btn btn-primary btn-sm" @click="applyCombination">Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="form-help">Click the dropdown to manually select keys, or use keyboard input for quick assignment</p>
         </div>
 
         <!-- Action-specific configuration -->
@@ -295,148 +783,160 @@
         </div>
 
         <div v-if="actionType === 'hotkey'" class="form-group">
-          <label>Key Combination</label>
-          <div class="key-recorder-container">
-            <input 
-              v-model="hotkeyString" 
-              type="text" 
-              class="input key-recorder-input" 
-              placeholder="Click here and press keys to record combination"
-              readonly
-              @click="startKeyRecording"
-              @keydown="handleKeyDown"
-              @keyup="handleKeyUp"
-              ref="keyRecorderInput"
-            />
-            <button 
-              class="btn btn-secondary key-recorder-btn" 
-              @click="toggleKeyRecording"
-              :class="{ 'recording': isRecording }"
-            >
-              <FontAwesomeIcon :icon="['fas', isRecording ? 'stop' : 'keyboard']" />
-              {{ isRecording ? 'Stop Recording' : 'Record Keys' }}
-            </button>
-          </div>
-          <p class="form-help">Click the input field or press "Record Keys" and then press your desired key combination (e.g., Ctrl+V, Alt+Tab)</p>
-        </div>
-
-        <!-- Macro Configuration -->
-        <div v-if="actionType === 'macro'" class="macro-editor">
-          <div class="form-group">
-            <div class="flex items-center justify-between">
-              <label>Macro Steps</label>
-              <button class="btn btn-sm btn-primary" @click="addMacroStep" type="button">
-                <FontAwesomeIcon :icon="['fas', 'plus']" /> Add Step
+          <label>Hotkey Combination</label>
+          <div class="hotkey-selector-container">
+            <div class="hotkey-input-wrapper">
+              <input 
+                v-model="hotkeyString" 
+                type="text" 
+                class="input hotkey-input" 
+                placeholder="Click To Assign Via Keyboard Input"
+                readonly
+                @click="toggleHotkeyDropdown"
+              />
+              <button 
+                class="dropdown-arrow" 
+                @click="toggleHotkeyDropdown"
+                :class="{ 'open': showHotkeyDropdown }"
+              >
+                <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
               </button>
             </div>
-            <p class="form-help">Execute multiple actions in sequence with delays</p>
-          </div>
-
-          <div v-if="macroSteps.length === 0" class="empty-state">
-            <p>No macro steps defined. Click "Add Step" to create your first macro step.</p>
-          </div>
-
-          <div v-for="(step, index) in macroSteps" :key="index" class="macro-step">
-            <div class="macro-step-header">
-              <span class="step-number">Step {{ index + 1 }}</span>
-              <div class="step-actions">
-                <button 
-                  class="btn-icon" 
-                  @click="moveMacroStep(index, -1)" 
-                  :disabled="index === 0"
-                  type="button"
-                  title="Move Up"
-                >
-                  <FontAwesomeIcon :icon="['fas', 'arrow-up']" />
-                </button>
-                <button 
-                  class="btn-icon" 
-                  @click="moveMacroStep(index, 1)" 
-                  :disabled="index === macroSteps.length - 1"
-                  type="button"
-                  title="Move Down"
-                >
-                  <FontAwesomeIcon :icon="['fas', 'arrow-down']" />
-                </button>
-                <button 
-                  class="btn-icon btn-danger" 
-                  @click="removeMacroStep(index)"
-                  type="button"
-                  title="Delete"
-                >
-                  <FontAwesomeIcon :icon="['fas', 'trash']" />
-                </button>
+            
+            <!-- Hotkey Dropdown -->
+            <div v-if="showHotkeyDropdown" class="hotkey-dropdown">
+              <div class="hotkey-dropdown-header">
+                <h4>Manually Select Hotkeys</h4>
               </div>
-            </div>
-
-            <div class="macro-step-content">
-              <div class="form-group">
-                <label class="small-label">Step Type</label>
-                <select v-model="step.type" class="select">
-                  <option value="hotkey">Hotkey</option>
-                  <option value="delay">Delay</option>
-                  <option value="text">Type Text</option>
-                  <option value="click">Mouse Click</option>
-                </select>
-              </div>
-
-              <div v-if="step.type === 'hotkey'" class="form-group">
-                <label class="small-label">Keys (comma-separated)</label>
-                <input 
-                  v-model="step.keysString" 
-                  type="text" 
-                  class="input" 
-                  placeholder="ctrl, c"
-                  @input="updateMacroStepKeys(index)"
-                />
-                <p class="form-help-sm">Example: ctrl, c or alt, tab or win, d</p>
-              </div>
-
-              <div v-if="step.type === 'delay'" class="form-group">
-                <label class="small-label">Delay (milliseconds)</label>
-                <input 
-                  v-model.number="step.delay" 
-                  type="number" 
-                  class="input" 
-                  min="0" 
-                  step="100"
-                  placeholder="500"
-                />
-                <p class="form-help-sm">1000ms = 1 second</p>
-              </div>
-
-              <div v-if="step.type === 'text'" class="form-group">
-                <label class="small-label">Text to Type</label>
-                <textarea 
-                  v-model="step.text" 
-                  class="textarea" 
-                  rows="2"
-                  placeholder="Enter text to type automatically"
-                ></textarea>
-              </div>
-
-              <div v-if="step.type === 'click'" class="form-group">
-                <label class="small-label">Click Position (optional)</label>
-                <div class="flex gap-sm">
-                  <input 
-                    v-model.number="step.clickX" 
-                    type="number" 
-                    class="input" 
-                    placeholder="X coordinate"
-                    style="flex: 1"
-                  />
-                  <input 
-                    v-model.number="step.clickY" 
-                    type="number" 
-                    class="input" 
-                    placeholder="Y coordinate"
-                    style="flex: 1"
-                  />
+              
+              <div class="hotkey-categories">
+                <!-- Letters and Numbers -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('letters')">
+                    <span>Letters And Numbers</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('letters') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('letters')" class="category-content">
+                    <div class="key-grid">
+                      <button 
+                        v-for="key in letterKeys" 
+                        :key="key" 
+                        class="key-button"
+                        @click="addKeyToCombination(key)"
+                      >
+                        {{ key.toUpperCase() }}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p class="form-help-sm">Leave empty to click at current mouse position</p>
+
+                <!-- Navigation Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('navigation')">
+                    <span>Navigation Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('navigation') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('navigation')" class="category-content">
+                    <div class="key-list">
+                      <button 
+                        v-for="key in navigationKeys" 
+                        :key="key.value" 
+                        class="key-button"
+                        @click="addKeyToCombination(key.value)"
+                      >
+                        <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                        {{ key.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Function Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('function')">
+                    <span>Function Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('function') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('function')" class="category-content">
+                    <div class="key-grid">
+                      <button 
+                        v-for="key in functionKeys" 
+                        :key="key" 
+                        class="key-button"
+                        @click="addKeyToCombination(key)"
+                      >
+                        {{ key.toUpperCase() }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modifier Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('modifiers')">
+                    <span>Modifier Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('modifiers') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('modifiers')" class="category-content">
+                    <div class="key-list">
+                      <button 
+                        v-for="key in modifierKeys" 
+                        :key="key.value" 
+                        class="key-button modifier-key"
+                        @click="addKeyToCombination(key.value)"
+                      >
+                        <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                        {{ key.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Other Keys -->
+                <div class="hotkey-category">
+                  <div class="category-header" @click="toggleCategory('other')">
+                    <span>Other Keys</span>
+                    <FontAwesomeIcon :icon="['fas', 'chevron-right']" :class="{ 'rotated': expandedCategories.includes('other') }" />
+                  </div>
+                  <div v-if="expandedCategories.includes('other')" class="category-content">
+                    <div class="key-list">
+                      <button 
+                        v-for="key in otherKeys" 
+                        :key="key.value" 
+                        class="key-button"
+                        @click="addKeyToCombination(key.value)"
+                      >
+                        <FontAwesomeIcon v-if="key.icon" :icon="key.icon" />
+                        {{ key.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Current Combination Display -->
+              <div class="current-combination">
+                <div class="combination-label">Current Combination:</div>
+                <div class="combination-display">
+                  <span 
+                    v-for="(key, index) in currentKeyCombination" 
+                    :key="index" 
+                    class="key-chip"
+                  >
+                    {{ key }}
+                    <button class="remove-key" @click="removeKeyFromCombination(index)">
+                      <FontAwesomeIcon :icon="['fas', 'times']" />
+                    </button>
+                  </span>
+                </div>
+                <div class="combination-actions">
+                  <button class="btn btn-secondary btn-sm" @click="clearCombination">Clear All</button>
+                  <button class="btn btn-primary btn-sm" @click="applyCombination">Apply</button>
+                </div>
               </div>
             </div>
           </div>
+          <p class="form-help">Click the dropdown to manually select keys, or use keyboard input for quick assignment</p>
         </div>
 
         <!-- System Metric Configuration -->
@@ -659,12 +1159,13 @@
         <button class="btn btn-primary" @click="handleSave">Save</button>
       </div>
     </div>
+  </div>
 
-    <IconPicker 
-      v-if="showIconPicker" 
-      @select="handleIconSelect" 
-      @close="showIconPicker = false" 
-    />
+  <IconPicker 
+    v-if="showIconPicker" 
+    @select="handleIconSelect" 
+    @close="showIconPicker = false" 
+  />
 
     <!-- Asset Picker Modal -->
     <AssetPicker
@@ -681,13 +1182,13 @@
       @close="showActionsSidebar = false"
       @select-action="handleActionSelection"
     />
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import type { Button, ButtonAction, ActionType } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useDashboardStore } from '@/stores/dashboard'
 import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
@@ -715,16 +1216,59 @@ const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
 
-// Key recorder state
-const isRecording = ref(false)
-const keyRecorderInput = ref<HTMLInputElement | null>(null)
-const recordedKeys = ref<string[]>([])
-const keyDownListener = ref<((e: KeyboardEvent) => void) | null>(null)
-const keyUpListener = ref<((e: KeyboardEvent) => void) | null>(null)
+// Hotkey dropdown state
+const showHotkeyDropdown = ref(false)
+const expandedCategories = ref<string[]>([])
+const currentKeyCombination = ref<string[]>([])
+
+// Key definitions
+const letterKeys = ref([
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+])
+
+const navigationKeys = ref([
+  { value: 'left', label: 'Left', icon: ['fas', 'arrow-left'] },
+  { value: 'up', label: 'Up', icon: ['fas', 'arrow-up'] },
+  { value: 'right', label: 'Right', icon: ['fas', 'arrow-right'] },
+  { value: 'down', label: 'Down', icon: ['fas', 'arrow-down'] },
+  { value: 'tab', label: 'Tab', icon: ['fas', 'arrow-right'] },
+  { value: 'caps', label: 'Caps Lock', icon: ['fas', 'lock'] },
+  { value: 'space', label: 'Space', icon: ['fas', 'minus'] },
+  { value: 'escape', label: 'Escape', icon: ['fas', 'times'] },
+  { value: 'enter', label: 'Enter', icon: ['fas', 'arrow-down'] },
+  { value: 'backspace', label: 'Backspace', icon: ['fas', 'arrow-left'] },
+  { value: 'home', label: 'Home', icon: ['fas', 'home'] },
+  { value: 'end', label: 'End', icon: ['fas', 'stop'] },
+  { value: 'pageup', label: 'Page Up', icon: ['fas', 'chevron-up'] },
+  { value: 'pagedown', label: 'Page Down', icon: ['fas', 'chevron-down'] },
+  { value: 'insert', label: 'Insert', icon: ['fas', 'plus'] },
+  { value: 'delete', label: 'Delete', icon: ['fas', 'trash'] }
+])
+
+const functionKeys = ref([
+  'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12'
+])
+
+const modifierKeys = ref([
+  { value: 'ctrl', label: 'Ctrl', icon: ['fas', 'keyboard'] },
+  { value: 'alt', label: 'Alt', icon: ['fas', 'keyboard'] },
+  { value: 'shift', label: 'Shift', icon: ['fas', 'keyboard'] },
+  { value: 'win', label: 'Windows', icon: ['fab', 'windows'] }
+])
+
+const otherKeys = ref([
+  { value: 'print', label: 'Print Screen', icon: ['fas', 'print'] },
+  { value: 'scroll', label: 'Scroll Lock', icon: ['fas', 'lock'] },
+  { value: 'pause', label: 'Pause Break', icon: ['fas', 'pause'] },
+  { value: 'numlock', label: 'Num Lock', icon: ['fas', 'lock'] },
+  { value: 'menu', label: 'Menu', icon: ['fas', 'bars'] }
+])
 
 // Macro steps management
 interface MacroStepUI {
-  type: 'hotkey' | 'delay' | 'text' | 'click'
+  type: 'hotkey' | 'delay' | 'text' | 'click' | 'button'
   keysString?: string
   keys?: string[]
   delay?: number
@@ -732,9 +1276,40 @@ interface MacroStepUI {
   clickX?: number
   clickY?: number
   position?: { x: number; y: number }
+  buttonId?: string
 }
 
 const macroSteps = ref<MacroStepUI[]>([])
+
+// Visual macro builder state
+const showMacroStepSelector = ref(false)
+const editingStepIndex = ref<number | null>(null)
+const editingStep = ref<MacroStepUI | null>(null)
+
+// Macro hotkey dropdown state
+const showMacroHotkeyDropdown = ref(false)
+const expandedMacroCategories = ref<string[]>([])
+const currentMacroKeyCombination = ref<string[]>([])
+
+// Available buttons for macro selection
+const availableButtons = computed(() => {
+  const dashboardStore = useDashboardStore()
+  const currentScene = dashboardStore.currentScene
+  if (!currentScene) return []
+  
+  // Get all buttons from all pages in the current scene
+  const allButtons: Button[] = []
+  currentScene.pages.forEach(page => {
+    page.buttons.forEach(button => {
+      // Exclude the current button being edited to avoid recursion
+      if (button.id !== props.button.id) {
+        allButtons.push(button)
+      }
+    })
+  })
+  
+  return allButtons
+})
 
 // Performance Monitor metrics
 const performanceMetricOptions = [
@@ -826,142 +1401,53 @@ function updateHotkeyConfig() {
     .filter(k => k.length > 0)
 }
 
-// Key recorder functions
-function startKeyRecording() {
-  if (isRecording.value) return
+// Hotkey dropdown functions
+function toggleHotkeyDropdown() {
+  showHotkeyDropdown.value = !showHotkeyDropdown.value
   
-  isRecording.value = true
-  recordedKeys.value = []
-  
-  // Focus the input to capture key events
-  if (keyRecorderInput.value) {
-    keyRecorderInput.value.focus()
-  }
-  
-  // Add global key listeners
-  keyDownListener.value = (e: KeyboardEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    const key = getKeyName(e)
-    if (key && !recordedKeys.value.includes(key)) {
-      recordedKeys.value.push(key)
-      updateHotkeyFromRecordedKeys()
+  if (showHotkeyDropdown.value) {
+    // Initialize current combination from existing hotkey string
+    if (hotkeyString.value) {
+      currentKeyCombination.value = hotkeyString.value
+        .split(',')
+        .map(k => k.trim())
+        .filter(k => k.length > 0)
+    } else {
+      currentKeyCombination.value = []
     }
   }
-  
-  keyUpListener.value = (e: KeyboardEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    // Stop recording after a short delay to allow for key combinations
-    setTimeout(() => {
-      if (isRecording.value) {
-        stopKeyRecording()
-      }
-    }, 500)
-  }
-  
-  document.addEventListener('keydown', keyDownListener.value)
-  document.addEventListener('keyup', keyUpListener.value)
 }
 
-function stopKeyRecording() {
-  isRecording.value = false
-  
-  if (keyDownListener.value) {
-    document.removeEventListener('keydown', keyDownListener.value)
-    keyDownListener.value = null
-  }
-  
-  if (keyUpListener.value) {
-    document.removeEventListener('keyup', keyUpListener.value)
-    keyUpListener.value = null
-  }
-  
-  // Blur the input
-  if (keyRecorderInput.value) {
-    keyRecorderInput.value.blur()
-  }
-}
-
-function toggleKeyRecording() {
-  if (isRecording.value) {
-    stopKeyRecording()
+function toggleCategory(category: string) {
+  const index = expandedCategories.value.indexOf(category)
+  if (index > -1) {
+    expandedCategories.value.splice(index, 1)
   } else {
-    startKeyRecording()
+    expandedCategories.value.push(category)
   }
 }
 
-function getKeyName(e: KeyboardEvent): string {
-  const modifiers = []
-  
-  if (e.ctrlKey) modifiers.push('ctrl')
-  if (e.altKey) modifiers.push('alt')
-  if (e.shiftKey) modifiers.push('shift')
-  if (e.metaKey) modifiers.push('win')
-  
-  // Get the actual key pressed (excluding modifiers)
-  let key = e.key.toLowerCase()
-  
-  // Handle special keys
-  const specialKeys: Record<string, string> = {
-    ' ': 'space',
-    'arrowup': 'up',
-    'arrowdown': 'down',
-    'arrowleft': 'left',
-    'arrowright': 'right',
-    'enter': 'enter',
-    'tab': 'tab',
-    'escape': 'escape',
-    'backspace': 'backspace',
-    'delete': 'delete',
-    'home': 'home',
-    'end': 'end',
-    'pageup': 'pageup',
-    'pagedown': 'pagedown',
-    'insert': 'insert',
-    'f1': 'f1', 'f2': 'f2', 'f3': 'f3', 'f4': 'f4',
-    'f5': 'f5', 'f6': 'f6', 'f7': 'f7', 'f8': 'f8',
-    'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12'
+function addKeyToCombination(key: string) {
+  // Don't add duplicate keys
+  if (!currentKeyCombination.value.includes(key)) {
+    currentKeyCombination.value.push(key)
   }
-  
-  if (specialKeys[key]) {
-    key = specialKeys[key]
-  }
-  
-  // Skip modifier keys themselves
-  if (['control', 'alt', 'shift', 'meta'].includes(key)) {
-    return ''
-  }
-  
-  // Combine modifiers with the key
-  if (modifiers.length > 0) {
-    return [...modifiers, key].join('+')
-  }
-  
-  return key
 }
 
-function updateHotkeyFromRecordedKeys() {
-  if (recordedKeys.value.length > 0) {
-    hotkeyString.value = recordedKeys.value.join(', ')
+function removeKeyFromCombination(index: number) {
+  currentKeyCombination.value.splice(index, 1)
+}
+
+function clearCombination() {
+  currentKeyCombination.value = []
+}
+
+function applyCombination() {
+  if (currentKeyCombination.value.length > 0) {
+    hotkeyString.value = currentKeyCombination.value.join(', ')
     updateHotkeyConfig()
   }
-}
-
-function handleKeyDown(e: KeyboardEvent) {
-  if (isRecording.value) {
-    e.preventDefault()
-    e.stopPropagation()
-  }
-}
-
-function handleKeyUp(e: KeyboardEvent) {
-  if (isRecording.value) {
-    e.preventDefault()
-    e.stopPropagation()
-  }
+  showHotkeyDropdown.value = false
 }
 
 function handleIconSelect(icon: string) {
@@ -1072,36 +1558,182 @@ function updateIconSize(event: Event) {
 }
 
 // Macro step functions
-function addMacroStep() {
-  macroSteps.value.push({
-    type: 'hotkey',
+// Visual macro builder functions
+function addMacroStep(type: 'hotkey' | 'delay' | 'text' | 'click') {
+  const newStep: MacroStepUI = {
+    type,
     keysString: '',
     keys: [],
-    delay: 500
-  })
+    delay: 500,
+    text: '',
+    clickX: 0,
+    clickY: 0
+  }
+  
+  macroSteps.value.push(newStep)
+  showMacroStepSelector.value = false
+  
+  // Auto-edit the new step
+  editMacroStep(macroSteps.value.length - 1)
 }
 
 function removeMacroStep(index: number) {
   macroSteps.value.splice(index, 1)
 }
 
-function moveMacroStep(index: number, direction: number) {
-  const newIndex = index + direction
-  if (newIndex >= 0 && newIndex < macroSteps.value.length) {
-    const temp = macroSteps.value[index]
-    macroSteps.value[index] = macroSteps.value[newIndex]
-    macroSteps.value[newIndex] = temp
-  }
-}
-
-function updateMacroStepKeys(index: number) {
-  const step = macroSteps.value[index]
-  if (step.keysString) {
-    step.keys = step.keysString
+function editMacroStep(index: number) {
+  editingStepIndex.value = index
+  editingStep.value = { ...macroSteps.value[index] }
+  
+  // Initialize macro key combination if it's a hotkey step
+  if (macroSteps.value[index].type === 'hotkey' && macroSteps.value[index].keysString) {
+    currentMacroKeyCombination.value = macroSteps.value[index].keysString
       .split(',')
       .map(k => k.trim())
       .filter(k => k.length > 0)
+  } else {
+    currentMacroKeyCombination.value = []
   }
+}
+
+function closeStepEditor() {
+  editingStepIndex.value = null
+  editingStep.value = null
+  showMacroHotkeyDropdown.value = false
+}
+
+function saveStepEditor() {
+  if (editingStepIndex.value !== null && editingStep.value) {
+    macroSteps.value[editingStepIndex.value] = { ...editingStep.value }
+    closeStepEditor()
+  }
+}
+
+function getStepIcon(type: string) {
+  const icons: Record<string, any> = {
+    'hotkey': ['fas', 'keyboard'],
+    'delay': ['fas', 'clock'],
+    'text': ['fas', 'keyboard'],
+    'click': ['fas', 'mouse-pointer'],
+    'button': ['fas', 'square']
+  }
+  return icons[type] || ['fas', 'question']
+}
+
+function getStepDescription(step: MacroStepUI): string {
+  switch (step.type) {
+    case 'hotkey':
+      return step.keysString || 'Hotkey'
+    case 'delay':
+      return `${step.delay || 500}ms delay`
+    case 'text':
+      return step.text || 'Type text'
+    case 'click':
+      return step.clickX !== undefined && step.clickY !== undefined 
+        ? `Click (${step.clickX}, ${step.clickY})`
+        : 'Mouse click'
+    case 'button':
+      const button = availableButtons.value.find(b => b.id === step.buttonId)
+      return button ? button.label : 'Button action'
+    default:
+      return 'Unknown step'
+  }
+}
+
+function selectButtonForMacro(button: Button) {
+  if (editingStep.value) {
+    editingStep.value.buttonId = button.id
+  }
+}
+
+function getButtonActionDescription(button: Button): string {
+  if (!button.action) return 'No action'
+  
+  switch (button.action.type) {
+    case 'hotkey':
+      return 'Hotkey'
+    case 'program':
+      return 'Launch Program'
+    case 'url':
+      return 'Open URL'
+    case 'command':
+      return 'Run Command'
+    case 'macro':
+      return 'Macro'
+    case 'system_metric':
+      return 'System Metric'
+    default:
+      return button.action.type
+  }
+}
+
+function getActionTypeDisplayName(actionType: string): string {
+  const actionNames: Record<string, string> = {
+    'url': 'Open URL',
+    'program': 'Launch Program',
+    'command': 'Run Command',
+    'hotkey': 'Send Hotkey',
+    'macro': 'Macro (Multiple Actions)',
+    'multi_action': 'Multi-Action',
+    'system_metric': 'System Metric Display',
+    'metric_memory': 'Memory Monitor',
+    'metric_cpu_usage': 'CPU Usage Monitor',
+    'metric_cpu_temperature': 'CPU Temperature Monitor',
+    'metric_cpu_frequency': 'CPU Frequency Monitor',
+    'metric_cpu_power': 'CPU Power Monitor',
+    'metric_internet_speed': 'Internet Speed Monitor',
+    'metric_harddisk': 'Hard Disk Monitor',
+    'metric_gpu_temperature': 'GPU Temperature Monitor',
+    'metric_gpu_frequency': 'GPU Frequency Monitor',
+    'metric_gpu_usage': 'GPU Usage Monitor',
+    'metric_gpu_memory_freq': 'GPU Memory Frequency Monitor',
+    'metric_gpu_memory_usage': 'GPU Memory Usage Monitor',
+    'calendar': 'Calendar',
+    'time_world_clock': 'World Time',
+    'time_timer': 'Timer',
+    'time_countdown': 'Countdown',
+    'weather': 'Weather Query',
+    'system_control': 'System Control',
+    'cross_platform': 'Cross-Platform Action'
+  }
+  
+  return actionNames[actionType] || actionType || 'No Action'
+}
+
+// Macro hotkey dropdown functions
+function toggleMacroHotkeyDropdown() {
+  showMacroHotkeyDropdown.value = !showMacroHotkeyDropdown.value
+}
+
+function toggleMacroCategory(category: string) {
+  const index = expandedMacroCategories.value.indexOf(category)
+  if (index > -1) {
+    expandedMacroCategories.value.splice(index, 1)
+  } else {
+    expandedMacroCategories.value.push(category)
+  }
+}
+
+function addKeyToMacroCombination(key: string) {
+  if (!currentMacroKeyCombination.value.includes(key)) {
+    currentMacroKeyCombination.value.push(key)
+  }
+}
+
+function removeKeyFromMacroCombination(index: number) {
+  currentMacroKeyCombination.value.splice(index, 1)
+}
+
+function clearMacroCombination() {
+  currentMacroKeyCombination.value = []
+}
+
+function applyMacroCombination() {
+  if (currentMacroKeyCombination.value.length > 0 && editingStep.value) {
+    editingStep.value.keysString = currentMacroKeyCombination.value.join(', ')
+    editingStep.value.keys = [...currentMacroKeyCombination.value]
+  }
+  showMacroHotkeyDropdown.value = false
 }
 
 function handleActionSelection(selectedActionType: string) {
@@ -1213,14 +1845,23 @@ function handleSave() {
   emit('save', editedButton.value)
 }
 
-// Cleanup key recorder listeners on unmount
+// Click outside to close dropdown
+function handleClickOutside(event: Event) {
+  const target = event.target as HTMLElement
+  const dropdown = document.querySelector('.hotkey-selector-container')
+  
+  if (dropdown && !dropdown.contains(target)) {
+    showHotkeyDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
 onUnmounted(() => {
-  if (keyDownListener.value) {
-    document.removeEventListener('keydown', keyDownListener.value)
-  }
-  if (keyUpListener.value) {
-    document.removeEventListener('keyup', keyUpListener.value)
-  }
+  document.removeEventListener('click', handleClickOutside)
+  showHotkeyDropdown.value = false
 })
 </script>
 
@@ -1600,47 +2241,211 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-/* Key Recorder Styles */
-.key-recorder-container {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: stretch;
+/* Hotkey Dropdown Styles */
+.hotkey-selector-container {
+  position: relative;
 }
 
-.key-recorder-input {
+.hotkey-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.hotkey-input {
   flex: 1;
   cursor: pointer;
   background-color: var(--color-surface);
   border: 2px solid var(--color-border);
   transition: all 0.2s ease;
+  padding-right: 40px;
 }
 
-.key-recorder-input:focus {
+.hotkey-input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
-.key-recorder-input.recording {
-  border-color: var(--color-success);
-  background-color: rgba(46, 204, 113, 0.1);
-  animation: pulse 1s infinite;
+.dropdown-arrow {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  transition: transform 0.2s ease;
 }
 
-.key-recorder-btn {
-  white-space: nowrap;
-  min-width: 120px;
+.dropdown-arrow.open {
+  transform: rotate(180deg);
 }
 
-.key-recorder-btn.recording {
-  background-color: var(--color-success);
+.hotkey-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.hotkey-dropdown-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.hotkey-dropdown-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.hotkey-categories {
+  padding: var(--spacing-sm);
+}
+
+.hotkey-category {
+  margin-bottom: var(--spacing-sm);
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.category-header:hover {
+  background: var(--color-hover);
+}
+
+.category-header svg {
+  transition: transform 0.2s ease;
+}
+
+.category-header svg.rotated {
+  transform: rotate(90deg);
+}
+
+.category-content {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: var(--spacing-xs);
+}
+
+.key-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.key-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  min-height: 32px;
+}
+
+.key-button:hover {
+  background: var(--color-hover);
+  border-color: var(--color-primary);
+}
+
+.key-button.modifier-key {
+  background: rgba(52, 152, 219, 0.1);
+  border-color: var(--color-primary);
+}
+
+.key-button.modifier-key:hover {
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.current-combination {
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.combination-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.combination-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  min-height: 32px;
+  align-items: center;
+}
+
+.key-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-primary);
   color: white;
-  animation: pulse 1s infinite;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
+.remove-key {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.remove-key:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.combination-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
 }
 
 .form-help {
@@ -1648,6 +2453,365 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
   line-height: 1.4;
+}
+
+/* Visual Macro Builder Styles */
+.macro-builder-container {
+  position: relative;
+}
+
+.macro-builder {
+  margin-bottom: var(--spacing-md);
+}
+
+.macro-steps-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  min-height: 60px;
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.macro-step-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.macro-step-chip:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.step-number {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.step-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.remove-step {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.remove-step:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.add-step-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-secondary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.add-step-btn:hover {
+  background: var(--color-secondary-dark);
+  transform: translateY(-1px);
+}
+
+.macro-step-selector {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.selector-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.close-selector {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-selector:hover {
+  background: var(--color-hover);
+}
+
+.step-types {
+  padding: var(--spacing-md);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.step-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.step-type-btn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-hover);
+  transform: translateY(-2px);
+}
+
+.step-type-btn svg {
+  font-size: 1.5rem;
+  color: var(--color-primary);
+}
+
+.step-type-btn span {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.step-type-btn small {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.macro-step-editor {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  margin-top: 4px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.editor-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.close-editor {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-editor:hover {
+  background: var(--color-hover);
+}
+
+.step-editor-content {
+  padding: var(--spacing-md);
+}
+
+.editor-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Button Selector Styles */
+.button-selector-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.button-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.button-option:hover {
+  border-color: var(--color-primary);
+  background: var(--color-hover);
+}
+
+.button-option.selected {
+  border-color: var(--color-primary);
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.button-preview {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+
+.custom-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.button-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.button-label {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button-action {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action Type Display Styles */
+.action-type-display {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.action-type-text {
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.action-type-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-type-badge.no-action {
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.action-type-badge:not(.no-action) {
+  background: var(--color-primary);
+  color: white;
 }
 </style>
 
