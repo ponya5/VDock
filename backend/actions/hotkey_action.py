@@ -100,8 +100,9 @@ class HotkeyAction(BaseAction):
         """Validate that hotkey is provided."""
         if not PYNPUT_AVAILABLE:
             return False
-        return ('keys' in self.config and
-                isinstance(self.config['keys'], list))
+        # Support both 'keys' (array) and 'hotkey' (string) formats
+        return (('keys' in self.config and isinstance(self.config['keys'], list)) or
+                ('hotkey' in self.config and isinstance(self.config['hotkey'], str)))
 
     def _parse_key(self, key_str: str):
         """Parse a key string to a Key or character.
@@ -128,7 +129,16 @@ class HotkeyAction(BaseAction):
                 'Invalid configuration: Keys are required'
             )
 
-        keys = self.config['keys']
+        # Support both 'keys' array and 'hotkey' string formats
+        if 'keys' in self.config:
+            keys = self.config['keys']
+        elif 'hotkey' in self.config:
+            # Parse hotkey string (e.g., "Ctrl+Shift+P" -> ["Ctrl", "Shift", "P"])
+            hotkey_str = self.config['hotkey']
+            keys = [k.strip() for k in hotkey_str.split('+')]
+        else:
+            return ActionResult(False, 'No keys or hotkey specified')
+
         # Small delay between key presses
         delay = self.config.get('delay', 0.05)
 

@@ -20,6 +20,7 @@ from routes.upload import upload_bp
 from routes.assets import assets_bp
 from routes.system_metrics import system_metrics_bp
 from routes.app_monitor import app_monitor_bp
+from routes.system import system_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -51,6 +52,7 @@ app.register_blueprint(upload_bp)
 app.register_blueprint(assets_bp)
 app.register_blueprint(system_metrics_bp)
 app.register_blueprint(app_monitor_bp)
+app.register_blueprint(system_bp)
 
 
 # ============================================================================

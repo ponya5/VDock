@@ -108,17 +108,19 @@ function editScene(scene: Scene) {
 .scene-tab {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: 1rem;
+  font-weight: 500;
   white-space: nowrap;
   min-width: 0;
+  min-height: 44px;
 }
 
 .scene-tab:hover {
@@ -137,29 +139,29 @@ function editScene(scene: Scene) {
 }
 
 .scene-icon {
-  font-size: 0.875rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 
 .scene-name {
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 150px;
 }
 
 .add-scene-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .add-scene-btn:hover {
@@ -172,16 +174,16 @@ function editScene(scene: Scene) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  opacity: 0.7;
+  font-size: 0.875rem;
+  opacity: 0.8;
 }
 
 .scene-edit-btn:hover {

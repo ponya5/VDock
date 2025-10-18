@@ -11,11 +11,39 @@ class ActionType(str, Enum):
     COMMAND = 'command'
     HOTKEY = 'hotkey'
     MULTI_ACTION = 'multi_action'
+    MACRO = 'macro'
     SYSTEM_CONTROL = 'system_control'
+    SYSTEM_METRIC = 'system_metric'
     CROSS_PLATFORM = 'cross_platform'
     FOLDER = 'folder'
     PLUGIN = 'plugin'
     CALENDAR = 'calendar'
+    WEATHER = 'weather'
+    # Individual performance metrics
+    METRIC_MEMORY = 'metric_memory'
+    METRIC_CPU_USAGE = 'metric_cpu_usage'
+    METRIC_CPU_TEMPERATURE = 'metric_cpu_temperature'
+    METRIC_CPU_FREQUENCY = 'metric_cpu_frequency'
+    METRIC_CPU_POWER = 'metric_cpu_power'
+    METRIC_INTERNET_SPEED = 'metric_internet_speed'
+    METRIC_HARDDISK = 'metric_harddisk'
+    METRIC_GPU_TEMPERATURE = 'metric_gpu_temperature'
+    METRIC_GPU_FREQUENCY = 'metric_gpu_frequency'
+    METRIC_GPU_USAGE = 'metric_gpu_usage'
+    METRIC_GPU_MEMORY_FREQ = 'metric_gpu_memory_freq'
+    METRIC_GPU_MEMORY_USAGE = 'metric_gpu_memory_usage'
+    # Time options
+    TIME_WORLD_CLOCK = 'time_world_clock'
+    TIME_TIMER = 'time_timer'
+    TIME_COUNTDOWN = 'time_countdown'
+    # Navigation
+    NEXT_PAGE = 'next_page'
+    PREVIOUS_PAGE = 'previous_page'
+    HOME_PAGE = 'home_page'
+    # Screenshot
+    SCREENSHOT = 'screenshot'
+    # Custom (placeholder action type)
+    CUSTOM = 'custom'
 
 
 class SystemControlType(str, Enum):

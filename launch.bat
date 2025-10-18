@@ -24,13 +24,13 @@ if not exist "frontend\node_modules" (
 )
 
 echo [3/5] Starting Backend Server...
-start "VDock Backend" cmd /k "cd backend && call venv\Scripts\activate.bat && python app.py"
+start "VDock Backend" cmd /c "cd /d %~dp0backend && call venv\Scripts\activate.bat && python app.py && pause"
 
 echo [4/5] Waiting for backend to initialize...
 timeout /t 5 /nobreak >nul
 
 echo [5/5] Starting Frontend Server...
-start "VDock Frontend" cmd /k "cd frontend && npm run dev"
+start "VDock Frontend" cmd /c "cd /d %~dp0frontend && npm run dev && pause"
 
 echo.
 echo ========================================

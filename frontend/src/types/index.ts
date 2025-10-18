@@ -31,6 +31,12 @@ export type ActionType =
   | 'cross_platform'
   | 'folder'
   | 'plugin'
+  // Navigation
+  | 'next_page'
+  | 'previous_page'
+  | 'home_page'
+  // Screenshot
+  | 'screenshot'
 
 export type ButtonShape = 'rectangle' | 'rounded' | 'circle' | 'hexagon' | 'diamond' | 'octagon'
 

@@ -9,6 +9,26 @@ from .base_action import BaseAction, ActionResult
 # Platform detection
 _SYSTEM = platform.system()
 
+# Windows API imports for media keys
+if _SYSTEM == 'Windows':
+    try:
+        import ctypes
+        from ctypes import wintypes
+        KEYEVENTF_EXTENDEDKEY = 0x0001
+        KEYEVENTF_KEYUP = 0x0002
+        VK_VOLUME_MUTE = 0xAD
+        VK_VOLUME_DOWN = 0xAE  
+        VK_VOLUME_UP = 0xAF
+        VK_MEDIA_NEXT_TRACK = 0xB0
+        VK_MEDIA_PREV_TRACK = 0xB1
+        VK_MEDIA_STOP = 0xB2
+        VK_MEDIA_PLAY_PAUSE = 0xB3
+        WINDOWS_API_AVAILABLE = True
+    except:
+        WINDOWS_API_AVAILABLE = False
+else:
+    WINDOWS_API_AVAILABLE = False
+
 
 class CrossPlatformAction(BaseAction):
     """Cross-platform system actions with OS-specific implementations."""
@@ -126,6 +146,20 @@ class CrossPlatformAction(BaseAction):
             return result.returncode != 9009  # Command not found error
         except:
             return False
+    
+    def _send_windows_key(self, vk_code: int) -> ActionResult:
+        """Send a Windows virtual key code using ctypes."""
+        if not WINDOWS_API_AVAILABLE:
+            return ActionResult(False, 'Windows API not available')
+        
+        try:
+            # Press key
+            ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_EXTENDEDKEY, 0)
+            # Release key
+            ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)
+            return ActionResult(True, 'Key sent successfully')
+        except Exception as e:
+            return ActionResult(False, f'Failed to send key: {str(e)}')
 
     # System Control Actions
     def _shutdown(self) -> ActionResult:
@@ -195,11 +229,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command(f'nircmd.exe changesysvolume {step}')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['volume_up']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_VOLUME_UP)
         elif _SYSTEM == 'Darwin':  # macOS
             volume_step = self.config.get('step', 10)
             script = f'set volume output volume (output volume of (get volume settings) + {volume_step})'
@@ -218,11 +249,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command(f'nircmd.exe changesysvolume -{step}')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['volume_down']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_VOLUME_DOWN)
         elif _SYSTEM == 'Darwin':  # macOS
             volume_step = self.config.get('step', 10)
             script = f'set volume output volume (output volume of (get volume settings) - {volume_step})'
@@ -239,11 +267,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command('nircmd.exe mutesysvolume 2')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['volume_mute']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_VOLUME_MUTE)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'set volume with output muted'
             return self._run_command(f'osascript -e "{script}"')
@@ -258,11 +283,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command('nircmd.exe mutesysvolume 0')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['volume_mute']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes (mute is toggle)
+                return self._send_windows_key(VK_VOLUME_MUTE)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'set volume without output muted'
             return self._run_command(f'osascript -e "{script}"')
@@ -292,7 +314,9 @@ class CrossPlatformAction(BaseAction):
                         return self._run_command(f'nircmd.exe setbrightness {new_brightness}')
                 except:
                     pass
-            return ActionResult(False, 'Brightness control requires NirCmd on Windows')
+            # Fallback to WMI using PowerShell
+            ps_script = "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,100)"
+            return self._run_command(f'powershell -Command "{ps_script}"')
         elif _SYSTEM == 'Darwin':  # macOS
             # Check if brightness tool is available
             try:
@@ -305,7 +329,7 @@ class CrossPlatformAction(BaseAction):
                     return self._run_command('brightness 1')  # Set to max
             except:
                 pass
-            return ActionResult(False, 'Brightness control requires brightness tool on macOS')
+            return ActionResult(False, 'Brightness control requires brightness tool on macOS. Install with: brew install brightness')
         elif _SYSTEM == 'Linux':
             # Try to get current brightness and increase
             try:
@@ -360,7 +384,9 @@ class CrossPlatformAction(BaseAction):
                         return self._run_command(f'nircmd.exe setbrightness {new_brightness}')
                 except:
                     pass
-            return ActionResult(False, 'Brightness control requires NirCmd on Windows')
+            # Fallback to WMI using PowerShell
+            ps_script = "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,50)"
+            return self._run_command(f'powershell -Command "{ps_script}"')
         elif _SYSTEM == 'Darwin':  # macOS
             # Check if brightness tool is available
             try:
@@ -416,7 +442,9 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command(f'nircmd.exe setbrightness {brightness}')
             else:
-                return ActionResult(False, 'Brightness control requires NirCmd on Windows')
+                # Fallback to WMI using PowerShell
+                ps_script = f"(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,{brightness})"
+                return self._run_command(f'powershell -Command "{ps_script}"')
         elif _SYSTEM == 'Darwin':  # macOS
             try:
                 result = subprocess.run(
@@ -457,11 +485,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command('nircmd.exe sendkeypress media_play_pause')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['media_play_pause']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_MEDIA_PLAY_PAUSE)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'tell application "Music" to playpause'
             return self._run_command(f'osascript -e "{script}"')
@@ -477,11 +502,17 @@ class CrossPlatformAction(BaseAction):
                     return self._run_command('playerctl play-pause')
             except:
                 pass
-            # Fallback to hotkey
-            from .hotkey_action import HotkeyAction
-            hotkey_config = {'keys': ['media_play_pause']}
-            hotkey_action = HotkeyAction(hotkey_config)
-            return hotkey_action.execute()
+            # Fallback to PowerShell SendKeys
+            ps_script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('{MEDIA_PLAY_PAUSE}')"
+            result = subprocess.run(
+                ['powershell', '-Command', ps_script],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                return ActionResult(True, 'Media play/pause toggled')
+            return ActionResult(False, 'Media control not available')
         else:
             return ActionResult(False, f'Media control not supported on {_SYSTEM}')
 
@@ -491,11 +522,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command('nircmd.exe sendkeypress media_next_track')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['media_next_track']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_MEDIA_NEXT_TRACK)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'tell application "Music" to next track'
             return self._run_command(f'osascript -e "{script}"')
@@ -511,11 +539,17 @@ class CrossPlatformAction(BaseAction):
                     return self._run_command('playerctl next')
             except:
                 pass
-            # Fallback to hotkey
-            from .hotkey_action import HotkeyAction
-            hotkey_config = {'keys': ['media_next_track']}
-            hotkey_action = HotkeyAction(hotkey_config)
-            return hotkey_action.execute()
+            # Fallback to PowerShell SendKeys
+            ps_script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('{MEDIA_NEXT_TRACK}')"
+            result = subprocess.run(
+                ['powershell', '-Command', ps_script],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                return ActionResult(True, 'Media next track')
+            return ActionResult(False, 'Media control not available')
         else:
             return ActionResult(False, f'Media control not supported on {_SYSTEM}')
 
@@ -525,11 +559,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command('nircmd.exe sendkeypress media_prev_track')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['media_previous_track']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_MEDIA_PREV_TRACK)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'tell application "Music" to previous track'
             return self._run_command(f'osascript -e "{script}"')
@@ -545,11 +576,17 @@ class CrossPlatformAction(BaseAction):
                     return self._run_command('playerctl previous')
             except:
                 pass
-            # Fallback to hotkey
-            from .hotkey_action import HotkeyAction
-            hotkey_config = {'keys': ['media_previous_track']}
-            hotkey_action = HotkeyAction(hotkey_config)
-            return hotkey_action.execute()
+            # Fallback to PowerShell SendKeys
+            ps_script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('{MEDIA_PREV_TRACK}')"
+            result = subprocess.run(
+                ['powershell', '-Command', ps_script],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                return ActionResult(True, 'Media previous track')
+            return ActionResult(False, 'Media control not available')
         else:
             return ActionResult(False, f'Media control not supported on {_SYSTEM}')
 
@@ -559,11 +596,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command('nircmd.exe sendkeypress media_stop')
             else:
-                # Fallback to hotkey
-                from .hotkey_action import HotkeyAction
-                hotkey_config = {'keys': ['media_stop']}
-                hotkey_action = HotkeyAction(hotkey_config)
-                return hotkey_action.execute()
+                # Use Windows API via ctypes
+                return self._send_windows_key(VK_MEDIA_STOP)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'tell application "Music" to stop'
             return self._run_command(f'osascript -e "{script}"')
@@ -579,11 +613,17 @@ class CrossPlatformAction(BaseAction):
                     return self._run_command('playerctl stop')
             except:
                 pass
-            # Fallback to hotkey
-            from .hotkey_action import HotkeyAction
-            hotkey_config = {'keys': ['media_stop']}
-            hotkey_action = HotkeyAction(hotkey_config)
-            return hotkey_action.execute()
+            # Fallback to PowerShell SendKeys
+            ps_script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('{MEDIA_STOP}')"
+            result = subprocess.run(
+                ['powershell', '-Command', ps_script],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                return ActionResult(True, 'Media stopped')
+            return ActionResult(False, 'Media control not available')
         else:
             return ActionResult(False, f'Media control not supported on {_SYSTEM}')
 
@@ -675,8 +715,8 @@ class CrossPlatformAction(BaseAction):
             if self._check_nircmd():
                 return self._run_command(f'nircmd.exe savescreenshot "{output_path}"')
             else:
-                # Fallback to PowerShell
-                ps_script = f'Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $Screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bitmap = New-Object System.Drawing.Bitmap $Screen.Width, $Screen.Height; $graphics = [System.Drawing.Graphics]::FromImage($bitmap); $graphics.CopyFromScreen($Screen.Left, $Screen.Top, 0, 0, $Screen.Size); $bitmap.Save("{output_path}"); $graphics.Dispose(); $bitmap.Dispose()'
+                # Fallback to PowerShell with proper string escaping
+                ps_script = f"Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $Screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bitmap = New-Object System.Drawing.Bitmap $Screen.Width, $Screen.Height; $graphics = [System.Drawing.Graphics]::FromImage($bitmap); $graphics.CopyFromScreen($Screen.Left, $Screen.Top, 0, 0, $Screen.Size); $bitmap.Save('{output_path}'); $graphics.Dispose(); $bitmap.Dispose()"
                 return self._run_command(f'powershell -Command "{ps_script}"')
         elif _SYSTEM == 'Darwin':  # macOS
             return self._run_command(f'screencapture -x "{output_path}"')

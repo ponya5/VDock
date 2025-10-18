@@ -20,15 +20,19 @@ export const useSettingsStore = defineStore('settings', () => {
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
   const dockedSidebarEnabled = ref(true)
+  const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
   const dashboardBackground = ref('default')
   
   // Grid settings
   const defaultGridRows = ref(3)
   const defaultGridCols = ref(3)
-  
+
   // Authentication settings
   const authEnabled = ref(false)
-  
+
+  // System settings
+  const startOnBoot = ref(false)
+
   // Search settings
   const recentActions = ref<string[]>([])
   const maxRecentActions = 10
@@ -45,10 +49,12 @@ export const useSettingsStore = defineStore('settings', () => {
         showTooltips.value = settings.showTooltips !== false
         animationsEnabled.value = settings.animationsEnabled !== false
         dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
+        dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
         dashboardBackground.value = settings.dashboardBackground || 'default'
         defaultGridRows.value = settings.defaultGridRows || 3
         defaultGridCols.value = settings.defaultGridCols || 3
         authEnabled.value = settings.authEnabled || false
+        startOnBoot.value = settings.startOnBoot || false
         recentActions.value = settings.recentActions || []
       } catch (err) {
         console.error('Failed to load settings:', err)
@@ -65,10 +71,12 @@ export const useSettingsStore = defineStore('settings', () => {
       showTooltips: showTooltips.value,
       animationsEnabled: animationsEnabled.value,
       dockedSidebarEnabled: dockedSidebarEnabled.value,
+      dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
       authEnabled: authEnabled.value,
+      startOnBoot: startOnBoot.value,
       recentActions: recentActions.value
     }
     localStorage.setItem('vdock_settings', JSON.stringify(settings))
@@ -76,7 +84,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dashboardBackground, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
     },
@@ -171,10 +179,12 @@ export const useSettingsStore = defineStore('settings', () => {
     showTooltips,
     animationsEnabled,
     dockedSidebarEnabled,
+    dockedSidebarWidth,
     dashboardBackground,
     defaultGridRows,
     defaultGridCols,
     authEnabled,
+    startOnBoot,
     recentActions,
     setTheme,
     loadThemes,

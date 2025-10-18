@@ -301,6 +301,11 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   color: var(--color-text-secondary);
   min-height: 60px;
   min-width: 60px;
+  /* Enhanced shadow for placeholder buttons */
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .button-placeholder.is-edit-mode {
@@ -313,6 +318,11 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   border-color: var(--color-primary);
   color: var(--color-primary);
   transform: scale(1.05);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.12),
+    0 2px 5px rgba(0, 0, 0, 0.08),
+    0 0 15px rgba(var(--color-primary-rgb, 74, 144, 226), 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .button-placeholder.is-highlighted {
@@ -321,11 +331,19 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   border-style: solid;
   color: var(--color-primary);
   transform: scale(1.08);
-  box-shadow: 0 0 20px rgba(var(--color-primary-rgb, 74, 144, 226), 0.5);
+  box-shadow: 
+    0 0 20px rgba(var(--color-primary-rgb, 74, 144, 226), 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    0 3px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .button-placeholder:active {
   transform: scale(0.95);
+  box-shadow: 
+    0 1px 4px rgba(0, 0, 0, 0.1),
+    0 0 2px rgba(0, 0, 0, 0.05),
+    inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 </style>
 

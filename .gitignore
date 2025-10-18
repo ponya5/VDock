@@ -158,3 +158,16 @@ frontend/electron/build/
 *.dmg
 *.deb
 *.rpm
+
+# Claude Code
+.claude/
+
+# Temporary documentation
+ACTION_TEST_REPORT.md
+MEDIA_CONTROLS_FIX_SUMMARY.md
+NEXT_STEPS.md
+*_DRAFT.md
+*_WIP.md
+
+# Windows-specific
+nul

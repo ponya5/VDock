@@ -264,7 +264,7 @@ class AppMonitor:
 _monitor_instance: Optional[AppMonitor] = None
 
 
-def get_app_monitor(poll_interval: float = 1.0) -> AppMonitor:
+def get_app_monitor(poll_interval: float = 5.0) -> AppMonitor:
     """Get the global AppMonitor singleton instance."""
     global _monitor_instance
     
@@ -274,7 +274,7 @@ def get_app_monitor(poll_interval: float = 1.0) -> AppMonitor:
     return _monitor_instance
 
 
-def start_monitoring(poll_interval: float = 1.0):
+def start_monitoring(poll_interval: float = 5.0):
     """Start the global app monitoring service."""
     monitor = get_app_monitor(poll_interval)
     monitor.start()

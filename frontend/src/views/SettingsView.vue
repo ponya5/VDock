@@ -77,6 +77,20 @@
             <p class="form-help">Display the left sidebar with persistent buttons</p>
           </div>
 
+          <div v-if="settings.dockedSidebarEnabled" class="form-group">
+            <label>Docked Sidebar Width</label>
+            <input 
+              v-model.number="settings.dockedSidebarWidth" 
+              type="range" 
+              min="80" 
+              max="300" 
+              step="10" 
+              class="slider"
+            />
+            <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
+            <p class="form-help">Adjust the width of the docked sidebar (80-300px)</p>
+          </div>
+
           <div class="form-group">
             <label>Dashboard Background</label>
             <select v-model="settings.dashboardBackground" class="select">
@@ -152,6 +166,17 @@
               <span>Enable Authentication</span>
             </label>
             <p class="form-help">Require password to access the application</p>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="settings.startOnBoot" type="checkbox" @change="handleStartOnBootToggle" />
+              <span>Start VDock on System Boot</span>
+            </label>
+            <p class="form-help">Automatically launch VDock when your computer starts</p>
+            <p v-if="startOnBootStatus" class="form-help" :class="startOnBootStatus.success ? 'text-success' : 'text-error'">
+              {{ startOnBootStatus.message }}
+            </p>
           </div>
           
           <div v-if="serverConfig" class="server-info">
@@ -293,8 +318,8 @@
                 <button 
                   v-if="isAppIntegrationEnabled(app.exe)"
                   class="btn-icon btn-sm"
-                  @click="configureAppIntegration(app)"
-                  title="Configure"
+                  @click="openShortcutManager(app)"
+                  title="Manage Shortcuts"
                 >
                   <FontAwesomeIcon :icon="['fas', 'cog']" />
                 </button>
@@ -344,6 +369,14 @@
         </section>
       </div>
 
+      <!-- Shortcut Manager Modal -->
+      <AppShortcutManager
+        v-if="showShortcutManager"
+        :app-exe="selectedAppForShortcuts?.exe || ''"
+        :scene-id="getAppScene(selectedAppForShortcuts?.exe || '')"
+        @close="showShortcutManager = false"
+        @add-shortcut="handleAddShortcut"
+      />
 
       <!-- About Tab -->
       <div v-if="activeTab === 'about'" class="tab-content">
@@ -371,9 +404,14 @@
             </div>
             
             <div class="mt-lg">
-              <button class="btn btn-secondary" @click="openGitHub">
-                <FontAwesomeIcon :icon="['fab', 'github']" /> GitHub
-              </button>
+              <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                <button class="btn btn-secondary" @click="openGitHub">
+                  <FontAwesomeIcon :icon="['fab', 'github']" /> GitHub
+                </button>
+                <button class="btn btn-secondary" @click="contactEmail">
+                  <FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -387,14 +425,18 @@ import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
+import { useDashboardStore } from '@/stores/dashboard'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
-import type { RunningApp, AppIntegration, Scene } from '@/types'
+import AppShortcutManager from '@/components/AppShortcutManager.vue'
+import { hasShortcuts, getTopShortcutsForApp, type AppShortcut } from '@/data/appShortcuts'
+import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const profilesStore = useProfilesStore()
+const dashboardStore = useDashboardStore()
 
 const settings = computed(() => settingsStore)
 const themes = computed(() => settingsStore.themes)
@@ -488,6 +530,9 @@ const runningApps = ref<RunningApp[]>([])
 const loadingApps = ref(false)
 const appIntegrations = ref<AppIntegration[]>([])
 const autoSwitchingEnabled = ref(false)
+const showShortcutManager = ref(false)
+const selectedAppForShortcuts = ref<RunningApp | null>(null)
+const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
 
 // Get all scenes from current profile
 const availableScenes = computed(() => {
@@ -532,8 +577,47 @@ async function handleAuthToggle() {
   }
 }
 
+async function handleStartOnBootToggle() {
+  try {
+    const response = await apiClient.post('/system/autostart', {
+      enabled: settings.value.startOnBoot
+    })
+
+    if (response.data.success) {
+      startOnBootStatus.value = {
+        success: true,
+        message: settings.value.startOnBoot
+          ? 'VDock will now start automatically on system boot'
+          : 'Auto-start disabled'
+      }
+    } else {
+      startOnBootStatus.value = {
+        success: false,
+        message: response.data.message || 'Failed to update auto-start setting'
+      }
+      settings.value.startOnBoot = !settings.value.startOnBoot
+    }
+  } catch (error) {
+    console.error('Failed to toggle auto-start:', error)
+    startOnBootStatus.value = {
+      success: false,
+      message: 'Failed to update auto-start setting. This feature may require administrator privileges.'
+    }
+    settings.value.startOnBoot = !settings.value.startOnBoot
+  }
+
+  // Clear status after 5 seconds
+  setTimeout(() => {
+    startOnBootStatus.value = null
+  }, 5000)
+}
+
 function openGitHub() {
   window.open('https://github.com/ponya5/VDock', '_blank')
+}
+
+function contactEmail() {
+  window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support'
 }
 
 // App Integration Functions
@@ -588,46 +672,148 @@ function updateAppScene(appExe: string, sceneId: string) {
 }
 
 async function createSceneForApp(app: RunningApp) {
-  const profile = profilesStore.currentProfile
-  if (!profile || !profile.pages || profile.pages.length === 0) {
-    alert('No pages available. Please create a page first.')
+  const profile = dashboardStore.currentProfile
+  if (!profile) {
+    alert('No profile loaded.')
     return
   }
   
-  // Get the first page
-  const firstPage = profile.pages[0]
+  if (!profile.scenes || profile.scenes.length === 0) {
+    alert('No scenes available. Please create a scene first.')
+    return
+  }
+  
+  // Get the first scene
+  const firstScene = profile.scenes[0]
+  if (!firstScene.pages || firstScene.pages.length === 0) {
+    alert('No pages in scene.')
+    return
+  }
   
   // Create a new scene named after the app
   const sceneName = app.name.replace('.exe', '')
   
   try {
+    // Check if we have shortcuts for this app
+    const topShortcuts = hasShortcuts(app.exe) ? getTopShortcutsForApp(app.exe, 8) : []
+    
+    // Create buttons from shortcuts
+    const buttons: Button[] = topShortcuts.map((shortcut, index) => createButtonFromShortcut(shortcut, index))
+    
     const newScene: Scene = {
       id: `scene-${Date.now()}`,
       name: sceneName,
-      buttons: [],
+      icon: 'window-maximize',
+      color: '#3498db',
+      pages: [{
+        id: `page-${Date.now()}`,
+        name: 'Page 1',
+        buttons: buttons,
+        grid_config: { rows: 4, cols: 5 }
+      }],
       triggeredByApp: app.exe,
       autoCreated: true
     }
     
-    // Add scene to the first page
-    firstPage.scenes.push(newScene)
-    
-    // Save profile
-    await profilesStore.saveProfile(profile)
+    // Add scene to profile
+    dashboardStore.addScene(newScene)
     
     // Update the integration with the new scene
     updateAppScene(app.exe, newScene.id)
     
-    alert(`Scene "${sceneName}" created successfully!`)
+    alert(`Scene "${sceneName}" created with ${buttons.length} shortcut buttons!`)
   } catch (error) {
     console.error('Failed to create scene:', error)
     alert('Failed to create scene')
   }
 }
 
-function configureAppIntegration(app: RunningApp) {
-  // TODO: Open configuration modal
-  alert(`Configuration for ${app.name} coming soon...`)
+function createButtonFromShortcut(shortcut: AppShortcut, index: number): Button {
+  const row = Math.floor(index / 5)
+  const col = index % 5
+  
+  return {
+    id: `button-${Date.now()}-${index}`,
+    label: shortcut.name,
+    secondary_label: shortcut.keys.join(' + '),
+    icon: ['fas', 'keyboard'],
+    icon_type: 'fontawesome',
+    action: {
+      type: 'hotkey',
+      config: {
+        keys: shortcut.keys
+      }
+    },
+    shape: 'rounded',
+    position: { row, col },
+    size: { rows: 1, cols: 1 },
+    style: {
+      backgroundColor: '#3498db',
+      textColor: '#ffffff'
+    },
+    tooltip: shortcut.description,
+    enabled: true
+  }
+}
+
+function openShortcutManager(app: RunningApp) {
+  selectedAppForShortcuts.value = app
+  showShortcutManager.value = true
+}
+
+function handleAddShortcut(shortcut: AppShortcut) {
+  const sceneId = getAppScene(selectedAppForShortcuts.value?.exe || '')
+  if (!sceneId) {
+    alert('Please create a scene first')
+    return
+  }
+  
+  // Find the scene
+  const profile = dashboardStore.currentProfile
+  if (!profile) return
+  
+  const scene = profile.scenes.find(s => s.id === sceneId)
+  if (!scene || !scene.pages || scene.pages.length === 0) {
+    alert('Scene not found')
+    return
+  }
+  
+  // Add button to first page of scene
+  const page = scene.pages[0]
+  const buttons = page.buttons || []
+  
+  // Find first empty slot
+  const gridRows = page.grid_config.rows
+  const gridCols = page.grid_config.cols
+  let emptySlot = null
+  
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridCols; col++) {
+      const occupied = buttons.some(b => 
+        b.position.row === row && b.position.col === col
+      )
+      if (!occupied) {
+        emptySlot = { row, col }
+        break
+      }
+    }
+    if (emptySlot) break
+  }
+  
+  if (!emptySlot) {
+    alert('No empty slots available in the scene')
+    return
+  }
+  
+  const newButton = createButtonFromShortcut(shortcut, 0)
+  newButton.position = emptySlot
+  
+  dashboardStore.addButton(newButton)
+  
+  // Close modal
+  showShortcutManager.value = false
+  
+  alert(`Added "${shortcut.name}" to scene!`)
 }
 
 function saveAppIntegrations() {
