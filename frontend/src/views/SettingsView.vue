@@ -113,6 +113,9 @@
                 <option value="starfield">Starfield</option>
                 <option value="bubble-float">Floating Bubbles</option>
                 <option value="neon-grid">Neon Grid</option>
+                <option value="floating-paths">Floating Paths</option>
+                <option value="floating-paths-v2">Floating Paths V2</option>
+                <option value="beams-background">Beams Background</option>
               </optgroup>
             </select>
             <p class="form-help">Choose a background style for your dashboard</p>
@@ -176,6 +179,17 @@
             <p class="form-help">Automatically launch VDock when your computer starts</p>
             <p v-if="startOnBootStatus" class="form-help" :class="startOnBootStatus.success ? 'text-success' : 'text-error'">
               {{ startOnBootStatus.message }}
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="settings.startWithWindows" type="checkbox" @change="handleStartWithWindowsToggle" />
+              <span>Start with Windows (Desktop App)</span>
+            </label>
+            <p class="form-help">Launch VDock desktop application when Windows starts (requires desktop app)</p>
+            <p v-if="startWithWindowsStatus" class="form-help" :class="startWithWindowsStatus.success ? 'text-success' : 'text-error'">
+              {{ startWithWindowsStatus.message }}
             </p>
           </div>
           
@@ -533,6 +547,7 @@ const autoSwitchingEnabled = ref(false)
 const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
 const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
+const startWithWindowsStatus = ref<{success: boolean, message: string} | null>(null)
 
 // Get all scenes from current profile
 const availableScenes = computed(() => {
@@ -609,6 +624,39 @@ async function handleStartOnBootToggle() {
   // Clear status after 5 seconds
   setTimeout(() => {
     startOnBootStatus.value = null
+  }, 5000)
+}
+
+async function handleStartWithWindowsToggle() {
+  try {
+    // Check if we're running in Electron
+    if (window.electronAPI) {
+      const result = await window.electronAPI.toggleAutoLaunch(settings.value.startWithWindows)
+      startWithWindowsStatus.value = {
+        success: result,
+        message: result 
+          ? 'VDock will now start with Windows'
+          : 'Auto-start with Windows disabled'
+      }
+    } else {
+      startWithWindowsStatus.value = {
+        success: false,
+        message: 'This feature is only available in the desktop application'
+      }
+      settings.value.startWithWindows = !settings.value.startWithWindows
+    }
+  } catch (error) {
+    console.error('Failed to toggle Windows auto-start:', error)
+    startWithWindowsStatus.value = {
+      success: false,
+      message: 'Failed to update Windows auto-start setting'
+    }
+    settings.value.startWithWindows = !settings.value.startWithWindows
+  }
+
+  // Clear status after 5 seconds
+  setTimeout(() => {
+    startWithWindowsStatus.value = null
   }, 5000)
 }
 

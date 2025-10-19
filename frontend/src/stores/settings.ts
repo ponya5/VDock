@@ -22,6 +22,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
   const dashboardBackground = ref('default')
+  const startWithWindows = ref(false)
   
   // Grid settings
   const defaultGridRows = ref(3)
@@ -51,6 +52,7 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
         dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
         dashboardBackground.value = settings.dashboardBackground || 'default'
+        startWithWindows.value = settings.startWithWindows || false
         defaultGridRows.value = settings.defaultGridRows || 3
         defaultGridCols.value = settings.defaultGridCols || 3
         authEnabled.value = settings.authEnabled || false
@@ -73,6 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
+      startWithWindows: startWithWindows.value,
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
       authEnabled: authEnabled.value,
@@ -181,6 +184,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarEnabled,
     dockedSidebarWidth,
     dashboardBackground,
+    startWithWindows,
     defaultGridRows,
     defaultGridCols,
     authEnabled,

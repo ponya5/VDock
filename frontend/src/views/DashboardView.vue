@@ -1,5 +1,9 @@
 <template>
   <div class="dashboard-view" :class="dashboardBackgroundClass" :style="dashboardBackgroundStyle">
+    <!-- Component-based animated backgrounds -->
+    <FloatingPathsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths'" />
+    <FloatingPathsBackgroundV2 v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths-v2'" />
+    <BeamsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-beams-background'" />
     <header class="deck-header enhanced-header">
       <div class="header-background"></div>
       <div class="header-content">
@@ -352,6 +356,9 @@ import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
+import FloatingPathsBackground from '@/components/backgrounds/FloatingPathsBackground.vue'
+import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBackgroundV2.vue'
+import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const router = useRouter()
@@ -384,6 +391,13 @@ const isEditingExistingScene = computed(() => {
 })
 
 const dashboardBackgroundClass = computed(() => {
+  // First check if current page has a background
+  if (currentPage.value?.background) {
+    // Page has its own background, don't apply dashboard background
+    return ''
+  }
+  
+  // Apply dashboard background when page background is null
   const bg = settingsStore.dashboardBackground
   if (bg === 'default') return ''
   // Check if it's a custom uploaded image (URL)
@@ -2008,10 +2022,53 @@ function showActionResult(result: ActionResult) {
 
 .dashboard-view.dashboard-bg-neon-grid {
   background: #0a0a0a;
-  background-image: 
+  background-image:
     linear-gradient(rgba(102, 126, 234, 0.3) 1px, transparent 1px),
     linear-gradient(90deg, rgba(102, 126, 234, 0.3) 1px, transparent 1px);
   background-size: 50px 50px;
+}
+
+/* Floating Paths Background */
+.dashboard-view.dashboard-bg-floating-paths {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-view.dashboard-bg-floating-paths::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(74, 0, 224, 0.1) 0%, transparent 50%);
+  animation: floatingPathsShift 30s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Beams Background */
+.dashboard-view.dashboard-bg-beams-background {
+  background: linear-gradient(135deg, #0f1729 0%, #1a2f4f 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-view.dashboard-bg-beams-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(105deg, rgba(100, 200, 255, 0.08) 0%, transparent 30%),
+    linear-gradient(205deg, rgba(100, 200, 255, 0.06) 0%, transparent 40%),
+    linear-gradient(305deg, rgba(150, 200, 255, 0.04) 0%, transparent 50%);
+  animation: beamsShift 20s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* Custom Background (applied via inline styles) */
@@ -2031,6 +2088,45 @@ function showActionResult(result: ActionResult) {
   50% { background-position: 100% 50%; }
   75% { background-position: 50% 0%; }
   100% { background-position: 0% 50%; }
+}
+
+@keyframes floatingPathsShift {
+  0% {
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(74, 0, 224, 0.1) 0%, transparent 50%);
+  }
+  50% {
+    background:
+      radial-gradient(ellipse at 40% 60%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 40%, rgba(74, 0, 224, 0.15) 0%, transparent 50%);
+  }
+  100% {
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(74, 0, 224, 0.1) 0%, transparent 50%);
+  }
+}
+
+@keyframes beamsShift {
+  0% {
+    background:
+      linear-gradient(105deg, rgba(100, 200, 255, 0.08) 0%, transparent 30%),
+      linear-gradient(205deg, rgba(100, 200, 255, 0.06) 0%, transparent 40%),
+      linear-gradient(305deg, rgba(150, 200, 255, 0.04) 0%, transparent 50%);
+  }
+  50% {
+    background:
+      linear-gradient(115deg, rgba(100, 200, 255, 0.12) 0%, transparent 35%),
+      linear-gradient(215deg, rgba(100, 200, 255, 0.1) 0%, transparent 45%),
+      linear-gradient(315deg, rgba(150, 200, 255, 0.08) 0%, transparent 55%);
+  }
+  100% {
+    background:
+      linear-gradient(105deg, rgba(100, 200, 255, 0.08) 0%, transparent 30%),
+      linear-gradient(205deg, rgba(100, 200, 255, 0.06) 0%, transparent 40%),
+      linear-gradient(305deg, rgba(150, 200, 255, 0.04) 0%, transparent 50%);
+  }
 }
 
 /* Help Modal */

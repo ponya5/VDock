@@ -5,7 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-all": "electron-builder --win --mac --linux",
+    "dist": "npm run build && electron-builder"
   },
   "build": {
     "appId": "com.vdock.app",
@@ -17,25 +20,57 @@
       "main.js",
       "preload.js",
       "../dist/**/*",
-      "../public/**/*"
+      "../public/**/*",
+      "../../backend/**/*",
+      "!../../backend/venv/**/*",
+      "!../../backend/__pycache__/**/*",
+      "!../../backend/data/uploads/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../../backend",
+        "to": "backend",
+        "filter": [
+          "!venv/**/*",
+          "!__pycache__/**/*",
+          "!data/uploads/**/*"
+        ]
+      }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
           "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
         }
       ],
-      "icon": "../public/icon.ico"
+      "icon": "../public/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "../public/icon.ico",
+      "uninstallerIcon": "../public/icon.ico",
+      "installerHeaderIcon": "../public/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": "Productivity",
+      "shortcutName": "VDock"
+    },
+    "portable": {
+      "artifactName": "VDock-Portable.exe"
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "auto-launch": "^5.0.5"
+  },
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"

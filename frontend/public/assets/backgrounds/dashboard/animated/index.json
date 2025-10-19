@@ -73,6 +73,33 @@
       "css": "neon-grid",
       "tags": ["neon", "grid", "retro", "animated"],
       "description": "Retro neon grid animation"
+    },
+    {
+      "id": "floating-paths",
+      "name": "Floating Paths",
+      "type": "background",
+      "format": "component",
+      "component": "FloatingPathsBackground",
+      "tags": ["paths", "floating", "animated", "geometric"],
+      "description": "Animated floating SVG paths with grid overlay"
+    },
+    {
+      "id": "floating-paths-v2",
+      "name": "Floating Paths V2",
+      "type": "background",
+      "format": "component",
+      "component": "FloatingPathsBackgroundV2",
+      "tags": ["paths", "floating", "animated", "minimal"],
+      "description": "Minimal floating paths with text animation"
+    },
+    {
+      "id": "beams-background",
+      "name": "Beams Background",
+      "type": "background",
+      "format": "component",
+      "component": "BeamsBackground",
+      "tags": ["beams", "light", "animated", "dynamic"],
+      "description": "Dynamic animated light beams with canvas rendering"
     }
   ]
 }

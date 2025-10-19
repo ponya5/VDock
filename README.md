@@ -1,409 +1,223 @@
-# VDock - Virtual Stream Interface
+# VDock - Virtual Stream Deck
 
-A powerful, cross-platform virtual stream interface that brings customizable control buttons to your computer. Control applications, execute commands, send hotkeys, automate workflows, monitor system metrics, and seamlessly integrate with your favorite applications—all with a beautiful, modern interface.
+VDock is a powerful virtual stream deck application that allows you to create customizable button layouts for controlling your computer, applications, and workflows.
 
 ## Features
 
-### 🎨 **Customization & Styling**
-- **Fully Customizable Buttons**: Create unlimited buttons with custom icons, labels, and actions
-- **Modern Visual Effects**: Glass-morphism, neumorphism, gradients, glow, and 3D effects
-- **Button Animations**: Pulse, shimmer, bounce, and rotate animations
-- **Custom Shapes**: Rectangle, rounded, circle, hexagon, diamond, and octagon buttons
-- **Dashboard Backgrounds**: 26+ built-in backgrounds plus support for custom images, GIFs, and videos
-- **Custom Avatars**: Upload your own photos as profile avatars
-
-### ⚡ **Automation & Actions**
-- **Multiple Action Types**: 
-  - Open URLs in your browser
-  - Launch programs and applications
-  - Execute shell commands
-  - Send keyboard shortcuts/hotkeys
-  - Control system functions (volume, media playback)
-- **Advanced Macro System**: Create multi-step automation sequences with hotkeys, delays, text typing, and mouse clicks
-- **System Metrics Display**: Monitor CPU, RAM, disk, network, temperature, battery, and GPU in real-time
-
-### 🔗 **Smart Integration**
-- **App Detection**: Automatically detect running applications
-- **App Integration**: Map applications to dedicated scenes
-- **Auto Scene Switching**: Automatically switch scenes when monitored apps become active
-- **Multi-Platform Support**: Windows, macOS, and Linux
-
-### 📊 **Organization & Management**
-- **Multi-Page Layouts**: Organize buttons across multiple pages with folder navigation
-- **Scene System**: Multiple scenes per page for different contexts
-- **Profile Management**: Create multiple profiles for different workflows (streaming, work, gaming)
-- **Asset Management**: Organized folder structure for icons, GIFs, videos, and backgrounds
-
-### 🎯 **User Experience**
-- **Beautiful Themes**: Choose from built-in themes (dark, light, high contrast) or create your own
-- **Plugin System**: Extend functionality with plugins (OBS Studio, Spotify, Discord, and more)
-- **Cross-Platform**: Runs on Windows, with support for Linux and macOS
-- **PWA Support**: Access from any device with a web browser
-- **Desktop App**: Native desktop application with system tray and global hotkeys
-- **Touch-Friendly**: Optimized for touchscreens and tablets
-
-## Architecture
-
-- **Backend**: Python Flask + Flask-SocketIO for real-time communication
-- **Frontend**: Vue 3 + TypeScript + Pinia for state management
-- **Desktop**: Electron wrapper for native desktop experience
-- **PWA**: Progressive Web App support for browser-based access
+- 🎛️ **Customizable Button Layouts** - Create unlimited button configurations
+- 🎨 **Animated Backgrounds** - Beautiful animated backgrounds including floating paths and light beams
+- 🔧 **System Controls** - Volume, brightness, media controls, and more
+- 🌐 **Web Integration** - Open URLs, launch applications, and control web services
+- 📱 **Responsive Design** - Works on desktop and mobile devices
+- 🔄 **Real-time Updates** - Live system monitoring and status updates
+- 🎯 **Global Shortcuts** - Quick access with keyboard shortcuts
+- 🚀 **Auto-start** - Launch automatically with Windows/macOS
 
 ## Installation
 
-### Prerequisites
+### Windows
 
-- Python 3.8 or higher
-- Node.js 18 or higher
-- npm or yarn
-- Docker and Docker Compose (for production deployment)
+#### Option 1: Installer (Recommended)
+1. Download `VDock Setup.exe` from the releases page
+2. Run the installer as administrator
+3. Follow the installation wizard
+4. Choose installation directory (default: `C:\Program Files\VDock`)
+5. Select whether to create desktop and start menu shortcuts
+6. Click "Install" and wait for completion
+7. Launch VDock from the desktop shortcut or start menu
 
-### Quick Start (Development)
+#### Option 2: Portable Version
+1. Download `VDock-Portable.exe` from the releases page
+2. Extract to any folder (e.g., `C:\VDock`)
+3. Double-click `VDock-Portable.exe` to run
+4. No installation required - runs directly from the folder
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd VDock
-```
+#### Option 3: Manual Installation
+1. Download the latest release ZIP file
+2. Extract to your desired location
+3. Install Python 3.8+ from [python.org](https://python.org)
+4. Install Node.js 18+ from [nodejs.org](https://nodejs.org)
+5. Open Command Prompt in the extracted folder
+6. Run the build script:
+   ```cmd
+   scripts\build-installer.bat
+   ```
+7. Follow the build process instructions
 
-2. Run the setup script:
-```bash
-# Windows
-setup.bat
+### macOS
 
-# Linux/macOS
-./setup.sh
-```
+#### Option 1: DMG Installer (Recommended)
+1. Download `VDock.dmg` from the releases page
+2. Double-click the DMG file to mount it
+3. Drag VDock to your Applications folder
+4. Eject the DMG file
+5. Launch VDock from Applications or Spotlight
 
-3. Start the application:
-```bash
-# Windows
-start_backend.bat
-start_frontend.bat
+#### Option 2: Manual Installation
+1. Download the latest release ZIP file
+2. Extract to your desired location
+3. Install Python 3.8+ using Homebrew:
+   ```bash
+   brew install python
+   ```
+4. Install Node.js 18+ using Homebrew:
+   ```bash
+   brew install node
+   ```
+5. Open Terminal in the extracted folder
+6. Run the build script:
+   ```bash
+   chmod +x scripts/build-installer.sh
+   ./scripts/build-installer.sh
+   ```
 
-# Linux/macOS
-./start_backend.sh
-./start_frontend.sh
-```
+## First Launch
 
-### Production Deployment
-
-For production deployment, see [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for detailed instructions.
-
-Quick production setup:
-```bash
-# Copy environment template
-cp env.example .env
-
-# Edit .env with your configuration
-# Set SECRET_KEY and AUTH_PASSWORD
-
-# Deploy with Docker
-./deploy.sh  # Linux/macOS
-deploy.bat   # Windows
-```
-
-### Manual Setup (Development)
-
-#### Backend Setup
-
-1. Navigate to the backend directory:
-```bash
-cd backend
-```
-
-2. Create a virtual environment:
-```bash
-python -m venv venv
-```
-
-3. Activate the virtual environment:
-- Windows: `venv\Scripts\activate`
-- Linux/Mac: `source venv/bin/activate`
-
-4. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-5. Copy `.env.example` to `.env` and configure:
-```bash
-copy .env.example .env
-```
-
-6. Start the backend server:
-```bash
-python app.py
-```
-
-The backend will run on `http://localhost:5000` by default.
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-The frontend will run on `http://localhost:3000` by default.
-
-### Desktop App
-
-1. Build the frontend:
-```bash
-cd frontend
-npm run build
-```
-
-2. Start the Electron app:
-```bash
-cd electron
-npm install
-npm start
-```
-
-3. Build the installer (Windows):
-```bash
-npm run build
-```
-
-The installer will be created in `frontend/electron/dist-electron/`.
-
-## Usage
-
-### First Time Setup
-
-1. Start the backend server
-2. Open the frontend in your browser or launch the desktop app
-3. Login with your password (default: `admin`, configurable in `.env`)
-4. Create a new profile or load an existing one
-5. Start adding buttons and configuring actions!
-
-### Creating Buttons
-
-1. Click the "Edit" button to enter edit mode
-2. Click "Add Button" to create a new button
-3. Configure the button:
-   - Set label and icon
-   - Choose an action type
-   - Configure action-specific settings
-   - Customize appearance
-4. Click "Save" to save the button
-5. Click "Save" in the toolbar to save the profile
-
-### Using Actions
-
-- **URL**: Opens websites in your default browser
-- **Program**: Launches applications or opens files
-- **Command**: Executes shell commands (use with caution)
-- **Hotkey**: Sends keyboard shortcuts (e.g., Ctrl+C, Alt+Tab)
-- **Multi-Action**: Executes multiple actions in sequence
-- **System Control**: Controls volume, media playback, brightness
-
-### Profiles
-
-Profiles let you create different button layouts for different purposes:
-
-- **Streaming**: Controls for OBS, audio, scene switching
-- **Work**: Frequently used applications and documents
-- **Gaming**: Game launchers and in-game macros
-- **Media**: Music controls, video players
-
-You can quickly switch between profiles or import/export them as JSON files.
+1. **Launch VDock** - Double-click the application icon
+2. **Wait for Backend** - The app will start the backend server (takes 3-5 seconds)
+3. **Create Profile** - Set up your first profile with buttons
+4. **Configure Settings** - Adjust appearance, shortcuts, and auto-start options
 
 ## Configuration
 
-### Backend Configuration
+### Auto-Start Options
 
-Edit `backend/.env`:
+VDock offers two auto-start methods:
 
-```env
-# Server settings
-HOST=127.0.0.1
-PORT=5000
+#### 1. System Boot (Web Version)
+- Go to **Settings** → **System** → **Start VDock on System Boot**
+- This starts the web server automatically when your computer boots
+- Requires administrator privileges on Windows
 
-# Security
-AUTH_PASSWORD=your-password-here
-REQUIRE_AUTH=True
+#### 2. Windows Startup (Desktop App)
+- Go to **Settings** → **System** → **Start with Windows (Desktop App)**
+- This launches the desktop application when Windows starts
+- Only available in the desktop application version
 
-# Network
-ALLOW_LAN=False  # Set to True to allow connections from other devices
+### Global Shortcuts
 
-# SSL (for HTTPS)
-USE_SSL=False
-SSL_CERT_PATH=cert.pem
-SSL_KEY_PATH=key.pem
-```
+- **Ctrl+Shift+D** - Show/hide VDock window
+- **Ctrl+Shift+M** - Toggle mute
+- **Ctrl+Shift+F** - Toggle fullscreen
 
-### Frontend Configuration
+### Background Customization
 
-Edit frontend settings through the Settings page in the application:
+1. Go to **Settings** → **Appearance** → **Dashboard Background**
+2. Choose from:
+   - **Static Gradients** - Ocean Breeze, Sunset Glow, Forest Mist, etc.
+   - **Animated Backgrounds** - Floating Paths, Beams Background, Aurora Borealis, etc.
 
-- Theme selection
-- Button size scaling
-- Animation preferences
-- Display options
+## System Requirements
 
-## Plugin Development
+### Windows
+- Windows 10/11 (64-bit)
+- 4GB RAM minimum, 8GB recommended
+- 500MB free disk space
+- Python 3.8+ (for manual installation)
+- Node.js 18+ (for manual installation)
 
-Create custom plugins to extend VDock functionality:
-
-```python
-from backend.plugins import BasePlugin, PluginInfo
-
-class Plugin(BasePlugin):
-    def get_info(self):
-        return PluginInfo(
-            id='my_plugin',
-            name='My Plugin',
-            version='1.0.0',
-            author='Your Name',
-            description='Plugin description',
-            actions=['my_action']
-        )
-    
-    def initialize(self):
-        # Initialize your plugin
-        return True
-    
-    def execute_action(self, action_id, config):
-        # Execute the action
-        return {'success': True, 'message': 'Action executed'}
-    
-    def get_action_schema(self, action_id):
-        # Return JSON schema for action configuration
-        return {}
-```
-
-Place your plugin file in `backend/data/plugins/`.
-
-## API Documentation
-
-### REST API
-
-- `POST /api/auth/login` - Authenticate and get token
-- `GET /api/profiles` - List all profiles
-- `POST /api/profiles` - Create new profile
-- `GET /api/profiles/<id>` - Get profile details
-- `PUT /api/profiles/<id>` - Update profile
-- `DELETE /api/profiles/<id>` - Delete profile
-- `POST /api/actions/execute` - Execute an action
-
-### WebSocket Events
-
-- `execute_action` - Execute action in real-time
-- `action_result` - Receive action execution result
-
-## Keyboard Shortcuts
-
-- `Ctrl+Shift+D` - Summon/hide deck window (Desktop app only)
-- `Ctrl+E` - Toggle edit mode
-- `Ctrl+S` - Save current profile
-- `Ctrl+Z` - Undo
-- `Ctrl+Y` - Redo
-- `Ctrl+,` - Open settings
+### macOS
+- macOS 10.15+ (Catalina or later)
+- 4GB RAM minimum, 8GB recommended
+- 500MB free disk space
+- Python 3.8+ (for manual installation)
+- Node.js 18+ (for manual installation)
 
 ## Troubleshooting
 
-### Backend won't start
+### Common Issues
 
-- Check that Python 3.8+ is installed
-- Verify all dependencies are installed
-- Check if port 5000 is already in use
-- Review backend logs in `backend/data/vdock.log`
+#### "Backend failed to start"
+- Ensure Python is installed and in PATH
+- Check if port 5000 is available
+- Run as administrator on Windows
 
-### Frontend can't connect to backend
+#### "Cannot connect to server"
+- Wait 3-5 seconds after launching
+- Check Windows Firewall settings
+- Ensure no other application is using port 5000
 
-- Ensure backend is running
-- Check CORS settings in backend `.env`
-- Verify firewall settings
+#### "Auto-start not working"
+- Run VDock as administrator at least once
+- Check Windows Startup folder
+- Verify registry entries (Windows)
+
+#### "Animated backgrounds not showing"
+- Ensure you've selected an animated background in Settings
 - Check browser console for errors
+- Try refreshing the page
 
-### Actions not working
+### Getting Help
 
-- For hotkeys: Ensure `pynput` library is installed
-- For system controls: Check Windows audio permissions
-- For commands: Verify command syntax and permissions
+- **GitHub Issues** - Report bugs and request features
+- **Email Support** - Contact: ponya81@gmail.com
+- **Documentation** - Check the `docs/` folder for detailed guides
 
-## Security Considerations
+## Development
 
-- **Command Execution**: Be cautious with the command action type. Only use trusted commands.
-- **Remote Access**: If enabling LAN access, use a strong password and consider using SSL/HTTPS.
-- **Plugins**: Only install plugins from trusted sources.
-- **Production Security**: See [docs/security/SECURITY.md](docs/security/SECURITY.md) for comprehensive security guidelines.
-- **Authentication**: Change default passwords immediately in production environments.
+### Building from Source
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ponya5/VDock.git
+   cd VDock
+   ```
+
+2. Install dependencies:
+   ```bash
+   # Backend
+   cd backend
+   pip install -r requirements.txt
+   
+   # Frontend
+   cd ../frontend
+   npm install
+   
+   # Electron
+   cd electron
+   npm install
+   ```
+
+3. Build the application:
+   ```bash
+   # Windows
+   scripts\build-installer.bat
+   
+   # macOS/Linux
+   ./scripts/build-installer.sh
+   ```
+
+### Project Structure
+
+```
+VDock/
+├── backend/           # Python Flask backend
+├── frontend/          # Vue.js frontend
+│   ├── electron/     # Electron desktop wrapper
+│   └── src/          # Vue.js source code
+├── docs/             # Documentation
+├── scripts/          # Build and deployment scripts
+└── README.md         # This file
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
-
-Contributions are welcome! Please follow these guidelines:
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests if applicable
 5. Submit a pull request
 
-## License
+## Acknowledgments
 
-This project is open-source. See LICENSE file for details.
-
-## Documentation
-
-- **[Documentation Hub](docs/README.md)** - Complete documentation overview
-- **[User Guide](docs/USER_GUIDE.md)** - Complete user manual
-- **[Quick Start](docs/QUICKSTART.md)** - Get started quickly
-- **[API Documentation](docs/API.md)** - Backend API reference
-
-### For Developers
-- **[Developer Guide](docs/development/DEVELOPER_GUIDE.md)** - Development setup and contribution guidelines
-- **[Launcher Documentation](docs/development/LAUNCHER_README.md)** - Launcher system documentation
-
-### For Administrators
-- **[Production Deployment](docs/deployment/PRODUCTION_DEPLOYMENT.md)** - Complete production deployment guide
-- **[Security Policy](docs/security/SECURITY.md)** - Security policies and best practices
-- **[Maintenance Guide](docs/maintenance/MAINTENANCE.md)** - Maintenance and troubleshooting procedures
-- **[Installation Notes](docs/deployment/INSTALL_NOTES.md)** - Installation troubleshooting
-
-## Support
-
-- **Documentation**: See [docs/](docs/) directory for comprehensive guides
-- **Issues**: Report bugs and feature requests on GitHub
-- **Production Support**: See [Maintenance Guide](docs/maintenance/MAINTENANCE.md) for maintenance and troubleshooting
-- **Security**: See [Security Policy](docs/security/SECURITY.md) for security policies and reporting
-- **Community**: Join our Discord server (link TBD)
-
-## Roadmap
-
-- [ ] Linux and macOS support
-- [ ] Cloud profile sync
-- [ ] Mobile companion app
-- [ ] Plugin marketplace
-- [ ] Voice activation
-- [ ] Hardware device integration
-- [ ] Community themes and icon packs
-
-## Credits
-
-Inspired by Elgato's Stream Deck and WebDeck.
-
-Built with:
-- Flask
-- Vue 3
-- Electron
-- Font Awesome
-- And many other amazing open-source projects
+- Built with Vue.js, Electron, and Flask
+- Icons by Font Awesome
+- Animated backgrounds inspired by modern web design trends
 
 ---
 
-Made with ❤️ for the community
-
+**VDock** - Making productivity beautiful and efficient.

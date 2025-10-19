@@ -686,3 +686,47 @@ body {
   }
 }
 
+/* New Component-Based Animated Backgrounds */
+
+/* Floating Paths Background */
+.dashboard-bg-floating-paths {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-bg-floating-paths::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  z-index: -1;
+}
+
+/* Floating Paths V2 Background */
+.dashboard-bg-floating-paths-v2 {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-bg-floating-paths-v2::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  z-index: -1;
+}
+
+/* Beams Background */
+.dashboard-bg-beams-background {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-bg-beams-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #0a0a0a;
+  z-index: -1;
+}
+
