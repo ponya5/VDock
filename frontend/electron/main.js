@@ -1,5 +1,7 @@
 const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen } = require('electron')
 const path = require('path')
+const { spawn } = require('child_process')
+const AutoLaunch = require('auto-launch')
 const isDev = process.env.NODE_ENV === 'development'
 
 let mainWindow = null
@@ -7,6 +9,72 @@ let tray = null
 let isQuitting = false
 let windowPinned = false
 let alwaysOnTop = false
+let backendProcess = null
+let autoLaunch = null
+
+// Initialize auto-launch
+function initializeAutoLaunch() {
+  autoLaunch = new AutoLaunch({
+    name: 'VDock',
+    path: app.getPath('exe'),
+    isHidden: true
+  })
+}
+
+// Start backend server
+function startBackend() {
+  const backendPath = isDev 
+    ? path.join(__dirname, '../../backend')
+    : path.join(process.resourcesPath, 'backend')
+  
+  const pythonPath = isDev 
+    ? 'python' 
+    : path.join(backendPath, 'python', 'python.exe')
+  
+  const appPath = path.join(backendPath, 'app.py')
+  
+  console.log('Starting backend server...')
+  console.log('Backend path:', backendPath)
+  console.log('Python path:', pythonPath)
+  console.log('App path:', appPath)
+  
+  backendProcess = spawn(pythonPath, [appPath], {
+    cwd: backendPath,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    detached: false
+  })
+  
+  backendProcess.stdout.on('data', (data) => {
+    console.log(`Backend stdout: ${data}`)
+  })
+  
+  backendProcess.stderr.on('data', (data) => {
+    console.error(`Backend stderr: ${data}`)
+  })
+  
+  backendProcess.on('close', (code) => {
+    console.log(`Backend process exited with code ${code}`)
+    if (!isQuitting) {
+      // Restart backend if it crashes
+      setTimeout(() => {
+        startBackend()
+      }, 5000)
+    }
+  })
+  
+  backendProcess.on('error', (err) => {
+    console.error('Failed to start backend:', err)
+  })
+}
+
+// Stop backend server
+function stopBackend() {
+  if (backendProcess) {
+    console.log('Stopping backend server...')
+    backendProcess.kill('SIGTERM')
+    backendProcess = null
+  }
+}
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
@@ -31,7 +99,10 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:3000')
     mainWindow.webContents.openDevTools()
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    // Wait for backend to start, then load the app
+    setTimeout(() => {
+      mainWindow.loadURL('http://localhost:5000')
+    }, 3000)
   }
 
   // Window event handlers
@@ -73,6 +144,22 @@ function createTray() {
         alwaysOnTop = item.checked
         if (mainWindow) {
           mainWindow.setAlwaysOnTop(alwaysOnTop)
+        }
+      }
+    },
+    {
+      label: 'Start with Windows',
+      type: 'checkbox',
+      checked: false,
+      click: async (item) => {
+        try {
+          if (item.checked) {
+            await autoLaunch.enable()
+          } else {
+            await autoLaunch.disable()
+          }
+        } catch (err) {
+          console.error('Failed to toggle auto-launch:', err)
         }
       }
     },
@@ -193,11 +280,45 @@ ipcMain.handle('window-summon-to-cursor', () => {
   mainWindow.focus()
 })
 
+// Auto-launch IPC handlers
+ipcMain.handle('toggle-auto-launch', async (event, enabled) => {
+  try {
+    if (enabled) {
+      await autoLaunch.enable()
+    } else {
+      await autoLaunch.disable()
+    }
+    return true
+  } catch (err) {
+    console.error('Failed to toggle auto-launch:', err)
+    return false
+  }
+})
+
+ipcMain.handle('is-auto-launch-enabled', async () => {
+  try {
+    return await autoLaunch.isEnabled()
+  } catch (err) {
+    console.error('Failed to check auto-launch status:', err)
+    return false
+  }
+})
+
 // App event handlers
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  initializeAutoLaunch()
+  startBackend()
   createWindow()
   createTray()
   registerGlobalShortcuts()
+  
+  // Check if auto-launch is enabled
+  try {
+    const isEnabled = await autoLaunch.isEnabled()
+    console.log('Auto-launch enabled:', isEnabled)
+  } catch (err) {
+    console.error('Failed to check auto-launch status:', err)
+  }
 })
 
 app.on('window-all-closed', () => {
@@ -215,6 +336,8 @@ app.on('activate', () => {
 app.on('will-quit', () => {
   // Unregister all shortcuts
   globalShortcut.unregisterAll()
+  // Stop backend server
+  stopBackend()
 })
 
 // Auto-launch on system startup (optional)
