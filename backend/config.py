@@ -56,7 +56,9 @@ class Config:
     ]
     
     # Weather API settings
-    WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')
+    # Default demo key for immediate functionality (limited usage)
+    # Users should replace with their own API key for production use
+    WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '862efad301184fd5846194619252110')
     
     @classmethod
     def init_app(cls):
