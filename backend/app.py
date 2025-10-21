@@ -2,8 +2,11 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from pathlib import Path
 import os
+import logging
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -33,8 +36,30 @@ from routes.weather import weather_bp
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Add security headers
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
+    if Config.USE_SSL:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
 # Initialize extensions
 CORS(app, origins=Config.CORS_ORIGINS)
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[Config.RATELIMIT_DEFAULT] if Config.RATELIMIT_ENABLED else [],
+    storage_uri=Config.RATELIMIT_STORAGE_URL,
+    enabled=Config.RATELIMIT_ENABLED
+)
+
 socketio = SocketIO(
     app,
     cors_allowed_origins=Config.CORS_ORIGINS,
@@ -62,6 +87,11 @@ app.register_blueprint(app_monitor_bp)
 app.register_blueprint(system_bp)
 app.register_blueprint(templates_bp, url_prefix='/api/templates')
 app.register_blueprint(weather_bp, url_prefix='/api')
+
+# Apply rate limits to specific routes
+if Config.RATELIMIT_ENABLED:
+    limiter.limit("5 per minute")(auth_bp.route('/api/auth/login', methods=['POST']))
+    limiter.limit("10 per minute")(upload_bp.route('/api/upload', methods=['POST']))
 
 
 # ============================================================================
