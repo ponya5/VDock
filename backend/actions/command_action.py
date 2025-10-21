@@ -1,23 +1,43 @@
 """Shell command execution action."""
 import subprocess
+import shlex
 from typing import Dict, Any
 from .base_action import BaseAction, ActionResult
 from config import Config
 
 
 class CommandAction(BaseAction):
-    """Executes a shell command."""
+    """Executes a shell command with security restrictions."""
     
     def validate(self) -> bool:
-        """Validate that command is provided."""
-        return 'command' in self.config and isinstance(self.config['command'], str)
+        """Validate that command is provided and allowed."""
+        if 'command' not in self.config or not isinstance(self.config['command'], str):
+            return False
+        
+        command = self.config['command'].strip()
+        
+        # Check if command execution is enabled
+        if not Config.ALLOW_COMMAND_EXECUTION:
+            return False
+        
+        # Check if command is in allowed list
+        if Config.ALLOWED_COMMAND_PATTERNS:
+            # Extract the base command (first word)
+            base_command = command.split()[0] if command else ''
+            if base_command not in Config.ALLOWED_COMMAND_PATTERNS:
+                return False
+        
+        return True
     
     def execute(self) -> ActionResult:
-        """Execute the shell command."""
+        """Execute the shell command with security checks."""
         if not self.validate():
-            return ActionResult(False, 'Invalid configuration: Command is required')
+            return ActionResult(
+                False,
+                'Command execution is disabled or command is not allowed. Only predefined safe commands are permitted.'
+            )
         
-        command = self.config['command']
+        command = self.config['command'].strip()
         require_confirmation = self.config.get('require_confirmation', Config.REQUIRE_COMMAND_CONFIRMATION)
         
         # Security check - if confirmation required and not provided
@@ -29,10 +49,13 @@ class CommandAction(BaseAction):
             )
         
         try:
-            # Execute command
+            # Use shlex.split for safer command parsing (avoid shell injection)
+            # Note: For predefined commands, this is safer than shell=True
+            cmd_args = shlex.split(command)
+            
+            # Execute command without shell=True for better security
             result = subprocess.run(
-                command,
-                shell=True,
+                cmd_args,
                 capture_output=True,
                 text=True,
                 timeout=30  # 30 second timeout

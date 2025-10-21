@@ -39,11 +39,17 @@ Welcome to the VDock documentation! This directory contains comprehensive guides
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines
 - **[Contributing](CONTRIBUTING.md)** - How to contribute to VDock
 
-### 📁 Archive
-- **[Action Test Report](archive/ACTION_TEST_REPORT.md)** - Testing results
-- **[Cleanup Summary](archive/CLEANUP_SUMMARY.md)** - Project cleanup documentation
-- **[Media Controls Fix Summary](archive/MEDIA_CONTROLS_FIX_SUMMARY.md)** - Media controls fixes
-- **[Next Steps](archive/NEXT_STEPS.md)** - Future development plans
+### 📦 Distribution & Deployment
+- **[Distribution Guide](DISTRIBUTION_GUIDE.md)** - How to package and share VDock with friends
+
+### 🔒 Security
+- **[Security Audit Report](SECURITY_AUDIT_REPORT.md)** - Comprehensive security analysis and fixes
+
+### 📊 Development Reports
+- **[Action Test Report](reports/ACTION_TEST_REPORT.md)** - Testing results
+- **[Final Completion Report](FINAL_COMPLETION_REPORT.md)** - Project completion summary
+- **[Clean Code Refactoring Plan](CLEAN_CODE_REFACTORING_PLAN.md)** - Code quality improvement roadmap
+- **[Additional Reports](reports/)** - Various development progress reports
 
 ## 📖 Quick Navigation
 

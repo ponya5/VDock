@@ -1,41 +1,73 @@
 <template>
-  <div class="time-options" :class="`time-${timeOption}`">
-    <div class="time-header">
-      <FontAwesomeIcon :icon="headerIcon" class="header-icon" />
-      <span class="header-title">{{ headerTitle }}</span>
-    </div>
-    
-    <div class="time-display">
-      <!-- World Time -->
-      <div v-if="timeOption === 'world_time'" class="world-time">
-        <div class="time-main">{{ currentTime }}</div>
-        <div class="time-date">{{ currentDate }}</div>
-        <div class="time-timezone">{{ timezoneLabel }}</div>
+  <div class="time-options" :class="[`time-${timeOption}`, { compact: compact }]">
+    <!-- Compact Mode -->
+    <div v-if="compact" class="time-compact">
+      <!-- World Time Compact -->
+      <div v-if="timeOption === 'world_time'" class="world-time-compact">
+        <div class="time-main-compact">{{ currentTime }}</div>
+        <div class="time-date-compact">{{ currentDate }}</div>
       </div>
       
-      <!-- Timer -->
-      <div v-else-if="timeOption === 'timer'" class="timer">
-        <div class="timer-display">{{ formattedTimerTime }}</div>
-        <div class="timer-controls">
-          <button 
-            class="timer-btn" 
-            @click="toggleTimer"
-            :class="{ active: timerRunning }"
-          >
-            <FontAwesomeIcon :icon="timerRunning ? ['fas', 'pause'] : ['fas', 'play']" />
-          </button>
-          <button class="timer-btn" @click="resetTimer">
-            <FontAwesomeIcon :icon="['fas', 'redo']" />
-          </button>
+      <!-- Timer Compact -->
+      <div v-else-if="timeOption === 'timer'" class="timer-compact">
+        <div class="timer-display-compact">{{ formattedTimerTime }}</div>
+        <button 
+          class="timer-btn-compact" 
+          @click="toggleTimer"
+          :class="{ active: timerRunning }"
+        >
+          <FontAwesomeIcon :icon="timerRunning ? ['fas', 'pause'] : ['fas', 'play']" />
+        </button>
+      </div>
+      
+      <!-- Countdown Compact -->
+      <div v-else-if="timeOption === 'countdown'" class="countdown-compact">
+        <div class="countdown-display-compact">{{ formattedCountdown }}</div>
+        <div class="countdown-progress-compact">
+          <div class="countdown-bar-compact" :style="{ width: countdownPercent + '%' }"></div>
         </div>
       </div>
+    </div>
+    
+    <!-- Full Mode -->
+    <div v-else>
+      <div class="time-header">
+        <FontAwesomeIcon :icon="headerIcon" class="header-icon" />
+        <span class="header-title">{{ headerTitle }}</span>
+      </div>
       
-      <!-- Countdown -->
-      <div v-else-if="timeOption === 'countdown'" class="countdown">
-        <div class="countdown-display">{{ formattedCountdown }}</div>
-        <div class="countdown-label">{{ countdownLabel }}</div>
-        <div class="countdown-progress">
-          <div class="countdown-bar" :style="{ width: countdownPercent + '%' }"></div>
+      <div class="time-display">
+        <!-- World Time -->
+        <div v-if="timeOption === 'world_time'" class="world-time">
+          <div class="time-main">{{ currentTime }}</div>
+          <div class="time-date">{{ currentDate }}</div>
+          <div class="time-timezone">{{ timezoneLabel }}</div>
+        </div>
+        
+        <!-- Timer -->
+        <div v-else-if="timeOption === 'timer'" class="timer">
+          <div class="timer-display">{{ formattedTimerTime }}</div>
+          <div class="timer-controls">
+            <button 
+              class="timer-btn" 
+              @click="toggleTimer"
+              :class="{ active: timerRunning }"
+            >
+              <FontAwesomeIcon :icon="timerRunning ? ['fas', 'pause'] : ['fas', 'play']" />
+            </button>
+            <button class="timer-btn" @click="resetTimer">
+              <FontAwesomeIcon :icon="['fas', 'redo']" />
+            </button>
+          </div>
+        </div>
+        
+        <!-- Countdown -->
+        <div v-else-if="timeOption === 'countdown'" class="countdown">
+          <div class="countdown-display">{{ formattedCountdown }}</div>
+          <div class="countdown-label">{{ countdownLabel }}</div>
+          <div class="countdown-progress">
+            <div class="countdown-bar" :style="{ width: countdownPercent + '%' }"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -52,12 +84,14 @@ interface Props {
   timezone?: string
   timerDuration?: number
   countdownTarget?: string
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   timezone: 'local',
   timerDuration: 0,
   countdownTarget: '',
+  compact: false,
 })
 
 const currentDateTime = ref(new Date())
@@ -378,6 +412,125 @@ onUnmounted(() => {
   background: white;
   transition: width 0.3s ease-out;
   border-radius: 4px;
+}
+
+/* Compact Mode Styles */
+.time-options.compact {
+  padding: 0.5rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* World Time Compact */
+.world-time-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-main-compact {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-date-compact {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+/* Timer Compact */
+.timer-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.timer-display-compact {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-btn-compact {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-btn-compact:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.timer-btn-compact.active {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Countdown Compact */
+.countdown-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.countdown-display-compact {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-progress-compact {
+  width: 80%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.countdown-bar-compact {
+  height: 100%;
+  background: white;
+  transition: width 0.3s ease-out;
+  border-radius: 2px;
 }
 </style>
 

@@ -44,6 +44,7 @@
         v-else-if="button.action?.type === 'time_world_clock'"
         time-option="world_time"
         :timezone="button.action?.config?.timezone || 'local'"
+        :compact="compact"
       />
       
       <!-- Timer -->
@@ -51,6 +52,7 @@
         v-else-if="button.action?.type === 'time_timer'"
         time-option="timer"
         :timer-duration="button.action?.config?.timer_duration || 0"
+        :compact="compact"
       />
       
       <!-- Countdown -->
@@ -58,6 +60,7 @@
         v-else-if="button.action?.type === 'time_countdown'"
         time-option="countdown"
         :countdown-target="button.action?.config?.countdown_target"
+        :compact="compact"
       />
       
       <!-- Weather -->
@@ -65,6 +68,8 @@
         v-else-if="button.action?.type === 'weather'"
         :location="button.action?.config?.weather_location || 'auto'"
         :refresh-interval="button.action?.config?.refresh_interval || 15"
+        :unit="button.action?.config?.temperature_unit || 'C'"
+        :compact="compact"
       />
       
       <!-- Calendar -->
@@ -142,12 +147,14 @@ interface Props {
   isEditMode?: boolean
   showLabels?: boolean
   showTooltips?: boolean
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   showLabels: true,
-  showTooltips: true
+  showTooltips: true,
+  compact: false
 })
 
 const emit = defineEmits<{
@@ -201,6 +208,7 @@ const buttonClasses = computed(() => ({
   'shape-octagon': props.button.shape === 'octagon',
   'edit-mode': props.isEditMode,
   'has-action': !!props.button.action,
+  'disabled': !props.button.enabled,
   'deck-button-enhanced': props.button.style?.enhanced,
   'deck-button-glass': props.button.style?.effect === 'glass',
   'deck-button-neumorphism': props.button.style?.effect === 'neumorphism',
@@ -296,7 +304,7 @@ function parseIcon(iconString: string) {
 }
 
 function handleClick() {
-  if (!props.isEditMode) {
+  if (!props.isEditMode && props.button.enabled) {
     emit('click', props.button)
   }
 }
@@ -621,6 +629,26 @@ function handleDragEnd() {
   width: 100%;
   height: 100%;
   opacity: 0.3;
+}
+
+/* Disabled button styles */
+.deck-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.deck-button.disabled:hover {
+  transform: none;
+  box-shadow: inherit;
+}
+
+.deck-button.disabled:active {
+  transform: none;
+}
+
+.deck-button.disabled .button-content {
+  pointer-events: none;
 }
 </style>
 
