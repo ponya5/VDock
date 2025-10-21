@@ -201,6 +201,7 @@ const buttonClasses = computed(() => ({
   'shape-octagon': props.button.shape === 'octagon',
   'edit-mode': props.isEditMode,
   'has-action': !!props.button.action,
+  'disabled': !props.button.enabled,
   'deck-button-enhanced': props.button.style?.enhanced,
   'deck-button-glass': props.button.style?.effect === 'glass',
   'deck-button-neumorphism': props.button.style?.effect === 'neumorphism',
@@ -296,7 +297,7 @@ function parseIcon(iconString: string) {
 }
 
 function handleClick() {
-  if (!props.isEditMode) {
+  if (!props.isEditMode && props.button.enabled) {
     emit('click', props.button)
   }
 }
@@ -621,6 +622,26 @@ function handleDragEnd() {
   width: 100%;
   height: 100%;
   opacity: 0.3;
+}
+
+/* Disabled button styles */
+.deck-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.deck-button.disabled:hover {
+  transform: none;
+  box-shadow: inherit;
+}
+
+.deck-button.disabled:active {
+  transform: none;
+}
+
+.deck-button.disabled .button-content {
+  pointer-events: none;
 }
 </style>
 

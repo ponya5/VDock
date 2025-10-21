@@ -406,7 +406,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!currentPage.value) return
     
     // Check if position is already occupied (including multi-cell buttons)
+    // Only check collisions with enabled buttons - disabled buttons don't occupy space
     const hasCollision = currentPage.value.buttons.some(existingButton => {
+      if (!existingButton.enabled) return false // Skip disabled buttons
       return checkButtonCollision(button, existingButton)
     })
     
@@ -429,8 +431,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
     const tempButton = { ...button, position: newPosition }
     
     // Check if new position is already occupied (including multi-cell buttons)
+    // Only check collisions with enabled buttons - disabled buttons don't occupy space
     const hasCollision = currentPage.value.buttons.some(existingButton => {
       if (existingButton.id === buttonId) return false
+      if (!existingButton.enabled) return false // Skip disabled buttons
       return checkButtonCollision(tempButton, existingButton)
     })
     
