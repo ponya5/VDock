@@ -46,11 +46,6 @@
         </div>
 
         <div class="header-right">
-          <button class="btn btn-glass enhanced-btn" @click="openQuickSearch" title="Quick Search (Ctrl+K)">
-            <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" />
-            <span class="btn-label">Search</span>
-            <span class="btn-shortcut">Ctrl+K</span>
-          </button>
           <button class="btn btn-glass enhanced-btn" @click="showHelp = true" title="Help & Guide">
             <FontAwesomeIcon :icon="['fas', 'question-circle']" />
             <span class="btn-label">Help</span>
@@ -104,6 +99,7 @@
           :button-size="settingsStore.buttonSize"
           :show-labels="settingsStore.showLabels"
           :show-tooltips="settingsStore.showTooltips"
+          :compact="shouldUseCompactMode"
           @button-click="handleButtonClick"
           @button-edit="handleButtonEdit"
           @button-copy="handleButtonCopy"
@@ -402,6 +398,20 @@ const isEditingExistingScene = computed(() => {
   return currentProfile.value.scenes.some(scene => scene.id === editingScene.value!.id)
 })
 
+// Determine if compact mode should be used for weather/time buttons
+const shouldUseCompactMode = computed(() => {
+  if (!currentPage.value) return false
+  
+  // Check if any button in the current page is weather or time-related
+  return currentPage.value.buttons.some(button => {
+    const actionType = button.action?.type
+    return actionType === 'weather' || 
+           actionType === 'time_world_clock' || 
+           actionType === 'time_timer' || 
+           actionType === 'time_countdown'
+  })
+})
+
 const dashboardBackgroundClass = computed(() => {
   // First check if current page has a background
   if (currentPage.value?.background) {
@@ -444,9 +454,6 @@ const actionCategories = ref([
       { id: 'sleep', name: 'Sleep', icon: ['fas', 'moon'] },
       { id: 'lock', name: 'Lock Screen', icon: ['fas', 'lock'] },
       { id: 'fullscreen', name: 'Full Screen', icon: ['fas', 'expand'] },
-      { id: 'volume-up', name: 'Volume Up', icon: ['fas', 'volume-up'] },
-      { id: 'volume-down', name: 'Volume Down', icon: ['fas', 'volume-down'] },
-      { id: 'volume-mute', name: 'Mute', icon: ['fas', 'volume-mute'] },
       { id: 'brightness-up', name: 'Brightness Up', icon: ['fas', 'sun'] },
       { id: 'brightness-down', name: 'Brightness Down', icon: ['fas', 'moon'] }
     ]
@@ -1016,7 +1023,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         ...baseButton,
         label: 'World Clock',
         icon: ['fas', 'globe'],
-        size: { rows: 2, cols: 2 },
+        size: { rows: 1, cols: 1 },
         style: { ...baseButton.style, backgroundColor: '#8e44ad' },
         action: {
           type: 'time_world_clock',
@@ -1056,11 +1063,11 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         ...baseButton,
         label: 'Weather',
         icon: ['fas', 'cloud-sun'],
-        size: { rows: 2, cols: 2 },
+        size: { rows: 1, cols: 1 },
         style: { ...baseButton.style, backgroundColor: '#3498db' },
         action: {
           type: 'weather',
-          config: { weather_location: 'auto', refresh_interval: 15 }
+          config: { weather_location: 'auto', refresh_interval: 15, temperature_unit: 'C' }
         }
       }
 
@@ -1451,6 +1458,16 @@ function addPageToCurrentScene() {
     success: true,
     message: `Page ${pageNumber} added to ${currentScene.value.name}`
   })
+
+  // Show recommendation toast for page navigation buttons
+  setTimeout(() => {
+    notificationsStore.info(
+      'Page Added Successfully!',
+      `Page ${pageNumber} has been added to "${currentScene.value.name}". Consider adding page navigation buttons to easily switch between pages.`,
+      'You can find page navigation actions in the "Navigation" category when editing buttons.',
+      { duration: 8000 }
+    )
+  }, 1500)
 }
 
 async function saveProfile() {
@@ -1752,6 +1769,10 @@ function showActionResult(result: ActionResult) {
   border-top: 1px solid var(--color-border);
   margin-right: 350px; /* Account for edit sidebar width */
   gap: var(--spacing-md);
+  position: relative;
+  z-index: 10;
+  min-height: 60px;
+  width: calc(100% - 350px);
 }
 
 .deck-footer.with-docked-sidebar {

@@ -88,11 +88,12 @@
 
           <div class="form-group">
             <label>Dashboard Background</label>
-            <select v-model="settings.dashboardBackground" class="select">
-              <option value="default">Default (Gradient)</option>
-              <optgroup label="Custom Background" v-if="customBackgroundUrl">
-                <option :value="customBackgroundUrl">Custom Uploaded Image</option>
-              </optgroup>
+            <div class="flex gap-sm">
+              <select v-model="settings.dashboardBackground" class="select" style="flex: 1">
+                <option value="default">Default (Gradient)</option>
+                <optgroup label="Custom Background" v-if="customBackgroundUrl">
+                  <option :value="customBackgroundUrl">Custom Uploaded Image</option>
+                </optgroup>
               <optgroup label="Static Gradients">
                 <option value="ocean-breeze">Ocean Breeze</option>
                 <option value="sunset-glow">Sunset Glow</option>
@@ -113,6 +114,7 @@
                 <option value="beams-background">Beams Background</option>
               </optgroup>
             </select>
+            </div>
             <p class="form-help">Choose a background style for your dashboard</p>
           </div>
 
@@ -152,10 +154,6 @@
 
         </section>
 
-        <!-- Touch Mode Configuration -->
-        <section class="settings-section card">
-          <TouchModeSelector />
-        </section>
       </div>
 
       <!-- Server Configuration Tab -->
@@ -192,6 +190,32 @@
               {{ startWithWindowsStatus.message }}
             </p>
           </div>
+
+          <div class="form-group">
+            <label>Server Host</label>
+            <input 
+              v-model="serverHost" 
+              type="text" 
+              class="input" 
+              placeholder="localhost"
+              @change="updateServerConfig"
+            />
+            <p class="form-help">Server host address (default: localhost)</p>
+          </div>
+
+          <div class="form-group">
+            <label>Server Port</label>
+            <input 
+              v-model.number="serverPort" 
+              type="number" 
+              class="input" 
+              min="1024" 
+              max="65535"
+              placeholder="5000"
+              @change="updateServerConfig"
+            />
+            <p class="form-help">Server port number (default: 5000)</p>
+          </div>
           
           <div v-if="serverConfig" class="server-info">
             <div class="info-row">
@@ -205,14 +229,6 @@
             <div class="info-row">
               <span class="info-label">Authentication:</span>
               <span class="info-value">{{ serverConfig.require_auth ? 'Enabled' : 'Disabled' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">LAN Access:</span>
-              <span class="info-value">{{ serverConfig.allow_lan ? 'Enabled' : 'Disabled' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">SSL:</span>
-              <span class="info-value">{{ serverConfig.use_ssl ? 'Enabled' : 'Disabled' }}</span>
             </div>
           </div>
 
@@ -431,6 +447,26 @@
         </section>
       </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="settings-footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <a href="https://linkedin.com/in/daniel-shalom" target="_blank" class="footer-link">
+            <FontAwesomeIcon :icon="['fab', 'linkedin']" />
+          </a>
+          <a href="https://github.com/ponya5" target="_blank" class="footer-link">
+            <FontAwesomeIcon :icon="['fab', 'github']" />
+          </a>
+        </div>
+        <div class="footer-right">
+          <a href="mailto:ponya81@gmail.com" class="footer-text-link">Contact</a>
+          <a href="#" class="footer-text-link">Terms of Service</a>
+          <a href="#" class="footer-text-link">About</a>
+          <span class="footer-copyright">Daniel Shalom. All rights reserved 2025 ©</span>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -502,10 +538,10 @@ const handleBackgroundUpload = async (event: Event) => {
     // Create form data
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('type', 'background')
+    formData.append('type', 'dashboard_background')
     
     // Upload to backend
-    const response = await apiClient.post('/upload/icon', formData, {
+    const response = await apiClient.post('/api/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -548,6 +584,10 @@ const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
 const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
 const startWithWindowsStatus = ref<{success: boolean, message: string} | null>(null)
+
+// Server configuration
+const serverHost = ref('localhost')
+const serverPort = ref(5000)
 
 // Get all scenes from current profile
 const availableScenes = computed(() => {
@@ -666,6 +706,16 @@ function openGitHub() {
 
 function contactEmail() {
   window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support'
+}
+
+function updateServerConfig() {
+  // Update server configuration
+  // Note: This would typically require backend restart to take effect
+  console.log('Server config updated:', { host: serverHost.value, port: serverPort.value })
+  
+  // Save to localStorage for persistence
+  localStorage.setItem('vdock_server_host', serverHost.value)
+  localStorage.setItem('vdock_server_port', serverPort.value.toString())
 }
 
 // App Integration Functions
@@ -950,6 +1000,12 @@ onMounted(async () => {
   settingsStore.loadServerConfig()
   loadAppIntegrations()
   loadCustomBackground()
+  
+  // Load server configuration from localStorage
+  const savedHost = localStorage.getItem('vdock_server_host')
+  const savedPort = localStorage.getItem('vdock_server_port')
+  if (savedHost) serverHost.value = savedHost
+  if (savedPort) serverPort.value = parseInt(savedPort)
   
   // Load running apps if on integration tab
   if (activeTab.value === 'integration') {
@@ -1494,6 +1550,82 @@ onUnmounted(() => {
   width: 100%;
   height: auto;
   display: block;
+}
+
+/* Footer Styles */
+.settings-footer {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg) 0;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.footer-left {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.footer-link:hover {
+  background: var(--color-primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.footer-text-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color var(--transition-fast);
+}
+
+.footer-text-link:hover {
+  color: var(--color-primary);
+}
+
+.footer-copyright {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    text-align: center;
+  }
+  
+  .footer-right {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
 }
 </style>
 

@@ -17,6 +17,7 @@
       :is-edit-mode="isEditMode"
       :show-labels="showLabels"
       :show-tooltips="showTooltips"
+      :compact="compact"
           @click="handleButtonClick"
           @edit="handleButtonEdit"
           @copy="handleButtonCopy"
@@ -56,13 +57,15 @@ interface Props {
   buttonSize?: number
   showLabels?: boolean
   showTooltips?: boolean
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   buttonSize: 1.0,
   showLabels: true,
-  showTooltips: true
+  showTooltips: true,
+  compact: false
 })
 
 const emit = defineEmits<{

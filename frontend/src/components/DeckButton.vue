@@ -44,6 +44,7 @@
         v-else-if="button.action?.type === 'time_world_clock'"
         time-option="world_time"
         :timezone="button.action?.config?.timezone || 'local'"
+        :compact="compact"
       />
       
       <!-- Timer -->
@@ -51,6 +52,7 @@
         v-else-if="button.action?.type === 'time_timer'"
         time-option="timer"
         :timer-duration="button.action?.config?.timer_duration || 0"
+        :compact="compact"
       />
       
       <!-- Countdown -->
@@ -58,6 +60,7 @@
         v-else-if="button.action?.type === 'time_countdown'"
         time-option="countdown"
         :countdown-target="button.action?.config?.countdown_target"
+        :compact="compact"
       />
       
       <!-- Weather -->
@@ -65,6 +68,8 @@
         v-else-if="button.action?.type === 'weather'"
         :location="button.action?.config?.weather_location || 'auto'"
         :refresh-interval="button.action?.config?.refresh_interval || 15"
+        :unit="button.action?.config?.temperature_unit || 'C'"
+        :compact="compact"
       />
       
       <!-- Calendar -->
@@ -142,12 +147,14 @@ interface Props {
   isEditMode?: boolean
   showLabels?: boolean
   showTooltips?: boolean
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   showLabels: true,
-  showTooltips: true
+  showTooltips: true,
+  compact: false
 })
 
 const emit = defineEmits<{

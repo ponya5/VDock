@@ -22,6 +22,7 @@ from routes.system_metrics import system_metrics_bp
 from routes.app_monitor import app_monitor_bp
 from routes.system import system_bp
 from routes.templates import templates_bp
+from routes.weather import weather_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -55,6 +56,7 @@ app.register_blueprint(system_metrics_bp)
 app.register_blueprint(app_monitor_bp)
 app.register_blueprint(system_bp)
 app.register_blueprint(templates_bp, url_prefix='/api/templates')
+app.register_blueprint(weather_bp, url_prefix='/api')
 
 
 # ============================================================================

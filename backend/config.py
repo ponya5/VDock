@@ -18,7 +18,7 @@ class Config:
     
     # Security settings
     REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'False').lower() == 'true'
-    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', '')
+    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', 'admin')  # Default password
     TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
     
     # Network settings

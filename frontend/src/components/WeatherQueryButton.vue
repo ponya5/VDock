@@ -1,50 +1,74 @@
 <template>
-  <div class="weather-query" :class="weatherClass">
-    <div class="weather-header">
-      <FontAwesomeIcon :icon="['fas', 'cloud-sun']" class="header-icon" />
-      <span class="header-title">Weather query</span>
-    </div>
-    
-    <div v-if="loading" class="loading-state">
-      <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
-      <span>Loading weather...</span>
-    </div>
-    
-    <div v-else-if="error" class="error-state">
-      <FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" />
-      <span>{{ error }}</span>
-    </div>
-    
-    <div v-else-if="weatherData" class="weather-content">
-      <div class="weather-main">
-        <div class="weather-icon">
+  <div class="weather-query" :class="[weatherClass, { compact: compact }]">
+    <!-- Compact Mode -->
+    <div v-if="compact" class="weather-compact">
+      <div v-if="loading" class="loading-compact">
+        <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
+      </div>
+      
+      <div v-else-if="error" class="error-compact">
+        <FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" />
+      </div>
+      
+      <div v-else-if="weatherData" class="weather-content-compact">
+        <div class="weather-icon-compact">
           <FontAwesomeIcon :icon="weatherIcon" />
         </div>
-        <div class="weather-temp">
+        <div class="weather-temp-compact">
           {{ weatherData.temperature }}°
-          <span class="temp-unit">{{ weatherData.unit }}</span>
         </div>
+        <div class="weather-desc-compact">{{ weatherData.description }}</div>
+      </div>
+    </div>
+    
+    <!-- Full Mode -->
+    <div v-else>
+      <div class="weather-header">
+        <FontAwesomeIcon :icon="['fas', 'cloud-sun']" class="header-icon" />
+        <span class="header-title">Weather query</span>
       </div>
       
-      <div class="weather-description">{{ weatherData.description }}</div>
-      
-      <div class="weather-location">
-        <FontAwesomeIcon :icon="['fas', 'map-marker-alt']" />
-        {{ weatherData.location }}
+      <div v-if="loading" class="loading-state">
+        <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
+        <span>Loading weather...</span>
       </div>
       
-      <div class="weather-details">
-        <div class="detail-item">
-          <FontAwesomeIcon :icon="['fas', 'tint']" />
-          <span>{{ weatherData.humidity }}%</span>
+      <div v-else-if="error" class="error-state">
+        <FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" />
+        <span>{{ error }}</span>
+      </div>
+      
+      <div v-else-if="weatherData" class="weather-content">
+        <div class="weather-main">
+          <div class="weather-icon">
+            <FontAwesomeIcon :icon="weatherIcon" />
+          </div>
+          <div class="weather-temp">
+            {{ weatherData.temperature }}°
+            <span class="temp-unit">{{ weatherData.unit }}</span>
+          </div>
         </div>
-        <div class="detail-item">
-          <FontAwesomeIcon :icon="['fas', 'wind']" />
-          <span>{{ weatherData.windSpeed }} mph</span>
+        
+        <div class="weather-description">{{ weatherData.description }}</div>
+        
+        <div class="weather-location">
+          <FontAwesomeIcon :icon="['fas', 'map-marker-alt']" />
+          {{ weatherData.location }}
         </div>
-        <div class="detail-item">
-          <FontAwesomeIcon :icon="['fas', 'eye']" />
-          <span>{{ weatherData.visibility }} mi</span>
+        
+        <div class="weather-details">
+          <div class="detail-item">
+            <FontAwesomeIcon :icon="['fas', 'tint']" />
+            <span>{{ weatherData.humidity }}%</span>
+          </div>
+          <div class="detail-item">
+            <FontAwesomeIcon :icon="['fas', 'wind']" />
+            <span>{{ weatherData.windSpeed }} mph</span>
+          </div>
+          <div class="detail-item">
+            <FontAwesomeIcon :icon="['fas', 'eye']" />
+            <span>{{ weatherData.visibility }} mi</span>
+          </div>
         </div>
       </div>
     </div>
@@ -59,11 +83,15 @@ import apiClient from '@/api/client'
 interface Props {
   location?: string
   refreshInterval?: number
+  compact?: boolean
+  unit?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   location: 'auto',
   refreshInterval: 15, // minutes
+  compact: false,
+  unit: 'C'
 })
 
 interface WeatherData {
@@ -134,7 +162,8 @@ async function fetchWeather() {
   try {
     const response = await apiClient.get('/weather', {
       params: {
-        location: props.location
+        location: props.location,
+        unit: props.unit || 'C'
       }
     })
     
@@ -324,6 +353,62 @@ onUnmounted(() => {
 
 .weather-stormy {
   background: linear-gradient(135deg, #434343 0%, #000000 100%);
+}
+
+/* Compact Mode Styles */
+.weather-query.compact {
+  padding: 0.5rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weather-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.loading-compact,
+.error-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.weather-content-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.weather-icon-compact {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.weather-temp-compact {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.weather-desc-compact {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  line-height: 1;
+  text-align: center;
 }
 </style>
 
