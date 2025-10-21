@@ -100,8 +100,8 @@ const emptySlots = computed(() => {
   const { rows, cols } = props.page.grid_config
   const occupiedPositions = new Set()
   
-  // Mark occupied positions (including multi-cell buttons)
-  visibleButtons.value.forEach(button => {
+  // Mark occupied positions (including multi-cell buttons) - only count enabled buttons
+  props.page.buttons.filter(btn => btn.enabled).forEach(button => {
     const { row, col } = button.position
     const { rows: buttonRows, cols: buttonCols } = button.size
     
@@ -153,11 +153,6 @@ function handleButtonDelete(buttonId: string) {
   emit('buttonDelete', buttonId)
 }
 
-function handlePlaceholderClick(row: number, col: number) {
-  if (props.isEditMode) {
-    emit('placeholderClick', { row, col })
-  }
-}
 
 // Touch gesture handling for page swiping
 let touchStartX = 0
@@ -272,6 +267,12 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   e.stopPropagation()
   if (highlightedSlot.value?.row === placeholder.row && highlightedSlot.value?.col === placeholder.col) {
     highlightedSlot.value = null
+  }
+}
+
+function handlePlaceholderClick(row: number, col: number) {
+  if (props.isEditMode) {
+    emit('placeholderClick', { row, col })
   }
 }
 </script>
