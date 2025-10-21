@@ -1257,6 +1257,7 @@ import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
 import type { ButtonTemplate } from '@/data/buttonTemplates'
 import { useNotificationsStore } from '@/stores/notifications'
+import apiClient from '@/api/client'
 
 interface Props {
   button: Button
@@ -2067,9 +2068,11 @@ function handleSave() {
       editedButton.value.action.countdown_target = actionConfig.value.countdown_target
     }
     
-    // Handle weather query
-    if (actionType.value === 'weather_query') {
-      editedButton.value.action.weather_location = actionConfig.value.weather_location || 'auto'
+    // Handle weather
+    if (actionType.value === 'weather') {
+      editedButton.value.action.config.weather_location = actionConfig.value.weather_location || 'auto'
+      editedButton.value.action.config.temperature_unit = actionConfig.value.temperature_unit || 'C'
+      editedButton.value.action.config.refresh_interval = actionConfig.value.refresh_interval || 15
     }
   }
   

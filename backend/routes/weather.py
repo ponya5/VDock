@@ -15,10 +15,13 @@ weather_bp = Blueprint('weather', __name__)
 def get_weather():
     """Get weather data"""
     try:
-        # Get parameters from query string
-        location = request.args.get('location', 'auto')
-        temp_unit = request.args.get('unit', 'C')
+        # Get parameters from query string - handle both direct and nested params
+        location = request.args.get('location') or request.args.get('params[location]', 'auto')
+        temp_unit = request.args.get('unit') or request.args.get('params[unit]', 'C')
         refresh_interval = request.args.get('refresh_interval', 15, type=int)
+        
+        # Debug logging
+        logger.info(f"Weather request - Location: {location}, Unit: {temp_unit}, All args: {dict(request.args)}")
 
         # Execute weather fetch
         config = {

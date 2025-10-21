@@ -15,7 +15,7 @@
           <FontAwesomeIcon :icon="weatherIcon" />
         </div>
         <div class="weather-temp-compact">
-          {{ weatherData.temperature }}°
+          {{ weatherData.temperature }}{{ weatherData.unit_symbol || '°' + weatherData.unit }}
         </div>
         <div class="weather-desc-compact">{{ weatherData.description }}</div>
       </div>
@@ -44,8 +44,7 @@
             <FontAwesomeIcon :icon="weatherIcon" />
           </div>
           <div class="weather-temp">
-            {{ weatherData.temperature }}°
-            <span class="temp-unit">{{ weatherData.unit }}</span>
+            {{ weatherData.temperature }}{{ weatherData.unit_symbol || '°' + weatherData.unit }}
           </div>
         </div>
         
@@ -63,11 +62,11 @@
           </div>
           <div class="detail-item">
             <FontAwesomeIcon :icon="['fas', 'wind']" />
-            <span>{{ weatherData.windSpeed }} mph</span>
+            <span>{{ weatherData.windSpeed }}</span>
           </div>
           <div class="detail-item">
             <FontAwesomeIcon :icon="['fas', 'eye']" />
-            <span>{{ weatherData.visibility }} mi</span>
+            <span>{{ weatherData.visibility }}</span>
           </div>
         </div>
       </div>
@@ -76,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import apiClient from '@/api/client'
 
@@ -97,12 +96,13 @@ const props = withDefaults(defineProps<Props>(), {
 interface WeatherData {
   temperature: number
   unit: string
+  unit_symbol?: string
   description: string
   condition: string
   location: string
   humidity: number
-  windSpeed: number
-  visibility: number
+  windSpeed: string
+  visibility: string
   icon: string
 }
 
@@ -112,7 +112,7 @@ const error = ref<string | null>(null)
 let intervalId: number | null = null
 
 const weatherClass = computed(() => {
-  if (!weatherData.value) return ''
+  if (!weatherData.value || !weatherData.value.condition) return ''
   
   const condition = weatherData.value.condition.toLowerCase()
   
@@ -132,7 +132,7 @@ const weatherClass = computed(() => {
 })
 
 const weatherIcon = computed(() => {
-  if (!weatherData.value) return ['fas', 'cloud']
+  if (!weatherData.value || !weatherData.value.condition) return ['fas', 'cloud']
   
   const condition = weatherData.value.condition.toLowerCase()
   
@@ -167,20 +167,21 @@ async function fetchWeather() {
       }
     })
     
-    weatherData.value = response.data
+    weatherData.value = response.data.data
   } catch (err: any) {
     console.error('Failed to fetch weather:', err)
     
     // Mock data for demo purposes
     weatherData.value = {
-      temperature: 72,
-      unit: 'F',
+      temperature: props.unit === 'C' ? 22 : 72,
+      unit: props.unit || 'C',
+      unit_symbol: props.unit === 'C' ? '°C' : '°F',
       description: 'Partly Cloudy',
       condition: 'Partly Cloudy',
       location: props.location === 'auto' ? 'Your Location' : props.location,
       humidity: 65,
-      windSpeed: 8,
-      visibility: 10,
+      windSpeed: props.unit === 'C' ? '13 km/h' : '8 mph',
+      visibility: props.unit === 'C' ? '16 km' : '10 mi',
       icon: 'partly-cloudy'
     }
     
@@ -205,6 +206,11 @@ function stopPolling() {
 onMounted(() => {
   fetchWeather()
   startPolling()
+})
+
+// Watch for unit changes and refetch weather
+watch(() => props.unit, () => {
+  fetchWeather()
 })
 
 onUnmounted(() => {
