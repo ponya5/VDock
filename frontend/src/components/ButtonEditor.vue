@@ -14,6 +14,9 @@
       </div>
 
       <div class="modal-body">
+        <!-- Quick Templates Section -->
+        <QuickTemplates @apply-template="applyTemplate" />
+
         <!-- Browse Actions Button -->
         <div class="form-group">
           <button class="btn btn-primary" @click="showActionsSidebar = true" style="width: 100%;">
@@ -473,6 +476,13 @@
               @click="showAssetPicker = 'animation'"
             >
               <FontAwesomeIcon :icon="['fas', 'film']" /> Browse Media
+            </button>
+            <button 
+              v-if="editedButton.media_type" 
+              class="btn btn-secondary" 
+              @click="showFileUpload = true"
+            >
+              <FontAwesomeIcon :icon="['fas', 'upload']" /> Upload
             </button>
           </div>
         </div>
@@ -1048,15 +1058,22 @@
           <p class="form-help">How often to update weather data (default: 15 minutes)</p>
         </div>
 
+        <div v-if="actionType === 'weather'" class="form-group">
+          <label>Temperature Unit</label>
+          <select v-model="actionConfig.temperature_unit" class="select">
+            <option value="C">Celsius (°C)</option>
+            <option value="F">Fahrenheit (°F)</option>
+          </select>
+          <p class="form-help">Choose temperature unit for weather display</p>
+        </div>
+
         <div v-if="actionType === 'system_control'" class="form-group">
           <label>System Action</label>
           <select v-model="actionConfig.action" class="select">
-            <option value="volume_up">Volume Up</option>
-            <option value="volume_down">Volume Down</option>
-            <option value="volume_mute">Mute/Unmute</option>
-            <option value="media_play_pause">Play/Pause</option>
-            <option value="media_next">Next Track</option>
-            <option value="media_previous">Previous Track</option>
+            <option value="shutdown">Shutdown</option>
+            <option value="restart">Restart</option>
+            <option value="sleep">Sleep</option>
+            <option value="lock_screen">Lock Screen</option>
             <option value="fullscreen">Full Screen</option>
           </select>
         </div>
@@ -1146,12 +1163,6 @@
           <input v-model="editedButton.tooltip" type="text" class="input" placeholder="Button description" />
         </div>
 
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input v-model="editedButton.enabled" type="checkbox" />
-            <span>Enabled</span>
-          </label>
-        </div>
       </div>
 
       <div class="modal-footer">
@@ -1182,6 +1193,55 @@
       @close="showActionsSidebar = false"
       @select-action="handleActionSelection"
     />
+
+    <!-- File Upload Modal -->
+    <div v-if="showFileUpload" class="modal-overlay" @click.self="showFileUpload = false">
+      <div class="modal file-upload-modal">
+        <div class="modal-header">
+          <h2>Upload Background Media</h2>
+          <button class="close-btn" @click="showFileUpload = false">
+            <FontAwesomeIcon :icon="['fas', 'times']" />
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
+            <input 
+              ref="fileInputRef"
+              type="file" 
+              accept="image/*,video/*,.gif" 
+              @change="handleFileSelect"
+              style="display: none"
+            />
+            <div class="upload-content">
+              <FontAwesomeIcon :icon="['fas', 'cloud-upload-alt']" class="upload-icon" />
+              <p>Click to select or drag and drop your media file</p>
+              <p class="upload-hint">Supports: JPG, PNG, GIF, MP4, WebM</p>
+            </div>
+          </div>
+          
+          <div v-if="uploadedFile" class="upload-preview">
+            <h3>Preview:</h3>
+            <div class="preview-container">
+              <img v-if="isImageFile" :src="uploadedFile.url" :alt="uploadedFile.name" class="preview-image" />
+              <video v-else-if="isVideoFile" :src="uploadedFile.url" class="preview-video" controls />
+            </div>
+            <p class="file-info">{{ uploadedFile.name }} ({{ formatFileSize(uploadedFile.size) }})</p>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showFileUpload = false">Cancel</button>
+          <button 
+            class="btn btn-primary" 
+            @click="confirmUpload"
+            :disabled="!uploadedFile"
+          >
+            Use as Background
+          </button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -1193,7 +1253,11 @@ import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
+import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
+import type { ButtonTemplate } from '@/data/buttonTemplates'
+import { useNotificationsStore } from '@/stores/notifications'
+import apiClient from '@/api/client'
 
 interface Props {
   button: Button
@@ -1211,6 +1275,12 @@ const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
 const showIconPicker = ref(false)
 const showAssetPicker = ref<'icon' | 'animation' | 'background' | null>(null)
 const showActionsSidebar = ref(false)
+const showFileUpload = ref(false)
+
+// File upload state
+const fileInputRef = ref<HTMLInputElement>()
+const uploadedFile = ref<{ name: string; size: number; url: string; type: string } | null>(null)
+const uploading = ref(false)
 
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
@@ -1381,6 +1451,15 @@ watch(actionConfig, (newConfig) => {
   }
 }, { deep: true })
 
+// File upload computed properties
+const isImageFile = computed(() => {
+  return uploadedFile.value?.type.startsWith('image/') || uploadedFile.value?.name.toLowerCase().endsWith('.gif')
+})
+
+const isVideoFile = computed(() => {
+  return uploadedFile.value?.type.startsWith('video/')
+})
+
 // Watch for media type changes to clear media when type is removed
 watch(() => editedButton.value.media_type, (newType) => {
   if (!newType) {
@@ -1393,6 +1472,158 @@ function handleActionTypeChange() {
   actionConfig.value = {}
   hotkeyString.value = ''
 }
+
+// Apply Quick Template
+function applyTemplate(template: ButtonTemplate) {
+  const notificationsStore = useNotificationsStore()
+
+  // Apply action
+  actionType.value = template.action.type as ActionType
+  actionConfig.value = { ...template.action.config }
+
+  // Apply icon
+  editedButton.value.icon = template.icon
+  editedButton.value.icon_type = 'fontawesome'
+
+  // Apply label
+  editedButton.value.label = template.name
+
+  // Apply style
+  if (template.style) {
+    editedButton.value.style.backgroundColor = template.style.backgroundColor || '#667eea'
+    editedButton.value.style.textColor = template.style.textColor || '#ffffff'
+  }
+
+  // Update hotkey string if applicable
+  if (template.action.type === 'hotkey' && template.action.config.keys) {
+    hotkeyString.value = Array.isArray(template.action.config.keys)
+      ? template.action.config.keys.join(', ')
+      : template.action.config.keys
+  }
+
+  notificationsStore.success(
+    'Template Applied',
+    `"${template.name}" template has been applied to this button`
+  )
+}
+
+// File upload methods
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    processFile(file)
+  }
+}
+
+function handleFileDrop(event: DragEvent) {
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    processFile(files[0])
+  }
+}
+
+function processFile(file: File) {
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm']
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm']
+  const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+  
+  if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+    const notificationsStore = useNotificationsStore()
+    notificationsStore.error(
+      'Invalid File Type',
+      'Please select a valid image or video file (JPG, PNG, GIF, MP4, WebM)'
+    )
+    return
+  }
+  
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024 // 10MB
+  if (file.size > maxSize) {
+    const notificationsStore = useNotificationsStore()
+    notificationsStore.error(
+      'File Too Large',
+      'File size must be less than 10MB'
+    )
+    return
+  }
+  
+  // Create preview URL
+  const url = URL.createObjectURL(file)
+  uploadedFile.value = {
+    name: file.name,
+    size: file.size,
+    url: url,
+    type: file.type
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+async function confirmUpload() {
+  if (!uploadedFile.value) return
+  
+  uploading.value = true
+  const notificationsStore = useNotificationsStore()
+  
+  try {
+    // Create FormData for file upload
+    const formData = new FormData()
+    const fileInput = fileInputRef.value
+    if (fileInput?.files?.[0]) {
+      formData.append('file', fileInput.files[0])
+      formData.append('type', 'button_background')
+    }
+    
+    // Upload file to backend
+    const response = await apiClient.post('/api/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    if (response.data.success) {
+      // Set the uploaded file as background media
+      editedButton.value.media_url = response.data.url
+      
+      // Determine media type based on file
+      if (isImageFile.value) {
+        editedButton.value.media_type = uploadedFile.value.name.toLowerCase().endsWith('.gif') ? 'gif' : 'image'
+      } else if (isVideoFile.value) {
+        editedButton.value.media_type = 'video'
+      }
+      
+      notificationsStore.success(
+        'Upload Successful',
+        'Background media has been uploaded and applied to the button'
+      )
+      
+      showFileUpload.value = false
+      uploadedFile.value = null
+    } else {
+      throw new Error(response.data.message || 'Upload failed')
+    }
+  } catch (error: any) {
+    notificationsStore.error(
+      'Upload Failed',
+      error.message || 'Failed to upload file'
+    )
+  } finally {
+    uploading.value = false
+  }
+}
+
 
 function updateHotkeyConfig() {
   actionConfig.value.keys = hotkeyString.value
@@ -1772,6 +2003,7 @@ function handleActionSelection(selectedActionType: string) {
 
 function handleSaveProfile() {
   emit('saveProfile')
+  emit('close')
 }
 
 function handleSave() {
@@ -1836,9 +2068,11 @@ function handleSave() {
       editedButton.value.action.countdown_target = actionConfig.value.countdown_target
     }
     
-    // Handle weather query
-    if (actionType.value === 'weather_query') {
-      editedButton.value.action.weather_location = actionConfig.value.weather_location || 'auto'
+    // Handle weather
+    if (actionType.value === 'weather') {
+      editedButton.value.action.config.weather_location = actionConfig.value.weather_location || 'auto'
+      editedButton.value.action.config.temperature_unit = actionConfig.value.temperature_unit || 'C'
+      editedButton.value.action.config.refresh_interval = actionConfig.value.refresh_interval || 15
     }
   }
   
@@ -2812,6 +3046,86 @@ onUnmounted(() => {
 .action-type-badge:not(.no-action) {
   background: var(--color-primary);
   color: white;
+}
+
+/* File Upload Modal Styles */
+.file-upload-modal {
+  max-width: 600px;
+  width: 90vw;
+}
+
+.upload-area {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--color-background);
+}
+
+.upload-area:hover {
+  border-color: var(--color-primary);
+  background: var(--color-hover);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--color-primary);
+  opacity: 0.7;
+}
+
+.upload-hint {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.upload-preview {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.upload-preview h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.preview-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.preview-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}
+
+.preview-video {
+  max-width: 300px;
+  max-height: 200px;
+  border-radius: var(--radius-sm);
+}
+
+.file-info {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  text-align: center;
 }
 </style>
 

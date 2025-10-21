@@ -150,9 +150,9 @@ function selectIcon(icon: string) {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: all var(--transition-fast);
   margin-bottom: -2px;
 }

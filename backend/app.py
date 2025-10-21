@@ -2,7 +2,15 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from pathlib import Path
+import os
+import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from config import Config
 from auth import require_auth
@@ -21,16 +29,40 @@ from routes.assets import assets_bp
 from routes.system_metrics import system_metrics_bp
 from routes.app_monitor import app_monitor_bp
 from routes.system import system_bp
+from routes.templates import templates_bp
+from routes.weather import weather_bp
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Add security headers
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
+    if Config.USE_SSL:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
 # Initialize extensions
 CORS(app, origins=Config.CORS_ORIGINS)
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[Config.RATELIMIT_DEFAULT] if Config.RATELIMIT_ENABLED else [],
+    storage_uri=Config.RATELIMIT_STORAGE_URL,
+    enabled=Config.RATELIMIT_ENABLED
+)
+
 socketio = SocketIO(
-    app, 
-    cors_allowed_origins=Config.CORS_ORIGINS, 
+    app,
+    cors_allowed_origins=Config.CORS_ORIGINS,
     async_mode='threading'
 )
 
@@ -53,6 +85,13 @@ app.register_blueprint(assets_bp)
 app.register_blueprint(system_metrics_bp)
 app.register_blueprint(app_monitor_bp)
 app.register_blueprint(system_bp)
+app.register_blueprint(templates_bp, url_prefix='/api/templates')
+app.register_blueprint(weather_bp, url_prefix='/api')
+
+# Apply rate limits to specific routes
+if Config.RATELIMIT_ENABLED:
+    limiter.limit("5 per minute")(auth_bp.route('/api/auth/login', methods=['POST']))
+    limiter.limit("10 per minute")(upload_bp.route('/api/upload', methods=['POST']))
 
 
 # ============================================================================
@@ -93,7 +132,7 @@ def serve_avatar(filename):
 def get_themes():
     """Get all available themes."""
     themes = [theme.to_dict() for theme in BUILTIN_THEMES.values()]
-    
+
     # Load custom themes
     theme_files = FileManager.list_files(Config.DATA_DIR / 'themes', '*.json')
     for file_path in theme_files:
@@ -104,7 +143,7 @@ def get_themes():
                 themes.append(theme.to_dict())
             except Exception as e:
                 logger.error(f"Error loading theme {file_path}: {e}")
-    
+
     return jsonify({'themes': themes})
 
 
@@ -127,17 +166,17 @@ def get_plugin_actions(plugin_id):
     plugin = plugin_manager.get_plugin(plugin_id)
     if not plugin:
         return jsonify({'error': 'Plugin not found'}), 404
-    
+
     info = plugin.get_info()
     actions = []
-    
+
     for action_id in info.actions:
         schema = plugin_manager.get_action_schema(action_id)
         actions.append({
             'id': action_id,
             'schema': schema
         })
-    
+
     return jsonify({'actions': actions})
 
 
@@ -155,7 +194,7 @@ def handle_connect(auth):
                 f"Unauthenticated connection attempt: {request.sid}"
             )
             return False
-        
+
         # Verify token
         from auth import AuthManager
         payload = AuthManager.verify_token(auth['token'])
@@ -164,13 +203,13 @@ def handle_connect(auth):
                 f"Invalid token for connection: {request.sid}"
             )
             return False
-        
+
         logger.info(
             f"Authenticated client connected: {request.sid}"
         )
     else:
         logger.info(f"Client connected: {request.sid}")
-    
+
     emit('connected', {'message': 'Connected to VDock server'})
 
 
@@ -184,12 +223,14 @@ def handle_disconnect():
 def handle_execute_action(data):
     """Execute an action via WebSocket."""
     if 'action' not in data:
-        emit('action_result', {'error': 'No action provided', 'success': False})
+        emit('action_result', {
+            'error': 'No action provided', 'success': False
+        })
         return
-    
+
     action_data = data['action']
     result = action_executor.execute_action(action_data)
-    
+
     emit('action_result', result.to_dict())
 
 
@@ -214,10 +255,10 @@ def health_check():
 if __name__ == '__main__':
     host = Config.HOST if Config.ALLOW_LAN else '127.0.0.1'
     port = Config.PORT
-    
+
     logger.info(f"Starting VDock server on {host}:{port}")
     logger.info(f"Plugins loaded: {len(plugin_manager.plugins)}")
-    
+
     socketio.run(
         app,
         host=host,
@@ -225,4 +266,3 @@ if __name__ == '__main__':
         debug=Config.DEBUG,
         allow_unsafe_werkzeug=True
     )
-

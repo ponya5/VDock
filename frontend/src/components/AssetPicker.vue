@@ -548,6 +548,7 @@ onMounted(async () => {
   transition: all var(--transition-fast);
   text-align: left;
   margin-bottom: var(--spacing-xs);
+  font-weight: 500;
 }
 
 .category-item:hover,

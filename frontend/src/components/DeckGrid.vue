@@ -17,6 +17,7 @@
       :is-edit-mode="isEditMode"
       :show-labels="showLabels"
       :show-tooltips="showTooltips"
+      :compact="compact"
           @click="handleButtonClick"
           @edit="handleButtonEdit"
           @copy="handleButtonCopy"
@@ -56,13 +57,15 @@ interface Props {
   buttonSize?: number
   showLabels?: boolean
   showTooltips?: boolean
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   buttonSize: 1.0,
   showLabels: true,
-  showTooltips: true
+  showTooltips: true,
+  compact: false
 })
 
 const emit = defineEmits<{
@@ -100,8 +103,8 @@ const emptySlots = computed(() => {
   const { rows, cols } = props.page.grid_config
   const occupiedPositions = new Set()
   
-  // Mark occupied positions (including multi-cell buttons)
-  visibleButtons.value.forEach(button => {
+  // Mark occupied positions (including multi-cell buttons) - only count enabled buttons
+  props.page.buttons.filter(btn => btn.enabled).forEach(button => {
     const { row, col } = button.position
     const { rows: buttonRows, cols: buttonCols } = button.size
     
@@ -153,11 +156,6 @@ function handleButtonDelete(buttonId: string) {
   emit('buttonDelete', buttonId)
 }
 
-function handlePlaceholderClick(row: number, col: number) {
-  if (props.isEditMode) {
-    emit('placeholderClick', { row, col })
-  }
-}
 
 // Touch gesture handling for page swiping
 let touchStartX = 0
@@ -272,6 +270,12 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   e.stopPropagation()
   if (highlightedSlot.value?.row === placeholder.row && highlightedSlot.value?.col === placeholder.col) {
     highlightedSlot.value = null
+  }
+}
+
+function handlePlaceholderClick(row: number, col: number) {
+  if (props.isEditMode) {
+    emit('placeholderClick', { row, col })
   }
 }
 </script>

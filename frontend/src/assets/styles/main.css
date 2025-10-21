@@ -14,6 +14,10 @@
   --color-success: #4ecdc4;
   --color-error: #ff6b6b;
   --color-warning: #ffe66d;
+  --color-info: #3b82f6;
+  --color-primary-rgb: 255, 107, 107;
+  --color-surface-hover: rgba(255, 255, 255, 0.15);
+  --color-primary-dark: #e85555;
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -55,6 +59,10 @@
   --color-success: #28a745;
   --color-error: #dc3545;
   --color-warning: #ffc107;
+  --color-info: #17a2b8;
+  --color-primary-rgb: 0, 123, 255;
+  --color-surface-hover: rgba(0, 0, 0, 0.05);
+  --color-primary-dark: #0056b3;
 }
 
 /* Dark Theme */
@@ -72,6 +80,10 @@
   --color-success: #27ae60;
   --color-error: #e74c3c;
   --color-warning: #f39c12;
+  --color-info: #3498db;
+  --color-primary-rgb: 52, 152, 219;
+  --color-surface-hover: rgba(255, 255, 255, 0.05);
+  --color-primary-dark: #2980b9;
 }
 
 /* Base Styles */
@@ -119,6 +131,23 @@ body {
 
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-border);
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn-accent:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-accent:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  box-shadow: none;
 }
 
 .btn-success {
@@ -728,5 +757,196 @@ body {
   inset: 0;
   background: #0a0a0a;
   z-index: -1;
+}
+
+/* =============================================
+   RESPONSIVE DESIGN BREAKPOINTS
+   ============================================= */
+
+/* Small devices (phones, less than 768px) */
+@media (max-width: 767px) {
+  :root {
+    --spacing-xs: 0.2rem;
+    --spacing-sm: 0.4rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
+  }
+  
+  body {
+    font-size: 14px;
+  }
+  
+  .btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+  
+  .input, .textarea, .select {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Hide labels on small screens to save space */
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  /* Stack elements vertically on mobile */
+  .stack-on-mobile {
+    flex-direction: column !important;
+  }
+  
+  /* Full width on mobile */
+  .full-width-mobile {
+    width: 100% !important;
+  }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) and (max-width: 1365px) {
+  :root {
+    --spacing-xl: 1.75rem;
+  }
+  
+  body {
+    font-size: 15px;
+  }
+  
+  .container-responsive {
+    max-width: 1200px;
+    padding: 0 var(--spacing-md);
+  }
+}
+
+/* Large devices (desktops, 1366px and up) */
+@media (min-width: 1366px) and (max-width: 1919px) {
+  :root {
+    --spacing-xl: 2rem;
+  }
+  
+  body {
+    font-size: 16px;
+  }
+  
+  .container-responsive {
+    max-width: 1400px;
+    padding: 0 var(--spacing-lg);
+  }
+}
+
+/* Extra large devices (4K displays, 1920px and up) */
+@media (min-width: 1920px) {
+  :root {
+    --spacing-xs: 0.3rem;
+    --spacing-sm: 0.6rem;
+    --spacing-md: 1.2rem;
+    --spacing-lg: 1.8rem;
+    --spacing-xl: 2.5rem;
+  }
+  
+  body {
+    font-size: 18px;
+  }
+  
+  .btn {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+  
+  .container-responsive {
+    max-width: 1800px;
+    padding: 0 var(--spacing-xl);
+  }
+  
+  /* Scale up button grids for 4K */
+  .deck-grid {
+    gap: calc(var(--spacing-md) * 1.2);
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  .deck-header {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  .btn {
+    padding: 0.5rem 0.75rem;
+    min-height: 32px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch-specific styles */
+  .btn, .input, .select {
+    min-height: 44px; /* WCAG 2.1 AA standard */
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .btn:hover {
+    transform: none;
+  }
+  
+  /* Add active state feedback instead */
+  .btn:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  /* Larger tap targets */
+  a, button {
+    padding: 0.75rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: rgba(0, 0, 0, 0.4);
+  }
+  
+  .theme-light {
+    --color-border: rgba(0, 0, 0, 0.3);
+  }
+  
+  .theme-dark {
+    --color-border: rgba(255, 255, 255, 0.3);
+  }
+  
+  .btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .btn {
+    border: 1px solid black;
+  }
 }
 
