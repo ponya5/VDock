@@ -21,6 +21,7 @@ from routes.assets import assets_bp
 from routes.system_metrics import system_metrics_bp
 from routes.app_monitor import app_monitor_bp
 from routes.system import system_bp
+from routes.templates import templates_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -29,8 +30,8 @@ app.config.from_object(Config)
 # Initialize extensions
 CORS(app, origins=Config.CORS_ORIGINS)
 socketio = SocketIO(
-    app, 
-    cors_allowed_origins=Config.CORS_ORIGINS, 
+    app,
+    cors_allowed_origins=Config.CORS_ORIGINS,
     async_mode='threading'
 )
 
@@ -53,6 +54,7 @@ app.register_blueprint(assets_bp)
 app.register_blueprint(system_metrics_bp)
 app.register_blueprint(app_monitor_bp)
 app.register_blueprint(system_bp)
+app.register_blueprint(templates_bp, url_prefix='/api/templates')
 
 
 # ============================================================================
@@ -93,7 +95,7 @@ def serve_avatar(filename):
 def get_themes():
     """Get all available themes."""
     themes = [theme.to_dict() for theme in BUILTIN_THEMES.values()]
-    
+
     # Load custom themes
     theme_files = FileManager.list_files(Config.DATA_DIR / 'themes', '*.json')
     for file_path in theme_files:
@@ -104,7 +106,7 @@ def get_themes():
                 themes.append(theme.to_dict())
             except Exception as e:
                 logger.error(f"Error loading theme {file_path}: {e}")
-    
+
     return jsonify({'themes': themes})
 
 
@@ -127,17 +129,17 @@ def get_plugin_actions(plugin_id):
     plugin = plugin_manager.get_plugin(plugin_id)
     if not plugin:
         return jsonify({'error': 'Plugin not found'}), 404
-    
+
     info = plugin.get_info()
     actions = []
-    
+
     for action_id in info.actions:
         schema = plugin_manager.get_action_schema(action_id)
         actions.append({
             'id': action_id,
             'schema': schema
         })
-    
+
     return jsonify({'actions': actions})
 
 
@@ -155,7 +157,7 @@ def handle_connect(auth):
                 f"Unauthenticated connection attempt: {request.sid}"
             )
             return False
-        
+
         # Verify token
         from auth import AuthManager
         payload = AuthManager.verify_token(auth['token'])
@@ -164,13 +166,13 @@ def handle_connect(auth):
                 f"Invalid token for connection: {request.sid}"
             )
             return False
-        
+
         logger.info(
             f"Authenticated client connected: {request.sid}"
         )
     else:
         logger.info(f"Client connected: {request.sid}")
-    
+
     emit('connected', {'message': 'Connected to VDock server'})
 
 
@@ -184,12 +186,14 @@ def handle_disconnect():
 def handle_execute_action(data):
     """Execute an action via WebSocket."""
     if 'action' not in data:
-        emit('action_result', {'error': 'No action provided', 'success': False})
+        emit('action_result', {
+            'error': 'No action provided', 'success': False
+        })
         return
-    
+
     action_data = data['action']
     result = action_executor.execute_action(action_data)
-    
+
     emit('action_result', result.to_dict())
 
 
@@ -214,10 +218,10 @@ def health_check():
 if __name__ == '__main__':
     host = Config.HOST if Config.ALLOW_LAN else '127.0.0.1'
     port = Config.PORT
-    
+
     logger.info(f"Starting VDock server on {host}:{port}")
     logger.info(f"Plugins loaded: {len(plugin_manager.plugins)}")
-    
+
     socketio.run(
         app,
         host=host,
@@ -225,4 +229,3 @@ if __name__ == '__main__':
         debug=Config.DEBUG,
         allow_unsafe_werkzeug=True
     )
-

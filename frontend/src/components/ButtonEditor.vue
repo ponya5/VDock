@@ -14,6 +14,9 @@
       </div>
 
       <div class="modal-body">
+        <!-- Quick Templates Section -->
+        <QuickTemplates @apply-template="applyTemplate" />
+
         <!-- Browse Actions Button -->
         <div class="form-group">
           <button class="btn btn-primary" @click="showActionsSidebar = true" style="width: 100%;">
@@ -1156,6 +1159,15 @@
 
       <div class="modal-footer">
         <button class="btn btn-secondary" @click="emit('close')">Cancel</button>
+        <button 
+          class="btn btn-accent" 
+          @click="testAction" 
+          :disabled="actionType === 'none' || testingAction"
+          title="Test this action before saving"
+        >
+          <FontAwesomeIcon :icon="['fas', testingAction ? 'spinner' : 'flask']" :spin="testingAction" />
+          {{ testingAction ? 'Testing...' : 'Test Action' }}
+        </button>
         <button class="btn btn-primary" @click="handleSave">Save</button>
       </div>
     </div>
@@ -1193,7 +1205,10 @@ import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
+import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
+import type { ButtonTemplate } from '@/data/buttonTemplates'
+import { useNotificationsStore } from '@/stores/notifications'
 
 interface Props {
   button: Button
@@ -1211,6 +1226,7 @@ const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
 const showIconPicker = ref(false)
 const showAssetPicker = ref<'icon' | 'animation' | 'background' | null>(null)
 const showActionsSidebar = ref(false)
+const testingAction = ref(false)
 
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
@@ -1392,6 +1408,100 @@ watch(() => editedButton.value.media_type, (newType) => {
 function handleActionTypeChange() {
   actionConfig.value = {}
   hotkeyString.value = ''
+}
+
+// Apply Quick Template
+function applyTemplate(template: ButtonTemplate) {
+  const notificationsStore = useNotificationsStore()
+
+  // Apply action
+  actionType.value = template.action.type as ActionType
+  actionConfig.value = { ...template.action.config }
+
+  // Apply icon
+  editedButton.value.icon = template.icon
+  editedButton.value.icon_type = 'fontawesome'
+
+  // Apply label
+  editedButton.value.label = template.name
+
+  // Apply style
+  if (template.style) {
+    editedButton.value.style.backgroundColor = template.style.backgroundColor || '#667eea'
+    editedButton.value.style.textColor = template.style.textColor || '#ffffff'
+  }
+
+  // Update hotkey string if applicable
+  if (template.action.type === 'hotkey' && template.action.config.keys) {
+    hotkeyString.value = Array.isArray(template.action.config.keys)
+      ? template.action.config.keys.join(', ')
+      : template.action.config.keys
+  }
+
+  notificationsStore.success(
+    'Template Applied',
+    `"${template.name}" template has been applied to this button`
+  )
+}
+
+// Test Action
+async function testAction() {
+  if (actionType.value === 'none' || testingAction.value) {
+    return
+  }
+
+  const notificationsStore = useNotificationsStore()
+  const dashboardStore = useDashboardStore()
+  testingAction.value = true
+
+  try {
+    // Create temporary action object
+    const testButtonAction: ButtonAction = {
+      type: actionType.value as ActionType,
+      config: { ...actionConfig.value }
+    }
+
+    notificationsStore.info(
+      'Testing Action',
+      `Executing ${actionType.value} action...`,
+      undefined,
+      { duration: 2000 }
+    )
+
+    // Execute the action via dashboard store
+    const testButton: Button = {
+      id: 'test-button',
+      label: 'Test Button',
+      icon: editedButton.value.icon,
+      icon_type: editedButton.value.icon_type,
+      icon_url: editedButton.value.icon_url,
+      style: editedButton.value.style,
+      action: testButtonAction
+    }
+    
+    const result = await dashboardStore.executeButtonAction(testButton)
+
+    if (result.success) {
+      notificationsStore.success(
+        'Test Successful',
+        result.message || 'Action executed successfully'
+      )
+    } else {
+      notificationsStore.error(
+        'Test Failed',
+        result.message || 'Action execution failed',
+        result.data?.details
+      )
+    }
+  } catch (error: any) {
+    notificationsStore.error(
+      'Test Error',
+      'Failed to test action',
+      error.message
+    )
+  } finally {
+    testingAction.value = false
+  }
 }
 
 function updateHotkeyConfig() {

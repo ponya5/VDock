@@ -1,0 +1,435 @@
+{
+  "id": "template-ide-vscode",
+  "name": "VS Code Essentials",
+  "description": "Essential shortcuts for Visual Studio Code",
+  "icon": "fa-code",
+  "color": "#007acc",
+  "category": "development",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-vscode-main",
+      "name": "VS Code Main",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-vscode-command",
+          "label": "Command",
+          "secondary_label": "Ctrl+Shift+P",
+          "icon": ["fas", "terminal"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#007acc",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open command palette",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "p"] }
+          }
+        },
+        {
+          "id": "btn-vscode-terminal",
+          "label": "Terminal",
+          "secondary_label": "Ctrl+`",
+          "icon": ["fas", "terminal"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#1e1e1e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Toggle terminal",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "`"] }
+          }
+        },
+        {
+          "id": "btn-vscode-sidebar",
+          "label": "Sidebar",
+          "secondary_label": "Ctrl+B",
+          "icon": ["fas", "bars"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#1e1e1e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Toggle sidebar",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "b"] }
+          }
+        },
+        {
+          "id": "btn-vscode-quick-open",
+          "label": "Quick Open",
+          "secondary_label": "Ctrl+P",
+          "icon": ["fas", "search"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#007acc",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Quick file open",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "p"] }
+          }
+        },
+        {
+          "id": "btn-vscode-settings",
+          "label": "Settings",
+          "secondary_label": "Ctrl+,",
+          "icon": ["fas", "gear"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#1e1e1e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open settings",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", ","] }
+          }
+        },
+        {
+          "id": "btn-vscode-find",
+          "label": "Find",
+          "secondary_label": "Ctrl+F",
+          "icon": ["fas", "magnifying-glass"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#007acc",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find in file",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "f"] }
+          }
+        },
+        {
+          "id": "btn-vscode-replace",
+          "label": "Replace",
+          "secondary_label": "Ctrl+H",
+          "icon": ["fas", "arrows-rotate"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#007acc",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find and replace",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "h"] }
+          }
+        },
+        {
+          "id": "btn-vscode-find-all",
+          "label": "Find All",
+          "secondary_label": "Ctrl+Shift+F",
+          "icon": ["fas", "magnifying-glass"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#007acc",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find in all files",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "f"] }
+          }
+        },
+        {
+          "id": "btn-vscode-format",
+          "label": "Format",
+          "secondary_label": "Shift+Alt+F",
+          "icon": ["fas", "align-left"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a085",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Format document",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["shift", "alt", "f"] }
+          }
+        },
+        {
+          "id": "btn-vscode-save",
+          "label": "Save",
+          "secondary_label": "Ctrl+S",
+          "icon": ["fas", "floppy-disk"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a085",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Save file",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "s"] }
+          }
+        },
+        {
+          "id": "btn-vscode-save-all",
+          "label": "Save All",
+          "secondary_label": "Ctrl+K S",
+          "icon": ["fas", "floppy-disk"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a085",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Save all files",
+          "enabled": true,
+          "action": {
+            "type": "macro",
+            "config": {
+              "steps": [
+                { "type": "hotkey", "keys": ["ctrl", "k"] },
+                { "type": "delay", "duration": 50 },
+                { "type": "hotkey", "keys": ["s"] }
+              ]
+            }
+          }
+        },
+        {
+          "id": "btn-vscode-comment",
+          "label": "Comment",
+          "secondary_label": "Ctrl+/",
+          "icon": ["fas", "comment"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#95a5a6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Toggle comment",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "/"] }
+          }
+        },
+        {
+          "id": "btn-vscode-dup-line",
+          "label": "Duplicate",
+          "secondary_label": "Shift+Alt+↓",
+          "icon": ["fas", "clone"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#9b59b6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Duplicate line",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["shift", "alt", "down"] }
+          }
+        },
+        {
+          "id": "btn-vscode-multi-cursor",
+          "label": "Multi-Cursor",
+          "secondary_label": "Ctrl+Alt+↓",
+          "icon": ["fas", "i-cursor"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#9b59b6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Add cursor below",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "alt", "down"] }
+          }
+        },
+        {
+          "id": "btn-vscode-go-to-def",
+          "label": "Definition",
+          "secondary_label": "F12",
+          "icon": ["fas", "arrow-right"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#e67e22",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Go to definition",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["f12"] }
+          }
+        },
+        {
+          "id": "btn-vscode-git",
+          "label": "Git",
+          "secondary_label": "Ctrl+Shift+G",
+          "icon": ["fas", "code-branch"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#f39c12",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open source control",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "g"] }
+          }
+        },
+        {
+          "id": "btn-vscode-debug",
+          "label": "Debug",
+          "secondary_label": "F5",
+          "icon": ["fas", "bug"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#e74c3c",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Start debugging",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["f5"] }
+          }
+        },
+        {
+          "id": "btn-vscode-extensions",
+          "label": "Extensions",
+          "secondary_label": "Ctrl+Shift+X",
+          "icon": ["fas", "puzzle-piece"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#34495e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open extensions",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "x"] }
+          }
+        },
+        {
+          "id": "btn-vscode-zen-mode",
+          "label": "Zen Mode",
+          "secondary_label": "Ctrl+K Z",
+          "icon": ["fas", "eye"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#34495e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Toggle zen mode",
+          "enabled": true,
+          "action": {
+            "type": "macro",
+            "config": {
+              "steps": [
+                { "type": "hotkey", "keys": ["ctrl", "k"] },
+                { "type": "delay", "duration": 50 },
+                { "type": "hotkey", "keys": ["z"] }
+              ]
+            }
+          }
+        },
+        {
+          "id": "btn-vscode-split",
+          "label": "Split Editor",
+          "secondary_label": "Ctrl+\\",
+          "icon": ["fas", "columns"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#34495e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Split editor",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "\\"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -6,18 +6,35 @@ from typing import Dict, Any, Optional
 class ActionResult:
     """Result of an action execution."""
     
-    def __init__(self, success: bool, message: str = '', data: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, 
+        success: bool, 
+        message: str = '', 
+        data: Optional[Dict[str, Any]] = None,
+        error_code: Optional[int] = None,
+        details: Optional[str] = None
+    ):
         self.success = success
         self.message = message
         self.data = data or {}
+        self.error_code = error_code
+        self.details = details
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        result = {
             'success': self.success,
             'message': self.message,
             'data': self.data
         }
+        
+        if self.error_code is not None:
+            result['error_code'] = self.error_code
+        
+        if self.details:
+            result['details'] = self.details
+        
+        return result
 
 
 class BaseAction(ABC):
