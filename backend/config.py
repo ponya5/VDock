@@ -17,9 +17,14 @@ class Config:
     PORT = int(os.environ.get('PORT', 5000))
     
     # Security settings
-    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'False').lower() == 'true'
-    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', 'admin')  # Default password
+    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'True').lower() == 'true'  # Auth enabled by default
+    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD')  # Must be set in environment
     TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
+    
+    # Rate limiting settings
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'True').lower() == 'true'
+    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    RATELIMIT_DEFAULT = os.environ.get('RATELIMIT_DEFAULT', '200 per day, 50 per hour')
     
     # Network settings
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001').split(',')
@@ -42,7 +47,13 @@ class Config:
     
     # Command execution settings
     REQUIRE_COMMAND_CONFIRMATION = os.environ.get('REQUIRE_COMMAND_CONFIRMATION', 'True').lower() == 'true'
-    ALLOWED_COMMAND_PATTERNS = []
+    ALLOW_COMMAND_EXECUTION = os.environ.get('ALLOW_COMMAND_EXECUTION', 'False').lower() == 'true'
+    ALLOWED_COMMAND_PATTERNS = [
+        # Only allow safe, predefined commands
+        'shutdown', 'restart', 'lock', 'sleep',
+        'volume_up', 'volume_down', 'volume_mute',
+        'media_play_pause', 'media_next', 'media_previous', 'media_stop'
+    ]
     
     # Weather API settings
     WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')

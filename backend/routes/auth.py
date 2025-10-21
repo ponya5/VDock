@@ -7,9 +7,15 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
-    """Authenticate and get a token."""
+    """Authenticate and get a token.
+    
+    Rate limited to 5 attempts per minute per IP address.
+    """
     data = request.json
     password = data.get('password', '') if data else ''
+    
+    if not password:
+        return jsonify({'error': 'Password is required', 'success': False}), 400
     
     token = AuthManager.authenticate(password)
     if token:

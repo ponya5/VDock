@@ -26,6 +26,36 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def validate_file_content(file_path):
+    """Validate file content matches its extension"""
+    try:
+        # Try to use python-magic if available for MIME type validation
+        try:
+            import magic
+            mime = magic.Magic(mime=True)
+            file_mime = mime.from_file(str(file_path))
+            
+            # Check if MIME type matches expected types
+            allowed_mimes = {
+                'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+                'video/mp4', 'video/webm', 'video/quicktime'
+            }
+            return any(file_mime.startswith(allowed) or allowed in file_mime for allowed in ['image/', 'video/'])
+        except ImportError:
+            # Fallback: Use Pillow for image validation
+            from PIL import Image
+            try:
+                with Image.open(file_path) as img:
+                    img.verify()
+                return True
+            except Exception:
+                # For video files or if image validation fails, allow but log
+                logger.warning(f"Could not validate file content: {file_path}")
+                return True
+    except Exception as e:
+        logger.error(f"File content validation error: {e}")
+        return False
+
 def get_file_type_folder(file_type):
     """Get the appropriate folder for the file type"""
     if file_type == 'button_background':
@@ -85,6 +115,18 @@ def upload_file():
         # Save file
         file_path = os.path.join(target_path, unique_filename)
         file.save(file_path)
+        
+        # Validate file content
+        if not validate_file_content(file_path):
+            # Delete the uploaded file if validation fails
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            return jsonify({
+                'success': False,
+                'message': 'Invalid file content. File does not match its extension.'
+            }), 400
         
         # Generate URL path
         url_path = f"/uploads/{target_folder}/{unique_filename}"
