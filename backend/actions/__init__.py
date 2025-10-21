@@ -6,6 +6,7 @@ from .command_action import CommandAction
 from .hotkey_action import HotkeyAction
 from .multi_action import MultiAction
 from .system_action import SystemAction
+from .weather_action import WeatherAction
 from .action_executor import ActionExecutor
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     'HotkeyAction',
     'MultiAction',
     'SystemAction',
+    'WeatherAction',
     'ActionExecutor'
 ]
 

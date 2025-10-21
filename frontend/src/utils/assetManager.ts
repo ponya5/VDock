@@ -180,11 +180,14 @@ class AssetManager {
     for (const [categoryId, indexPath] of Object.entries(animationIndex.categories.gifs)) {
       const categoryData = await this.loadJSON(`/assets/${indexPath}`)
       if (categoryData && categoryData.animations) {
+        // Determine asset type based on category
+        const assetType = categoryId === 'buttons' ? 'icon' : 'animation'
+        
         const assets: AssetMetadata[] = categoryData.animations.map((anim: any) => ({
           id: anim.id,
           name: anim.name,
           category: `gif-${categoryId}`,
-          type: 'animation' as const,
+          type: assetType as const,
           format: 'gif',
           size: anim.size,
           dimensions: anim.dimensions,
