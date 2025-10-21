@@ -44,6 +44,9 @@ class Config:
     REQUIRE_COMMAND_CONFIRMATION = os.environ.get('REQUIRE_COMMAND_CONFIRMATION', 'True').lower() == 'true'
     ALLOWED_COMMAND_PATTERNS = []
     
+    # Weather API settings
+    WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')
+    
     @classmethod
     def init_app(cls):
         """Initialize application directories and configuration."""
