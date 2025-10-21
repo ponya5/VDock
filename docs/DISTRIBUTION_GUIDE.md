@@ -170,6 +170,7 @@ For sharing with other developers who want to modify the code:
 - Configuration files (`.env.example`, `package.json`, `requirements.txt`)
 - Documentation (`docs/` folder)
 - Installation scripts (`install.bat`, `install.sh`)
+- Working weather functionality (demo API key included)
 
 ### What to Exclude:
 - `node_modules/`

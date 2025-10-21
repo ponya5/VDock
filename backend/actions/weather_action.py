@@ -39,12 +39,12 @@ class WeatherAction(BaseAction):
             temp_unit = self.config.get('temperature_unit', 'C')
 
             # Check if API key is available
-            if not self.api_key:
+            if not self.api_key or self.api_key == 'demo-key-replace-with-your-own':
                 logger.warning("WeatherAPI.com API key not configured, using mock data")
                 mock_data = self._get_mock_weather_data(location, temp_unit)
                 return ActionResult(
                     success=True,
-                    message=f"Weather data fetched for {location} (mock data - API key not configured)",
+                    message=f"Weather data fetched for {location} (demo mode - get your own API key at weatherapi.com)",
                     data=mock_data['data']
                 )
 
@@ -56,8 +56,26 @@ class WeatherAction(BaseAction):
             }
 
             response = requests.get(self.base_url, params=params, timeout=10)
+            
+            # Handle API errors gracefully
+            if response.status_code == 401:
+                logger.warning("WeatherAPI.com API key invalid, falling back to mock data")
+                mock_data = self._get_mock_weather_data(location, temp_unit)
+                return ActionResult(
+                    success=True,
+                    message=f"Weather data fetched for {location} (demo mode - API key invalid, get your own at weatherapi.com)",
+                    data=mock_data['data']
+                )
+            elif response.status_code == 403:
+                logger.warning("WeatherAPI.com rate limit exceeded, falling back to mock data")
+                mock_data = self._get_mock_weather_data(location, temp_unit)
+                return ActionResult(
+                    success=True,
+                    message=f"Weather data fetched for {location} (demo mode - rate limit exceeded, get your own API key)",
+                    data=mock_data['data']
+                )
+            
             response.raise_for_status()
-
             data = response.json()
 
             # Extract weather data from WeatherAPI.com response
@@ -107,7 +125,7 @@ class WeatherAction(BaseAction):
             mock_data = self._get_mock_weather_data(location, temp_unit)
             return ActionResult(
                 success=True,
-                message=f"Weather data fetched for {location} (fallback data - API unavailable)",
+                message=f"Weather data fetched for {location} (demo mode - API unavailable, get your own key at weatherapi.com)",
                 data=mock_data['data']
             )
         except Exception as e:
@@ -116,7 +134,7 @@ class WeatherAction(BaseAction):
             mock_data = self._get_mock_weather_data(location, temp_unit)
             return ActionResult(
                 success=True,
-                message=f"Weather data fetched for {location} (fallback data - error occurred)",
+                message=f"Weather data fetched for {location} (demo mode - error occurred, get your own key at weatherapi.com)",
                 data=mock_data['data']
             )
 

@@ -55,6 +55,12 @@
           {{ weatherData.location }}
         </div>
         
+        <!-- Demo mode indicator -->
+        <div v-if="isDemoMode" class="demo-mode-indicator">
+          <FontAwesomeIcon :icon="['fas', 'info-circle']" />
+          <span>Demo Mode - Get your own API key at weatherapi.com</span>
+        </div>
+        
         <div class="weather-details">
           <div class="detail-item">
             <FontAwesomeIcon :icon="['fas', 'tint']" />
@@ -109,6 +115,7 @@ interface WeatherData {
 const weatherData = ref<WeatherData | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const isDemoMode = ref(false)
 let intervalId: number | null = null
 
 const weatherClass = computed(() => {
@@ -168,6 +175,9 @@ async function fetchWeather() {
     })
     
     weatherData.value = response.data.data
+    
+    // Check if we're in demo mode based on the message
+    isDemoMode.value = response.data.message && response.data.message.includes('demo mode')
   } catch (err: any) {
     console.error('Failed to fetch weather:', err)
     
@@ -186,6 +196,7 @@ async function fetchWeather() {
     }
     
     error.value = null // Clear error for mock data
+    isDemoMode.value = true // Mock data means demo mode
   } finally {
     loading.value = false
   }
@@ -415,6 +426,24 @@ onUnmounted(() => {
   opacity: 0.8;
   line-height: 1;
   text-align: center;
+}
+
+.demo-mode-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  color: #ffc107;
+  opacity: 0.9;
+}
+
+.demo-mode-indicator svg {
+  font-size: 0.8rem;
 }
 </style>
 
