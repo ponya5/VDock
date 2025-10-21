@@ -1,10 +1,12 @@
 """
 Macro Action Handler
-Executes a sequence of actions with delays
+Executes a sequence of actions with delays and advanced features
+Supports: hotkey, delay, text, click, clipboard operations
 """
 import time
 import logging
-from typing import List, Dict, Any
+import pyperclip
+from typing import Dict, Any
 from .base_action import BaseAction
 from .hotkey_action import HotkeyAction
 from .command_action import CommandAction
@@ -58,6 +60,12 @@ class MacroAction(BaseAction):
                         result = self._execute_text(step)
                     elif step_type == 'click':
                         result = self._execute_click(step)
+                    elif step_type == 'clipboard_copy':
+                        result = self._execute_clipboard_copy(step)
+                    elif step_type == 'clipboard_paste':
+                        result = self._execute_clipboard_paste(step)
+                    elif step_type == 'clipboard_set':
+                        result = self._execute_clipboard_set(step)
                     else:
                         result = {
                             'success': False,
@@ -162,6 +170,88 @@ class MacroAction(BaseAction):
                 'message': f'Click failed: {str(e)}'
             }
     
+    def _execute_clipboard_copy(self, step: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute clipboard copy (Ctrl+C equivalent)"""
+        try:
+            # Simulate Ctrl+C
+            self.hotkey_action.execute({'combo': 'ctrl+c'})
+            time.sleep(0.1)  # Wait for clipboard to update
+
+            # Try to read clipboard to verify
+            try:
+                clipboard_content = pyperclip.paste()
+                preview = clipboard_content[:100] if len(
+                    clipboard_content) > 100 else clipboard_content
+                return {
+                    'success': True,
+                    'message': (f'Copied to clipboard '
+                                f'(length: {len(clipboard_content)} chars)'),
+                    'clipboard_preview': preview
+                }
+            except Exception:
+                return {
+                    'success': True,
+                    'message': 'Copy command sent (clipboard not readable)'
+                }
+        except Exception as e:
+            logger.error(f"Clipboard copy error: {e}")
+            return {
+                'success': False,
+                'message': f'Clipboard copy failed: {str(e)}'
+            }
+    
+    def _execute_clipboard_paste(self, step: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute clipboard paste (Ctrl+V equivalent)"""
+        try:
+            # Simulate Ctrl+V
+            self.hotkey_action.execute({'combo': 'ctrl+v'})
+
+            # Try to read what was pasted
+            try:
+                clipboard_content = pyperclip.paste()
+                preview = clipboard_content[:100] if len(
+                    clipboard_content) > 100 else clipboard_content
+                return {
+                    'success': True,
+                    'message': (f'Pasted from clipboard '
+                                f'(length: {len(clipboard_content)} chars)'),
+                    'clipboard_preview': preview
+                }
+            except Exception:
+                return {
+                    'success': True,
+                    'message': 'Paste command sent'
+                }
+        except Exception as e:
+            logger.error(f"Clipboard paste error: {e}")
+            return {
+                'success': False,
+                'message': f'Clipboard paste failed: {str(e)}'
+            }
+    
+    def _execute_clipboard_set(self, step: Dict[str, Any]) -> Dict[str, Any]:
+        """Set clipboard content without pasting"""
+        text = step.get('text', '')
+        if not text:
+            return {
+                'success': False,
+                'message': 'No text specified for clipboard'
+            }
+        
+        try:
+            pyperclip.copy(text)
+            return {
+                'success': True,
+                'message': f'Clipboard set (length: {len(text)} chars)',
+                'clipboard_preview': text[:100] if len(text) > 100 else text
+            }
+        except Exception as e:
+            logger.error(f"Clipboard set error: {e}")
+            return {
+                'success': False,
+                'message': f'Failed to set clipboard: {str(e)}'
+            }
+    
     def validate_config(self, config: Dict[str, Any]) -> bool:
         """Validate macro configuration"""
         if 'steps' not in config:
@@ -171,7 +261,10 @@ class MacroAction(BaseAction):
         if not isinstance(steps, list) or len(steps) == 0:
             return False
         
-        valid_step_types = ['hotkey', 'delay', 'text', 'click']
+        valid_step_types = [
+            'hotkey', 'delay', 'text', 'click',
+            'clipboard_copy', 'clipboard_paste', 'clipboard_set'
+        ]
         for step in steps:
             if 'type' not in step:
                 return False

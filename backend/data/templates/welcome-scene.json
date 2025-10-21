@@ -1,0 +1,346 @@
+{
+  "id": "template-welcome",
+  "name": "Welcome to VDock",
+  "description": "Essential controls to get you started",
+  "icon": "fa-home",
+  "color": "#667eea",
+  "category": "essentials",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-essentials",
+      "name": "Essential Controls",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-media-play-pause",
+          "label": "Play/Pause",
+          "icon": ["fas", "play"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#3498db",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Play or pause media",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "media_play_pause" }
+          }
+        },
+        {
+          "id": "btn-media-previous",
+          "label": "Previous",
+          "icon": ["fas", "backward"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#3498db",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Previous track",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "media_previous" }
+          }
+        },
+        {
+          "id": "btn-media-next",
+          "label": "Next",
+          "icon": ["fas", "forward"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#3498db",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Next track",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "media_next" }
+          }
+        },
+        {
+          "id": "btn-volume-up",
+          "label": "Vol +",
+          "icon": ["fas", "volume-up"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#27ae60",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Increase volume",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "volume_up", "step": 10 }
+          }
+        },
+        {
+          "id": "btn-volume-down",
+          "label": "Vol -",
+          "icon": ["fas", "volume-down"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#27ae60",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Decrease volume",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "volume_down", "step": 10 }
+          }
+        },
+        {
+          "id": "btn-volume-mute",
+          "label": "Mute",
+          "icon": ["fas", "volume-mute"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#e67e22",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Mute/unmute",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "volume_mute" }
+          }
+        },
+        {
+          "id": "btn-lock",
+          "label": "Lock",
+          "icon": ["fas", "lock"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#34495e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Lock screen",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "lock_screen" }
+          }
+        },
+        {
+          "id": "btn-sleep",
+          "label": "Sleep",
+          "icon": ["fas", "moon"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#9b59b6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Put computer to sleep",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "sleep" }
+          }
+        },
+        {
+          "id": "btn-restart",
+          "label": "Restart",
+          "icon": ["fas", "redo"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#f39c12",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Restart computer",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "restart" }
+          }
+        },
+        {
+          "id": "btn-shutdown",
+          "label": "Shutdown",
+          "icon": ["fas", "power-off"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#e74c3c",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Shutdown computer",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "shutdown" }
+          }
+        },
+        {
+          "id": "btn-fullscreen",
+          "label": "Fullscreen",
+          "icon": ["fas", "expand"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a085",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Toggle fullscreen (F11)",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["f11"] }
+          }
+        },
+        {
+          "id": "btn-screenshot",
+          "label": "Screenshot",
+          "icon": ["fas", "camera"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8e44ad",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Take a screenshot",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "screenshot", "path": "screenshot.png" }
+          }
+        },
+        {
+          "id": "btn-calc",
+          "label": "Calculator",
+          "icon": ["fas", "calculator"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#2c3e50",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open calculator",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "open_app", "path": "calc.exe" }
+          }
+        },
+        {
+          "id": "btn-notepad",
+          "label": "Notepad",
+          "icon": ["fas", "file-alt"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#2c3e50",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open notepad",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "open_app", "path": "notepad.exe" }
+          }
+        },
+        {
+          "id": "btn-file-explorer",
+          "label": "Explorer",
+          "icon": ["fas", "folder-open"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#2c3e50",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open file explorer",
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": { "action": "open_app", "path": "explorer.exe" }
+          }
+        },
+        {
+          "id": "btn-cpu",
+          "label": "CPU",
+          "icon": ["fas", "microchip"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#2980b9",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "CPU usage monitor",
+          "enabled": true,
+          "action": {
+            "type": "metric_cpu_usage",
+            "config": { "refresh_interval": 2 }
+          }
+        },
+        {
+          "id": "btn-memory",
+          "label": "RAM",
+          "icon": ["fas", "memory"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#2980b9",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Memory usage monitor",
+          "enabled": true,
+          "action": {
+            "type": "metric_memory",
+            "config": { "refresh_interval": 2 }
+          }
+        }
+      ]
+    }
+  ]
+}
+

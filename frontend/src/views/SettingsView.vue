@@ -25,15 +25,10 @@
         <section class="settings-section card">
           <h2>Appearance</h2>
           
-          <div class="form-group">
-            <label>Theme</label>
-            <select v-model="settings.currentTheme" class="select">
-              <option value="default">Default (Colorful)</option>
-              <option value="light">Light Mode</option>
-              <option value="dark">Dark Mode</option>
-            </select>
-            <p class="form-help">Choose your preferred color scheme</p>
-          </div>
+          <!-- Theme is fixed to dark mode -->
+
+          <!-- Touch Mode Configuration -->
+          <TouchModeSelector />
 
           <div class="form-group">
             <label>Button Size</label>
@@ -155,6 +150,11 @@
             <p class="form-help">Upload your own image or GIF as a dashboard background (supports PNG, JPG, GIF)</p>
           </div>
 
+        </section>
+
+        <!-- Touch Mode Configuration -->
+        <section class="settings-section card">
+          <TouchModeSelector />
         </section>
       </div>
 
@@ -441,6 +441,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { useDashboardStore } from '@/stores/dashboard'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import TouchModeSelector from '@/components/TouchModeSelector.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
@@ -453,7 +454,6 @@ const profilesStore = useProfilesStore()
 const dashboardStore = useDashboardStore()
 
 const settings = computed(() => settingsStore)
-const themes = computed(() => settingsStore.themes)
 const serverConfig = computed(() => settingsStore.serverConfig)
 
 const activeTab = ref('appearance')
@@ -573,7 +573,7 @@ const tabs = [
 ]
 
 onMounted(() => {
-  settingsStore.loadThemes()
+  // Theme is fixed to dark mode - no need to load themes
   settingsStore.loadServerConfig()
 })
 
@@ -946,7 +946,7 @@ function handleAutoSceneSwitch(sceneId: string, appExe: string) {
 }
 
 onMounted(async () => {
-  settingsStore.loadThemes()
+  // Theme is fixed to dark mode - no need to load themes
   settingsStore.loadServerConfig()
   loadAppIntegrations()
   loadCustomBackground()

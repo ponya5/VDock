@@ -1,0 +1,429 @@
+{
+  "id": "template-ide-jetbrains",
+  "name": "JetBrains IDEs",
+  "description": "Essential shortcuts for IntelliJ, PyCharm, WebStorm, etc.",
+  "icon": "fa-code",
+  "color": "#000000",
+  "category": "development",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-jetbrains-main",
+      "name": "JetBrains Main",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-jetbrains-search-everywhere",
+          "label": "Search All",
+          "secondary_label": "Shift Shift",
+          "icon": ["fas", "search"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#087cfa",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Search everywhere (Double Shift)",
+          "enabled": true,
+          "action": {
+            "type": "macro",
+            "config": {
+              "steps": [
+                { "type": "hotkey", "keys": ["shift"] },
+                { "type": "delay", "duration": 100 },
+                { "type": "hotkey", "keys": ["shift"] }
+              ]
+            }
+          }
+        },
+        {
+          "id": "btn-jetbrains-find-action",
+          "label": "Actions",
+          "secondary_label": "Ctrl+Shift+A",
+          "icon": ["fas", "bolt"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#087cfa",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find action",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "a"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-run",
+          "label": "Run",
+          "secondary_label": "Shift+F10",
+          "icon": ["fas", "play"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#10b981",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Run program",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["shift", "f10"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-debug",
+          "label": "Debug",
+          "secondary_label": "Shift+F9",
+          "icon": ["fas", "bug"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#ef4444",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Debug program",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["shift", "f9"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-stop",
+          "label": "Stop",
+          "secondary_label": "Ctrl+F2",
+          "icon": ["fas", "stop"],
+          "icon_type": "fontawesome",
+          "position": { "row": 0, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#ef4444",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Stop program",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "f2"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-refactor",
+          "label": "Refactor",
+          "secondary_label": "Ctrl+Alt+Shift+T",
+          "icon": ["fas", "wand-magic-sparkles"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Refactor this",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "alt", "shift", "t"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-rename",
+          "label": "Rename",
+          "secondary_label": "Shift+F6",
+          "icon": ["fas", "pen"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Rename symbol",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["shift", "f6"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-reformat",
+          "label": "Format",
+          "secondary_label": "Ctrl+Alt+L",
+          "icon": ["fas", "align-left"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a085",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Reformat code",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "alt", "l"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-optimize",
+          "label": "Optimize",
+          "secondary_label": "Ctrl+Alt+O",
+          "icon": ["fas", "broom"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a085",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Optimize imports",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "alt", "o"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-generate",
+          "label": "Generate",
+          "secondary_label": "Alt+Insert",
+          "icon": ["fas", "plus-circle"],
+          "icon_type": "fontawesome",
+          "position": { "row": 1, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#f59e0b",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Generate code",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["alt", "insert"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-terminal",
+          "label": "Terminal",
+          "secondary_label": "Alt+F12",
+          "icon": ["fas", "terminal"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#1e1e1e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open terminal",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["alt", "f12"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-find",
+          "label": "Find",
+          "secondary_label": "Ctrl+F",
+          "icon": ["fas", "magnifying-glass"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#087cfa",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find in file",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "f"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-replace",
+          "label": "Replace",
+          "secondary_label": "Ctrl+R",
+          "icon": ["fas", "arrows-rotate"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#087cfa",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find and replace",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "r"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-find-all",
+          "label": "Find All",
+          "secondary_label": "Ctrl+Shift+F",
+          "icon": ["fas", "magnifying-glass"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#087cfa",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Find in path",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "f"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-goto-class",
+          "label": "Go to Class",
+          "secondary_label": "Ctrl+N",
+          "icon": ["fas", "file-code"],
+          "icon_type": "fontawesome",
+          "position": { "row": 2, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#e67e22",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Go to class",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "n"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-goto-file",
+          "label": "Go to File",
+          "secondary_label": "Ctrl+Shift+N",
+          "icon": ["fas", "file"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 0 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#e67e22",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Go to file",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "shift", "n"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-comment",
+          "label": "Comment",
+          "secondary_label": "Ctrl+/",
+          "icon": ["fas", "comment"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 1 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#95a5a6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Toggle comment",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "/"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-duplicate",
+          "label": "Duplicate",
+          "secondary_label": "Ctrl+D",
+          "icon": ["fas", "clone"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 2 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#9b59b6",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Duplicate line",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "d"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-recent-files",
+          "label": "Recent",
+          "secondary_label": "Ctrl+E",
+          "icon": ["fas", "clock-rotate-left"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 3 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#34495e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Recent files",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "e"] }
+          }
+        },
+        {
+          "id": "btn-jetbrains-settings",
+          "label": "Settings",
+          "secondary_label": "Ctrl+Alt+S",
+          "icon": ["fas", "gear"],
+          "icon_type": "fontawesome",
+          "position": { "row": 3, "col": 4 },
+          "size": { "rows": 1, "cols": 1 },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#34495e",
+            "textColor": "#ffffff"
+          },
+          "tooltip": "Open settings",
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": { "keys": ["ctrl", "alt", "s"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -46,6 +46,11 @@
         </div>
 
         <div class="header-right">
+          <button class="btn btn-glass enhanced-btn" @click="openQuickSearch" title="Quick Search (Ctrl+K)">
+            <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" />
+            <span class="btn-label">Search</span>
+            <span class="btn-shortcut">Ctrl+K</span>
+          </button>
           <button class="btn btn-glass enhanced-btn" @click="showHelp = true" title="Help & Guide">
             <FontAwesomeIcon :icon="['fas', 'question-circle']" />
             <span class="btn-label">Help</span>
@@ -340,6 +345,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Quick Search -->
+    <QuickSearch ref="quickSearchRef" />
   </div>
 </template>
 
@@ -349,6 +357,7 @@ import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useProfilesStore } from '@/stores/profiles'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotificationsStore } from '@/stores/notifications'
 import type { Button, ActionResult, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
 import PageNavigation from '@/components/PageNavigation.vue'
@@ -356,6 +365,7 @@ import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
+import QuickSearch from '@/components/QuickSearch.vue'
 import FloatingPathsBackground from '@/components/backgrounds/FloatingPathsBackground.vue'
 import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBackgroundV2.vue'
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
@@ -365,12 +375,14 @@ const router = useRouter()
 const dashboardStore = useDashboardStore()
 const profilesStore = useProfilesStore()
 const settingsStore = useSettingsStore()
+const notificationsStore = useNotificationsStore()
 
 const editingButton = ref<Button | null>(null)
 const editingScene = ref<Scene | null>(null)
 const actionResult = ref<ActionResult | null>(null)
 const clipboardButton = ref<Button | null>(null)
 const showHelp = ref(false)
+const quickSearchRef = ref<InstanceType<typeof QuickSearch>>()
 let actionResultTimeout: number | null = null
 
 // Sidebar state
@@ -627,6 +639,10 @@ watch(currentProfile, (profile) => {
 
 function toggleEditMode() {
   dashboardStore.toggleEditMode()
+}
+
+function openQuickSearch() {
+  quickSearchRef.value?.open()
 }
 
 // Sidebar methods
@@ -1462,6 +1478,18 @@ async function saveProfile() {
 }
 
 function showActionResult(result: ActionResult) {
+  // Use new notification system
+  if (result.success) {
+    notificationsStore.success('Action Executed', result.message)
+  } else {
+    notificationsStore.error(
+      'Action Failed',
+      result.message,
+      result.data?.details || undefined
+    )
+  }
+  
+  // Keep old toast for backward compatibility during transition
   actionResult.value = result
 
   if (actionResultTimeout) {
@@ -2186,6 +2214,262 @@ function showActionResult(result: ActionResult) {
 
 .help-section a:hover {
   text-decoration: underline;
+}
+
+/* =============================================
+   RESPONSIVE STYLES
+   ============================================= */
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .deck-header {
+    padding: var(--spacing-sm);
+  }
+  
+  .header-content {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+  
+  .header-left,
+  .header-right {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  
+  .header-center {
+    flex: 1 1 100%;
+    order: 3;
+  }
+  
+  .profile-title-inline {
+    font-size: 1rem;
+  }
+  
+  .enhanced-btn .btn-label {
+    display: none; /* Hide labels on mobile */
+  }
+  
+  .enhanced-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  /* Stack page navigation on mobile */
+  .enhanced-page-nav,
+  .enhanced-scene-nav {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Mobile footer */
+  .deck-footer {
+    flex-wrap: wrap;
+    padding: var(--spacing-sm);
+    margin-right: 0;
+    margin-left: 0;
+  }
+  
+  .footer-section {
+    flex: 1 1 auto;
+  }
+  
+  /* Hide edit sidebar on mobile, show as modal instead */
+  .edit-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 2000;
+  }
+  
+  /* Full width main content on mobile */
+  .main-content {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .main-content.with-sidebar {
+    margin-right: 0 !important;
+  }
+  
+  .main-content.with-docked-sidebar {
+    margin-left: 0 !important;
+  }
+  
+  /* Action toast on mobile */
+  .action-toast {
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+    left: var(--spacing-md);
+    width: auto;
+  }
+  
+  /* Help modal on mobile */
+  .help-modal {
+    width: 100%;
+    max-height: 90vh;
+    margin: 5vh 0;
+  }
+}
+
+/* Tablet (768px - 1365px) */
+@media (min-width: 768px) and (max-width: 1365px) {
+  .profile-title-inline {
+    font-size: 1.1rem;
+  }
+  
+  .enhanced-btn {
+    padding: 0.5rem var(--spacing-sm);
+  }
+  
+  .edit-sidebar {
+    width: 300px;
+  }
+  
+  .main-content.with-sidebar {
+    margin-right: 300px;
+  }
+  
+  .deck-footer {
+    margin-right: 300px;
+  }
+}
+
+/* Large Desktop (1366px - 1919px) */
+@media (min-width: 1366px) and (max-width: 1919px) {
+  .deck-header {
+    padding: var(--spacing-lg);
+  }
+}
+
+/* 4K and Ultra-Wide (>= 1920px) */
+@media (min-width: 1920px) {
+  .deck-header {
+    padding: var(--spacing-xl);
+  }
+  
+  .profile-title-inline {
+    font-size: 1.5rem;
+  }
+  
+  .enhanced-avatar {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .enhanced-btn {
+    padding: 1rem var(--spacing-lg);
+    font-size: 1rem;
+  }
+  
+  .edit-sidebar {
+    width: 400px;
+  }
+  
+  .main-content.with-sidebar {
+    margin-right: 400px;
+  }
+  
+  .deck-footer {
+    margin-right: 400px;
+  }
+  
+  .action-toast {
+    width: 500px;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 767px) and (orientation: landscape) {
+  .deck-header {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  
+  .enhanced-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .profile-title-inline {
+    font-size: 0.95rem;
+  }
+}
+
+/* Touch device specific */
+@media (hover: none) and (pointer: coarse) {
+  .enhanced-btn {
+    min-height: var(--min-touch-target, 44px);
+    min-width: var(--min-touch-target, 44px);
+  }
+  
+  /* Remove hover-dependent label showing */
+  .enhanced-btn .btn-label {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  /* Larger grid gaps for touch */
+  .deck-grid {
+    gap: calc(var(--spacing-md) * 1.2);
+  }
+}
+
+/* Glassmorphism Button Styles */
+.btn-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-glass:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.btn-shortcut {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-xs);
+  margin-left: 0.5rem;
+  font-family: monospace;
+  opacity: 0.7;
+}
+
+.enhanced-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.enhanced-btn .btn-label {
+  white-space: nowrap;
+}
+
+/* Smooth animations for better UX */
+.dashboard-view {
+  animation: fadeInView 0.3s ease-out;
+}
+
+@keyframes fadeInView {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
 

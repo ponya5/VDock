@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Theme, ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const currentTheme = ref('default')
-  const themes = ref<Theme[]>([])
+  // Fixed to dark mode only
+  const currentTheme = ref('dark')
   const serverConfig = ref<ServerConfig | null>(null)
   
   // Window settings
@@ -23,6 +23,22 @@ export const useSettingsStore = defineStore('settings', () => {
   const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
   const dashboardBackground = ref('default')
   const startWithWindows = ref(false)
+  
+  // Touch mode settings
+  const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
+  const minimumTouchTargetSize = ref(44) // px (WCAG 2.1 AA standard)
+  const touchModeMultiplier = computed(() => {
+    switch (touchMode.value) {
+      case 'normal':
+        return 1.0
+      case 'touch-friendly':
+        return 1.5
+      case 'tablet':
+        return 2.0
+      default:
+        return 1.0
+    }
+  })
   
   // Grid settings
   const defaultGridRows = ref(3)
@@ -44,7 +60,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (stored) {
       try {
         const settings = JSON.parse(stored)
-        currentTheme.value = settings.currentTheme || 'default'
+        // Theme is fixed to dark mode
         buttonSize.value = settings.buttonSize || 1.0
         showLabels.value = settings.showLabels !== false
         showTooltips.value = settings.showTooltips !== false
@@ -53,6 +69,8 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
         dashboardBackground.value = settings.dashboardBackground || 'default'
         startWithWindows.value = settings.startWithWindows || false
+        touchMode.value = settings.touchMode || 'normal'
+        minimumTouchTargetSize.value = settings.minimumTouchTargetSize || 44
         defaultGridRows.value = settings.defaultGridRows || 3
         defaultGridCols.value = settings.defaultGridCols || 3
         authEnabled.value = settings.authEnabled || false
@@ -67,7 +85,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Save settings to localStorage
   function saveSettings() {
     const settings = {
-      currentTheme: currentTheme.value,
+      // Theme is fixed to dark mode
       buttonSize: buttonSize.value,
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
@@ -76,6 +94,8 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
       startWithWindows: startWithWindows.value,
+      touchMode: touchMode.value,
+      minimumTouchTargetSize: minimumTouchTargetSize.value,
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
       authEnabled: authEnabled.value,
@@ -87,25 +107,40 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [currentTheme, buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
+      applyTouchModeStyles()
     },
     { deep: true }
   )
-
-  function setTheme(themeId: string) {
-    currentTheme.value = themeId
+  
+  // Apply touch mode styles to document
+  function applyTouchModeStyles() {
+    const root = document.documentElement
+    const multiplier = touchModeMultiplier.value
+    
+    // Update CSS variables based on touch mode
+    root.style.setProperty('--touch-multiplier', multiplier.toString())
+    root.style.setProperty('--min-touch-target', `${minimumTouchTargetSize.value}px`)
+    
+    // Scale spacing
+    root.style.setProperty('--spacing-touch-xs', `${0.25 * multiplier}rem`)
+    root.style.setProperty('--spacing-touch-sm', `${0.5 * multiplier}rem`)
+    root.style.setProperty('--spacing-touch-md', `${1 * multiplier}rem`)
+    root.style.setProperty('--spacing-touch-lg', `${1.5 * multiplier}rem`)
+    
+    // Scale interactive elements
+    root.style.setProperty('--button-padding-v', `${0.75 * multiplier}rem`)
+    root.style.setProperty('--button-padding-h', `${1 * multiplier}rem`)
+    root.style.setProperty('--button-min-height', `${Math.max(36 * multiplier, minimumTouchTargetSize.value)}px`)
+    
+    // Scale icons and text
+    root.style.setProperty('--icon-size', `${1 * multiplier}rem`)
+    root.style.setProperty('--text-scale', multiplier.toString())
   }
 
-  async function loadThemes() {
-    try {
-      const response = await apiClient.get('/themes')
-      themes.value = response.data.themes
-    } catch (err) {
-      console.error('Failed to load themes:', err)
-    }
-  }
+  // Theme is fixed to dark mode - no setTheme function needed
 
   async function loadServerConfig() {
     try {
@@ -168,10 +203,10 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Initialize
   loadSettings()
+  applyTouchModeStyles()
 
   return {
     currentTheme,
-    themes,
     serverConfig,
     windowPinned,
     windowPosition,
@@ -185,13 +220,15 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarWidth,
     dashboardBackground,
     startWithWindows,
+    touchMode,
+    minimumTouchTargetSize,
+    touchModeMultiplier,
     defaultGridRows,
     defaultGridCols,
     authEnabled,
     startOnBoot,
     recentActions,
-    setTheme,
-    loadThemes,
+    applyTouchModeStyles,
     loadServerConfig,
     updateServerConfig,
     addRecentAction,
