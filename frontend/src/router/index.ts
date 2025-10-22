@@ -49,6 +49,12 @@ router.beforeEach(async (to, from, next) => {
 
   // Check if auth is enabled from settings
   const settingsStore = await import('@/stores/settings').then(m => m.useSettingsStore())
+  
+  // Load server config if not already loaded
+  if (!settingsStore.serverConfig) {
+    await settingsStore.loadServerConfig()
+  }
+  
   const authEnabled = settingsStore.authEnabled
 
   if (authEnabled && requiresAuth && !authStore.isAuthenticated) {
