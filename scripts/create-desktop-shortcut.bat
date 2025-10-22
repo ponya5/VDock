@@ -39,20 +39,12 @@ if exist "%PROJECT_ROOT%\dist\VDock-Launcher.exe" (
 ) else if exist "%PROJECT_ROOT%\VDock-Launcher.exe" (
     set "LAUNCHER_PATH=%PROJECT_ROOT%\VDock-Launcher.exe"
     echo Found VDock-Launcher.exe in root
+) else if exist "%PROJECT_ROOT%\Launch-VDock.bat" (
+    set "LAUNCHER_PATH=%PROJECT_ROOT%\Launch-VDock.bat"
+    echo Found Launch-VDock.bat
 ) else (
-    echo VDock-Launcher.exe not found. Building it now...
-    echo.
-    
-    REM Try to build the launcher
-    powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\scripts\build-launcher.ps1"
-    
-    if exist "%PROJECT_ROOT%\dist\VDock-Launcher.exe" (
-        set "LAUNCHER_PATH=%PROJECT_ROOT%\dist\VDock-Launcher.exe"
-        echo ✓ Launcher built successfully
-    ) else (
-        echo Error: Could not build launcher. Using launch.bat instead.
-        set "LAUNCHER_PATH=%PROJECT_ROOT%\launch.bat"
-    )
+    echo No launcher found. Using Launch-VDock.bat as default.
+    set "LAUNCHER_PATH=%PROJECT_ROOT%\Launch-VDock.bat"
 )
 
 echo.
