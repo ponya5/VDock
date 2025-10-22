@@ -135,7 +135,12 @@ class SystemMetrics:
         try:
             temps = psutil.sensors_temperatures()
             if not temps:
-                return {'available': False, 'message': 'Temperature sensors not available'}
+                # Return empty sensors array for platforms without temperature support
+                return {
+                    'available': False,
+                    'message': 'Temperature sensors not available',
+                    'sensors': []
+                }
             
             temp_data = []
             for name, entries in temps.items():
@@ -153,10 +158,19 @@ class SystemMetrics:
                 'sensors': temp_data
             }
         except AttributeError:
-            return {'available': False, 'message': 'Temperature monitoring not supported on this platform'}
+            # Temperature monitoring not supported on this platform
+            return {
+                'available': False,
+                'message': 'Temperature monitoring not supported on this platform',
+                'sensors': []
+            }
         except Exception as e:
             logger.error(f"Error getting temperature metrics: {e}")
-            return {'available': False, 'error': str(e)}
+            return {
+                'available': False,
+                'error': str(e),
+                'sensors': []
+            }
     
     @staticmethod
     def get_battery_metrics() -> Dict[str, Any]:

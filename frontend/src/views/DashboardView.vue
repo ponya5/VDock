@@ -530,9 +530,7 @@ const actionCategories = ref([
     actions: [
       { id: 'metric_memory', name: 'Memory', icon: ['fas', 'memory'] },
       { id: 'metric_cpu_usage', name: 'CPU usage', icon: ['fas', 'microchip'] },
-      { id: 'metric_cpu_temperature', name: 'CPU temperature', icon: ['fas', 'thermometer-half'] },
       { id: 'metric_cpu_frequency', name: 'CPU frequency', icon: ['fas', 'wave-square'] },
-      { id: 'metric_cpu_power', name: 'CPU package power', icon: ['fas', 'bolt'] },
       { id: 'metric_internet_speed', name: 'Internet speed', icon: ['fas', 'network-wired'] },
       { id: 'metric_harddisk', name: 'Harddisk', icon: ['fas', 'hdd'] },
       { id: 'metric_gpu_temperature', name: 'GPU temperature', icon: ['fas', 'thermometer-half'] },
@@ -1034,9 +1032,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
     // Monitor Metrics
     case 'metric_memory':
     case 'metric_cpu_usage':
-    case 'metric_cpu_temperature':
     case 'metric_cpu_frequency':
-    case 'metric_cpu_power':
     case 'metric_internet_speed':
     case 'metric_harddisk':
     case 'metric_gpu_temperature':
@@ -1052,7 +1048,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         style: { ...baseButton.style, backgroundColor: '#2980b9' },
         action: {
           type: action.id as any,
-          config: { refresh_interval: 2 }
+          config: { refresh_interval: 10 }
         }
       }
 
@@ -1258,9 +1254,7 @@ if (!button.action) return
     'time_countdown',
     'metric_memory',
     'metric_cpu_usage',
-    'metric_cpu_temperature',
     'metric_cpu_frequency',
-    'metric_cpu_power',
     'metric_internet_speed',
     'metric_harddisk',
     'metric_gpu_temperature',

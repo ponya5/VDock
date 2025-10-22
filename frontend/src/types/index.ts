@@ -94,6 +94,7 @@ export interface ButtonSize {
 
 export interface ButtonStyle {
   backgroundColor?: string
+  innerBackgroundColor?: string
   borderColor?: string
   borderWidth?: number
   textColor?: string

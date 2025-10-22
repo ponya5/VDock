@@ -31,12 +31,16 @@
       </button>
     </div>
 
-    <div class="button-content">
+    <div class="button-content" :style="buttonContentStyle">
       <!-- Individual Metric Displays -->
       <PerformanceMonitorButton 
-        v-if="isMetricActionType"
+        v-if="isMetricActionType && getMetricFromActionType"
         :metrics="[getMetricFromActionType]"
-        :refresh-interval="button.action?.config?.refresh_interval || 2"
+        :refresh-interval="button.action?.config?.refresh_interval || 10"
+        :custom-icon="button.icon"
+        :custom-icon-type="button.icon_type || 'fontawesome'"
+        :custom-media-url="button.media_url"
+        :custom-media-type="button.media_type"
       />
       
       <!-- World Clock -->
@@ -125,11 +129,11 @@
         />
       </div>
 
-      <div v-if="button.label && showLabels && !isSpecialActionType" class="button-label">
+      <div v-if="button.label && showLabels && !isSpecialActionType" class="button-label" :style="labelStyle">
         {{ button.label }}
       </div>
 
-      <div v-if="button.secondary_label && showLabels && !isSpecialActionType" class="button-secondary-label">
+      <div v-if="button.secondary_label && showLabels && !isSpecialActionType" class="button-secondary-label" :style="secondaryLabelStyle">
         {{ button.secondary_label }}
       </div>
     </div>
@@ -315,6 +319,30 @@ const mediaStyle = computed(() => {
   }
 })
 
+const labelStyle = computed(() => {
+  const fontSize = props.button.style?.fontSize || 16
+  return {
+    fontSize: `${fontSize}px`
+  }
+})
+
+const secondaryLabelStyle = computed(() => {
+  const fontSize = props.button.style?.fontSize || 16
+  return {
+    fontSize: `${fontSize * 0.75}px`
+  }
+})
+
+const buttonContentStyle = computed(() => {
+  const style = props.button.style
+  if (style?.innerBackgroundColor) {
+    return {
+      backgroundColor: style.innerBackgroundColor
+    }
+  }
+  return {}
+})
+
 function parseIcon(iconString: string) {
   // Format: "fas fa-home" or "fab fa-twitter"
   const parts = iconString.split(' ')
@@ -490,6 +518,8 @@ function handleDragEnd() {
   text-align: center;
   width: 100%;
   height: 100%;
+  border-radius: inherit;
+  transition: background-color 0.2s ease;
 }
 
 /* Special action types that render full content */
