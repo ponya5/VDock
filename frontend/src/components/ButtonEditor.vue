@@ -539,6 +539,13 @@
             />
             <div class="icon-size-display">
               <span>{{ editedButton.style?.iconSize || 32 }}px</span>
+              <button 
+                class="restore-default-btn" 
+                @click="restoreDefaultIconSize"
+                title="Restore Default Size"
+              >
+                <FontAwesomeIcon :icon="['fas', 'undo']" />
+              </button>
               <div class="icon-preview">
                 <FontAwesomeIcon 
                   :icon="editedButton.icon || ['fas', 'home']" 
@@ -1913,6 +1920,13 @@ function updateIconSize(event: Event) {
   editedButton.value.style.iconSize = parseInt(target.value)
 }
 
+function restoreDefaultIconSize() {
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.iconSize = 32
+}
+
 // Macro step functions
 // Visual macro builder functions
 function addMacroStep(type: 'hotkey' | 'delay' | 'text' | 'click') {
@@ -2441,6 +2455,23 @@ onUnmounted(() => {
   font-weight: 500;
   color: var(--color-text);
   font-size: 0.875rem;
+}
+
+.restore-default-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.restore-default-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .icon-preview {

@@ -11,7 +11,7 @@
       </div>
       
       <div v-else-if="weatherData" class="weather-content-compact">
-        <div class="weather-icon-compact">
+        <div class="weather-icon-compact" :style="{ fontSize: `${iconSize}px` }">
           <FontAwesomeIcon :icon="weatherIcon" />
         </div>
         <div class="weather-temp-compact">
@@ -40,7 +40,7 @@
       
       <div v-else-if="weatherData" class="weather-content">
         <div class="weather-main">
-          <div class="weather-icon">
+          <div class="weather-icon" :style="{ fontSize: `${iconSize}px` }">
             <FontAwesomeIcon :icon="weatherIcon" />
           </div>
           <div class="weather-temp">
@@ -90,13 +90,15 @@ interface Props {
   refreshInterval?: number
   compact?: boolean
   unit?: string
+  iconSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   location: 'auto',
   refreshInterval: 15, // minutes
   compact: false,
-  unit: 'C'
+  unit: 'C',
+  iconSize: 32
 })
 
 interface WeatherData {
