@@ -167,6 +167,22 @@
               <span>Enable Authentication</span>
             </label>
             <p class="form-help">Require password to access the application</p>
+            <div v-if="settings.authEnabled" class="auth-instructions">
+              <div class="instruction-box">
+                <h4><FontAwesomeIcon :icon="['fas', 'key']" /> Password Configuration</h4>
+                <p><strong>To set your access password:</strong></p>
+                <ol>
+                  <li>Open <code>backend/.env</code> file in a text editor</li>
+                  <li>Find the line: <code>AUTH_PASSWORD=your-secure-password-here</code></li>
+                  <li>Replace <code>your-secure-password-here</code> with your desired password</li>
+                  <li>Save the file and restart VDock</li>
+                </ol>
+                <p class="security-note">
+                  <FontAwesomeIcon :icon="['fas', 'shield-alt']" />
+                  <strong>Security tip:</strong> Use a strong password with at least 12 characters including letters, numbers, and symbols.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
@@ -1626,6 +1642,62 @@ onUnmounted(() => {
     flex-direction: column;
     gap: var(--spacing-sm);
   }
+}
+
+.auth-instructions {
+  margin-top: var(--spacing-md);
+}
+
+.instruction-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-top: var(--spacing-sm);
+}
+
+.instruction-box h4 {
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.instruction-box ol {
+  margin: var(--spacing-md) 0;
+  padding-left: var(--spacing-xl);
+}
+
+.instruction-box li {
+  margin-bottom: var(--spacing-xs);
+  line-height: 1.5;
+}
+
+.instruction-box code {
+  background: var(--color-background);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: var(--color-primary);
+}
+
+.security-note {
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-top: var(--spacing-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  font-size: 0.9em;
+}
+
+.security-note svg {
+  color: var(--color-primary);
+  margin-top: 2px;
 }
 </style>
 

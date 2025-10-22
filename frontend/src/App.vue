@@ -25,9 +25,12 @@ const notificationsStore = useNotificationsStore()
 // Don't show notifications on login page
 const showNotifications = computed(() => route.path !== '/login')
 
-onMounted(() => {
+onMounted(async () => {
   // Initialize API client with notifications store
   apiClient.setNotificationsStore(notificationsStore)
+  
+  // Load server configuration first to determine auth requirements
+  await settingsStore.loadServerConfig()
   
   // Check for saved auth token
   authStore.initAuth()

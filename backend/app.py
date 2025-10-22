@@ -253,6 +253,10 @@ if __name__ == '__main__':
 
     logger.info(f"Starting VDock server on {host}:{port}")
     logger.info(f"Plugins loaded: {len(plugin_manager.plugins)}")
+    
+    if Config.DEBUG:
+        logger.warning("Running in DEBUG mode - not suitable for production!")
+        logger.info("To disable this warning, set DEBUG=False in your .env file")
 
     socketio.run(
         app,

@@ -81,13 +81,26 @@ def create_profile():
         grid_config={'rows': 3, 'cols': 5}
     )
     
+    # Create default scene
+    default_scene = Scene(
+        id=str(uuid.uuid4()),
+        name='Scene 1',
+        icon='home',
+        color='#3498db',
+        pages=[default_page],
+        isActive=True,
+        buttonSize=1.0
+    )
+    
     profile = Profile(
         id=profile_id,
         name=data.get('name', 'New Profile'),
         description=data.get('description', ''),
         icon=data.get('icon') if data.get('icon') else None,
         avatar=data.get('avatar') if data.get('avatar') else None,
-        pages=[default_page],
+        pages=[default_page],  # Backward compatibility
+        scenes=[default_scene],  # New scenes structure
+        dockedButtons=[],  # Initialize empty docked buttons
         theme=data.get('theme', 'default'),
         settings=ProfileSettings(),
         created_at=timestamp,

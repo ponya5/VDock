@@ -366,6 +366,7 @@ import FloatingPathsBackground from '@/components/backgrounds/FloatingPathsBackg
 import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBackgroundV2.vue'
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { createDemoProfile, isFirstTimeUser } from '@/utils/demoProfile'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -606,13 +607,16 @@ onMounted(async () => {
     }
   }
 
-  // Load first available profile
+  // Load first available profile or create demo profile for first-time users
   await profilesStore.loadProfiles()
   if (profilesStore.profiles.length > 0) {
     const profile = await profilesStore.getProfile(profilesStore.profiles[0].id)
     if (profile) {
       dashboardStore.setProfile(profile)
     }
+  } else {
+    // First-time user: create demo profile
+    await createDemoProfileForFirstTimeUser()
   }
   
   // Add keyboard shortcuts
@@ -1211,6 +1215,55 @@ async function handleButtonClick(button: Button) {
 async function handleSaveProfileFromEditor() {
   console.log('DashboardView: saving profile from editor')
   await saveProfile()
+}
+
+async function createDemoProfileForFirstTimeUser() {
+  try {
+    console.log('Creating demo profile for first-time user...')
+    
+    // Create the demo profile
+    const demoProfile = createDemoProfile()
+    
+    // Save it via the profiles store
+    const createdProfile = await profilesStore.createProfile({
+      name: demoProfile.name,
+      description: demoProfile.description,
+      theme: demoProfile.theme
+    })
+    
+    if (createdProfile) {
+      // Update the created profile with our demo scenes and buttons
+      const updatedProfile = await profilesStore.updateProfile(createdProfile.id, {
+        ...demoProfile,
+        id: createdProfile.id // Keep the server-generated ID
+      })
+      
+      if (updatedProfile) {
+        // Load the demo profile
+        dashboardStore.setProfile(updatedProfile)
+        
+        // Show welcome notification
+        notificationsStore.success(
+          'Welcome to VDock!',
+          'We\'ve created a demo profile to get you started. Explore the buttons to see what VDock can do!',
+          { duration: 8000 }
+        )
+        
+        console.log('Demo profile created and loaded successfully')
+      } else {
+        console.error('Failed to update demo profile with scenes')
+      }
+    } else {
+      console.error('Failed to create demo profile')
+    }
+  } catch (error) {
+    console.error('Error creating demo profile:', error)
+    notificationsStore.error(
+      'Setup Error',
+      'Failed to create demo profile. You can create your own profile from the Profiles page.',
+      { duration: 6000 }
+    )
+  }
 }
 
 async function handleButtonSave(button: Button) {
