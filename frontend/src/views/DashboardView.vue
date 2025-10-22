@@ -148,7 +148,7 @@
 
           <div class="categories-section">
             <div 
-              v-for="category in filteredCategories" 
+              v-for="(category, index) in filteredCategories" 
               :key="category.id"
               class="category-group"
             >
@@ -156,11 +156,31 @@
                 class="category-header" 
                 @click="toggleCategory(category.id)"
               >
-                <FontAwesomeIcon 
-                  :icon="['fas', expandedCategories.includes(category.id) ? 'chevron-down' : 'chevron-right']" 
-                />
-                <span>{{ category.name }}</span>
-                <span class="category-count">({{ category.actions.length }})</span>
+                <div class="category-title">
+                  <FontAwesomeIcon 
+                    :icon="['fas', expandedCategories.includes(category.id) ? 'chevron-down' : 'chevron-right']" 
+                  />
+                  <span>{{ category.name }}</span>
+                  <span class="category-count">({{ category.actions.length }})</span>
+                </div>
+                <div class="category-controls" v-if="!actionSearch" @click.stop>
+                  <button 
+                    class="btn-icon" 
+                    :disabled="index === 0"
+                    @click="moveCategoryUp(index)"
+                    title="Move Up"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'arrow-up']" />
+                  </button>
+                  <button 
+                    class="btn-icon" 
+                    :disabled="index === actionCategories.length - 1"
+                    @click="moveCategoryDown(index)"
+                    title="Move Down"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'arrow-down']" />
+                  </button>
+                </div>
               </div>
 
               <div 
@@ -219,20 +239,18 @@
           <FontAwesomeIcon :icon="['fas', 'plus']" />
           Add Page
         </button>
-      </div>
-
-      <div class="footer-section footer-spacer"></div>
-
-      <div class="footer-section">
         <button
           class="btn btn-success btn-sm"
           @click="saveProfile"
           title="Save all changes to profile"
+          style="margin-left: var(--spacing-sm);"
         >
           <FontAwesomeIcon :icon="['fas', 'save']" />
           Save Profile
         </button>
       </div>
+
+      <div class="footer-section footer-spacer"></div>
     </footer>
 
     <!-- Button Editor Modal -->
@@ -391,7 +409,7 @@ let actionResultTimeout: number | null = null
 
 // Sidebar state
 const actionSearch = ref('')
-const expandedCategories = ref<string[]>(['system', 'media', 'web', 'metrics', 'time', 'weather', 'navigation'])
+const expandedCategories = ref<string[]>(['quick-launch', 'system', 'audio', 'media', 'window-management', 'web', 'text', 'metrics', 'time', 'weather', 'navigation'])
 const selectedAction = ref<any>(null)
 
 const currentProfile = computed(() => dashboardStore.currentProfile)
@@ -454,6 +472,20 @@ const dashboardBackgroundStyle = computed(() => {
 // Button action categories
 const actionCategories = ref([
   {
+    id: 'quick-launch',
+    name: 'Quick Launch',
+    actions: [
+      { id: 'launch-browser', name: 'Web Browser', icon: ['fas', 'globe'] },
+      { id: 'launch-file-explorer', name: 'File Explorer', icon: ['fas', 'folder'] },
+      { id: 'launch-calculator', name: 'Calculator', icon: ['fas', 'calculator'] },
+      { id: 'launch-notepad', name: 'Notepad', icon: ['fas', 'file-alt'] },
+      { id: 'launch-cmd', name: 'Command Prompt', icon: ['fas', 'terminal'] },
+      { id: 'launch-powershell', name: 'PowerShell', icon: ['fas', 'terminal'] },
+      { id: 'launch-paint', name: 'Paint', icon: ['fas', 'paint-brush'] },
+      { id: 'launch-snipping-tool', name: 'Snipping Tool', icon: ['fas', 'cut'] }
+    ]
+  },
+  {
     id: 'system',
     name: 'System',
     actions: [
@@ -461,9 +493,23 @@ const actionCategories = ref([
       { id: 'restart', name: 'Restart', icon: ['fas', 'redo'] },
       { id: 'sleep', name: 'Sleep', icon: ['fas', 'moon'] },
       { id: 'lock', name: 'Lock Screen', icon: ['fas', 'lock'] },
-      { id: 'fullscreen', name: 'Full Screen', icon: ['fas', 'expand'] },
       { id: 'brightness-up', name: 'Brightness Up', icon: ['fas', 'sun'] },
-      { id: 'brightness-down', name: 'Brightness Down', icon: ['fas', 'moon'] }
+      { id: 'brightness-down', name: 'Brightness Down', icon: ['fas', 'moon'] },
+      { id: 'empty-recycle-bin', name: 'Empty Recycle Bin', icon: ['fas', 'trash-alt'] },
+      { id: 'task-manager', name: 'Task Manager', icon: ['fas', 'tasks'] },
+      { id: 'control-panel', name: 'Control Panel', icon: ['fas', 'cog'] },
+      { id: 'device-manager', name: 'Device Manager', icon: ['fas', 'hard-drive'] }
+    ]
+  },
+  {
+    id: 'audio',
+    name: 'Audio & Volume',
+    actions: [
+      { id: 'volume-up', name: 'Volume Up', icon: ['fas', 'volume-up'] },
+      { id: 'volume-down', name: 'Volume Down', icon: ['fas', 'volume-down'] },
+      { id: 'mute', name: 'Mute/Unmute', icon: ['fas', 'volume-mute'] },
+      { id: 'microphone-mute', name: 'Mute Microphone', icon: ['fas', 'microphone-slash'] },
+      { id: 'microphone-unmute', name: 'Unmute Microphone', icon: ['fas', 'microphone'] }
     ]
   },
   {
@@ -473,10 +519,18 @@ const actionCategories = ref([
       { id: 'play-pause', name: 'Play/Pause', icon: ['fas', 'play'] },
       { id: 'next-track', name: 'Next Track', icon: ['fas', 'forward'] },
       { id: 'prev-track', name: 'Previous Track', icon: ['fas', 'backward'] },
-      { id: 'stop', name: 'Stop', icon: ['fas', 'stop'] },
-      { id: 'volume-up-media', name: 'Volume Up', icon: ['fas', 'volume-up'] },
-      { id: 'volume-down-media', name: 'Volume Down', icon: ['fas', 'volume-down'] },
-      { id: 'mute-media', name: 'Mute', icon: ['fas', 'volume-mute'] }
+      { id: 'stop', name: 'Stop', icon: ['fas', 'stop'] }
+    ]
+  },
+  {
+    id: 'window-management',
+    name: 'Window Management',
+    actions: [
+      { id: 'minimize-window', name: 'Minimize Window', icon: ['fas', 'window-minimize'] },
+      { id: 'maximize-window', name: 'Maximize Window', icon: ['fas', 'window-maximize'] },
+      { id: 'close-window', name: 'Close Window', icon: ['fas', 'window-close'] },
+      { id: 'switch-window', name: 'Switch Window (Alt+Tab)', icon: ['fas', 'window-restore'] },
+      { id: 'show-desktop', name: 'Show Desktop', icon: ['fas', 'desktop'] }
     ]
   },
   {
@@ -488,7 +542,8 @@ const actionCategories = ref([
       { id: 'open-folder', name: 'Open Folder', icon: ['fas', 'folder-open'] },
       { id: 'open-file', name: 'Open File', icon: ['fas', 'file'] },
       { id: 'screenshot', name: 'Screenshot', icon: ['fas', 'camera'] },
-      { id: 'clipboard', name: 'Copy to Clipboard', icon: ['fas', 'clipboard'] }
+      { id: 'run-command', name: 'Run Command', icon: ['fas', 'terminal'] },
+      { id: 'close-app', name: 'Close Application', icon: ['fas', 'times-circle'] }
     ]
   },
   {
@@ -498,12 +553,53 @@ const actionCategories = ref([
       { id: 'type-text', name: 'Type Text', icon: ['fas', 'keyboard'] },
       { id: 'hotkey', name: 'Hotkey', icon: ['fas', 'keyboard'] },
       { id: 'macro', name: 'Macro (Multiple Actions)', icon: ['fas', 'list-ol'] },
-      { id: 'delay', name: 'Delay', icon: ['fas', 'clock'] }
+      { id: 'clipboard', name: 'Copy to Clipboard', icon: ['fas', 'clipboard'] }
+    ]
+  },
+  {
+    id: 'metrics',
+    name: 'Monitor Metrics',
+    actions: [
+      { id: 'metric_cpu_usage', name: 'CPU Usage', icon: ['fas', 'microchip'] },
+      { id: 'metric_memory', name: 'Memory', icon: ['fas', 'memory'] },
+      { id: 'metric_harddisk', name: 'Hard Disk', icon: ['fas', 'hdd'] },
+      { id: 'metric_cpu_frequency', name: 'CPU Frequency', icon: ['fas', 'wave-square'] },
+      { id: 'metric_internet_speed', name: 'Internet Speed', icon: ['fas', 'network-wired'] },
+      { id: 'metric_gpu_temperature', name: 'GPU Temperature', icon: ['fas', 'thermometer-half'] },
+      { id: 'metric_gpu_usage', name: 'GPU Core Usage', icon: ['fas', 'grip-vertical'] },
+      { id: 'metric_gpu_memory_usage', name: 'GPU Memory Usage', icon: ['fas', 'memory'] },
+      { id: 'metric_gpu_frequency', name: 'GPU Core Frequency', icon: ['fas', 'wave-square'] },
+      { id: 'metric_gpu_memory_freq', name: 'GPU Memory Frequency', icon: ['fas', 'memory'] }
+    ]
+  },
+  {
+    id: 'time',
+    name: 'Time & Date',
+    actions: [
+      { id: 'time_world_clock', name: 'World Time', icon: ['fas', 'globe'] },
+      { id: 'time_timer', name: 'Timer', icon: ['fas', 'stopwatch'] },
+      { id: 'time_countdown', name: 'Countdown', icon: ['fas', 'hourglass-half'] }
+    ]
+  },
+  {
+    id: 'weather',
+    name: 'Weather',
+    actions: [
+      { id: 'weather', name: 'Weather', icon: ['fas', 'cloud-sun'] }
+    ]
+  },
+  {
+    id: 'navigation',
+    name: 'Navigation',
+    actions: [
+      { id: 'next-page', name: 'Next Page', icon: ['fas', 'arrow-right'] },
+      { id: 'previous-page', name: 'Previous Page', icon: ['fas', 'arrow-left'] },
+      { id: 'home-page', name: 'Home Page', icon: ['fas', 'home'] }
     ]
   },
   {
     id: 'streaming',
-    name: 'Streaming',
+    name: 'Streaming (OBS)',
     actions: [
       { id: 'obs-scene', name: 'OBS Scene', icon: ['fas', 'video'] },
       { id: 'obs-source', name: 'OBS Source', icon: ['fas', 'layer-group'] },
@@ -516,53 +612,12 @@ const actionCategories = ref([
   },
   {
     id: 'custom',
-    name: 'Custom',
+    name: 'Custom Media',
     actions: [
       { id: 'custom-icon', name: 'Custom Icon', icon: ['fas', 'image'] },
       { id: 'custom-gif', name: 'Custom GIF', icon: ['fas', 'film'] },
       { id: 'custom-video', name: 'Custom Video', icon: ['fas', 'video'] },
       { id: 'custom-sound', name: 'Custom Sound', icon: ['fas', 'volume-up'] }
-    ]
-  },
-  {
-    id: 'metrics',
-    name: 'Monitor Metrics',
-    actions: [
-      { id: 'metric_memory', name: 'Memory', icon: ['fas', 'memory'] },
-      { id: 'metric_cpu_usage', name: 'CPU usage', icon: ['fas', 'microchip'] },
-      { id: 'metric_cpu_frequency', name: 'CPU frequency', icon: ['fas', 'wave-square'] },
-      { id: 'metric_internet_speed', name: 'Internet speed', icon: ['fas', 'network-wired'] },
-      { id: 'metric_harddisk', name: 'Harddisk', icon: ['fas', 'hdd'] },
-      { id: 'metric_gpu_temperature', name: 'GPU temperature', icon: ['fas', 'thermometer-half'] },
-      { id: 'metric_gpu_frequency', name: 'GPU core frequency', icon: ['fas', 'wave-square'] },
-      { id: 'metric_gpu_usage', name: 'GPU Core Usage', icon: ['fas', 'grip-vertical'] },
-      { id: 'metric_gpu_memory_freq', name: 'GPU memory frequency', icon: ['fas', 'memory'] },
-      { id: 'metric_gpu_memory_usage', name: 'GPU Memory Usage', icon: ['fas', 'memory'] }
-    ]
-  },
-  {
-    id: 'time',
-    name: 'Time',
-    actions: [
-      { id: 'time_world_clock', name: 'World Time', icon: ['fas', 'globe'] },
-      { id: 'time_timer', name: 'Timer', icon: ['fas', 'stopwatch'] },
-      { id: 'time_countdown', name: 'Countdown', icon: ['fas', 'hourglass-half'] }
-    ]
-  },
-  {
-    id: 'weather',
-    name: 'Weather',
-    actions: [
-      { id: 'weather', name: 'Weather query', icon: ['fas', 'cloud-sun'] }
-    ]
-  },
-  {
-    id: 'navigation',
-    name: 'Navigation',
-    actions: [
-      { id: 'next-page', name: 'Next Page', icon: ['fas', 'arrow-right'] },
-      { id: 'previous-page', name: 'Previous Page', icon: ['fas', 'arrow-left'] },
-      { id: 'home-page', name: 'Home Page', icon: ['fas', 'home'] }
     ]
   }
 ])
@@ -668,6 +723,24 @@ function toggleCategory(categoryId: string) {
     expandedCategories.value.splice(index, 1)
   } else {
     expandedCategories.value.push(categoryId)
+  }
+}
+
+function moveCategoryUp(index: number) {
+  if (index > 0) {
+    const categories = actionCategories.value
+    const temp = categories[index]
+    categories[index] = categories[index - 1]
+    categories[index - 1] = temp
+  }
+}
+
+function moveCategoryDown(index: number) {
+  if (index < actionCategories.value.length - 1) {
+    const categories = actionCategories.value
+    const temp = categories[index]
+    categories[index] = categories[index + 1]
+    categories[index + 1] = temp
   }
 }
 
@@ -821,7 +894,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         style: { ...baseButton.style, backgroundColor: '#27ae60' },
         action: {
           type: 'cross_platform',
-          config: { action: 'volume_up', step: 10 }
+          config: { action: 'volume_up', step: 2000 }
         }
       }
 
@@ -833,19 +906,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         style: { ...baseButton.style, backgroundColor: '#27ae60' },
         action: {
           type: 'cross_platform',
-          config: { action: 'volume_down', step: 10 }
-        }
-      }
-
-    case 'volume-mute':
-      return {
-        ...baseButton,
-        label: 'Mute',
-        icon: ['fas', 'volume-mute'],
-        style: { ...baseButton.style, backgroundColor: '#e67e22' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_mute' }
+          config: { action: 'volume_down', step: 2000 }
         }
       }
 
@@ -894,42 +955,6 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         action: {
           type: 'cross_platform',
           config: { action: 'media_stop' }
-        }
-      }
-
-    case 'volume-up-media':
-      return {
-        ...baseButton,
-        label: 'Volume Up',
-        icon: ['fas', 'volume-up'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_up', step: 10 }
-        }
-      }
-
-    case 'volume-down-media':
-      return {
-        ...baseButton,
-        label: 'Volume Down',
-        icon: ['fas', 'volume-down'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_down', step: 10 }
-        }
-      }
-
-    case 'mute-media':
-      return {
-        ...baseButton,
-        label: 'Mute',
-        icon: ['fas', 'volume-mute'],
-        style: { ...baseButton.style, backgroundColor: '#e67e22' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_mute' }
         }
       }
 
@@ -1140,6 +1165,275 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         action: {
           type: 'home_page',
           config: {}
+        }
+      }
+
+    // New System Actions
+    case 'empty-recycle-bin':
+      return {
+        ...baseButton,
+        label: 'Empty Recycle Bin',
+        icon: ['fas', 'trash-alt'],
+        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'empty_recycle_bin' }
+        }
+      }
+
+    case 'task-manager':
+      return {
+        ...baseButton,
+        label: 'Task Manager',
+        icon: ['fas', 'tasks'],
+        style: { ...baseButton.style, backgroundColor: '#34495e' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'taskmgr.exe' }
+        }
+      }
+
+    case 'control-panel':
+      return {
+        ...baseButton,
+        label: 'Control Panel',
+        icon: ['fas', 'cog'],
+        style: { ...baseButton.style, backgroundColor: '#7f8c8d' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'control.exe' }
+        }
+      }
+
+    case 'device-manager':
+      return {
+        ...baseButton,
+        label: 'Device Manager',
+        icon: ['fas', 'hard-drive'],
+        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'devmgmt.msc' }
+        }
+      }
+
+    // New Web & Apps Actions
+    case 'run-command':
+      return {
+        ...baseButton,
+        label: 'Run Command',
+        icon: ['fas', 'terminal'],
+        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'run_command', command: 'echo Hello' }
+        }
+      }
+
+    case 'close-app':
+      return {
+        ...baseButton,
+        label: 'Close App',
+        icon: ['fas', 'times-circle'],
+        style: { ...baseButton.style, backgroundColor: '#c0392b' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'close_app', app_name: 'notepad.exe' }
+        }
+      }
+
+    // Audio Control Actions
+    case 'mute':
+      return {
+        ...baseButton,
+        label: 'Mute',
+        icon: ['fas', 'volume-mute'],
+        style: { ...baseButton.style, backgroundColor: '#e67e22' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'volume_mute' }
+        }
+      }
+
+    case 'microphone-mute':
+      return {
+        ...baseButton,
+        label: 'Mute Mic',
+        icon: ['fas', 'microphone-slash'],
+        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'microphone_mute' }
+        }
+      }
+
+    case 'microphone-unmute':
+      return {
+        ...baseButton,
+        label: 'Unmute Mic',
+        icon: ['fas', 'microphone'],
+        style: { ...baseButton.style, backgroundColor: '#27ae60' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'microphone_unmute' }
+        }
+      }
+
+    // Quick Launch Actions
+    case 'launch-browser':
+      return {
+        ...baseButton,
+        label: 'Browser',
+        icon: ['fas', 'globe'],
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_url', url: 'https://www.google.com' }
+        }
+      }
+
+    case 'launch-file-explorer':
+      return {
+        ...baseButton,
+        label: 'File Explorer',
+        icon: ['fas', 'folder'],
+        style: { ...baseButton.style, backgroundColor: '#f39c12' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'explorer.exe' }
+        }
+      }
+
+    case 'launch-calculator':
+      return {
+        ...baseButton,
+        label: 'Calculator',
+        icon: ['fas', 'calculator'],
+        style: { ...baseButton.style, backgroundColor: '#16a085' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'calc.exe' }
+        }
+      }
+
+    case 'launch-notepad':
+      return {
+        ...baseButton,
+        label: 'Notepad',
+        icon: ['fas', 'file-alt'],
+        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'notepad.exe' }
+        }
+      }
+
+    case 'launch-cmd':
+      return {
+        ...baseButton,
+        label: 'Command Prompt',
+        icon: ['fas', 'terminal'],
+        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'cmd.exe' }
+        }
+      }
+
+    case 'launch-powershell':
+      return {
+        ...baseButton,
+        label: 'PowerShell',
+        icon: ['fas', 'terminal'],
+        style: { ...baseButton.style, backgroundColor: '#34495e' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'powershell.exe' }
+        }
+      }
+
+    case 'launch-paint':
+      return {
+        ...baseButton,
+        label: 'Paint',
+        icon: ['fas', 'paint-brush'],
+        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'mspaint.exe' }
+        }
+      }
+
+    case 'launch-snipping-tool':
+      return {
+        ...baseButton,
+        label: 'Snipping Tool',
+        icon: ['fas', 'cut'],
+        style: { ...baseButton.style, backgroundColor: '#9b59b6' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'open_app', path: 'SnippingTool.exe' }
+        }
+      }
+
+    // Window Management Actions
+    case 'minimize-window':
+      return {
+        ...baseButton,
+        label: 'Minimize',
+        icon: ['fas', 'window-minimize'],
+        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
+        action: {
+          type: 'hotkey',
+          config: { keys: ['Win', 'Down'] }
+        }
+      }
+
+    case 'maximize-window':
+      return {
+        ...baseButton,
+        label: 'Maximize',
+        icon: ['fas', 'window-maximize'],
+        style: { ...baseButton.style, backgroundColor: '#16a085' },
+        action: {
+          type: 'hotkey',
+          config: { keys: ['Win', 'Up'] }
+        }
+      }
+
+    case 'close-window':
+      return {
+        ...baseButton,
+        label: 'Close Window',
+        icon: ['fas', 'window-close'],
+        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
+        action: {
+          type: 'hotkey',
+          config: { keys: ['Alt', 'F4'] }
+        }
+      }
+
+    case 'switch-window':
+      return {
+        ...baseButton,
+        label: 'Switch Window',
+        icon: ['fas', 'window-restore'],
+        style: { ...baseButton.style, backgroundColor: '#3498db' },
+        action: {
+          type: 'hotkey',
+          config: { keys: ['Alt', 'Tab'] }
+        }
+      }
+
+    case 'show-desktop':
+      return {
+        ...baseButton,
+        label: 'Show Desktop',
+        icon: ['fas', 'desktop'],
+        style: { ...baseButton.style, backgroundColor: '#7f8c8d' },
+        action: {
+          type: 'hotkey',
+          config: { keys: ['Win', 'D'] }
         }
       }
 
@@ -2076,6 +2370,7 @@ function showActionResult(result: ActionResult) {
 .category-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: var(--spacing-sm);
   background-color: var(--color-surface-solid);
   cursor: pointer;
@@ -2092,10 +2387,55 @@ function showActionResult(result: ActionResult) {
   font-size: 0.8rem;
 }
 
+.category-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
 .category-count {
   margin-left: auto;
   font-size: 0.8rem;
   color: var(--color-text-secondary);
+}
+
+.category-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.category-header:hover .category-controls {
+  opacity: 1;
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.btn-icon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-icon svg {
+  font-size: 0.75rem;
 }
 
 .category-actions {

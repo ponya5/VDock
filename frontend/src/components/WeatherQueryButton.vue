@@ -25,7 +25,7 @@
     <div v-else>
       <div class="weather-header">
         <FontAwesomeIcon :icon="['fas', 'cloud-sun']" class="header-icon" />
-        <span class="header-title">Weather query</span>
+        <span class="header-title">{{ displayLocation }}</span>
       </div>
       
       <div v-if="loading" class="loading-state">
@@ -49,11 +49,6 @@
         </div>
         
         <div class="weather-description">{{ weatherData.description }}</div>
-        
-        <div class="weather-location">
-          <FontAwesomeIcon :icon="['fas', 'map-marker-alt']" />
-          {{ weatherData.location }}
-        </div>
         
         <!-- Demo mode indicator -->
         <div v-if="isDemoMode" class="demo-mode-indicator">
@@ -119,6 +114,21 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const isDemoMode = ref(false)
 let intervalId: number | null = null
+
+const displayLocation = computed(() => {
+  // If we have weather data with a location, show it
+  if (weatherData.value?.location) {
+    return weatherData.value.location
+  }
+  
+  // If location is set to 'auto', show 'Weather'
+  if (props.location === 'auto') {
+    return 'Weather'
+  }
+  
+  // Otherwise show the configured location
+  return props.location || 'Weather'
+})
 
 const weatherClass = computed(() => {
   if (!weatherData.value || !weatherData.value.condition) return ''

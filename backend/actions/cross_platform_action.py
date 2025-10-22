@@ -38,12 +38,15 @@ class CrossPlatformAction(BaseAction):
         'shutdown', 'restart', 'sleep', 'lock_screen',
         # Volume control
         'volume_up', 'volume_down', 'volume_mute', 'volume_unmute',
+        # Microphone control
+        'microphone_mute', 'microphone_unmute',
         # Brightness control
         'brightness_up', 'brightness_down', 'brightness_set',
         # Media control
         'media_play_pause', 'media_next', 'media_previous', 'media_stop',
         # Web & Apps
         'open_url', 'open_app', 'open_folder', 'open_file', 'screenshot',
+        'run_command', 'close_app', 'empty_recycle_bin',
     ]
 
     def __init__(self, config: Dict[str, Any]):
@@ -106,6 +109,16 @@ class CrossPlatformAction(BaseAction):
                 return self._open_file()
             elif action == 'screenshot':
                 return self._screenshot()
+            elif action == 'microphone_mute':
+                return self._microphone_mute()
+            elif action == 'microphone_unmute':
+                return self._microphone_unmute()
+            elif action == 'run_command':
+                return self._run_custom_command()
+            elif action == 'close_app':
+                return self._close_app()
+            elif action == 'empty_recycle_bin':
+                return self._empty_recycle_bin()
             else:
                 return ActionResult(False, f'Unknown action: {action}')
         except Exception as e:
@@ -767,6 +780,97 @@ class CrossPlatformAction(BaseAction):
         else:
             return ActionResult(False, f'Screenshot not supported on {_SYSTEM}')
 
+
+    # Microphone Control Actions
+    def _microphone_mute(self) -> ActionResult:
+        """Mute microphone."""
+        if _SYSTEM == 'Windows':
+            if self._check_nircmd():
+                return self._run_command('nircmd.exe mutesysvolume 1 microphone')
+            else:
+                # PowerShell method to mute microphone
+                ps_script = "$devices = Get-WmiObject -Class Win32_SoundDevice; foreach ($device in $devices) { if ($device.Name -like '*Microphone*') { $device.Disable() } }"
+                return self._run_command(f'powershell -Command "{ps_script}"')
+        elif _SYSTEM == 'Darwin':  # macOS
+            script = 'set volume input volume 0'
+            return self._run_command(f'osascript -e "{script}"')
+        elif _SYSTEM == 'Linux':
+            return self._run_command('amixer set Capture nocap')
+        else:
+            return ActionResult(False, f'Microphone control not supported on {_SYSTEM}')
+
+    def _microphone_unmute(self) -> ActionResult:
+        """Unmute microphone."""
+        if _SYSTEM == 'Windows':
+            if self._check_nircmd():
+                return self._run_command('nircmd.exe mutesysvolume 0 microphone')
+            else:
+                # PowerShell method to unmute microphone
+                ps_script = "$devices = Get-WmiObject -Class Win32_SoundDevice; foreach ($device in $devices) { if ($device.Name -like '*Microphone*') { $device.Enable() } }"
+                return self._run_command(f'powershell -Command "{ps_script}"')
+        elif _SYSTEM == 'Darwin':  # macOS
+            script = 'set volume input volume 50'
+            return self._run_command(f'osascript -e "{script}"')
+        elif _SYSTEM == 'Linux':
+            return self._run_command('amixer set Capture cap')
+        else:
+            return ActionResult(False, f'Microphone control not supported on {_SYSTEM}')
+
+    # Additional Actions
+    def _run_custom_command(self) -> ActionResult:
+        """Run a custom command."""
+        command = self.config.get('command')
+        if not command:
+            return ActionResult(False, 'Command not specified')
+        
+        return self._run_command(command)
+
+    def _close_app(self) -> ActionResult:
+        """Close an application by name."""
+        app_name = self.config.get('app_name')
+        if not app_name:
+            return ActionResult(False, 'Application name not specified')
+        
+        if _SYSTEM == 'Windows':
+            # Remove .exe extension if present for taskkill
+            if app_name.endswith('.exe'):
+                app_name_clean = app_name
+            else:
+                app_name_clean = app_name + '.exe'
+            return self._run_command(f'taskkill /F /IM "{app_name_clean}"')
+        elif _SYSTEM == 'Darwin':  # macOS
+            # Remove .app extension if present
+            app_name_clean = app_name.replace('.app', '')
+            return self._run_command(f'pkill -x "{app_name_clean}"')
+        elif _SYSTEM == 'Linux':
+            return self._run_command(f'pkill "{app_name}"')
+        else:
+            return ActionResult(False, f'Close app not supported on {_SYSTEM}')
+
+    def _empty_recycle_bin(self) -> ActionResult:
+        """Empty the recycle bin."""
+        if _SYSTEM == 'Windows':
+            if self._check_nircmd():
+                return self._run_command('nircmd.exe emptybin')
+            else:
+                # PowerShell method
+                ps_script = "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"
+                return self._run_command(f'powershell -Command "{ps_script}"')
+        elif _SYSTEM == 'Darwin':  # macOS
+            return self._run_command('rm -rf ~/.Trash/*')
+        elif _SYSTEM == 'Linux':
+            # Try multiple trash locations
+            commands = [
+                'rm -rf ~/.local/share/Trash/*',
+                'rm -rf ~/.Trash/*'
+            ]
+            for cmd in commands:
+                result = self._run_command(cmd)
+                if result.success:
+                    return result
+            return ActionResult(False, 'Could not empty trash')
+        else:
+            return ActionResult(False, f'Empty recycle bin not supported on {_SYSTEM}')
 
     def get_description(self) -> str:
         """Get action description."""

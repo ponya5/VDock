@@ -1,112 +1,125 @@
 @echo off
-REM VDock Setup Script for Windows
+REM VDock Easy Installer for Windows
+REM This script will set up VDock automatically
 
 echo ========================================
-echo VDock Virtual Stream Deck Setup
+echo    VDock Installation Wizard
 echo ========================================
 echo.
 
-REM Check Python
-echo Checking Python installation...
+REM Check if Python is installed
+echo [1/6] Checking Python installation...
 python --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Python not found! Please install Python 3.8 or higher.
+if %errorlevel% neq 0 (
+    echo ERROR: Python is not installed!
+    echo Please install Python 3.9+ from https://www.python.org/downloads/
+    echo Make sure to check "Add Python to PATH" during installation.
     pause
     exit /b 1
 )
-echo [OK] Python found
+echo ✓ Python found
 
-REM Check Node.js
-echo Checking Node.js installation...
+REM Check if Node.js is installed
+echo [2/6] Checking Node.js installation...
 node --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Node.js not found! Please install Node.js 18 or higher.
+if %errorlevel% neq 0 (
+    echo ERROR: Node.js is not installed!
+    echo Please install Node.js from https://nodejs.org/
     pause
     exit /b 1
 )
-echo [OK] Node.js found
+echo ✓ Node.js found
 
-echo.
-echo ========================================
-echo Setting up Backend
-echo ========================================
+REM Create Python virtual environment
+echo [3/6] Creating Python virtual environment...
+if not exist "backend\venv" (
+    cd backend
+    python -m venv venv
+    cd ..
+    echo ✓ Virtual environment created
+) else (
+    echo ✓ Virtual environment already exists
+)
+
+REM Install Python dependencies
+echo [4/6] Installing backend dependencies...
 cd backend
-
-REM Create virtual environment
-echo Creating Python virtual environment...
-python -m venv venv
-if errorlevel 1 (
-    echo [ERROR] Failed to create virtual environment
-    pause
-    exit /b 1
-)
-
-REM Activate virtual environment
-echo Activating virtual environment...
 call venv\Scripts\activate.bat
-
-REM Install backend dependencies
-echo Installing backend dependencies...
-pip install -r requirements.txt
-if errorlevel 1 (
-    echo [ERROR] Failed to install backend dependencies
+pip install -r requirements.txt --quiet
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to install Python dependencies
     pause
     exit /b 1
 )
-
-REM Copy .env file
-if not exist .env (
-    echo Creating .env file...
-    copy .env.example .env
-)
-
 cd ..
-
-echo.
-echo ========================================
-echo Setting up Frontend
-echo ========================================
-cd frontend
+echo ✓ Backend dependencies installed
 
 REM Install frontend dependencies
-echo Installing frontend dependencies...
-call npm install
-if errorlevel 1 (
-    echo [ERROR] Failed to install frontend dependencies
-    pause
-    exit /b 1
+echo [5/6] Installing frontend dependencies...
+cd frontend
+if not exist "node_modules" (
+    call npm install
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to install Node.js dependencies
+        pause
+        exit /b 1
+    )
+    echo ✓ Frontend dependencies installed
+) else (
+    echo ✓ Frontend dependencies already installed
 )
-
-REM Copy .env file
-if not exist .env (
-    echo Creating .env file...
-    copy .env.example .env
-)
-
 cd ..
 
+REM Create data directories
+echo [6/6] Setting up data directories...
+if not exist "backend\data" mkdir "backend\data"
+if not exist "backend\data\profiles" mkdir "backend\data\profiles"
+if not exist "backend\data\uploads" mkdir "backend\data\uploads"
+echo ✓ Data directories created
+
+REM Create desktop shortcut
+echo.
+echo Creating desktop shortcut...
+set SCRIPT_DIR=%~dp0
+set DESKTOP=%USERPROFILE%\Desktop
+set SHORTCUT=%DESKTOP%\VDock.lnk
+
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%launch.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%frontend\public\favicon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
+
+if exist "%SHORTCUT%" (
+    echo ✓ Desktop shortcut created: VDock.lnk
+) else (
+    echo ! Could not create desktop shortcut
+)
+
 echo.
 echo ========================================
-echo Setup Complete!
+echo    Installation Complete!
 echo ========================================
 echo.
-echo To start the application:
+echo VDock has been installed successfully!
 echo.
-echo 1. Backend:
-echo    cd backend
-echo    venv\Scripts\activate
-echo    python app.py
+echo To start VDock:
+echo   1. Double-click "VDock" shortcut on your desktop
+echo   2. Or run: launch.bat
 echo.
-echo 2. Frontend (in a new terminal):
-echo    cd frontend
-echo    npm run dev
+echo Default login: admin / admin
+echo Backend:  http://localhost:5000
+echo Frontend: http://localhost:3000
 echo.
-echo 3. Or use the provided start scripts:
-echo    - start_backend.bat
-echo    - start_frontend.bat
-echo.
-echo Default login password: admin
-echo (Change this in backend\.env)
+echo Would you like to start VDock now? (Y/N)
+set /p START_NOW=
+
+if /i "%START_NOW%"=="Y" (
+    echo.
+    echo Starting VDock...
+    call launch.bat
+) else (
+    echo.
+    echo You can start VDock anytime by:
+    echo   - Double-clicking the desktop shortcut
+    echo   - Running launch.bat
+)
+
 echo.
 pause
-
