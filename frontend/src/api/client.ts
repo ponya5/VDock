@@ -139,6 +139,12 @@ class ApiClient {
         }
         this.lastErrorTime = currentTime
         
+        // Don't show notifications for metrics endpoints (they poll frequently)
+        if (config?.url?.includes('/metrics')) {
+          console.warn('429 error (suppressed for metrics):', config?.url)
+          return
+        }
+        
         this.notificationsStore.warning(
           'Too Many Requests',
           'You\'re making too many requests. Please slow down.',

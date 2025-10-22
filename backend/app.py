@@ -88,6 +88,10 @@ app.register_blueprint(system_bp)
 app.register_blueprint(templates_bp, url_prefix='/api/templates')
 app.register_blueprint(weather_bp, url_prefix='/api')
 
+# Exempt critical endpoints from rate limiting
+limiter.exempt(profiles_bp)  # Profile saves are critical
+limiter.exempt(actions_bp)  # Action execution (frequent button clicks)
+
 
 # ============================================================================
 # Root Route

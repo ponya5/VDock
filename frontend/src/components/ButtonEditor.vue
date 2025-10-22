@@ -501,7 +501,7 @@
         </div>
 
         <div class="form-group">
-          <label>Background Color</label>
+          <label>Frame Color (Outer)</label>
           <div class="color-picker-section">
             <div class="current-color" :style="{ backgroundColor: editedButton.style?.backgroundColor || '#2c3e50' }">
               <input 
@@ -521,6 +521,59 @@
                 @click="selectColor(color)"
                 :title="color"
               ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Content Color (Inner)</label>
+          <div class="color-picker-section">
+            <div class="current-color" :style="{ backgroundColor: editedButton.style?.innerBackgroundColor || '#1a1a2e' }">
+              <input 
+                v-model="editedButton.style.innerBackgroundColor" 
+                type="color" 
+                class="color-input"
+                @input="updateInnerBackgroundColor"
+              />
+            </div>
+            <div class="color-palette">
+              <div 
+                v-for="color in colorPalette" 
+                :key="color"
+                class="color-swatch"
+                :class="{ active: editedButton.style?.innerBackgroundColor === color }"
+                :style="{ backgroundColor: color }"
+                @click="selectInnerColor(color)"
+                :title="color"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Font Size</label>
+          <div class="icon-size-controls">
+            <input 
+              v-model.number="editedButton.style.fontSize" 
+              type="range" 
+              class="icon-size-slider"
+              min="8" 
+              max="48" 
+              step="2"
+              @input="updateFontSize"
+            />
+            <div class="icon-size-display">
+              <span>{{ editedButton.style?.fontSize || 16 }}px</span>
+              <button 
+                class="restore-default-btn" 
+                @click="restoreDefaultFontSize"
+                title="Restore Default Size"
+              >
+                <FontAwesomeIcon :icon="['fas', 'undo']" />
+              </button>
+              <div class="font-preview">
+                <span :style="{ fontSize: `${editedButton.style?.fontSize || 16}px` }">Aa</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1047,9 +1100,9 @@
             class="input" 
             min="1" 
             max="60"
-            placeholder="5"
+            placeholder="10"
           />
-          <p class="form-help">How often to update the metric (default: 5 seconds)</p>
+          <p class="form-help">How often to update the metric (default: 10 seconds)</p>
         </div>
 
         <!-- Individual Metric Configuration -->
@@ -1061,9 +1114,9 @@
             class="input" 
             min="1" 
             max="60"
-            placeholder="5"
+            placeholder="10"
           />
-          <p class="form-help">How often to update the metric (default: 5 seconds)</p>
+          <p class="form-help">How often to update the metric (default: 10 seconds)</p>
         </div>
 
         <!-- World Clock Configuration -->
@@ -1912,6 +1965,21 @@ function updateBackgroundColor(event: Event) {
   editedButton.value.style.backgroundColor = target.value
 }
 
+function selectInnerColor(color: string) {
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.innerBackgroundColor = color
+}
+
+function updateInnerBackgroundColor(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.innerBackgroundColor = target.value
+}
+
 function updateIconSize(event: Event) {
   const target = event.target as HTMLInputElement
   if (!editedButton.value.style) {
@@ -1920,11 +1988,26 @@ function updateIconSize(event: Event) {
   editedButton.value.style.iconSize = parseInt(target.value)
 }
 
+function updateFontSize(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.fontSize = parseInt(target.value)
+}
+
 function restoreDefaultIconSize() {
   if (!editedButton.value.style) {
     editedButton.value.style = {}
   }
   editedButton.value.style.iconSize = 32
+}
+
+function restoreDefaultFontSize() {
+  if (!editedButton.value.style) {
+    editedButton.value.style = {}
+  }
+  editedButton.value.style.fontSize = 16
 }
 
 // Macro step functions
@@ -2154,6 +2237,9 @@ function handleSave() {
   // Set default values if not provided
   if (!editedButton.value.style.backgroundColor) {
     editedButton.value.style.backgroundColor = '#2c3e50'
+  }
+  if (!editedButton.value.style.innerBackgroundColor) {
+    editedButton.value.style.innerBackgroundColor = '#1a1a2e'
   }
   if (!editedButton.value.style.iconSize) {
     editedButton.value.style.iconSize = 32
@@ -2472,6 +2558,22 @@ onUnmounted(() => {
   background: var(--color-surface-hover);
   color: var(--color-primary);
   border-color: var(--color-primary);
+}
+
+.font-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs);
+  background-color: var(--color-surface-solid);
+  border-radius: var(--radius-sm);
+  min-width: 40px;
+  text-align: center;
+}
+
+.font-preview span {
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .icon-preview {

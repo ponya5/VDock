@@ -37,7 +37,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  refreshInterval: 5000,
+  refreshInterval: 10000, // 10 seconds in milliseconds
   showProgressBar: true
 })
 
