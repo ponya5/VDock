@@ -580,6 +580,29 @@
               <FontAwesomeIcon :icon="['fas', 'palette']" /> Backgrounds
             </button>
           </div>
+          
+          <!-- Visual Effect Preview Box -->
+          <div class="animation-preview-container">
+            <div class="animation-preview-label">Preview:</div>
+            <div 
+              class="animation-preview-box"
+              :class="{
+                'deck-button-glass': editedButton.style?.effect === 'glass',
+                'deck-button-neumorphism': editedButton.style?.effect === 'neumorphism',
+                'deck-button-gradient': editedButton.style?.effect === 'gradient',
+                'deck-button-glow': editedButton.style?.effect === 'glow',
+                'deck-button-3d': editedButton.style?.effect === '3d'
+              }"
+              :style="editedButton.style?.effect === 'gradient' && editedButton.style?.gradient ? { background: editedButton.style.gradient } : {}"
+            >
+              <FontAwesomeIcon 
+                v-if="editedButton.icon" 
+                :icon="editedButton.icon" 
+                class="preview-icon"
+              />
+              <span v-else class="preview-placeholder">Button</span>
+            </div>
+          </div>
         </div>
 
         <div v-if="editedButton.style?.effect === 'gradient'" class="form-group">
@@ -601,6 +624,27 @@
             <option value="bounce">Bounce</option>
             <option value="rotate">Rotate</option>
           </select>
+          
+          <!-- Animation Preview Box -->
+          <div class="animation-preview-container">
+            <div class="animation-preview-label">Preview:</div>
+            <div 
+              class="animation-preview-box"
+              :class="{
+                'btn-pulse': editedButton.style?.animation === 'pulse',
+                'btn-shimmer': editedButton.style?.animation === 'shimmer',
+                'btn-bounce': editedButton.style?.animation === 'bounce',
+                'btn-rotate': editedButton.style?.animation === 'rotate'
+              }"
+            >
+              <FontAwesomeIcon 
+                v-if="editedButton.icon" 
+                :icon="editedButton.icon" 
+                class="preview-icon"
+              />
+              <span v-else class="preview-placeholder">Button</span>
+            </div>
+          </div>
         </div>
 
         <!-- Action-specific configuration -->
@@ -3238,6 +3282,46 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
   margin: 0;
   text-align: center;
+}
+
+/* Animation Preview Styles */
+.animation-preview-container {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.animation-preview-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.animation-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background-color: var(--color-surface-solid);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin: 0 auto;
+  transition: all var(--transition-fast);
+}
+
+.preview-icon {
+  font-size: 2rem;
+  color: var(--color-primary);
+}
+
+.preview-placeholder {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
 }
 </style>
 

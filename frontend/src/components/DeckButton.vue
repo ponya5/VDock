@@ -218,7 +218,9 @@ const buttonClasses = computed(() => ({
   'deck-button-gradient': props.button.style?.effect === 'gradient',
   'deck-button-glow': props.button.style?.effect === 'glow',
   'btn-pulse': props.button.style?.animation === 'pulse',
-  'btn-shimmer': props.button.style?.animation === 'shimmer'
+  'btn-shimmer': props.button.style?.animation === 'shimmer',
+  'btn-bounce': props.button.style?.animation === 'bounce',
+  'btn-rotate': props.button.style?.animation === 'rotate'
 }))
 
 const buttonStyle = computed(() => {

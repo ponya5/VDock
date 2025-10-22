@@ -118,8 +118,8 @@
                   class="gradient-preview"
                   :style="{ background: asset.css }"
                 ></div>
-                <img v-else-if="asset.thumbnail" 
-                  :src="asset.thumbnail" 
+                <img v-else-if="asset.url || asset.thumbnail" 
+                  :src="asset.thumbnail || asset.url" 
                   :alt="asset.name"
                   class="asset-image"
                 />
@@ -143,7 +143,7 @@
             </div>
           </div>
 
-          <div v-if="totalPages > 1" class="pagination">
+          <div v-if="totalPages > 1 || filteredAssets.length > 10" class="pagination">
             <button 
               class="pagination-btn" 
               :disabled="currentPage === 1"
@@ -155,6 +155,12 @@
             <span class="pagination-info">
               Page {{ currentPage }} of {{ totalPages }}
             </span>
+            
+            <select v-model="itemsPerPage" class="pagination-select">
+              <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+                {{ option }}
+              </option>
+            </select>
             
             <button 
               class="pagination-btn" 
@@ -179,6 +185,11 @@
               class="selected-gradient"
               :style="{ background: selectedAsset.css }"
             ></div>
+            <img v-else-if="selectedAsset.url || selectedAsset.thumbnail"
+              :src="selectedAsset.thumbnail || selectedAsset.url"
+              :alt="selectedAsset.name"
+              class="selected-image"
+            />
             <div class="selected-details">
               <h4>{{ selectedAsset.name }}</h4>
               <p>{{ selectedAsset.category }}</p>
@@ -234,7 +245,8 @@ const selectedCategory = ref('')
 const viewMode = ref<'grid' | 'list'>('grid')
 const selectedAsset = ref<AssetMetadata | null>(props.initialSelection || null)
 const currentPage = ref(1)
-const itemsPerPage = 24
+const itemsPerPage = ref(24)
+const itemsPerPageOptions = [10, 20, 50]
 
 // Data
 const categories = ref<AssetCategory[]>([])
@@ -281,11 +293,11 @@ const filteredAssets = computed(() => {
   return assets
 })
 
-const totalPages = computed(() => Math.ceil(filteredAssets.value.length / itemsPerPage))
+const totalPages = computed(() => Math.ceil(filteredAssets.value.length / itemsPerPage.value))
 
 const paginatedAssets = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
   return filteredAssets.value.slice(start, end)
 })
 
@@ -334,6 +346,10 @@ watch(searchQuery, () => {
 })
 
 watch(selectedCategory, () => {
+  currentPage.value = 1
+})
+
+watch(itemsPerPage, () => {
   currentPage.value = 1
 })
 
@@ -490,9 +506,14 @@ onMounted(async () => {
   padding: var(--spacing-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background-color: var(--color-background);
+  background-color: var(--color-surface-solid);
   color: var(--color-text);
   min-width: 150px;
+}
+
+.category-select option {
+  background-color: var(--color-surface-solid);
+  color: var(--color-text);
 }
 
 .view-options {
@@ -750,6 +771,26 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
+.pagination-select {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-solid);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pagination-select:hover {
+  border-color: var(--color-primary);
+}
+
+.pagination-select option {
+  background-color: var(--color-surface-solid);
+  color: var(--color-text);
+}
+
 .asset-picker-footer {
   display: flex;
   align-items: center;
@@ -777,6 +818,13 @@ onMounted(async () => {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-sm);
+}
+
+.selected-image {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
 }
 
 .selected-details h4 {
