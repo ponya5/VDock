@@ -314,9 +314,26 @@ class CrossPlatformAction(BaseAction):
                         return self._run_command(f'nircmd.exe setbrightness {new_brightness}')
                 except:
                     pass
-            # Fallback to WMI using PowerShell
-            ps_script = "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,100)"
-            return self._run_command(f'powershell -Command "{ps_script}"')
+            
+            # Try multiple Windows brightness control methods
+            methods = [
+                # Method 1: WMI with error handling
+                f'powershell -Command "try {{ (Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,100) }} catch {{ Write-Host \\"WMI not supported\\" }}"',
+                # Method 2: Windows 10+ brightness control
+                f'powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\\"{{F15}}\\")"',
+                # Method 3: Fallback hotkey
+                'powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\\"%{{F15}}\\")"'
+            ]
+            
+            for method in methods:
+                try:
+                    result = self._run_command(method)
+                    if result.success:
+                        return ActionResult(True, 'Brightness increased')
+                except:
+                    continue
+            
+            return ActionResult(False, 'Brightness control not available on this system')
         elif _SYSTEM == 'Darwin':  # macOS
             # Check if brightness tool is available
             try:
@@ -384,9 +401,26 @@ class CrossPlatformAction(BaseAction):
                         return self._run_command(f'nircmd.exe setbrightness {new_brightness}')
                 except:
                     pass
-            # Fallback to WMI using PowerShell
-            ps_script = "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,50)"
-            return self._run_command(f'powershell -Command "{ps_script}"')
+            
+            # Try multiple Windows brightness control methods
+            methods = [
+                # Method 1: WMI with error handling
+                f'powershell -Command "try {{ (Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,50) }} catch {{ Write-Host \\"WMI not supported\\" }}"',
+                # Method 2: Windows 10+ brightness control
+                f'powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\\"{{F14}}\\")"',
+                # Method 3: Fallback hotkey
+                'powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\\"%{{F14}}\\")"'
+            ]
+            
+            for method in methods:
+                try:
+                    result = self._run_command(method)
+                    if result.success:
+                        return ActionResult(True, 'Brightness decreased')
+                except:
+                    continue
+            
+            return ActionResult(False, 'Brightness control not available on this system')
         elif _SYSTEM == 'Darwin':  # macOS
             # Check if brightness tool is available
             try:

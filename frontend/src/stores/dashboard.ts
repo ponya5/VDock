@@ -278,13 +278,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  function addButton(button: Button) {
-    if (!currentPage.value) return
-    currentPage.value.buttons.push(button)
-    addToHistory()
-    // Auto-save profile after adding button
-    saveProfile()
-  }
 
   function removeButton(buttonId: string) {
     if (!currentPage.value) return
@@ -419,6 +412,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     
     currentPage.value.buttons.push(button)
     console.log('Added button:', button)
+    addToHistory()
+    // Auto-save profile after adding button
+    saveProfile()
   }
 
   function moveButton(buttonId: string, newPosition: { row: number; col: number }) {

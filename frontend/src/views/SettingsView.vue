@@ -31,7 +31,16 @@
           <TouchModeSelector />
 
           <div class="form-group">
-            <label>Button Size</label>
+            <div class="form-group-header">
+              <label>Button Size</label>
+              <button 
+                class="btn-reset" 
+                @click="settings.buttonSize = 1.0"
+                title="Reset to default (1.0x)"
+              >
+                <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
+              </button>
+            </div>
             <input 
               v-model.number="settings.buttonSize" 
               type="range" 
@@ -1183,6 +1192,34 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.form-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+}
+
+.btn-reset {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.btn-reset:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .server-info {

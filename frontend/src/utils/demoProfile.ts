@@ -23,9 +23,11 @@ export function createDemoProfile(): Profile {
       action: {
         type: 'cross_platform',
         config: {
-          action: 'volume_up'
+          action: 'volume_up',
+          step: 10
         }
       },
+      enabled: true,
       position: { row: 0, col: 0 }
     },
     {
@@ -40,9 +42,11 @@ export function createDemoProfile(): Profile {
       action: {
         type: 'cross_platform',
         config: {
-          action: 'volume_down'
+          action: 'volume_down',
+          step: 10
         }
       },
+      enabled: true,
       position: { row: 0, col: 1 }
     },
     {
@@ -60,6 +64,7 @@ export function createDemoProfile(): Profile {
           action: 'volume_mute'
         }
       },
+      enabled: true,
       position: { row: 0, col: 2 }
     },
     {

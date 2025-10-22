@@ -27,8 +27,8 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
     icon: ['fas', 'play'],
     category: 'media',
     action: {
-      type: 'system',
-      config: { command: 'media_play_pause' }
+      type: 'cross_platform',
+      config: { action: 'media_play_pause' }
     },
     style: {
       backgroundColor: '#10b981',
@@ -42,8 +42,8 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
     icon: ['fas', 'forward-step'],
     category: 'media',
     action: {
-      type: 'system',
-      config: { command: 'media_next' }
+      type: 'cross_platform',
+      config: { action: 'media_next' }
     },
     style: {
       backgroundColor: '#10b981',
@@ -57,8 +57,8 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
     icon: ['fas', 'backward-step'],
     category: 'media',
     action: {
-      type: 'system',
-      config: { command: 'media_previous' }
+      type: 'cross_platform',
+      config: { action: 'media_previous' }
     },
     style: {
       backgroundColor: '#10b981',
@@ -72,8 +72,8 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
     icon: ['fas', 'volume-high'],
     category: 'media',
     action: {
-      type: 'system',
-      config: { command: 'volume_up' }
+      type: 'cross_platform',
+      config: { action: 'volume_up', step: 10 }
     },
     style: {
       backgroundColor: '#3b82f6',
@@ -87,8 +87,8 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
     icon: ['fas', 'volume-low'],
     category: 'media',
     action: {
-      type: 'system',
-      config: { command: 'volume_down' }
+      type: 'cross_platform',
+      config: { action: 'volume_down', step: 10 }
     },
     style: {
       backgroundColor: '#3b82f6',
@@ -102,8 +102,8 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
     icon: ['fas', 'volume-xmark'],
     category: 'media',
     action: {
-      type: 'system',
-      config: { command: 'volume_mute' }
+      type: 'cross_platform',
+      config: { action: 'volume_mute' }
     },
     style: {
       backgroundColor: '#ef4444',

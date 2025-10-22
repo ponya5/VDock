@@ -4,11 +4,16 @@
     <FloatingPathsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths'" />
     <FloatingPathsBackgroundV2 v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths-v2'" />
     <BeamsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-beams-background'" />
-    <header class="deck-header enhanced-header">
+    
+    <header v-if="settingsStore.showHeader" class="deck-header enhanced-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
-          <div class="profile-avatar-container">
+          <div 
+            class="profile-avatar-container clickable" 
+            @click="settingsStore.showHeader = !settingsStore.showHeader"
+            title="Click to toggle header visibility"
+          >
             <img 
               v-if="currentProfile?.avatar" 
               :src="currentProfile.avatar" 
@@ -80,7 +85,8 @@
         :is-edit-mode="isEditMode"
         :show-labels="settingsStore.showLabels"
         :show-tooltips="settingsStore.showTooltips"
-        :button-size="settingsStore.buttonSize"
+        :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
+        :show-header="settingsStore.showHeader"
         @button-click="handleButtonClick"
         @button-edit="handleButtonEdit"
         @button-copy="handleButtonCopy"
@@ -88,6 +94,7 @@
         @button-drop="handleDockedButtonDrop"
         @add-button="handleAddDockedButton"
         @placeholder-click="handleDockedPlaceholderClick"
+        @toggle-header="settingsStore.showHeader = !settingsStore.showHeader"
       />
       
       
@@ -96,7 +103,7 @@
           v-if="currentPage"
           :page="currentPage"
           :is-edit-mode="isEditMode"
-          :button-size="settingsStore.buttonSize"
+          :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
           :show-labels="settingsStore.showLabels"
           :show-tooltips="settingsStore.showTooltips"
           :compact="shouldUseCompactMode"
@@ -743,11 +750,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
       backgroundColor: '#2c3e50',
       textColor: '#ffffff'
     },
-    enabled: true,
-    action: {
-      type: 'custom',
-      config: {}
-    }
+    enabled: true
   }
 
   // Action-specific configurations
@@ -896,6 +899,42 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         }
       }
 
+    case 'volume-up-media':
+      return {
+        ...baseButton,
+        label: 'Volume Up',
+        icon: ['fas', 'volume-up'],
+        style: { ...baseButton.style, backgroundColor: '#27ae60' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'volume_up', step: 10 }
+        }
+      }
+
+    case 'volume-down-media':
+      return {
+        ...baseButton,
+        label: 'Volume Down',
+        icon: ['fas', 'volume-down'],
+        style: { ...baseButton.style, backgroundColor: '#27ae60' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'volume_down', step: 10 }
+        }
+      }
+
+    case 'mute-media':
+      return {
+        ...baseButton,
+        label: 'Mute',
+        icon: ['fas', 'volume-mute'],
+        style: { ...baseButton.style, backgroundColor: '#e67e22' },
+        action: {
+          type: 'cross_platform',
+          config: { action: 'volume_mute' }
+        }
+      }
+
     case 'screenshot':
       return {
         ...baseButton,
@@ -989,11 +1028,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
         icon: '',
         media_type: 'image',
         media_url: '',
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'custom',
-          config: {}
-        }
+        style: { ...baseButton.style, backgroundColor: '#2c3e50' }
       }
 
     // Monitor Metrics
@@ -1113,13 +1148,7 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
       }
 
     default:
-      return {
-        ...baseButton,
-        action: {
-          type: 'custom',
-          config: {}
-        }
-      }
+      return baseButton
   }
 }
 
@@ -1180,7 +1209,46 @@ function handleSceneDelete(sceneId: string) {
 }
 
 async function handleButtonClick(button: Button) {
-  if (!button.action) return
+if (!button.action) return
+
+  // Handle UI control actions locally in the frontend
+  if (button.action.type === 'ui_control') {
+    const action = button.action.config.action
+    const step = button.action.config.step || 10
+    
+    if (action === 'ui_brightness_up') {
+      const newBrightness = Math.min(200, settingsStore.uiBrightness + step)
+      settingsStore.uiBrightness = newBrightness
+      showActionResult({
+        success: true,
+        message: `UI brightness: ${newBrightness}%`
+      })
+      return
+    } else if (action === 'ui_brightness_down') {
+      const newBrightness = Math.max(10, settingsStore.uiBrightness - step)
+      settingsStore.uiBrightness = newBrightness
+      showActionResult({
+        success: true,
+        message: `UI brightness: ${newBrightness}%`
+      })
+      return
+    } else if (action === 'ui_brightness_set') {
+      const value = button.action.config.value || 100
+      settingsStore.uiBrightness = value
+      showActionResult({
+        success: true,
+        message: `UI brightness set to ${value}%`
+      })
+      return
+    } else if (action === 'toggle_header') {
+      settingsStore.showHeader = !settingsStore.showHeader
+      showActionResult({
+        success: true,
+        message: settingsStore.showHeader ? 'Header shown' : 'Header hidden'
+      })
+      return
+    }
+  }
 
   // Skip execution for display-only action types (weather, time, metrics)
   const displayOnlyTypes = [
@@ -1279,13 +1347,14 @@ async function handleButtonSave(button: Button) {
     ) || []
     
     if (currentProfile.value) {
-      // Create updated profile and set directly to avoid backend round-trip
+      // Create updated profile and save it
       const updatedProfile = {
         ...currentProfile.value,
         dockedButtons: updatedDockedButtons
       }
       
       dashboardStore.setProfile(updatedProfile)
+      await dashboardStore.saveProfile()
       
       showActionResult({
         success: true,
@@ -1306,13 +1375,14 @@ async function handleDockedButtonDelete(buttonId: string) {
   if (currentProfile.value) {
     const updatedDockedButtons = currentProfile.value.dockedButtons?.filter(btn => btn.id !== buttonId) || []
     
-    // Create updated profile and set directly
+    // Create updated profile and save it
     const updatedProfile = {
       ...currentProfile.value,
       dockedButtons: updatedDockedButtons
     }
     
     dashboardStore.setProfile(updatedProfile)
+    await dashboardStore.saveProfile()
     
     showActionResult({
       success: true,
@@ -1339,11 +1409,7 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
       textColor: '#ffffff'
     },
     tooltip: '',
-    enabled: true,
-    action: {
-      type: 'custom',
-      config: {}
-    }
+    enabled: true
   }
   
   console.log('DashboardView: creating new docked button', newButton)
@@ -1359,6 +1425,7 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
     
     // Use setProfile to trigger reactivity properly
     dashboardStore.setProfile(updatedProfile)
+    await dashboardStore.saveProfile()
     
     showActionResult({
       success: true,
@@ -1499,11 +1566,7 @@ function handlePlaceholderClick(position: { row: number; col: number }) {
         backgroundColor: '#2c3e50',
         textColor: '#ffffff'
       },
-      enabled: true,
-      action: {
-        type: 'custom',
-        config: {}
-      }
+      enabled: true
     }
     
     dashboardStore.addButton(button)
@@ -2088,6 +2151,15 @@ function showActionResult(result: ActionResult) {
 .btn-sm {
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 0.8rem;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.clickable:hover {
+  transform: scale(1.05);
 }
 
 /* Dashboard Background Styles */

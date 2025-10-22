@@ -10,6 +10,10 @@ from .macro_action import MacroAction
 from .system_action import SystemAction
 from .cross_platform_action import CrossPlatformAction
 from .metric_action import MetricAction
+from .navigation_action import NavigationAction
+from .time_action import TimeAction
+from .weather_action import WeatherAction
+from .ui_control_action import UIControlAction
 
 
 class ActionExecutor:
@@ -23,6 +27,7 @@ class ActionExecutor:
         'hotkey': HotkeyAction,
         'multi_action': MultiAction,
         'macro': MacroAction,
+        'system': SystemAction,
         'system_control': SystemAction,
         'cross_platform': CrossPlatformAction,
         'metric_cpu_usage': MetricAction,
@@ -30,7 +35,12 @@ class ActionExecutor:
         'metric_disk': MetricAction,
         'metric_network': MetricAction,
         'metric_temperature': MetricAction,
-        'metric_battery': MetricAction
+        'metric_battery': MetricAction,
+        'time_world_clock': TimeAction,
+        'weather': WeatherAction,
+        'next_page': NavigationAction,
+        'previous_page': NavigationAction,
+        'ui_control': UIControlAction
     }
     
     def execute_action(self, action_data: Dict[str, Any]) -> ActionResult:
@@ -59,6 +69,16 @@ class ActionExecutor:
             if action_type.startswith('metric_'):
                 config = config.copy()
                 config['metric_type'] = action_type
+            
+            # For time actions, add the action type to config
+            if action_type.startswith('time_'):
+                config = config.copy()
+                config['action_type'] = action_type.replace('time_', '')
+            
+            # For navigation actions, add the action type to config
+            if action_type in ['next_page', 'previous_page']:
+                config = config.copy()
+                config['action_type'] = action_type
             
             action = action_class(config)
             

@@ -222,8 +222,8 @@ const buttonClasses = computed(() => ({
 }))
 
 const buttonStyle = computed(() => {
-  const { position, size, style } = props.button
-  
+  const { position = { row: 0, col: 0 }, size = { rows: 1, cols: 1 }, style } = props.button
+
   const baseStyle = {
     gridRow: `${position.row + 1} / span ${size.rows}`,
     gridColumn: `${position.col + 1} / span ${size.cols}`,

@@ -23,6 +23,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
   const dashboardBackground = ref('default')
   const startWithWindows = ref(false)
+  const uiBrightness = ref(100) // UI brightness percentage (0-200)
+  const showHeader = ref(true) // Show/hide dashboard header
   
   // Touch mode settings
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
@@ -69,6 +71,8 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
         dashboardBackground.value = settings.dashboardBackground || 'default'
         startWithWindows.value = settings.startWithWindows || false
+        uiBrightness.value = settings.uiBrightness !== undefined ? settings.uiBrightness : 100
+        showHeader.value = settings.showHeader !== false
         touchMode.value = settings.touchMode || 'normal'
         minimumTouchTargetSize.value = settings.minimumTouchTargetSize || 44
         defaultGridRows.value = settings.defaultGridRows || 3
@@ -94,6 +98,8 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
       startWithWindows: startWithWindows.value,
+      uiBrightness: uiBrightness.value,
+      showHeader: showHeader.value,
       touchMode: touchMode.value,
       minimumTouchTargetSize: minimumTouchTargetSize.value,
       defaultGridRows: defaultGridRows.value,
@@ -107,10 +113,11 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, uiBrightness, showHeader, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
       applyTouchModeStyles()
+      applyUIBrightnessFilter()
     },
     { deep: true }
   )
@@ -138,6 +145,19 @@ export const useSettingsStore = defineStore('settings', () => {
     // Scale icons and text
     root.style.setProperty('--icon-size', `${1 * multiplier}rem`)
     root.style.setProperty('--text-scale', multiplier.toString())
+  }
+
+  // Apply UI brightness filter to document
+  function applyUIBrightnessFilter() {
+    const root = document.documentElement
+    const brightnessValue = uiBrightness.value / 100
+    root.style.setProperty('--ui-brightness', brightnessValue.toString())
+    
+    // Apply filter to the body element for overall brightness control
+    const appElement = document.querySelector('#app')
+    if (appElement) {
+      (appElement as HTMLElement).style.filter = `brightness(${brightnessValue})`
+    }
   }
 
   // Theme is fixed to dark mode - no setTheme function needed
@@ -204,6 +224,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Initialize
   loadSettings()
   applyTouchModeStyles()
+  applyUIBrightnessFilter()
 
   return {
     currentTheme,
@@ -220,6 +241,8 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarWidth,
     dashboardBackground,
     startWithWindows,
+    uiBrightness,
+    showHeader,
     touchMode,
     minimumTouchTargetSize,
     touchModeMultiplier,
@@ -229,6 +252,7 @@ export const useSettingsStore = defineStore('settings', () => {
     startOnBoot,
     recentActions,
     applyTouchModeStyles,
+    applyUIBrightnessFilter,
     loadServerConfig,
     updateServerConfig,
     addRecentAction,
