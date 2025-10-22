@@ -217,10 +217,22 @@ const buttonClasses = computed(() => ({
   'deck-button-neumorphism': props.button.style?.effect === 'neumorphism',
   'deck-button-gradient': props.button.style?.effect === 'gradient',
   'deck-button-glow': props.button.style?.effect === 'glow',
+  'deck-button-neon': props.button.style?.effect === 'neon',
+  'deck-button-metallic': props.button.style?.effect === 'metallic',
+  'deck-button-liquid': props.button.style?.effect === 'liquid',
+  'deck-button-holographic': props.button.style?.effect === 'holographic',
+  'deck-button-shadow': props.button.style?.effect === 'shadow',
+  'deck-button-emissive': props.button.style?.effect === 'emissive',
   'btn-pulse': props.button.style?.animation === 'pulse',
   'btn-shimmer': props.button.style?.animation === 'shimmer',
   'btn-bounce': props.button.style?.animation === 'bounce',
-  'btn-rotate': props.button.style?.animation === 'rotate'
+  'btn-rotate': props.button.style?.animation === 'rotate',
+  'btn-wiggle': props.button.style?.animation === 'wiggle',
+  'btn-float': props.button.style?.animation === 'float',
+  'btn-scale': props.button.style?.animation === 'scale',
+  'btn-slide': props.button.style?.animation === 'slide',
+  'btn-fade': props.button.style?.animation === 'fade',
+  'btn-spin': props.button.style?.animation === 'spin'
 }))
 
 const buttonStyle = computed(() => {
