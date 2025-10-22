@@ -191,24 +191,24 @@ onUnmounted(() => {
 
 @keyframes slideIn {
   from {
-    transform: translateX(100%);
+    transform: translateX(100%) translateY(-100%);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(0) translateY(0);
     opacity: 1;
   }
 }
 
 @keyframes slideOut {
   from {
-    transform: translateX(0);
+    transform: translateX(0) translateY(0);
     opacity: 1;
     max-height: 200px;
     margin-bottom: var(--spacing-sm);
   }
   to {
-    transform: translateX(100%);
+    transform: translateX(100%) translateY(-100%);
     opacity: 0;
     max-height: 0;
     margin-bottom: 0;
