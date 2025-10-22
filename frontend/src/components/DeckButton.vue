@@ -45,6 +45,7 @@
         time-option="world_time"
         :timezone="button.action?.config?.timezone || 'local'"
         :compact="compact"
+        :font-size="button.action?.config?.font_size || 1.0"
       />
       
       <!-- Timer -->
@@ -53,6 +54,7 @@
         time-option="timer"
         :timer-duration="button.action?.config?.timer_duration || 0"
         :compact="compact"
+        :font-size="button.action?.config?.font_size || 1.0"
       />
       
       <!-- Countdown -->
@@ -61,6 +63,7 @@
         time-option="countdown"
         :countdown-target="button.action?.config?.countdown_target"
         :compact="compact"
+        :font-size="button.action?.config?.font_size || 1.0"
       />
       
       <!-- Weather -->

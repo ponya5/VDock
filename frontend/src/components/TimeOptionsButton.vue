@@ -1,5 +1,5 @@
 <template>
-  <div class="time-options" :class="[`time-${timeOption}`, { compact: compact }]">
+  <div class="time-options" :class="[`time-${timeOption}`, { compact: compact }]" :style="dynamicFontSizeStyle">
     <!-- Compact Mode -->
     <div v-if="compact" class="time-compact">
       <!-- World Time Compact -->
@@ -85,6 +85,7 @@ interface Props {
   timerDuration?: number
   countdownTarget?: string
   compact?: boolean
+  fontSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -92,6 +93,7 @@ const props = withDefaults(defineProps<Props>(), {
   timerDuration: 0,
   countdownTarget: '',
   compact: false,
+  fontSize: 1.0,
 })
 
 const currentDateTime = ref(new Date())
@@ -249,6 +251,13 @@ const countdownPercent = computed(() => {
   return Math.max(0, Math.min(100, (elapsed / total) * 100))
 })
 
+// Dynamic font sizing based on fontSize prop
+const dynamicFontSizeStyle = computed(() => {
+  return {
+    '--font-size-multiplier': props.fontSize
+  }
+})
+
 function updateClock() {
   currentDateTime.value = new Date()
 }
@@ -314,7 +323,7 @@ onUnmounted(() => {
 }
 
 .time-main {
-  font-size: 2.5rem;
+  font-size: calc(2.5rem * var(--font-size-multiplier, 1));
   font-weight: 700;
   line-height: 1;
   margin-bottom: var(--spacing-xs);
@@ -322,7 +331,7 @@ onUnmounted(() => {
 }
 
 .time-date {
-  font-size: 1rem;
+  font-size: calc(1rem * var(--font-size-multiplier, 1));
   opacity: 0.9;
   margin-bottom: var(--spacing-xs);
 }
@@ -416,11 +425,12 @@ onUnmounted(() => {
 
 /* Compact Mode Styles */
 .time-options.compact {
-  padding: 0.5rem;
+  padding: 0.25rem;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  container-type: inline-size;
 }
 
 .time-compact {
@@ -444,17 +454,71 @@ onUnmounted(() => {
 }
 
 .time-main-compact {
-  font-size: 1.2rem;
+  font-size: calc(0.75rem * var(--font-size-multiplier, 1));
   font-weight: 600;
-  line-height: 1;
-  margin-bottom: 0.25rem;
+  line-height: 0.9;
+  margin-bottom: 0.125rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .time-date-compact {
-  font-size: 0.7rem;
+  font-size: calc(0.5rem * var(--font-size-multiplier, 1));
   opacity: 0.8;
-  line-height: 1;
+  line-height: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Container query responsive sizing */
+@container (max-width: 100px) {
+  .time-main-compact {
+    font-size: 0.6rem;
+  }
+  .time-date-compact {
+    font-size: 0.4rem;
+  }
+}
+
+@container (max-width: 120px) {
+  .time-main-compact {
+    font-size: 0.65rem;
+  }
+  .time-date-compact {
+    font-size: 0.45rem;
+  }
+}
+
+@container (min-width: 150px) {
+  .time-main-compact {
+    font-size: 0.85rem;
+  }
+  .time-date-compact {
+    font-size: 0.55rem;
+  }
+}
+
+@container (min-width: 180px) {
+  .time-main-compact {
+    font-size: 1rem;
+  }
+  .time-date-compact {
+    font-size: 0.6rem;
+  }
+}
+
+@container (min-width: 220px) {
+  .time-main-compact {
+    font-size: 1.2rem;
+  }
+  .time-date-compact {
+    font-size: 0.7rem;
+  }
 }
 
 /* Timer Compact */

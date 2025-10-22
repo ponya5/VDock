@@ -1009,6 +1009,24 @@
           </select>
         </div>
 
+        <div v-if="actionType === 'time_world_clock'" class="form-group">
+          <label>Font Size</label>
+          <div class="font-size-controls">
+            <input 
+              v-model.number="actionConfig.font_size" 
+              type="range" 
+              class="font-size-slider"
+              min="0.5" 
+              max="2.0" 
+              step="0.1"
+            />
+            <div class="font-size-display">
+              <span>{{ (actionConfig.font_size || 1.0).toFixed(1) }}x</span>
+            </div>
+          </div>
+          <p class="form-help">Adjust the clock font size (0.5x to 2.0x)</p>
+        </div>
+
         <!-- Timer Configuration -->
         <div v-if="actionType === 'time_timer'" class="form-group">
           <label>Timer Duration (seconds)</label>
@@ -1022,6 +1040,24 @@
           <p class="form-help">Initial duration (0 for stopwatch mode)</p>
         </div>
 
+        <div v-if="actionType === 'time_timer'" class="form-group">
+          <label>Font Size</label>
+          <div class="font-size-controls">
+            <input 
+              v-model.number="actionConfig.font_size" 
+              type="range" 
+              class="font-size-slider"
+              min="0.5" 
+              max="2.0" 
+              step="0.1"
+            />
+            <div class="font-size-display">
+              <span>{{ (actionConfig.font_size || 1.0).toFixed(1) }}x</span>
+            </div>
+          </div>
+          <p class="form-help">Adjust the timer font size (0.5x to 2.0x)</p>
+        </div>
+
         <!-- Countdown Configuration -->
         <div v-if="actionType === 'time_countdown'" class="form-group">
           <label>Countdown Target Date/Time</label>
@@ -1031,6 +1067,24 @@
             class="input"
           />
           <p class="form-help">Leave empty to countdown until tomorrow</p>
+        </div>
+
+        <div v-if="actionType === 'time_countdown'" class="form-group">
+          <label>Font Size</label>
+          <div class="font-size-controls">
+            <input 
+              v-model.number="actionConfig.font_size" 
+              type="range" 
+              class="font-size-slider"
+              min="0.5" 
+              max="2.0" 
+              step="0.1"
+            />
+            <div class="font-size-display">
+              <span>{{ (actionConfig.font_size || 1.0).toFixed(1) }}x</span>
+            </div>
+          </div>
+          <p class="form-help">Adjust the countdown font size (0.5x to 2.0x)</p>
         </div>
 
         <!-- Weather Configuration -->
@@ -2328,6 +2382,61 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   overflow: hidden;
+}
+
+/* Font Size Controls */
+.font-size-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.font-size-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.font-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  border: 2px solid var(--color-surface-solid);
+  box-shadow: var(--shadow-sm);
+}
+
+.font-size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  border: 2px solid var(--color-surface-solid);
+  box-shadow: var(--shadow-sm);
+}
+
+.font-size-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.font-size-display span {
+  font-weight: 600;
+  color: var(--color-accent);
+  font-size: 0.875rem;
 }
 
 /* Macro Editor Styles */

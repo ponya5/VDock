@@ -88,11 +88,6 @@ app.register_blueprint(system_bp)
 app.register_blueprint(templates_bp, url_prefix='/api/templates')
 app.register_blueprint(weather_bp, url_prefix='/api')
 
-# Apply rate limits to specific routes
-if Config.RATELIMIT_ENABLED:
-    limiter.limit("5 per minute")(auth_bp.route('/api/auth/login', methods=['POST']))
-    limiter.limit("10 per minute")(upload_bp.route('/api/upload', methods=['POST']))
-
 
 # ============================================================================
 # Root Route
