@@ -571,6 +571,12 @@
               <option value="gradient">Gradient</option>
               <option value="glow">Glow Effect</option>
               <option value="3d">3D Effect</option>
+              <option value="neon">Neon</option>
+              <option value="metallic">Metallic</option>
+              <option value="liquid">Liquid</option>
+              <option value="holographic">Holographic</option>
+              <option value="shadow">Deep Shadow</option>
+              <option value="emissive">Emissive</option>
             </select>
             <button 
               class="btn btn-secondary" 
@@ -591,7 +597,13 @@
                 'deck-button-neumorphism': editedButton.style?.effect === 'neumorphism',
                 'deck-button-gradient': editedButton.style?.effect === 'gradient',
                 'deck-button-glow': editedButton.style?.effect === 'glow',
-                'deck-button-3d': editedButton.style?.effect === '3d'
+                'deck-button-3d': editedButton.style?.effect === '3d',
+                'deck-button-neon': editedButton.style?.effect === 'neon',
+                'deck-button-metallic': editedButton.style?.effect === 'metallic',
+                'deck-button-liquid': editedButton.style?.effect === 'liquid',
+                'deck-button-holographic': editedButton.style?.effect === 'holographic',
+                'deck-button-shadow': editedButton.style?.effect === 'shadow',
+                'deck-button-emissive': editedButton.style?.effect === 'emissive'
               }"
               :style="editedButton.style?.effect === 'gradient' && editedButton.style?.gradient ? { background: editedButton.style.gradient } : {}"
             >
@@ -623,6 +635,12 @@
             <option value="shimmer">Shimmer</option>
             <option value="bounce">Bounce</option>
             <option value="rotate">Rotate</option>
+            <option value="wiggle">Wiggle</option>
+            <option value="float">Float</option>
+            <option value="scale">Scale</option>
+            <option value="slide">Slide</option>
+            <option value="fade">Fade</option>
+            <option value="spin">Spin</option>
           </select>
           
           <!-- Animation Preview Box -->
@@ -634,7 +652,13 @@
                 'btn-pulse': editedButton.style?.animation === 'pulse',
                 'btn-shimmer': editedButton.style?.animation === 'shimmer',
                 'btn-bounce': editedButton.style?.animation === 'bounce',
-                'btn-rotate': editedButton.style?.animation === 'rotate'
+                'btn-rotate': editedButton.style?.animation === 'rotate',
+                'btn-wiggle': editedButton.style?.animation === 'wiggle',
+                'btn-float': editedButton.style?.animation === 'float',
+                'btn-scale': editedButton.style?.animation === 'scale',
+                'btn-slide': editedButton.style?.animation === 'slide',
+                'btn-fade': editedButton.style?.animation === 'fade',
+                'btn-spin': editedButton.style?.animation === 'spin'
               }"
             >
               <FontAwesomeIcon 
