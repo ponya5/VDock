@@ -9,6 +9,7 @@ from .multi_action import MultiAction
 from .macro_action import MacroAction
 from .system_action import SystemAction
 from .cross_platform_action import CrossPlatformAction
+from .metric_action import MetricAction
 
 
 class ActionExecutor:
@@ -23,7 +24,13 @@ class ActionExecutor:
         'multi_action': MultiAction,
         'macro': MacroAction,
         'system_control': SystemAction,
-        'cross_platform': CrossPlatformAction
+        'cross_platform': CrossPlatformAction,
+        'metric_cpu_usage': MetricAction,
+        'metric_memory': MetricAction,
+        'metric_disk': MetricAction,
+        'metric_network': MetricAction,
+        'metric_temperature': MetricAction,
+        'metric_battery': MetricAction
     }
     
     def execute_action(self, action_data: Dict[str, Any]) -> ActionResult:
@@ -47,6 +54,12 @@ class ActionExecutor:
         try:
             # Create action instance
             action_class = self.ACTION_CLASSES[action_type]
+            
+            # For metric actions, add the metric type to config
+            if action_type.startswith('metric_'):
+                config = config.copy()
+                config['metric_type'] = action_type
+            
             action = action_class(config)
             
             # For multi-actions, set the executor reference
