@@ -73,6 +73,7 @@
         :refresh-interval="button.action?.config?.refresh_interval || 15"
         :unit="button.action?.config?.temperature_unit || 'C'"
         :compact="compact"
+        :icon-size="button.style?.iconSize || 32"
       />
       
       <!-- Calendar -->
