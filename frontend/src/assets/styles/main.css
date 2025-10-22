@@ -456,6 +456,7 @@ body {
     0 4px 15px rgba(0, 0, 0, 0.1),
     0 2px 4px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .deck-button-glow:hover {
@@ -464,6 +465,23 @@ body {
     0 8px 25px rgba(0, 0, 0, 0.2),
     0 4px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(102, 126, 234, 0.4),
+      0 4px 15px rgba(0, 0, 0, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(102, 126, 234, 0.7),
+      0 6px 20px rgba(0, 0, 0, 0.15),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
 }
 
 /* Button Shape Variants */
@@ -513,6 +531,34 @@ body {
   background: linear-gradient(90deg, var(--color-primary) 0%, rgba(255, 255, 255, 0.2) 50%, var(--color-primary) 100%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+/* Bounce Animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.btn-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+/* Rotate Animation */
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-rotate {
+  animation: rotate 2s linear infinite;
 }
 
 /* Animations */

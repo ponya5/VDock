@@ -198,7 +198,7 @@ class AssetManager {
 
         this.categories.set(`gif-${categoryId}`, {
           id: `gif-${categoryId}`,
-          name: `GIF ${categoryId.charAt(0).toUpperCase() + categoryId.slice(1)}`,
+          name: categoryId === 'buttons' ? 'GIF Buttons' : `GIF ${categoryId.charAt(0).toUpperCase() + categoryId.slice(1)}`,
           description: categoryData.description,
           assets
         })

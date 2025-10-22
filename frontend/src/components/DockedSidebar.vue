@@ -281,10 +281,30 @@ function stopResize() {
 .sidebar-header.clickable-header {
   cursor: pointer;
   background-color: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
+  animation: header-glow 2s ease-in-out infinite;
+}
+
+@keyframes header-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+  }
 }
 
 .sidebar-header.clickable-header:hover {
   background-color: var(--color-primary-hover, rgba(100, 200, 255, 0.1));
+  animation: header-glow-hover 1s ease-in-out infinite;
+}
+
+@keyframes header-glow-hover {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.9);
+  }
 }
 
 .sidebar-header h3 {
