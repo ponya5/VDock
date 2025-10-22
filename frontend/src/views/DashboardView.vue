@@ -256,7 +256,7 @@
     />
 
     <!-- Action Result Toast -->
-    <div v-if="actionResult" class="action-toast" :class="actionResult.success ? 'success' : 'error'">
+    <div v-if="actionResult && !settingsStore.showRegularToasts && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
 

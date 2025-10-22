@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useSettingsStore } from './settings'
 
 export interface NotificationAction {
   label: string
@@ -37,9 +38,18 @@ export const useNotificationsStore = defineStore('notifications', () => {
     notifications.value.filter(n => n.type === 'warning' && !n.read).length
   )
   
-  const toasts = computed(() =>
-    notifications.value.filter(n => !n.read).slice(-3) // Show last 3 unread
-  )
+  const toasts = computed(() => {
+    const settingsStore = useSettingsStore()
+    const unreadNotifications = notifications.value.filter(n => !n.read)
+    
+    // If showRegularToasts is disabled, only show error toasts
+    if (!settingsStore.showRegularToasts) {
+      return unreadNotifications.filter(n => n.type === 'error').slice(-3)
+    }
+    
+    // Otherwise show all types
+    return unreadNotifications.slice(-3) // Show last 3 unread
+  })
   
   // Actions
   function addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) {

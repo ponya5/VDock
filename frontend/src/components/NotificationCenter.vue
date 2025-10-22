@@ -653,11 +653,11 @@ onUnmounted(() => {
 
 .toast-container {
   position: fixed;
-  bottom: var(--spacing-lg);
+  top: var(--spacing-lg);
   right: var(--spacing-lg);
   z-index: 10000;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   gap: var(--spacing-sm);
   pointer-events: none;
 }
@@ -681,6 +681,7 @@ onUnmounted(() => {
   .toast-container {
     left: var(--spacing-md);
     right: var(--spacing-md);
+    top: var(--spacing-md);
   }
 }
 </style>
