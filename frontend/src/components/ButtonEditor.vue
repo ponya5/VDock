@@ -1548,6 +1548,9 @@ function applyTemplate(template: ButtonTemplate) {
     editedButton.value.style.textColor = template.style.textColor || '#ffffff'
   }
 
+  // Ensure button is enabled
+  editedButton.value.enabled = true
+
   // Update hotkey string if applicable
   if (template.action.type === 'hotkey' && template.action.config.keys) {
     hotkeyString.value = Array.isArray(template.action.config.keys)

@@ -37,6 +37,8 @@ export type ActionType =
   | 'home_page'
   // Screenshot
   | 'screenshot'
+  // UI Control
+  | 'ui_control'
 
 export type ButtonShape = 'rectangle' | 'rounded' | 'circle' | 'hexagon' | 'diamond' | 'octagon'
 

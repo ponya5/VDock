@@ -46,14 +46,25 @@ class ApiClient {
     this.notificationsStore = store
   }
 
+  private lastErrorTime = 0
+  private errorThrottleMs = 1000
+
   private handleError(error: AxiosError) {
     if (!this.notificationsStore) return
 
     const response = error.response
     const config = error.config
+    const currentTime = Date.now()
     
     // Network error
     if (!response) {
+      // Throttle network errors to prevent spam on page load
+      if (currentTime - this.lastErrorTime < this.errorThrottleMs) {
+        console.warn('Network error throttled:', config?.url)
+        return
+      }
+      this.lastErrorTime = currentTime
+      
       this.notificationsStore.error(
         'Network Error',
         'Unable to connect to the server. Please check your internet connection.',
@@ -89,6 +100,11 @@ class ApiClient {
         break
 
       case 404:
+        // Don't show 404 errors for config/profiles on initial load (expected behavior)
+        if (config?.url?.includes('/config') || config?.url?.includes('/profiles')) {
+          console.warn('Resource not found (expected):', config?.url)
+          return
+        }
         this.notificationsStore.error(
           'Not Found',
           'The requested resource was not found.',
@@ -116,6 +132,13 @@ class ApiClient {
         break
 
       case 429:
+        // Throttle 429 errors to prevent spam
+        if (currentTime - this.lastErrorTime < this.errorThrottleMs) {
+          console.warn('429 error throttled:', config?.url)
+          return
+        }
+        this.lastErrorTime = currentTime
+        
         this.notificationsStore.warning(
           'Too Many Requests',
           'You\'re making too many requests. Please slow down.',

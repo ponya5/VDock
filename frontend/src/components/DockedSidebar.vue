@@ -6,12 +6,17 @@
       @mousedown="startResize"
       title="Drag to resize"
     ></div>
-    <div class="sidebar-header">
+    <div
+      class="sidebar-header"
+      :class="{ 'clickable-header': !props.showHeader }"
+      :title="!props.showHeader ? 'Click to show header' : ''"
+      @click="!props.showHeader && emit('toggleHeader')"
+    >
       <h3>Docked Buttons</h3>
-      <button 
-        v-if="isEditMode" 
-        class="add-btn" 
-        @click="handleAddButton"
+      <button
+        v-if="isEditMode"
+        class="add-btn"
+        @click.stop="handleAddButton"
         title="Add Docked Button"
       >
         <FontAwesomeIcon :icon="['fas', 'plus']" />
@@ -71,13 +76,15 @@ interface Props {
   showLabels?: boolean
   showTooltips?: boolean
   buttonSize?: number
+  showHeader?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   showLabels: true,
   showTooltips: true,
-  buttonSize: 1.0
+  buttonSize: 1.0,
+  showHeader: true
 })
 
 const emit = defineEmits<{
@@ -88,6 +95,7 @@ const emit = defineEmits<{
   buttonDrop: [event: DragEvent, position: { row: number; col: number }]
   addButton: [position: { row: number; col: number }]
   placeholderClick: [position: { row: number; col: number }]
+  toggleHeader: []
 }>()
 
 const gridCols = 1 // Docked sidebar is always 1 column
@@ -267,6 +275,16 @@ function stopResize() {
   padding: var(--spacing-md);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-surface);
+  transition: background-color var(--transition-fast), cursor var(--transition-fast);
+}
+
+.sidebar-header.clickable-header {
+  cursor: pointer;
+  background-color: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
+}
+
+.sidebar-header.clickable-header:hover {
+  background-color: var(--color-primary-hover, rgba(100, 200, 255, 0.1));
 }
 
 .sidebar-header h3 {
