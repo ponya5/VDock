@@ -40,6 +40,7 @@ except ImportError:
         f10 = 'f10'
         f11 = 'f11'
         f12 = 'f12'
+        insert = 'insert'
         media_volume_up = 'volume_up'
         media_volume_down = 'volume_down'
         media_volume_mute = 'volume_mute'
@@ -80,6 +81,8 @@ class HotkeyAction(BaseAction):
         'f1': Key.f1, 'f2': Key.f2, 'f3': Key.f3, 'f4': Key.f4,
         'f5': Key.f5, 'f6': Key.f6, 'f7': Key.f7, 'f8': Key.f8,
         'f9': Key.f9, 'f10': Key.f10, 'f11': Key.f11, 'f12': Key.f12,
+        # Additional keys
+        'insert': Key.insert,
         # Media and volume keys
         'volume_up': Key.media_volume_up,
         'volume_down': Key.media_volume_down,

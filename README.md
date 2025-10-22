@@ -2,222 +2,174 @@
 
 VDock is a powerful virtual stream deck application that allows you to create customizable button layouts for controlling your computer, applications, and workflows.
 
-## Features
+## ✨ Features
 
-- 🎛️ **Customizable Button Layouts** - Create unlimited button configurations
-- 🎨 **Animated Backgrounds** - Beautiful animated backgrounds including floating paths and light beams
-- 🔧 **System Controls** - Volume, brightness, media controls, and more
+- 🎛️ **Customizable Button Layouts** - Create unlimited button configurations with drag & drop
+- 🎨 **Animated Backgrounds** - Beautiful animated backgrounds including floating paths and light beams  
+- 🔧 **System Controls** - Volume, brightness, media controls, and system metrics
 - 🌐 **Web Integration** - Open URLs, launch applications, and control web services
-- 📱 **Responsive Design** - Works on desktop and mobile devices
-- 🔄 **Real-time Updates** - Live system monitoring and status updates
-- 🎯 **Global Shortcuts** - Quick access with keyboard shortcuts
-- 🚀 **Auto-start** - Launch automatically with Windows/macOS
+- 📱 **Cross-Platform** - Works on Windows, macOS, and Linux
+- 🔄 **Real-time Monitoring** - Live CPU, RAM, and system status updates
+- 🎯 **Global Shortcuts** - Quick access with customizable keyboard shortcuts
+- 🚀 **Auto-start** - Launch automatically with your system
 
-## Installation
+## 🚀 Quick Start
 
 ### Windows
+```cmd
+# Run the installer
+install.bat
 
-#### Option 1: Installer (Recommended)
-1. Download `VDock Setup.exe` from the releases page
-2. Run the installer as administrator
-3. Follow the installation wizard
-4. Choose installation directory (default: `C:\Program Files\VDock`)
-5. Select whether to create desktop and start menu shortcuts
-6. Click "Install" and wait for completion
-7. Launch VDock from the desktop shortcut or start menu
+# Launch VDock (desktop shortcut created automatically)
+# Or manually: launch.bat
+```
 
-#### Option 2: Portable Version
-1. Download `VDock-Portable.exe` from the releases page
-2. Extract to any folder (e.g., `C:\VDock`)
-3. Double-click `VDock-Portable.exe` to run
-4. No installation required - runs directly from the folder
+### macOS / Linux
+```bash
+# Make installer executable and run
+chmod +x install.sh
+./install.sh
 
-#### Option 3: Manual Installation
-1. Download the latest release ZIP file
-2. Extract to your desired location
-3. Install Python 3.8+ from [python.org](https://python.org)
-4. Install Node.js 18+ from [nodejs.org](https://nodejs.org)
-5. Open Command Prompt in the extracted folder
-6. Run the build script:
-   ```cmd
-   scripts\build-installer.bat
-   ```
-7. Follow the build process instructions
+# Launch VDock
+./launch.sh
+```
 
-### macOS
+**First Launch:**
+1. Wait 3-5 seconds for the backend to start
+2. Open your browser to http://localhost:3000
+3. Default login: `admin` / `admin` ⚠️ *Change this in production!*
+4. Create your first profile and start adding buttons
 
-#### Option 1: DMG Installer (Recommended)
-1. Download `VDock.dmg` from the releases page
-2. Double-click the DMG file to mount it
-3. Drag VDock to your Applications folder
-4. Eject the DMG file
-5. Launch VDock from Applications or Spotlight
+## 📋 System Requirements
 
-#### Option 2: Manual Installation
-1. Download the latest release ZIP file
-2. Extract to your desired location
-3. Install Python 3.8+ using Homebrew:
-   ```bash
-   brew install python
-   ```
-4. Install Node.js 18+ using Homebrew:
-   ```bash
-   brew install node
-   ```
-5. Open Terminal in the extracted folder
-6. Run the build script:
-   ```bash
-   chmod +x scripts/build-installer.sh
-   ./scripts/build-installer.sh
-   ```
+- **Windows:** 10/11 (64-bit), 4GB RAM, 500MB disk space
+- **macOS:** 10.15+ (Catalina), 4GB RAM, 500MB disk space  
+- **Linux:** Ubuntu 18.04+, 4GB RAM, 500MB disk space
+- **Dependencies:** Python 3.9+, Node.js 16+ (auto-installed by installer)
 
-## First Launch
+## 🎮 Button Types
 
-1. **Launch VDock** - Double-click the application icon
-2. **Wait for Backend** - The app will start the backend server (takes 3-5 seconds)
-3. **Create Profile** - Set up your first profile with buttons
-4. **Configure Settings** - Adjust appearance, shortcuts, and auto-start options
+VDock supports various button actions:
 
-## Configuration
+- **System Controls:** Volume up/down/mute, media play/pause/next/previous
+- **Applications:** Launch programs, open files/folders
+- **Web Actions:** Open URLs, web shortcuts
+- **Hotkeys:** Send keyboard combinations (Ctrl+C, Alt+Tab, etc.)
+- **Macros:** Execute sequences of actions with delays
+- **System Metrics:** Display live CPU, RAM, disk usage
+- **Custom Commands:** Run shell commands (advanced users)
 
-### Auto-Start Options
+## ⚙️ Configuration
 
-VDock offers two auto-start methods:
+### Auto-Start Setup
+1. Open VDock → **Settings** → **System**
+2. Enable **"Start VDock on System Boot"**
+3. Requires administrator privileges on Windows
 
-#### 1. System Boot (Web Version)
-- Go to **Settings** → **System** → **Start VDock on System Boot**
-- This starts the web server automatically when your computer boots
-- Requires administrator privileges on Windows
-
-#### 2. Windows Startup (Desktop App)
-- Go to **Settings** → **System** → **Start with Windows (Desktop App)**
-- This launches the desktop application when Windows starts
-- Only available in the desktop application version
-
-### Global Shortcuts
-
+### Global Shortcuts (Default)
 - **Ctrl+Shift+D** - Show/hide VDock window
 - **Ctrl+Shift+M** - Toggle mute
 - **Ctrl+Shift+F** - Toggle fullscreen
 
-### Background Customization
-
+### Animated Backgrounds
 1. Go to **Settings** → **Appearance** → **Dashboard Background**
-2. Choose from:
-   - **Static Gradients** - Ocean Breeze, Sunset Glow, Forest Mist, etc.
-   - **Animated Backgrounds** - Floating Paths, Beams Background, Aurora Borealis, etc.
+2. Choose from static gradients or animated options:
+   - Floating Paths, Light Beams, Aurora Borealis, Matrix Rain, etc.
 
-## System Requirements
-
-### Windows
-- Windows 10/11 (64-bit)
-- 4GB RAM minimum, 8GB recommended
-- 500MB free disk space
-- Python 3.8+ (for manual installation)
-- Node.js 18+ (for manual installation)
-
-### macOS
-- macOS 10.15+ (Catalina or later)
-- 4GB RAM minimum, 8GB recommended
-- 500MB free disk space
-- Python 3.8+ (for manual installation)
-- Node.js 18+ (for manual installation)
-
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-#### "Backend failed to start"
-- Ensure Python is installed and in PATH
+**"Backend failed to start"**
+- Ensure Python 3.9+ is installed
 - Check if port 5000 is available
 - Run as administrator on Windows
 
-#### "Cannot connect to server"
+**"Cannot connect to server"**  
 - Wait 3-5 seconds after launching
 - Check Windows Firewall settings
-- Ensure no other application is using port 5000
+- Ensure no other app is using port 5000
 
-#### "Auto-start not working"
+**"Auto-start not working"**
 - Run VDock as administrator at least once
-- Check Windows Startup folder
-- Verify registry entries (Windows)
+- Check system startup settings
+- Verify the auto-start option is enabled in Settings
 
-#### "Animated backgrounds not showing"
-- Ensure you've selected an animated background in Settings
-- Check browser console for errors
-- Try refreshing the page
+**Button actions not working**
+- Check button configuration in the editor
+- Verify required permissions (e.g., for system controls)
+- See logs in the browser console (F12)
 
 ### Getting Help
+- **Issues:** [GitHub Issues](https://github.com/ponya5/VDock/issues)
+- **Email:** ponya81@gmail.com
+- **Documentation:** Check the `docs/` folder for detailed guides
 
-- **GitHub Issues** - Report bugs and request features
-- **Email Support** - Contact: ponya81@gmail.com
-- **Documentation** - Check the `docs/` folder for detailed guides
-
-## Development
+## 🛠️ Development
 
 ### Building from Source
+```bash
+# Clone repository
+git clone https://github.com/ponya5/VDock.git
+cd VDock
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ponya5/VDock.git
-   cd VDock
-   ```
+# Install dependencies
+cd backend && pip install -r requirements.txt
+cd ../frontend && npm install
 
-2. Install dependencies:
-   ```bash
-   # Backend
-   cd backend
-   pip install -r requirements.txt
-   
-   # Frontend
-   cd ../frontend
-   npm install
-   
-   # Electron
-   cd electron
-   npm install
-   ```
-
-3. Build the application:
-   ```bash
-   # Windows
-   scripts\build-installer.bat
-   
-   # macOS/Linux
-   ./scripts/build-installer.sh
-   ```
+# Build application
+# Windows: scripts\build-installer.bat
+# macOS/Linux: ./scripts/build-installer.sh
+```
 
 ### Project Structure
-
 ```
 VDock/
-├── backend/           # Python Flask backend
-├── frontend/          # Vue.js frontend
-│   ├── electron/     # Electron desktop wrapper
+├── backend/           # Python Flask API server
+├── frontend/          # Vue.js web interface
+│   ├── electron/     # Electron desktop wrapper  
 │   └── src/          # Vue.js source code
-├── docs/             # Documentation
+├── docs/             # Documentation and guides
 ├── scripts/          # Build and deployment scripts
 └── README.md         # This file
 ```
 
-## License
+## 📄 File Organization
+
+**Essential files (keep in root):**
+- `README.md` - This documentation
+- `LICENSE` - MIT license
+- `install.bat/sh` - Main installers
+- `launch.bat/ps1/sh` - Application launchers
+- `docker-compose.yml` - Docker deployment
+
+**Additional resources:**
+- `docs/` - Detailed documentation and guides
+- `scripts/` - Build scripts and utilities
+- `backend/` - Python server code
+- `frontend/` - Vue.js web interface
+
+## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - Built with Vue.js, Electron, and Flask
 - Icons by Font Awesome
-- Animated backgrounds inspired by modern web design trends
+- Animated backgrounds inspired by modern web design
+- Community contributions and feedback
 
 ---
 
-**VDock** - Making productivity beautiful and efficient.
+**VDock** - Making productivity beautiful and efficient. 🎮✨
+
+For detailed installation instructions, see `docs/guides/INSTALLATION.md`
