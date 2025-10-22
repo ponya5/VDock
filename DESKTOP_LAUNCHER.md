@@ -14,7 +14,7 @@ Copy `Launch-VDock.bat` to your desktop and double-click it!
 4. **Rename** to "VDock" (optional)
 5. **Double-click** to launch!
 
-### Option 2: Automated Shortcut Creator
+### Option 2: Automated Shortcut Creator (With Icon)
 
 Run this command in the VDock folder:
 
@@ -22,7 +22,7 @@ Run this command in the VDock folder:
 scripts\create-desktop-shortcut.bat
 ```
 
-This will create a proper shortcut on your desktop.
+This creates a shortcut on your desktop with the VDock icon.
 
 ## 🎯 Launch Process
 
