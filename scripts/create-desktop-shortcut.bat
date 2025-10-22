@@ -7,14 +7,16 @@ echo VDock Desktop Shortcut Creator
 echo ========================================
 echo.
 
-REM Get the project root directory
+REM Get the project root directory (parent of scripts folder)
 set "PROJECT_ROOT=%~dp0.."
-set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
+cd /d "%PROJECT_ROOT%"
+set "PROJECT_ROOT=%CD%"
 
-REM Check if running from scripts folder
+REM Check if project root has backend folder
 if not exist "%PROJECT_ROOT%\backend" (
-    echo Error: Please run this script from the scripts folder
+    echo Error: Could not find VDock project root
     echo Current directory: %CD%
+    echo PROJECT_ROOT: %PROJECT_ROOT%
     pause
     exit /b 1
 )
@@ -28,8 +30,28 @@ if not defined DESKTOP (
     exit /b 1
 )
 
+REM Find icon file (use VdIcon.ico first, then fallback options)
+set "ICON_PATH=%PROJECT_ROOT%\backend\Assets\VdIcon.ico"
+if not exist "%ICON_PATH%" (
+    set "ICON_PATH=%PROJECT_ROOT%\backend\Assets\VdockIcon.ico"
+)
+if not exist "%ICON_PATH%" (
+    set "ICON_PATH=%PROJECT_ROOT%\backend\Assets\IconVdock.png"
+)
+if not exist "%ICON_PATH%" (
+    set "ICON_PATH=%PROJECT_ROOT%\frontend\public\favicon.ico"
+)
+if not exist "%ICON_PATH%" (
+    set "ICON_PATH="
+)
+
 echo Project root: %PROJECT_ROOT%
 echo Desktop path: %DESKTOP%
+if defined ICON_PATH (
+    echo Icon: %ICON_PATH%
+) else (
+    echo Icon: Using default
+)
 echo.
 
 REM Check if VDock-Launcher.exe exists
@@ -61,7 +83,11 @@ echo Set oLink = oWS.CreateShortcut^(sLinkFile^)
 echo oLink.TargetPath = "%LAUNCHER_PATH%"
 echo oLink.WorkingDirectory = "%PROJECT_ROOT%"
 echo oLink.Description = "VDock Virtual Stream Deck Launcher"
-echo oLink.IconLocation = "%LAUNCHER_PATH%"
+if defined ICON_PATH (
+    echo oLink.IconLocation = "%ICON_PATH%"
+) else (
+    echo oLink.IconLocation = "%LAUNCHER_PATH%"
+)
 echo oLink.Save
 ) > "%VBS_FILE%"
 
