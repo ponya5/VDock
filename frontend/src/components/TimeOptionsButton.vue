@@ -32,7 +32,7 @@
     <!-- Full Mode -->
     <div v-else>
       <div class="time-header">
-        <FontAwesomeIcon :icon="headerIcon" class="header-icon" />
+        <FontAwesomeIcon :icon="headerIcon" class="header-icon" :style="{ fontSize: `${iconSize}px` }" />
         <span class="header-title">{{ headerTitle }}</span>
       </div>
       
@@ -86,6 +86,7 @@ interface Props {
   countdownTarget?: string
   compact?: boolean
   fontSize?: number
+  iconSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -94,6 +95,7 @@ const props = withDefaults(defineProps<Props>(), {
   countdownTarget: '',
   compact: false,
   fontSize: 1.0,
+  iconSize: 32
 })
 
 const currentDateTime = ref(new Date())
