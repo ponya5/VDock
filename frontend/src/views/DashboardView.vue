@@ -1178,6 +1178,31 @@ function handleSceneDelete(sceneId: string) {
 async function handleButtonClick(button: Button) {
   if (!button.action) return
 
+  // Skip execution for display-only action types (weather, time, metrics)
+  const displayOnlyTypes = [
+    'weather',
+    'time_world_clock',
+    'time_timer', 
+    'time_countdown',
+    'metric_memory',
+    'metric_cpu_usage',
+    'metric_cpu_temperature',
+    'metric_cpu_frequency',
+    'metric_cpu_power',
+    'metric_internet_speed',
+    'metric_harddisk',
+    'metric_gpu_temperature',
+    'metric_gpu_frequency',
+    'metric_gpu_usage',
+    'metric_gpu_memory_freq',
+    'metric_gpu_memory_usage'
+  ]
+
+  if (displayOnlyTypes.includes(button.action.type)) {
+    // These buttons are display-only and don't need to execute actions
+    return
+  }
+
   const result = await dashboardStore.executeButtonAction(button)
   showActionResult(result)
 }
