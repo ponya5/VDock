@@ -94,12 +94,21 @@ limiter.exempt(actions_bp)  # Action execution (frequent button clicks)
 
 
 # ============================================================================
-# Root Route
+# Root Route - Serve Frontend for Electron App
 # ============================================================================
 
 @app.route('/')
 def root():
-    """Root route."""
+    """Serve the frontend index.html for the Electron app."""
+    # Use absolute path resolution
+    backend_dir = Path(__file__).resolve().parent
+    project_root = backend_dir.parent
+    frontend_index = project_root / 'frontend' / 'dist' / 'index.html'
+
+    if frontend_index.exists():
+        return send_file(str(frontend_index))
+
+    logger.warning(f"Frontend index.html not found at {frontend_index}")
     return jsonify({'message': 'VDock API is running', 'success': True})
 
 
@@ -246,6 +255,35 @@ def health_check():
         'plugins_loaded': len(plugin_manager.plugins)
     })
 
+
+# ============================================================================
+# Frontend File Serving (for Electron app)
+# ============================================================================
+
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Serve frontend files for the Electron app."""
+    # Skip API routes
+    if path.startswith('api/') or path.startswith('avatars/'):
+        return jsonify({'error': 'Not found'}), 404
+
+    # Use absolute path resolution
+    backend_dir = Path(__file__).resolve().parent
+    project_root = backend_dir.parent
+    frontend_path = project_root / 'frontend' / 'dist' / path
+
+    # Check if the file exists in the dist directory
+    if frontend_path.exists() and frontend_path.is_file():
+        return send_file(str(frontend_path))
+
+    # If it's a frontend route (no file extension), serve index.html for SPA routing
+    if '.' not in path:
+        index_path = project_root / 'frontend' / 'dist' / 'index.html'
+        if index_path.exists():
+            return send_file(str(index_path))
+
+    # If nothing found, return 404
+    return jsonify({'error': 'File not found'}), 404
 
 # ============================================================================
 # Main Entry Point

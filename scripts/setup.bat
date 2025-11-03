@@ -68,23 +68,39 @@ if not exist "node_modules" (
 ) else (
     echo ✓ Frontend dependencies already installed
 )
-cd ..
+
+REM Install Electron-specific dependencies
+echo [6/6] Installing Electron dependencies...
+cd electron
+if not exist "node_modules" (
+    call npm install
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to install Electron dependencies
+        cd ..\..
+        pause
+        exit /b 1
+    )
+    echo ✓ Electron dependencies installed
+) else (
+    echo ✓ Electron dependencies already installed
+)
+cd ..\..
 
 REM Create data directories
-echo [6/6] Setting up data directories...
+echo [7/7] Setting up data directories...
 if not exist "backend\data" mkdir "backend\data"
 if not exist "backend\data\profiles" mkdir "backend\data\profiles"
 if not exist "backend\data\uploads" mkdir "backend\data\uploads"
 echo ✓ Data directories created
 
-REM Create desktop shortcut
+REM Create desktop shortcut for Electron app
 echo.
 echo Creating desktop shortcut...
 set SCRIPT_DIR=%~dp0
 set DESKTOP=%USERPROFILE%\Desktop
 set SHORTCUT=%DESKTOP%\VDock.lnk
 
-powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%launch.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%frontend\public\favicon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%launchers\Launch-VDock-Electron.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%backend\Assets\VdIcon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
 
 if exist "%SHORTCUT%" (
     echo ✓ Desktop shortcut created: VDock.lnk
@@ -101,7 +117,7 @@ echo VDock has been installed successfully!
 echo.
 echo To start VDock:
 echo   1. Double-click "VDock" shortcut on your desktop
-echo   2. Or run: launch.bat
+echo   2. Or run: scripts\launchers\Launch-VDock-Electron.bat
 echo.
 echo Default login: admin / admin
 echo Backend:  http://localhost:5000

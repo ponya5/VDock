@@ -4,11 +4,11 @@
   "description": "VDock - Virtual Stream Deck Desktop App",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "build-win": "electron-builder --win",
-    "build-all": "electron-builder --win --mac --linux",
-    "dist": "npm run build && electron-builder"
+    "start": "cross-env NODE_ENV=development npx electron .",
+    "build": "npx electron-builder",
+    "build-win": "npx electron-builder --win",
+    "build-all": "npx electron-builder --win --mac --linux",
+    "dist": "npm run build && npx electron-builder"
   },
   "build": {
     "appId": "com.vdock.app",
@@ -41,11 +41,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "../public/icon.ico",
@@ -72,8 +76,8 @@
     "auto-launch": "^5.0.5"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
   }
 }
-

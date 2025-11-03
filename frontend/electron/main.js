@@ -2,7 +2,8 @@ const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen } = requ
 const path = require('path')
 const { spawn } = require('child_process')
 const AutoLaunch = require('auto-launch')
-const isDev = process.env.NODE_ENV === 'development'
+// Detect development mode by checking if backend exists relative to electron directory
+const isDev = require('fs').existsSync(path.join(__dirname, '../../backend'))
 
 let mainWindow = null
 let tray = null
@@ -23,26 +24,48 @@ function initializeAutoLaunch() {
 
 // Start backend server
 function startBackend() {
-  const backendPath = isDev 
+  const backendPath = isDev
     ? path.join(__dirname, '../../backend')
     : path.join(process.resourcesPath, 'backend')
-  
-  const pythonPath = isDev 
-    ? 'python' 
-    : path.join(backendPath, 'python', 'python.exe')
-  
+
   const appPath = path.join(backendPath, 'app.py')
-  
+
+  console.log('========================================')
   console.log('Starting backend server...')
+  console.log('Development mode:', isDev)
   console.log('Backend path:', backendPath)
-  console.log('Python path:', pythonPath)
   console.log('App path:', appPath)
-  
-  backendProcess = spawn(pythonPath, [appPath], {
-    cwd: backendPath,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    detached: false
-  })
+  console.log('========================================')
+
+  // In development, activate virtual environment first
+  if (isDev) {
+    const activateScript = path.join(backendPath, 'venv', 'Scripts', 'activate.bat')
+    const pythonCmd = 'python'
+    const args = [appPath]
+
+    console.log('Using virtual environment activation script:', activateScript)
+    console.log('Python command:', pythonCmd)
+    console.log('App args:', args)
+
+    // Use cmd to run the activation and python command
+    const cmd = `${activateScript} && ${pythonCmd} ${args.join(' ')}`
+    console.log('Full command:', cmd)
+
+    backendProcess = spawn('cmd', ['/c', cmd], {
+      cwd: backendPath,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: false,
+      shell: true
+    })
+  } else {
+    // In production, use bundled python
+    const pythonPath = path.join(process.resourcesPath, 'backend', 'python.exe')
+    backendProcess = spawn(pythonPath, [appPath], {
+      cwd: backendPath,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: false
+    })
+  }
   
   backendProcess.stdout.on('data', (data) => {
     console.log(`Backend stdout: ${data}`)
@@ -86,24 +109,59 @@ function createWindow() {
     minHeight: 600,
     frame: true,
     transparent: false,
+    show: true,  // Explicitly show the window
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, '../public/icon.png')
+    icon: path.join(__dirname, '../../backend/Assets/VdIcon.ico')
   })
 
-  // Load app
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:3000')
-    mainWindow.webContents.openDevTools()
-  } else {
-    // Wait for backend to start, then load the app
-    setTimeout(() => {
-      mainWindow.loadURL('http://localhost:5000')
-    }, 3000)
-  }
+  // Show window immediately
+  mainWindow.show()
+  mainWindow.focus()
+  console.log('Window created and shown')
+  console.log('Window visible:', mainWindow.isVisible())
+  console.log('Window minimized:', mainWindow.isMinimized())
+  console.log('Window bounds:', mainWindow.getBounds())
+
+  // Load app - In both dev and production, load from backend server
+  // which serves the frontend files
+  setTimeout(() => {
+    console.log('Loading URL: http://localhost:5000')
+    mainWindow.loadURL('http://localhost:5000').then(() => {
+      console.log('URL loaded successfully')
+      // Force show and focus after load
+      mainWindow.show()
+      mainWindow.focus()
+      mainWindow.setAlwaysOnTop(true)
+      setTimeout(() => mainWindow.setAlwaysOnTop(false), 1000)
+      console.log('Window should be on top now')
+    }).catch((err) => {
+      console.error('Failed to load URL:', err)
+      // Show error in window
+      mainWindow.loadURL(`data:text/html,<html><body style="font-family: Arial; padding: 20px;"><h1>Failed to load VDock</h1><p>Error: ${err.message}</p><p>Please ensure the backend server is running on http://localhost:5000</p></body></html>`)
+    })
+
+    // DevTools can be opened manually with F12 if needed
+    // if (isDev) {
+    //   mainWindow.webContents.openDevTools()
+    // }
+
+    // Add console logging for page load events
+    mainWindow.webContents.on('did-finish-load', () => {
+      console.log('Page finished loading')
+    })
+
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('Page failed to load:', errorCode, errorDescription)
+    })
+
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log(`[Renderer] ${message}`)
+    })
+  }, 3000)
 
   // Window event handlers
   mainWindow.on('close', (event) => {
@@ -122,11 +180,144 @@ function createWindow() {
   mainWindow.setAlwaysOnTop(alwaysOnTop)
 }
 
-function createTray() {
-  const iconPath = path.join(__dirname, '../public/icon.png')
-  tray = new Tray(iconPath)
+function fixFirewall() {
+  const { dialog } = require('electron')
+  const { exec } = require('child_process')
 
-  const contextMenu = Menu.buildFromTemplate([
+  // Show confirmation dialog
+  dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: ['Yes', 'Cancel'],
+    defaultId: 0,
+    title: 'Fix Windows Firewall',
+    message: 'Add VDock to Windows Firewall exclusions?',
+    detail: 'This will add VDock launcher files to Windows Firewall exceptions to prevent connection issues.\n\nThis requires administrator privileges.'
+  }).then(result => {
+    if (result.response === 0) {
+      // User clicked Yes
+      const launcherPath = process.execPath
+      const pythonPath = path.join(__dirname, '../../backend/venv/Scripts/python.exe')
+
+      // Add firewall rules
+      const commands = [
+        `netsh advfirewall firewall add rule name="VDock Electron" dir=in action=allow program="${launcherPath}" enable=yes`,
+        `netsh advfirewall firewall add rule name="VDock Python Backend" dir=in action=allow program="${pythonPath}" enable=yes`
+      ]
+
+      // Execute firewall commands with admin privileges
+      const psCommand = commands.map(cmd => `Start-Process -Verb RunAs -FilePath "cmd" -ArgumentList "/c", "${cmd.replace(/"/g, '\\"')}" -Wait`).join('; ')
+
+      exec(`powershell -Command "${psCommand}"`, (error, stdout, stderr) => {
+        if (error) {
+          dialog.showErrorBox('Firewall Fix Failed', `Failed to add firewall rules:\n${error.message}\n\nPlease run VDock as administrator or add the rules manually.`)
+        } else {
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Firewall Fixed',
+            message: 'VDock has been added to Windows Firewall exclusions successfully!',
+            detail: 'You should no longer experience connection issues.'
+          })
+        }
+      })
+    }
+  })
+}
+
+async function openSettings() {
+  // Get current auto-launch status
+  const isAutoLaunchEnabled = await autoLaunch.isEnabled().catch(() => false)
+
+  // Create a simple settings window
+  const settingsWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: mainWindow,
+    modal: true,
+    show: false,
+    frame: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    icon: path.join(__dirname, '../../backend/Assets/VdIcon.ico')
+  })
+
+  // Create HTML content for settings
+  const settingsHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>VDock Settings</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .setting { margin: 15px 0; }
+        .setting label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .setting input[type="checkbox"] { margin-right: 8px; }
+        button { padding: 8px 16px; margin: 10px 5px 0 0; border: none; border-radius: 4px; cursor: pointer; }
+        .save { background: #007acc; color: white; }
+        .cancel { background: #ccc; color: black; }
+      </style>
+    </head>
+    <body>
+      <h2>VDock Settings</h2>
+
+      <div class="setting">
+        <label>
+          <input type="checkbox" id="alwaysOnTop" ${alwaysOnTop ? 'checked' : ''}>
+          Always on Top
+        </label>
+      </div>
+
+      <div class="setting">
+        <label>
+          <input type="checkbox" id="startWithWindows" ${isAutoLaunchEnabled ? 'checked' : ''}>
+          Start with Windows
+        </label>
+      </div>
+
+      <div class="setting">
+        <label for="theme">Theme:</label>
+        <select id="theme">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <button class="save" onclick="saveSettings()">Save</button>
+      <button class="cancel" onclick="closeSettings()">Cancel</button>
+
+      <script>
+        function saveSettings() {
+          const alwaysOnTop = document.getElementById('alwaysOnTop').checked;
+          const startWithWindows = document.getElementById('startWithWindows').checked;
+
+          // Send settings to main process
+          window.postMessage({
+            type: 'settings-update',
+            alwaysOnTop: alwaysOnTop,
+            startWithWindows: startWithWindows
+          }, '*');
+
+          window.close();
+        }
+
+        function closeSettings() {
+          window.close();
+        }
+      </script>
+    </body>
+    </html>
+  `
+
+  settingsWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(settingsHtml)}`)
+  settingsWindow.show()
+}
+
+async function createTrayMenu() {
+  const isAutoLaunchEnabled = await autoLaunch.isEnabled().catch(() => false)
+
+  return Menu.buildFromTemplate([
     {
       label: 'Show VDock',
       click: () => {
@@ -136,45 +327,41 @@ function createTray() {
         }
       }
     },
+    { type: 'separator' },
     {
-      label: 'Toggle Always on Top',
-      type: 'checkbox',
-      checked: alwaysOnTop,
-      click: (item) => {
-        alwaysOnTop = item.checked
-        if (mainWindow) {
-          mainWindow.setAlwaysOnTop(alwaysOnTop)
-        }
+      label: 'Settings',
+      click: () => {
+        // Open settings window or dialog
+        openSettings()
       }
     },
     {
-      label: 'Start with Windows',
-      type: 'checkbox',
-      checked: false,
-      click: async (item) => {
-        try {
-          if (item.checked) {
-            await autoLaunch.enable()
-          } else {
-            await autoLaunch.disable()
-          }
-        } catch (err) {
-          console.error('Failed to toggle auto-launch:', err)
-        }
+      label: 'Fix Firewall',
+      click: () => {
+        fixFirewall()
       }
     },
     { type: 'separator' },
     {
-      label: 'Quit',
+      label: 'Exit',
       click: () => {
         isQuitting = true
         app.quit()
       }
     }
   ])
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, '../../backend/Assets/VdIcon.ico')
+  tray = new Tray(iconPath)
 
   tray.setToolTip('VDock - Virtual Stream Deck')
-  tray.setContextMenu(contextMenu)
+
+  // Set initial menu
+  createTrayMenu().then(menu => {
+    tray.setContextMenu(menu)
+  })
 
   // Double-click to show/hide
   tray.on('double-click', () => {
@@ -187,6 +374,13 @@ function createTray() {
       }
     }
   })
+}
+
+async function updateTrayMenu() {
+  if (tray) {
+    const menu = await createTrayMenu()
+    tray.setContextMenu(menu)
+  }
 }
 
 function registerGlobalShortcuts() {
@@ -217,6 +411,29 @@ ipcMain.handle('window-pin', (event, pinned) => {
   windowPinned = pinned
   // Implement pin logic (prevent window from being moved)
   return windowPinned
+})
+
+ipcMain.handle('settings-update', async (event, settings) => {
+  try {
+    alwaysOnTop = settings.alwaysOnTop
+    if (mainWindow) {
+      mainWindow.setAlwaysOnTop(alwaysOnTop)
+    }
+
+    if (settings.startWithWindows) {
+      await autoLaunch.enable()
+    } else {
+      await autoLaunch.disable()
+    }
+
+    // Update tray menu to reflect changes
+    updateTrayMenu()
+
+    return true
+  } catch (err) {
+    console.error('Failed to update settings:', err)
+    return false
+  }
 })
 
 ipcMain.handle('window-dock', (event, side) => {
@@ -306,12 +523,25 @@ ipcMain.handle('is-auto-launch-enabled', async () => {
 
 // App event handlers
 app.whenReady().then(async () => {
+  console.log('========================================')
+  console.log('Electron app ready - initializing VDock')
+  console.log('========================================')
+
   initializeAutoLaunch()
+  console.log('✓ Auto-launch initialized')
+
   startBackend()
+  console.log('✓ Backend starting...')
+
   createWindow()
+  console.log('✓ Window created')
+
   createTray()
+  console.log('✓ Tray icon created')
+
   registerGlobalShortcuts()
-  
+  console.log('✓ Global shortcuts registered')
+
   // Check if auto-launch is enabled
   try {
     const isEnabled = await autoLaunch.isEnabled()
@@ -319,6 +549,11 @@ app.whenReady().then(async () => {
   } catch (err) {
     console.error('Failed to check auto-launch status:', err)
   }
+
+  console.log('========================================')
+  console.log('VDock initialization complete!')
+  console.log('Window should be visible now')
+  console.log('========================================')
 })
 
 app.on('window-all-closed', () => {
