@@ -116,20 +116,6 @@ def root():
 # Static File Serving
 # ============================================================================
 
-@app.route('/avatars/<filename>')
-def serve_avatar(filename):
-    """Serve avatar files from the Avatars directory."""
-    try:
-        avatars_dir = Path(__file__).parent / 'Avatars'
-        avatar_path = avatars_dir / filename
-
-        if not avatar_path.exists() or not avatar_path.is_file():
-            return jsonify({'error': 'Avatar not found'}), 404
-
-        return send_file(avatar_path)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 # ============================================================================
 # Theme Routes
