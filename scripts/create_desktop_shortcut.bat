@@ -2,7 +2,8 @@
 REM Create VDock Desktop Shortcut
 echo Creating VDock desktop shortcut...
 
-set SCRIPT_DIR=%~dp0..
+REM Get the project root directory (parent of scripts folder)
+for %%I in ("%~dp0..") do set "SCRIPT_DIR=%%~fI"
 set DESKTOP=%USERPROFILE%\Desktop
 set SHORTCUT=%DESKTOP%\VDock.lnk
 
@@ -18,7 +19,7 @@ if exist "%SHORTCUT%" (
 
 REM Create new shortcut pointing to Browser launcher
 echo Creating new shortcut...
-powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%\scripts\launchers\Launch-VDock-Browser.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%\backend\Assets\VdIcon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%\scripts\launchers\Launch-VDock-Browser.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%\scripts\vdock-icon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
 
 if exist "%SHORTCUT%" (
     echo ✓ Desktop shortcut created successfully: %SHORTCUT%

@@ -1,81 +1,54 @@
 # VDock Icon Generator
-# Creates an ICO file from a simple SVG/bitmap
+# Copies the official VDock icon from Assets folder
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $IconPath = Join-Path $ScriptDir "vdock-icon.ico"
+$SourceIconPath = Join-Path $ScriptDir "..\backend\Assets\VdockIcon.ico"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "VDock Icon Generator" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if we can create the icon
-Write-Host "Creating VDock icon..." -ForegroundColor Yellow
-
-# Create icon using .NET
-Add-Type -AssemblyName System.Drawing
-
-# Create a bitmap
-$bitmap = New-Object System.Drawing.Bitmap(256, 256)
-$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-$graphics.Clear([System.Drawing.Color]::White)
-
-# Draw VDock icon (simple design)
-$brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(50, 100, 200))
-$pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(30, 60, 150), 3)
-
-# Draw a deck shape (rounded rectangle)
-$graphics.FillRoundedRectangle($brush, 40, 40, 176, 176, 20, 20)
-$graphics.DrawRoundedRectangle($pen, 40, 40, 176, 176, 20, 20)
-
-# Draw button grid (4x4 buttons)
-$buttonBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(100, 150, 255))
-$buttonPen = New-Object System.Drawing.Pen([System.Drawing.Color]::White, 1)
-
-$startX = 60
-$startY = 60
-$buttonSize = 35
-$spacing = 5
-
-for ($row = 0; $row -lt 4; $row++) {
-    for ($col = 0; $col -lt 4; $col++) {
-        $x = $startX + ($col * ($buttonSize + $spacing))
-        $y = $startY + ($row * ($buttonSize + $spacing))
-
-        $graphics.FillRectangle($buttonBrush, $x, $y, $buttonSize, $buttonSize)
-        $graphics.DrawRectangle($buttonPen, $x, $y, $buttonSize, $buttonSize)
-    }
-}
-
-$graphics.Dispose()
-
-# Convert bitmap to icon and save
-try {
-    # Save as a temporary PNG first
-    $tempPng = Join-Path $env:TEMP "vdock_icon_temp.png"
-    $bitmap.Save($tempPng, [System.Drawing.Imaging.ImageFormat]::Png)
-
-    # Create icon from bitmap
-    $icon = [System.Drawing.Icon]::FromHandle($bitmap.GetHicon())
-    $icon.Save($IconPath)
-    $icon.Dispose()
-
-    Remove-Item $tempPng -Force -ErrorAction SilentlyContinue
-
-    Write-Host "✓ Icon created successfully: vdock-icon.ico" -ForegroundColor Green
-    Write-Host "  Location: $IconPath" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "This icon features:" -ForegroundColor Cyan
-    Write-Host "  - Blue gradient background (VDock theme)" -ForegroundColor Gray
-    Write-Host "  - 4x4 button grid (representing Stream Deck layout)" -ForegroundColor Gray
-    Write-Host "  - Scalable for various sizes" -ForegroundColor Gray
-} catch {
-    Write-Host "✗ Error creating icon: $_" -ForegroundColor Red
+# Check if source icon exists
+if (!(Test-Path $SourceIconPath)) {
+    Write-Host "[ERROR] Source icon not found: $SourceIconPath" -ForegroundColor Red
+    Write-Host "Please ensure the VdockIcon.ico file exists in backend/Assets/" -ForegroundColor Yellow
     exit 1
-} finally {
-    $bitmap.Dispose()
 }
 
-Write-Host ""
-Write-Host "Icon ready for use with PyInstaller!" -ForegroundColor Green
-Read-Host "Press Enter to exit"
+Write-Host "Copying VDock icon from Assets..." -ForegroundColor Yellow
+
+try {
+    # Copy the icon from Assets folder
+    Copy-Item -Path $SourceIconPath -Destination $IconPath -Force
+
+    # Verify the copy was successful
+    if (Test-Path $IconPath) {
+        $sourceSize = (Get-Item $SourceIconPath).Length
+        $destSize = (Get-Item $IconPath).Length
+
+        if ($sourceSize -eq $destSize) {
+            Write-Host "[SUCCESS] Icon copied successfully: vdock-icon.ico" -ForegroundColor Green
+            Write-Host "  Source: $SourceIconPath" -ForegroundColor Gray
+            Write-Host "  Destination: $IconPath" -ForegroundColor Gray
+            Write-Host "  Size: $([math]::Round($destSize/1KB, 2)) KB" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "This icon contains:" -ForegroundColor Cyan
+            Write-Host "  - Official VDock branding" -ForegroundColor Gray
+            Write-Host "  - Professional icon design" -ForegroundColor Gray
+            Write-Host "  - Compatible with Windows desktop shortcuts" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "Icon ready for use with PyInstaller and desktop shortcuts!" -ForegroundColor Green
+        } else {
+            Write-Host "[ERROR] Icon copy verification failed - file sizes don't match" -ForegroundColor Red
+            exit 1
+        }
+    } else {
+        Write-Host "[ERROR] Icon copy failed - destination file not found" -ForegroundColor Red
+        exit 1
+    }
+} catch {
+    Write-Host "[ERROR] Error copying icon: $_" -ForegroundColor Red
+    exit 1
+}
