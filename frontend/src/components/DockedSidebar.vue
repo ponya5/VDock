@@ -8,11 +8,13 @@
     ></div>
     <div
       class="sidebar-header"
-      :class="{ 'clickable-header': !props.showHeader }"
-      :title="!props.showHeader ? 'Click to show header' : ''"
       @click="!props.showHeader && emit('toggleHeader')"
     >
-      <h3>Docked Buttons</h3>
+      <div v-if="!props.showHeader" class="header-toggle-button">
+        <FontAwesomeIcon :icon="['fas', 'chevron-up']" />
+        <span>Docked Buttons</span>
+      </div>
+      <h3 v-else>Docked Buttons</h3>
       <button
         v-if="isEditMode"
         class="add-btn"
@@ -278,40 +280,58 @@ function stopResize() {
   transition: background-color var(--transition-fast), cursor var(--transition-fast);
 }
 
-.sidebar-header.clickable-header {
-  cursor: pointer;
-  background-color: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
-  animation: header-glow 2s ease-in-out infinite;
-}
-
-@keyframes header-glow {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
-  }
-}
-
-.sidebar-header.clickable-header:hover {
-  background-color: var(--color-primary-hover, rgba(100, 200, 255, 0.1));
-  animation: header-glow-hover 1s ease-in-out infinite;
-}
-
-@keyframes header-glow-hover {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(102, 126, 234, 0.9);
-  }
-}
+/* Removed clickable-header styles as we now use a proper button */
 
 .sidebar-header h3 {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
+}
+
+.header-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: button-pulse 2s ease-in-out infinite;
+}
+
+.header-toggle-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: button-pulse-hover 1s ease-in-out infinite;
+}
+
+.header-toggle-button svg {
+  font-size: 0.8rem;
+}
+
+@keyframes button-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 8px rgba(102, 126, 234, 0.1);
+  }
+}
+
+@keyframes button-pulse-hover {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(102, 126, 234, 0.6);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 12px rgba(102, 126, 234, 0.2);
+  }
 }
 
 .add-btn {
@@ -374,3 +394,4 @@ function stopResize() {
   opacity: 1;
 }
 </style>
+
