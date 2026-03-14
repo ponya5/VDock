@@ -37,7 +37,8 @@ class Config:
     
     
     # Data storage
-    DATA_DIR = Path(os.environ.get('DATA_DIR', 'data'))
+    BASE_DIR = Path(__file__).resolve().parent
+    DATA_DIR = Path(os.environ.get('DATA_DIR', str(BASE_DIR / 'data')))
     PROFILES_DIR = DATA_DIR / 'profiles'
     UPLOADS_DIR = DATA_DIR / 'uploads'
     PLUGINS_DIR = DATA_DIR / 'plugins'
@@ -66,6 +67,8 @@ class Config:
         cls.DATA_DIR.mkdir(exist_ok=True)
         cls.PROFILES_DIR.mkdir(exist_ok=True)
         cls.UPLOADS_DIR.mkdir(exist_ok=True)
+        (cls.UPLOADS_DIR / 'backgrounds').mkdir(exist_ok=True)
+        (cls.UPLOADS_DIR / 'button_backgrounds').mkdir(exist_ok=True)
         cls.PLUGINS_DIR.mkdir(exist_ok=True)
         
         # Create default config file if it doesn't exist
