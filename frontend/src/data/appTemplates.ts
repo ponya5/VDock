@@ -493,3 +493,74 @@ const automationDev: AppTemplate[] = [
     ],
   },
 ]
+
+// ─── AI Models & Platforms ───────────────────────────────────────────────────
+const aiPlatforms: AppTemplate[] = [
+  {
+    id: 'huggingface',
+    name: 'HuggingFace',
+    description: 'HuggingFace platform shortcuts',
+    icon: ['fas', 'robot'],
+    logo: '/logos/huggingface.png',
+    color: '#ff9d00',
+    buttons: [
+      { label: 'Open HF', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://huggingface.co'), tooltip: 'Open HuggingFace' },
+      { label: 'Models', icon: ['fas', 'brain'], action: url('https://huggingface.co/models'), tooltip: 'Browse models' },
+      { label: 'Spaces', icon: ['fas', 'rocket'], action: url('https://huggingface.co/spaces'), tooltip: 'Browse Spaces' },
+      { label: 'Datasets', icon: ['fas', 'database'], action: url('https://huggingface.co/datasets'), tooltip: 'Browse datasets' },
+    ],
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama',
+    description: 'Ollama local LLM shortcuts',
+    icon: ['fas', 'server'],
+    logo: '/logos/ollama.png',
+    color: '#1a1a1a',
+    buttons: [
+      { label: 'Run Llama', icon: ['fas', 'play'], action: cmd('ollama run llama3.2'), tooltip: 'Run Llama 3.2' },
+      { label: 'Run Mistral', icon: ['fas', 'play'], action: cmd('ollama run mistral'), tooltip: 'Run Mistral' },
+      { label: 'Run Gemma', icon: ['fas', 'play'], action: cmd('ollama run gemma3'), tooltip: 'Run Gemma 3' },
+      { label: 'List Models', icon: ['fas', 'list'], action: cmd('ollama list'), tooltip: 'List local models' },
+      { label: 'Pull Model', icon: ['fas', 'download'], action: cmd('ollama pull llama3.2'), tooltip: 'Pull a model' },
+      { label: 'Open WebUI', icon: ['fas', 'globe'], action: url('http://localhost:3000'), tooltip: 'Open Ollama WebUI' },
+    ],
+  },
+  {
+    id: 'antigravity',
+    name: 'Antigravity',
+    description: 'Antigravity AI shortcuts',
+    icon: ['fas', 'rocket'],
+    logo: '/logos/antigravity.png',
+    color: '#8b5cf6',
+    buttons: [
+      { label: 'Open Antigravity', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://antigravity.ai'), tooltip: 'Open Antigravity' },
+    ],
+  },
+  {
+    id: 'microsoft-ai',
+    name: 'Microsoft AI',
+    description: 'Microsoft AI tools shortcuts',
+    icon: ['fab', 'microsoft'],
+    logo: '/logos/microsoft-ai.png',
+    color: '#0078d4',
+    buttons: [
+      { label: 'Copilot', icon: ['fas', 'robot'], action: url('https://copilot.microsoft.com'), tooltip: 'Open Microsoft Copilot' },
+      { label: 'Azure AI', icon: ['fas', 'cloud'], action: url('https://ai.azure.com'), tooltip: 'Open Azure AI Studio' },
+      { label: 'Bing AI', icon: ['fas', 'magnifying-glass'], action: url('https://www.bing.com/chat'), tooltip: 'Bing AI Chat' },
+    ],
+  },
+  {
+    id: 'google-ai',
+    name: 'Google AI',
+    description: 'Google AI platform shortcuts',
+    icon: ['fab', 'google'],
+    logo: '/logos/google-ai.png',
+    color: '#4285f4',
+    buttons: [
+      { label: 'AI Studio', icon: ['fas', 'flask'], action: url('https://aistudio.google.com'), tooltip: 'Google AI Studio' },
+      { label: 'Vertex AI', icon: ['fas', 'cloud'], action: url('https://console.cloud.google.com/vertex-ai'), tooltip: 'Vertex AI' },
+      { label: 'Gemini API', icon: ['fas', 'code'], action: url('https://ai.google.dev'), tooltip: 'Gemini API docs' },
+    ],
+  },
+]
