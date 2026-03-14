@@ -1,4 +1,4 @@
-export interface TemplateButton {
+﻿export interface TemplateButton {
   label: string
   icon: string[]
   action: { type: string; config: Record<string, unknown> }
@@ -563,4 +563,14 @@ const aiPlatforms: AppTemplate[] = [
       { label: 'Gemini API', icon: ['fas', 'code'], action: url('https://ai.google.dev'), tooltip: 'Gemini API docs' },
     ],
   },
+]
+
+// --- Exported categories ---
+export const templateCategories: TemplateCategory[] = [
+  { id: 'ai-assistants', name: 'AI Assistants', icon: ['fas', 'robot'], templates: aiAssistants },
+  { id: 'ai-coding', name: 'AI Coding', icon: ['fas', 'terminal'], templates: aiCoding },
+  { id: 'ai-image-video', name: 'AI Image & Video', icon: ['fas', 'image'], templates: aiImageVideo },
+  { id: 'design-creative', name: 'Design & Creative', icon: ['fas', 'pen-nib'], templates: designCreative },
+  { id: 'automation-dev', name: 'Automation & Dev', icon: ['fas', 'diagram-project'], templates: automationDev },
+  { id: 'ai-platforms', name: 'AI Models & Platforms', icon: ['fas', 'brain'], templates: aiPlatforms },
 ]
