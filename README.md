@@ -1,109 +1,161 @@
-# VDock - Virtual Stream Deck
+# VDock — Virtual Stream Deck
 
-VDock is a powerful virtual stream deck application that allows you to create customizable button layouts for controlling your computer, applications, and workflows.
+> A powerful, browser-based virtual stream deck that puts your most-used controls at your fingertips. Build custom button layouts, automate workflows, monitor system stats, and control everything from a single, beautiful interface.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](README.md)
+[![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
+[![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
+
+---
 
 ## ✨ Features
 
-- 🎛️ **Customizable Button Layouts** - Create unlimited button configurations with drag & drop
-- 🎨 **Animated Backgrounds** - Beautiful animated backgrounds including floating paths and light beams  
-- 🔧 **System Controls** - Volume, brightness, media controls, and system metrics
-- 🌐 **Web Integration** - Open URLs, launch applications, and control web services
-- 📱 **Cross-Platform** - Works on Windows, macOS, and Linux
-- 🔄 **Real-time Monitoring** - Live CPU, RAM, and system status updates
-- 🎯 **Global Shortcuts** - Quick access with customizable keyboard shortcuts
-- 🚀 **Auto-start** - Launch automatically with your system
+### 🎛️ Button & Layout System
+- **Customizable Grid Layouts** — Drag, drop, resize, and reorder buttons freely
+- **Scenes** — Multiple button layouts per profile (e.g. Work, Gaming, Streaming)
+- **Pages** — Stack multiple pages inside each scene with circular navigation
+- **Docked Sidebar** — Persistent buttons pinned across all pages/scenes
+- **Template Gallery** — Jump-start with pre-built button sets
+
+### 🖥️ System Controls
+- Volume up/down/mute, microphone toggle
+- Brightness control, media play/pause/next/previous
+- Screen lock, sleep, shutdown, restart
+- Window management (minimize, maximize, close, Alt+Tab)
+- Show Desktop, Task Manager, Control Panel
+
+### 📊 Real-time Monitoring
+- Live CPU usage, frequency, temperature
+- RAM / Memory usage
+- Hard disk usage
+- GPU core usage, GPU memory, GPU temperature, GPU frequency
+- Internet speed
+
+### 🌐 Web & App Integration
+- Open URLs in browser, launch applications, open files/folders
+- Run shell commands and scripts
+- Send keyboard hotkeys (single keys or full combinations)
+- Macros — chain multiple actions with optional delays
+- Copy text to clipboard, type text via virtual keyboard
+
+### 🌤️ Widgets
+- **World Clock** — Display time in any timezone
+- **Timer** — Countdown and stopwatch widgets
+- **Weather** — Live weather for any city
+
+### 🎬 Streaming (OBS)
+- Switch OBS scenes, toggle sources/filters
+- Start/stop streaming and recording
+
+### 🎨 Appearance
+- 26+ animated dashboard backgrounds (Floating Paths, Light Beams, Aurora, Matrix Rain, etc.)
+- Custom background image upload
+- Per-page background color, gradient, or image
+- Button animations, labels, tooltips, and icon customization
+- Asset library for custom icons, GIFs, and videos
+
+### 🚀 Convenience
+- Global keyboard shortcuts (configurable)
+- Auto-start on system boot
+- Multi-profile support with avatars
+- Profile import / export
+- Quick Search for buttons and actions
+
+---
 
 ## 🚀 Quick Start
 
 ### Windows
 ```cmd
-# Run the installer
-install.bat
-
-# Launch VDock (desktop shortcut created automatically)
-# Or manually: launch.bat
+# Run the launcher directly
+launch.bat
 ```
 
-### macOS / Linux
-```bash
-# Make installer executable and run
-chmod +x install.sh
-./install.sh
+### First Launch
+1. Wait **5–10 seconds** for the backend to initialize
+2. Open your browser: **http://localhost:3000**
+3. Default login: `admin` / `admin` ⚠️ *Change this in Settings → Security!*
+4. Pick a template or start blank → customize your first button layout
 
-# Launch VDock
-./launch.sh
-```
-
-**First Launch:**
-1. Wait 3-5 seconds for the backend to start
-2. Open your browser to http://localhost:3000
-3. Default login: `admin` / `admin` ⚠️ *Change this in production!*
-4. Create your first profile and start adding buttons
+---
 
 ## 📋 System Requirements
 
-- **Windows:** 10/11 (64-bit), 4GB RAM, 500MB disk space
-- **macOS:** 10.15+ (Catalina), 4GB RAM, 500MB disk space  
-- **Linux:** Ubuntu 18.04+, 4GB RAM, 500MB disk space
-- **Dependencies:** Python 3.9+, Node.js 16+ (auto-installed by installer)
+| Component   | Minimum                          |
+|-------------|----------------------------------|
+| OS          | Windows 10/11, macOS 10.15+, Ubuntu 18.04+ |
+| RAM         | 4 GB                             |
+| Disk        | 500 MB                           |
+| Python      | 3.9+                             |
+| Node.js     | 16+                              |
+| Browser     | Chrome, Firefox, Edge (modern)   |
 
-## 🎮 Button Types
+---
 
-VDock supports various button actions:
+## 🎮 Button Action Types
 
-- **System Controls:** Volume up/down/mute, media play/pause/next/previous
-- **Applications:** Launch programs, open files/folders
-- **Web Actions:** Open URLs, web shortcuts
-- **Hotkeys:** Send keyboard combinations (Ctrl+C, Alt+Tab, etc.)
-- **Macros:** Execute sequences of actions with delays
-- **System Metrics:** Display live CPU, RAM, disk usage
-- **Custom Commands:** Run shell commands (advanced users)
+| Action         | Description                                      |
+|----------------|--------------------------------------------------|
+| **Hotkey**     | Send any keyboard shortcut (Ctrl+C, Win+D, etc.) |
+| **Program**    | Launch any application                           |
+| **URL**        | Open a website in the default browser            |
+| **Command**    | Run a shell command or script                    |
+| **Macro**      | Chain multiple actions with delays               |
+| **System**     | Volume, brightness, media, power, window control |
+| **Metrics**    | Live display of CPU, RAM, GPU, disk, network     |
+| **Weather**    | Current weather for a chosen city                |
+| **Time**       | World clock, timer, or countdown display         |
+| **OBS**        | Scene/source/filter control + streaming toggle   |
+| **Custom Media** | Custom icon, GIF, video, or sound on-button    |
+| **Navigation** | Jump to next/previous page or home page          |
+| **Clipboard**  | Copy predefined text to clipboard                |
+
+---
 
 ## ⚙️ Configuration
 
-### Auto-Start Setup
-1. Open VDock → **Settings** → **System**
-2. Enable **"Start VDock on System Boot"**
-3. Requires administrator privileges on Windows
+### Changing Settings
+1. Open VDock → click **Settings** (top-right ⚙️)
+2. Available sections: **Appearance**, **Button Layout**, **System**, **Security**
 
-### Global Shortcuts (Default)
-- **Ctrl+Shift+D** - Show/hide VDock window
-- **Ctrl+Shift+M** - Toggle mute
-- **Ctrl+Shift+F** - Toggle fullscreen
+### Key Settings
+| Setting              | Default       | Description                              |
+|----------------------|---------------|------------------------------------------|
+| Dashboard Background | Default       | Static or animated background            |
+| Button Size          | Medium        | Scale all buttons up/down                |
+| Show Labels          | On            | Show/hide text labels on buttons         |
+| Show Header          | On            | Toggle the top navigation bar            |
+| Docked Sidebar       | Off           | Enable persistent sidebar buttons        |
+| Auto-start           | Off           | Launch VDock on system boot              |
 
-### Animated Backgrounds
-1. Go to **Settings** → **Appearance** → **Dashboard Background**
-2. Choose from static gradients or animated options:
-   - Floating Paths, Light Beams, Aurora Borealis, Matrix Rain, etc.
+### Global Shortcuts (Defaults)
+| Shortcut          | Action                    |
+|-------------------|---------------------------|
+| `Ctrl+Shift+D`    | Show/hide VDock window    |
+| `Ctrl+Shift+M`    | Toggle mute               |
+| `Ctrl+Shift+F`    | Toggle fullscreen         |
+
+---
 
 ## 🔧 Troubleshooting
 
-### Common Issues
-
-**"Backend failed to start"**
-- Ensure Python 3.9+ is installed
-- Check if port 5000 is available
-- Run as administrator on Windows
-
-**"Cannot connect to server"**  
-- Wait 3-5 seconds after launching
-- Check Windows Firewall settings
-- Ensure no other app is using port 5000
-
-**"Auto-start not working"**
-- Run VDock as administrator at least once
-- Check system startup settings
-- Verify the auto-start option is enabled in Settings
-
-**Button actions not working**
-- Check button configuration in the editor
-- Verify required permissions (e.g., for system controls)
-- See logs in the browser console (F12)
+| Problem | Solution |
+|---|---|
+| **Backend failed to start** | Ensure Python 3.9+ is installed; check port 5000 is free; try running as administrator |
+| **Cannot connect to server** | Wait 10 seconds, then refresh; check Windows Firewall; verify nothing else uses port 5000 |
+| **Buttons disappeared** | Hard-refresh browser (`Ctrl+Shift+R`) to clear cached state |
+| **Hotkeys not working** | Restart the backend; verify the button action type is set to `hotkey` |
+| **Changes not saving** | Click the **Save Profile** button in the footer while in Edit Mode |
+| **Auto-start not working** | Run VDock as administrator at least once; check startup settings |
 
 ### Getting Help
+- **In-app:** Click the **Help** button in the top-right header → full User Guide
 - **Issues:** [GitHub Issues](https://github.com/ponya5/VDock/issues)
 - **Email:** ponya81@gmail.com
-- **Documentation:** Check the `docs/` folder for detailed guides
+- **Docs:** see the `docs/` folder for detailed guides
+
+---
 
 ## 🛠️ Development
 
@@ -113,63 +165,57 @@ VDock supports various button actions:
 git clone https://github.com/ponya5/VDock.git
 cd VDock
 
-# Install dependencies
-cd backend && pip install -r requirements.txt
-cd ../frontend && npm install
+# Backend dependencies
+cd backend
+pip install -r requirements.txt
 
-# Build application
-# Windows: scripts\build-installer.bat
-# macOS/Linux: ./scripts/build-installer.sh
+# Frontend dependencies
+cd ../frontend
+npm install
+npm run dev
 ```
 
 ### Project Structure
 ```
 VDock/
 ├── backend/           # Python Flask API server
-├── frontend/          # Vue.js web interface
-│   ├── electron/     # Electron desktop wrapper  
-│   └── src/          # Vue.js source code
-├── docs/             # Documentation and guides
-├── scripts/          # Build and deployment scripts
-└── README.md         # This file
+│   ├── app.py         # Main server entry point
+│   └── requirements.txt
+├── frontend/          # Vue 3 + TypeScript web interface
+│   ├── src/
+│   │   ├── components/   # Reusable Vue components
+│   │   ├── views/        # Page-level views (Dashboard, Settings, Profiles)
+│   │   ├── stores/       # Pinia state stores
+│   │   └── types/        # TypeScript type definitions
+│   └── package.json
+├── docs/              # Documentation and guides
+├── scripts/           # Build and utility scripts
+├── launch.bat         # Windows launcher
+├── docker-compose.yml # Docker deployment
+└── README.md
 ```
 
-## 📄 File Organization
-
-**Essential files (keep in root):**
-- `README.md` - This documentation
-- `LICENSE` - MIT license
-- `install.bat/sh` - Main installers
-- `launch.bat/ps1/sh` - Application launchers
-- `docker-compose.yml` - Docker deployment
-
-**Additional resources:**
-- `docs/` - Detailed documentation and guides
-- `scripts/` - Build scripts and utilities
-- `backend/` - Python server code
-- `frontend/` - Vue.js web interface
+---
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m 'Add my feature'`
+4. Push: `git push origin feature/my-feature`
 5. Open a Pull Request
 
 ## 🙏 Acknowledgments
 
-- Built with Vue.js, Electron, and Flask
-- Icons by Font Awesome
-- Animated backgrounds inspired by modern web design
+- Built with **Vue 3**, **TypeScript**, **Pinia**, **Flask**, and **Python**
+- Icons by **Font Awesome**
+- Animated backgrounds inspired by modern web design trends
 - Community contributions and feedback
 
 ---
 
-**VDock** - Making productivity beautiful and efficient. 🎮✨
-
-For detailed installation instructions, see `docs/guides/INSTALLATION.md`
+**VDock** — Making productivity beautiful and efficient. 🎮✨

@@ -121,8 +121,8 @@
             <div class="flex gap-sm">
               <select v-model="settings.dashboardBackground" class="select" style="flex: 1">
                 <option value="default">Default (Gradient)</option>
-                <optgroup label="Custom Background" v-if="customBackgroundUrl">
-                  <option :value="customBackgroundUrl">Custom Uploaded Image</option>
+                <optgroup label="Custom Background" v-if="isCustomBackground">
+                  <option :value="settings.dashboardBackground">Custom Uploaded Image</option>
                 </optgroup>
               <optgroup label="Static Gradients">
                 <option value="ocean-breeze">Ocean Breeze</option>
@@ -161,13 +161,13 @@
               />
               <button 
                 class="btn btn-secondary upload-btn" 
-                @click="$refs.backgroundFileInput.click()"
+                @click="($refs.backgroundFileInput as HTMLInputElement).click()"
               >
                 <FontAwesomeIcon :icon="['fas', 'upload']" />
                 Choose Image or GIF
               </button>
               <button 
-                v-if="customBackgroundUrl"
+                v-if="isCustomBackground"
                 class="btn btn-danger"
                 @click="removeCustomBackground"
                 title="Remove Custom Background"
@@ -176,10 +176,10 @@
                 Remove
               </button>
             </div>
-            <div v-if="customBackgroundUrl" class="background-preview">
-              <img :src="customBackgroundUrl" alt="Custom Background" />
+            <div v-if="isCustomBackground" class="background-preview">
+              <img :src="settings.dashboardBackground" alt="Custom Background" />
             </div>
-            <p class="form-help">Upload your own image or GIF as a dashboard background (supports PNG, JPG, GIF)</p>
+            <p class="form-help">Upload your own image or GIF — it will be applied as the dashboard background immediately.</p>
           </div>
 
         </section>
@@ -523,23 +523,13 @@ const serverConfig = computed(() => settingsStore.serverConfig)
 const activeTab = ref('appearance')
 
 // Custom Background State
-const customBackgroundUrl = ref<string | null>(null)
 const backgroundFileInput = ref<HTMLInputElement | null>(null)
 
-// Load custom background from localStorage
-const loadCustomBackground = () => {
-  const stored = localStorage.getItem('customBackgroundUrl')
-  if (stored) {
-    customBackgroundUrl.value = stored
-  }
-}
-
-// Save custom background to localStorage
-const saveCustomBackground = (url: string) => {
-  customBackgroundUrl.value = url
-  localStorage.setItem('customBackgroundUrl', url)
-  // Don't auto-select - let user choose from dropdown
-}
+// True when the dashboardBackground is a custom uploaded image URL
+const isCustomBackground = computed(() =>
+  settings.value.dashboardBackground.startsWith('/api/uploads/') ||
+  (settings.value.dashboardBackground.startsWith('http') && !['ocean-breeze','sunset-glow','forest-mist','royal-purple','golden-hour','floating-particles','gradient-waves','geometric-patterns','aurora-borealis','starfield','bubble-float','neon-grid','floating-paths','floating-paths-v2','beams-background','default'].includes(settings.value.dashboardBackground))
+)
 
 // Handle background file upload
 const handleBackgroundUpload = async (event: Event) => {
@@ -563,22 +553,17 @@ const handleBackgroundUpload = async (event: Event) => {
   }
   
   try {
-    // Create form data
     const formData = new FormData()
     formData.append('file', file)
     formData.append('type', 'dashboard_background')
     
-    // Upload to backend
-    const response = await apiClient.post('/api/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+    const response = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
     
     if (response.data.success) {
-      const imageUrl = response.data.url
-      saveCustomBackground(imageUrl)
-      alert('Background uploaded successfully! Select "Custom Uploaded Image" from the Dashboard Background dropdown above to use it.')
+      // Immediately apply as the active background
+      settingsStore.dashboardBackground = response.data.url
     } else {
       alert('Failed to upload background: ' + (response.data.error || 'Unknown error'))
     }
@@ -586,7 +571,6 @@ const handleBackgroundUpload = async (event: Event) => {
     console.error('Error uploading background:', error)
     alert('Failed to upload background: ' + (error.message || 'Unknown error'))
   } finally {
-    // Reset file input
     if (target) target.value = ''
   }
 }
@@ -594,12 +578,7 @@ const handleBackgroundUpload = async (event: Event) => {
 // Remove custom background
 const removeCustomBackground = () => {
   if (confirm('Are you sure you want to remove the custom background?')) {
-    customBackgroundUrl.value = null
-    localStorage.removeItem('customBackgroundUrl')
-    // Reset to default background
-    if (settings.value.dashboardBackground.startsWith('/api/uploads/')) {
-      settings.value.dashboardBackground = 'default'
-    }
+    settingsStore.dashboardBackground = 'default'
   }
 }
 
@@ -1022,7 +1001,6 @@ onMounted(async () => {
   // Theme is fixed to dark mode - no need to load themes
   settingsStore.loadServerConfig()
   loadAppIntegrations()
-  loadCustomBackground()
   
   // Load server configuration from localStorage
   const savedHost = localStorage.getItem('vdock_server_host')

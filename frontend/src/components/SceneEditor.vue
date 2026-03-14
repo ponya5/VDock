@@ -141,6 +141,36 @@
           <p class="form-help">Manage pages within this scene. Each scene must have at least one page.</p>
         </div>
 
+        <!-- Scene Background -->
+        <div class="form-group">
+          <label>Scene Background (Optional)</label>
+          <div class="scene-bg-controls">
+            <div v-if="editedScene.background?.image" class="scene-bg-preview">
+              <img :src="editedScene.background.image" alt="Scene Background" />
+              <button class="remove-bg-btn" @click="removeSceneBackground" title="Remove background">
+                <FontAwesomeIcon :icon="['fas', 'times']" />
+              </button>
+            </div>
+            <div class="scene-bg-actions">
+              <input
+                ref="sceneFileInput"
+                type="file"
+                accept="image/*,.gif"
+                style="display:none"
+                @change="handleSceneBackgroundUpload"
+              />
+              <button class="btn btn-secondary btn-sm" @click="(sceneFileInput as HTMLInputElement)?.click()" :disabled="uploading">
+                <FontAwesomeIcon :icon="['fas', uploading ? 'spinner' : 'upload']" :spin="uploading" />
+                {{ uploading ? 'Uploading…' : (editedScene.background?.image ? 'Replace Image' : 'Upload Image') }}
+              </button>
+              <button v-if="editedScene.background?.image" class="btn btn-danger btn-sm" @click="removeSceneBackground">
+                <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
+              </button>
+            </div>
+            <p class="form-help">Set a custom background image for this scene only. It overrides the global dashboard background.</p>
+          </div>
+        </div>
+
         <div v-if="isEditing" class="form-group">
           <label class="checkbox-label">
             <input v-model="editedScene.isActive" type="checkbox" />
@@ -176,6 +206,7 @@ import { ref, computed } from 'vue'
 import type { Scene } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
+import apiClient from '@/api/client'
 
 interface Props {
   scene?: Scene
@@ -195,6 +226,8 @@ const emit = defineEmits<{
 const showIconPicker = ref(false)
 const editingPageIndex = ref<number | null>(null)
 const editingPageName = ref('')
+const sceneFileInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
 
 // Initialize edited scene
 const editedScene = ref<Scene>(props.scene ? { ...props.scene } : {
@@ -256,6 +289,46 @@ function updateButtonSize(event: Event) {
 function handleIconSelect(icon: string) {
   editedScene.value.icon = icon
   showIconPicker.value = false
+}
+
+async function handleSceneBackgroundUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
+  if (!validTypes.includes(file.type)) {
+    alert('Please upload a valid image file (PNG, JPG, GIF, WebP)')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('File size must be less than 10MB')
+    return
+  }
+
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'scene_background')
+    const response = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (response.data.success) {
+      editedScene.value.background = { type: 'image', image: response.data.url }
+    } else {
+      alert('Upload failed: ' + (response.data.error || 'Unknown error'))
+    }
+  } catch (err: any) {
+    alert('Upload failed: ' + (err.message || 'Unknown error'))
+  } finally {
+    uploading.value = false
+    if (target) target.value = ''
+  }
+}
+
+function removeSceneBackground() {
+  editedScene.value.background = undefined
 }
 
 function handleSave() {
@@ -655,5 +728,60 @@ function deletePage(index: number) {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-xs);
+}
+/* Scene Background Styles */
+.scene-bg-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  background-color: var(--color-background);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+}
+
+.scene-bg-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.scene-bg-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-bg-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.remove-bg-btn:hover {
+  background: var(--color-error);
+}
+
+.scene-bg-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.scene-bg-actions .btn {
+  flex: 1;
 }
 </style>

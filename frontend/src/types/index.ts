@@ -157,6 +157,7 @@ export interface Scene {
   icon?: string
   color?: string
   pages: Page[]
+  background?: Background  // Optional per-scene background (image URL, gradient, or solid)
   isActive?: boolean
   buttonSize?: number // Size multiplier for scene buttons
   triggeredByApp?: string // App executable name that triggers this scene

@@ -292,93 +292,7 @@
     </div>
 
     <!-- Help Modal -->
-    <div v-if="showHelp" class="modal-overlay" @click.self="showHelp = false">
-      <div class="help-modal modal">
-        <div class="modal-header">
-          <h2><FontAwesomeIcon :icon="['fas', 'question-circle']" /> VDock User Guide</h2>
-          <button class="close-btn" @click="showHelp = false">
-            <FontAwesomeIcon :icon="['fas', 'times']" />
-          </button>
-        </div>
-        <div class="help-content">
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'rocket']" /> Quick Start</h3>
-            <ol>
-              <li><strong>Toggle Edit Mode</strong>: Click the Edit button to add/modify buttons</li>
-              <li><strong>Add Buttons</strong>: Click empty cells or use the Actions sidebar</li>
-              <li><strong>Configure Actions</strong>: Choose what each button does (Hotkey, Program, URL, etc.)</li>
-              <li><strong>Save Changes</strong>: Click "Save Profile" button in footer</li>
-            </ol>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'keyboard']" /> Button Actions</h3>
-            <ul>
-              <li><strong>Hotkey</strong>: Send keyboard shortcuts (e.g., Ctrl+C, Ctrl+V)</li>
-              <li><strong>Program</strong>: Launch applications</li>
-              <li><strong>URL</strong>: Open websites in browser</li>
-              <li><strong>Command</strong>: Run shell commands</li>
-              <li><strong>Macro</strong>: Multi-step automation</li>
-              <li><strong>System</strong>: Volume, brightness, media controls</li>
-              <li><strong>Navigation</strong>: Navigate between pages</li>
-              <li><strong>Metrics</strong>: Display system stats (CPU, RAM, GPU)</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'layer-group']" /> Scenes & Pages</h3>
-            <ul>
-              <li><strong>Scenes</strong>: Different button layouts (Work, Gaming, Streaming)</li>
-              <li><strong>Pages</strong>: Multiple pages within each scene</li>
-              <li><strong>Add Page</strong>: Click "Add Page" button in footer</li>
-              <li><strong>Navigate</strong>: Use Next/Previous buttons (loops around)</li>
-              <li><strong>Edit Scene</strong>: Click edit icon next to scene name</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" /> Troubleshooting</h3>
-            <ul>
-              <li><strong>Hotkeys not working?</strong> Restart backend server (see docs/)</li>
-              <li><strong>Changes not saving?</strong> Click "Save Profile" button</li>
-              <li><strong>Buttons disappeared?</strong> Hard refresh browser (Ctrl+Shift+R)</li>
-              <li><strong>Backend not responding?</strong> Check if running at localhost:5000</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'book']" /> Documentation</h3>
-            <p>For detailed documentation, see:</p>
-            <ul>
-              <li><strong>Getting Started:</strong></li>
-              <li>• <code>docs/QUICKSTART.md</code> - Quick setup guide</li>
-              <li>• <code>docs/guides/INSTALLATION.md</code> - Complete installation</li>
-              <li>• <code>docs/guides/USER_GUIDE.md</code> - Complete user guide</li>
-              <li><strong>Advanced Features:</strong></li>
-              <li>• <code>docs/ASSET_SYSTEM_GUIDE.md</code> - Managing files & assets</li>
-              <li>• <code>docs/NEW_ACTION_TYPES_GUIDE.md</code> - Creating custom actions</li>
-              <li>• <code>docs/APP_INTEGRATION_GUIDE.md</code> - App integration</li>
-              <li><strong>Development & Deployment:</strong></li>
-              <li>• <code>docs/development/DEVELOPER_GUIDE.md</code> - Developer guide</li>
-              <li>• <code>docs/deployment/PRODUCTION_DEPLOYMENT.md</code> - Production setup</li>
-              <li>• <code>docs/CHANGELOG.md</code> - Version history</li>
-              <li><strong>Project Info:</strong></li>
-              <li>• <code>README.md</code> - Project overview</li>
-              <li>• <code>docs/README.md</code> - Documentation index</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'envelope']" /> Support</h3>
-            <p>Need help?</p>
-            <ul>
-              <li><strong>Email</strong>: <a href="mailto:ponya81@gmail.com">ponya81@gmail.com</a></li>
-              <li><strong>GitHub</strong>: <a href="https://github.com/ponya5/VDock" target="_blank">Report Issues</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
+    <UserGuideModal v-if="showHelp" @close="showHelp = false" />
 
     <!-- Quick Search -->
     <QuickSearch ref="quickSearchRef" />
@@ -398,6 +312,7 @@ import PageIndicator from '@/components/PageIndicator.vue'
 import PageNavigation from '@/components/PageNavigation.vue'
 import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
+import UserGuideModal from '@/components/UserGuideModal.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
 import QuickSearch from '@/components/QuickSearch.vue'
@@ -470,6 +385,11 @@ const dashboardBackgroundClass = computed(() => {
     // Page has its own background, don't apply dashboard background
     return ''
   }
+
+  // Check if current scene has a background
+  if (currentScene.value?.background?.image) {
+    return 'dashboard-bg-custom'
+  }
   
   // Apply dashboard background when page background is null
   const bg = settingsStore.dashboardBackground
@@ -482,6 +402,16 @@ const dashboardBackgroundClass = computed(() => {
 })
 
 const dashboardBackgroundStyle = computed(() => {
+  // Check scene background first
+  if (currentScene.value?.background?.image) {
+    return {
+      backgroundImage: `url(${currentScene.value.background.image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }
+  }
+
   const bg = settingsStore.dashboardBackground
   // Handle custom image backgrounds
   if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
