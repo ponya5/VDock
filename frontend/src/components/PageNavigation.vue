@@ -67,7 +67,6 @@ const emit = defineEmits<{
   padding: var(--spacing-sm) var(--spacing-md);
 }
 
-/* Uiverse lenfear23 — shared mixin via class */
 .nav-btn,
 .page-indicator {
   display: flex;
@@ -75,13 +74,12 @@ const emit = defineEmits<{
   justify-content: center;
   outline: none;
   cursor: pointer;
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  background: transparent;
   border-radius: 30px;
-  border: 1px solid #8F9092;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.2s ease;
   font-weight: 600;
-  color: #606060;
-  text-shadow: 0 1px #fff;
+  color: var(--color-text-secondary);
 }
 
 .nav-btn {
@@ -92,31 +90,25 @@ const emit = defineEmits<{
 
 .nav-btn:hover:not(:disabled),
 .page-indicator:hover {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 3px 3px #CECFD1;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .nav-btn:active,
-.page-indicator:active,
+.page-indicator:active {
+  transform: scale(0.94);
+}
+
 .page-indicator.active {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 5px 3px #999,
-    inset 0 0 30px #aaa;
-  color: #333;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(52, 152, 219, 0.12);
 }
 
 .nav-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.25;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .page-indicators {

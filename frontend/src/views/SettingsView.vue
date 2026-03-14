@@ -23,31 +23,46 @@
       <div class="settings-content">
       <!-- Appearance Tab -->
       <div v-if="activeTab === 'appearance'" class="tab-content">
-        <section class="settings-section card">
-          <h2>Appearance</h2>
-          
-          <!-- Theme is fixed to dark mode -->
 
-          <!-- Touch Mode Configuration -->
+        <!-- Appearance Sub-tabs -->
+        <div class="sub-tab-bar">
+          <button
+            :class="['sub-tab-btn', { active: appearanceSubTab === 'display' }]"
+            @click="appearanceSubTab = 'display'"
+          >
+            <FontAwesomeIcon :icon="['fas', 'sliders-h']" /> Display
+          </button>
+          <button
+            :class="['sub-tab-btn', { active: appearanceSubTab === 'background' }]"
+            @click="appearanceSubTab = 'background'"
+          >
+            <FontAwesomeIcon :icon="['fas', 'image']" /> Background
+          </button>
+        </div>
+
+        <!-- Display sub-tab -->
+        <section v-if="appearanceSubTab === 'display'" class="settings-section card">
+          <h2>Display</h2>
+
           <TouchModeSelector />
 
           <div class="form-group">
             <div class="form-group-header">
               <label>Button Size</label>
-              <button 
-                class="btn-reset" 
+              <button
+                class="btn-reset"
                 @click="settings.buttonSize = 1.0"
                 title="Reset to default (1.0x)"
               >
                 <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
               </button>
             </div>
-            <input 
-              v-model.number="settings.buttonSize" 
-              type="range" 
-              min="0.5" 
-              max="2" 
-              step="0.1" 
+            <input
+              v-model.number="settings.buttonSize"
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
               class="slider"
             />
             <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
@@ -92,17 +107,22 @@
 
           <div v-if="settings.dockedSidebarEnabled" class="form-group">
             <label>Docked Sidebar Width</label>
-            <input 
-              v-model.number="settings.dockedSidebarWidth" 
-              type="range" 
-              min="80" 
-              max="300" 
-              step="10" 
+            <input
+              v-model.number="settings.dockedSidebarWidth"
+              type="range"
+              min="80"
+              max="300"
+              step="10"
               class="slider"
             />
             <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
             <p class="form-help">Adjust the width of the docked sidebar (80-300px)</p>
           </div>
+        </section>
+
+        <!-- Background sub-tab -->
+        <section v-if="appearanceSubTab === 'background'" class="settings-section card">
+          <h2>Background</h2>
 
           <div class="form-group">
             <label>Animated Background</label>
@@ -151,23 +171,23 @@
           <div class="form-group">
             <label>Upload Custom Background</label>
             <div class="upload-section">
-              <input 
+              <input
                 ref="backgroundFileInput"
-                type="file" 
-                accept="image/*,.gif" 
+                type="file"
+                accept="image/*,.gif"
                 @change="handleBackgroundUpload"
                 class="file-input"
                 style="display: none"
               />
-              <button 
-                class="btn btn-secondary upload-btn" 
+              <button
+                class="btn btn-secondary upload-btn"
                 :disabled="uploadingBackground"
                 @click="($refs.backgroundFileInput as HTMLInputElement).click()"
               >
                 <FontAwesomeIcon :icon="uploadingBackground ? ['fas', 'spinner'] : ['fas', 'upload']" :spin="uploadingBackground" />
                 {{ uploadingBackground ? 'Uploading...' : 'Choose Image or GIF' }}
               </button>
-              <button 
+              <button
                 v-if="isCustomBackground"
                 class="btn btn-danger"
                 @click="removeCustomBackground"
@@ -187,15 +207,15 @@
             <label>Scene Background — {{ currentScene?.name ?? 'No scene' }}</label>
             <p class="form-help" style="margin-bottom: var(--spacing-sm)">Override the background for the current scene only.</p>
             <div class="upload-section">
-              <input 
+              <input
                 ref="sceneBackgroundFileInput"
-                type="file" 
-                accept="image/*,.gif" 
+                type="file"
+                accept="image/*,.gif"
                 @change="handleSceneBackgroundUpload"
                 class="file-input"
                 style="display: none"
               />
-              <button 
+              <button
                 class="btn btn-secondary upload-btn"
                 :disabled="uploadingSceneBackground || !currentScene"
                 @click="($refs.sceneBackgroundFileInput as HTMLInputElement).click()"
@@ -203,7 +223,7 @@
                 <FontAwesomeIcon :icon="uploadingSceneBackground ? ['fas', 'spinner'] : ['fas', 'image']" :spin="uploadingSceneBackground" />
                 {{ uploadingSceneBackground ? 'Uploading...' : 'Set Scene Background' }}
               </button>
-              <button 
+              <button
                 v-if="hasSceneBackground"
                 class="btn btn-danger"
                 @click="removeSceneBackground"
@@ -220,6 +240,77 @@
 
         </section>
 
+      </div>
+
+      <!-- Templates Tab -->
+      <div v-if="activeTab === 'templates'" class="tab-content">
+        <section class="settings-section card">
+          <h2>App Templates</h2>
+          <p class="section-description">Add pre-built scenes for popular apps. Each template creates a new scene with ready-to-use buttons.</p>
+        </section>
+
+        <section
+          v-for="category in templateCategories"
+          :key="category.id"
+          class="settings-section card template-category"
+        >
+          <button class="category-header" @click="toggleCategory(category.id)">
+            <span class="category-title">
+              <FontAwesomeIcon :icon="category.icon" class="category-icon" />
+              {{ category.name }}
+            </span>
+            <FontAwesomeIcon
+              :icon="['fas', expandedCategory === category.id ? 'chevron-up' : 'chevron-down']"
+              class="category-chevron"
+            />
+          </button>
+
+          <div v-if="expandedCategory === category.id" class="template-grid">
+            <div
+              v-for="template in category.templates"
+              :key="template.id"
+              class="template-card"
+            >
+              <div class="template-card-header" :style="{ borderLeftColor: template.color }">
+                <div class="template-icon-wrap" :style="{ background: template.color + '22' }">
+                  <img
+                    v-if="template.logo"
+                    :src="template.logo"
+                    :alt="template.name"
+                    class="template-logo-img"
+                  />
+                  <FontAwesomeIcon v-else :icon="template.icon" :style="{ color: template.color }" />
+                </div>
+                <div class="template-info">
+                  <span class="template-name">{{ template.name }}</span>
+                  <span class="template-desc">{{ template.description }}</span>
+                </div>
+                <button
+                  class="btn btn-primary btn-sm template-add-btn"
+                  :disabled="addingTemplate === template.id"
+                  @click="addTemplateAsScene(template)"
+                >
+                  <FontAwesomeIcon :icon="addingTemplate === template.id ? ['fas', 'spinner'] : ['fas', 'plus']" :spin="addingTemplate === template.id" />
+                  {{ addingTemplate === template.id ? 'Adding...' : 'Add Scene' }}
+                </button>
+              </div>
+              <div class="template-buttons-preview">
+                <span
+                  v-for="btn in template.buttons.slice(0, 8)"
+                  :key="btn.label"
+                  class="template-btn-chip"
+                  :style="{ background: btn.style?.backgroundColor ? btn.style.backgroundColor + '33' : template.color + '22', borderColor: btn.style?.backgroundColor ?? template.color }"
+                >
+                  <FontAwesomeIcon :icon="btn.icon" :style="{ color: btn.style?.backgroundColor ?? template.color }" />
+                  {{ btn.label }}
+                </span>
+                <span v-if="template.buttons.length > 8" class="template-btn-chip template-btn-more">
+                  +{{ template.buttons.length - 8 }} more
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <!-- Server Configuration Tab -->
@@ -515,18 +606,37 @@
               </ul>
             </div>
             
-            <div class="mt-lg">
-              <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap; align-items: center;">
-                <button class="btn btn-secondary" @click="openGitHub">
-                  <FontAwesomeIcon :icon="['fab', 'github']" /> GitHub
-                </button>
-                <button class="btn btn-secondary" @click="contactEmail">
-                  <FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact
-                </button>
-                <span style="color: var(--color-text-secondary); font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);">Daniel Shalom. All rights reserved 2026 ©</span>
-              </div>
+            <div class="mt-lg about-links">
+              <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="about-link-btn">
+                <FontAwesomeIcon :icon="['fas', 'globe']" /> Website
+              </a>
+              <a href="https://github.com/ponya5" target="_blank" rel="noopener" class="about-link-btn">
+                <FontAwesomeIcon :icon="['fab', 'github']" /> GitHub
+              </a>
+              <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="about-link-btn">
+                <FontAwesomeIcon :icon="['fab', 'linkedin']" /> LinkedIn
+              </a>
+              <button class="about-link-btn" @click="contactEmail">
+                <FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact
+              </button>
+              <span class="about-copyright">Daniel Shalom. All rights reserved 2026 ©</span>
             </div>
           </div>
+        </section>
+
+        <!-- Ko-fi Support Section -->
+        <section class="settings-section card kofi-section">
+          <h2>Support the Project</h2>
+          <p class="section-description">If you enjoy using VDock, consider buying me a coffee. It helps keep the project alive and growing.</p>
+          <a
+            href="https://ko-fi.com/danielshalom"
+            target="_blank"
+            rel="noopener"
+            class="kofi-btn"
+          >
+            <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
+            Support me on Ko-fi
+          </a>
         </section>
       </div>
     </div>
@@ -547,6 +657,7 @@ import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
 import { hasShortcuts, getTopShortcutsForApp, type AppShortcut } from '@/data/appShortcuts'
+import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 
 const router = useRouter()
@@ -559,6 +670,58 @@ const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
 
 const activeTab = ref('appearance')
+const appearanceSubTab = ref<'display' | 'background'>('display')
+
+// Templates state
+const expandedCategory = ref<string | null>(null)
+const addingTemplate = ref<string | null>(null)
+
+function toggleCategory(id: string) {
+  expandedCategory.value = expandedCategory.value === id ? null : id
+}
+
+async function addTemplateAsScene(template: AppTemplate) {
+  const profile = dashboardStore.currentProfile
+  if (!profile) {
+    notificationsStore.error('No profile', 'Load a profile first.')
+    return
+  }
+  addingTemplate.value = template.id
+  try {
+    const buttons: Button[] = template.buttons.map((b, index) => ({
+      id: `button-${Date.now()}-${index}`,
+      label: b.label,
+      icon: b.icon,
+      icon_type: 'fontawesome',
+      action: b.action,
+      shape: 'rounded',
+      position: { row: Math.floor(index / 5), col: index % 5 },
+      size: { rows: 1, cols: 1 },
+      style: { backgroundColor: b.style?.backgroundColor ?? template.color, textColor: b.style?.textColor ?? '#ffffff' },
+      tooltip: b.tooltip ?? b.label,
+      enabled: true
+    }))
+
+    const newScene: Scene = {
+      id: `scene-${Date.now()}`,
+      name: template.name,
+      icon: template.icon[1] ?? 'layer-group',
+      color: template.color,
+      pages: [{
+        id: `page-${Date.now()}`,
+        name: 'Page 1',
+        buttons,
+        grid_config: { rows: 4, cols: 5 }
+      }],
+      autoCreated: false
+    }
+
+    dashboardStore.addScene(newScene)
+    notificationsStore.success('Scene added', `"${template.name}" scene added to your dashboard.`)
+  } finally {
+    addingTemplate.value = null
+  }
+}
 
 // Custom Background State
 const backgroundFileInput = ref<HTMLInputElement | null>(null)
@@ -711,6 +874,7 @@ const availableScenes = computed(() => {
 
 const tabs = [
   { id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'] },
+  { id: 'templates', name: 'Templates', icon: ['fas', 'layer-group'] },
   { id: 'server', name: 'Server', icon: ['fas', 'server'] },
   { id: 'integration', name: 'Integration', icon: ['fas', 'plug'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
@@ -1797,6 +1961,257 @@ onUnmounted(() => {
 .security-note svg {
   color: var(--color-primary);
   margin-top: 2px;
+}
+
+/* Appearance sub-tabs */
+.sub-tab-bar {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-sm);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-background);
+  padding-top: var(--spacing-xs);
+}
+
+.sub-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+}
+
+.sub-tab-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.sub-tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Template styles */
+.template-category {
+  padding: 0;
+  overflow: hidden;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: clamp(0.90rem, 2vw + 0.56rem, 1.35rem);
+  font-weight: 600;
+  transition: background var(--transition-fast);
+  min-height: 56px;
+}
+
+.category-header:hover {
+  background: var(--color-surface);
+}
+
+.category-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.category-icon {
+  color: var(--color-primary);
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
+}
+
+.category-chevron {
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-fast);
+}
+
+.template-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
+}
+
+.template-card {
+  background: var(--glass-bg, rgba(0,0,0,0.25));
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.12));
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.template-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-left: 3px solid var(--color-primary);
+}
+
+.template-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
+}
+
+.template-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.template-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.template-name {
+  font-weight: 600;
+  font-size: clamp(0.85rem, 2vw + 0.53rem, 1.28rem);
+  color: var(--color-text);
+}
+
+.template-desc {
+  font-size: clamp(0.65rem, 2vw + 0.41rem, 0.98rem);
+  color: var(--color-text-secondary);
+}
+
+.template-add-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: 44px;
+}
+
+.template-buttons-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.template-btn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px var(--spacing-sm);
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.template-btn-more {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary);
+}
+
+/* About links */
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.about-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--glass-bg, rgba(0,0,0,0.25));
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.12));
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  min-height: 44px;
+}
+
+.about-link-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.about-copyright {
+  color: var(--color-text-secondary);
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
+  margin-left: auto;
+}
+
+/* Ko-fi section */
+.kofi-section {
+  text-align: center;
+}
+
+.kofi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: #00b9fe;
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: clamp(0.90rem, 2vw + 0.56rem, 1.35rem);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  min-height: 52px;
+  margin-top: var(--spacing-md);
+}
+
+.kofi-btn:hover {
+  background: #009fd9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 185, 254, 0.35);
+}
+
+.kofi-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 </style>
 

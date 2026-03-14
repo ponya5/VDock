@@ -8,10 +8,6 @@
       >
         <button
           :class="['scene-tab', { active: index === currentSceneIndex }]"
-          :style="{ 
-            backgroundColor: scene.color || '#3498db',
-            transform: `scale(${scene.buttonSize || 1.0})`
-          }"
           @click="setScene(index)"
           :title="scene.name"
         >
@@ -102,7 +98,6 @@ function editScene(scene: Scene) {
   gap: var(--spacing-xs);
 }
 
-/* Uiverse lenfear23 style */
 .scene-tab {
   display: flex;
   align-items: center;
@@ -112,37 +107,31 @@ function editScene(scene: Scene) {
   cursor: pointer;
   height: 44px;
   padding: 0 var(--spacing-lg);
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  background: transparent;
   border-radius: 30px;
-  border: 1px solid #8F9092;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.2s ease;
   font-size: clamp(0.75rem, 1vw + 0.5rem, 0.9rem);
   font-weight: 600;
-  color: #606060;
-  text-shadow: 0 1px #fff;
+  color: var(--color-text-secondary);
   white-space: nowrap;
   min-width: 0;
 }
 
 .scene-tab:hover {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 3px 3px #CECFD1;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.scene-tab:active,
 .scene-tab.active {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 5px 3px #999,
-    inset 0 0 30px #aaa;
-  color: #333;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(52, 152, 219, 0.12);
+}
+
+.scene-tab:active {
+  transform: scale(0.96);
 }
 
 .scene-icon {
@@ -164,31 +153,22 @@ function editScene(scene: Scene) {
   cursor: pointer;
   width: 44px;
   height: 44px;
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  background: transparent;
   border-radius: 30px;
-  border: 1px solid #8F9092;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.2s ease;
   font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
-  color: #606060;
+  color: var(--color-text-secondary);
 }
 
 .add-scene-btn:hover {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 3px 3px #CECFD1;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(52, 152, 219, 0.12);
 }
 
 .add-scene-btn:active {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 5px 3px #999,
-    inset 0 0 30px #aaa;
+  transform: scale(0.94);
 }
 
 .scene-edit-btn {
@@ -199,31 +179,22 @@ function editScene(scene: Scene) {
   cursor: pointer;
   width: 32px;
   height: 32px;
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  background: transparent;
   border-radius: 30px;
-  border: 1px solid #8F9092;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.2s ease;
   font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
-  color: #606060;
+  color: var(--color-text-secondary);
 }
 
 .scene-edit-btn:hover {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 3px 3px #CECFD1;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(52, 152, 219, 0.12);
 }
 
 .scene-edit-btn:active {
-  box-shadow:
-    0 4px 3px 1px #FCFCFC,
-    0 6px 8px #D6D7D9,
-    0 -4px 4px #CECFD1,
-    0 -6px 4px #FEFEFE,
-    inset 0 0 5px 3px #999,
-    inset 0 0 30px #aaa;
+  transform: scale(0.94);
 }
 
 @media (max-width: 768px) {
