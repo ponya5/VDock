@@ -419,22 +419,51 @@ function handleDragEnd() {
 
 <style scoped>
 .deck-button {
+  --btn-bg: #080808;
+  --btn-radius: var(--radius-md);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md);
-  border: 2px solid var(--color-border);
+  padding: 0;
+  border: 0;
+  border-radius: var(--btn-radius);
+  background-color: var(--btn-bg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   overflow: hidden;
   user-select: none;
-  /* Enhanced shadow for more alive UI */
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  min-width: 60px;
+  min-height: 60px;
+  outline: none;
+  box-shadow:
+    inset 0 0.3rem 0.9rem rgba(255, 255, 255, 0.3),
+    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.7),
+    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.5),
+    0 3rem 3rem rgba(0, 0, 0, 0.3),
+    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+}
+
+/* Uiverse hover state */
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover {
+  box-shadow:
+    inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.4),
+    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.7),
+    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.7),
+    0 3rem 3rem rgba(0, 0, 0, 0.3),
+    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+}
+
+/* Uiverse active/press state */
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.5),
+    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.8),
+    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.4),
+    0 3rem 3rem rgba(0, 0, 0, 0.3),
+    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
 }
 
 .deck-button[draggable="true"] {
@@ -443,12 +472,6 @@ function handleDragEnd() {
 
 .deck-button[draggable="true"]:active {
   cursor: grabbing;
-  transform: scale(0.95);
-  opacity: 0.8;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .deck-button.shape-rectangle {
@@ -463,29 +486,21 @@ function handleDragEnd() {
   border-radius: var(--radius-full);
 }
 
-.deck-button.has-action:hover:not(.edit-mode):not(.is-placeholder) {
-  transform: scale(1.05);
-  box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.25),
-    0 4px 8px rgba(0, 0, 0, 0.15),
-    0 0 20px rgba(var(--color-primary-rgb, 255, 107, 107), 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  border-color: var(--color-primary);
-}
-
-.deck-button:active:not(.edit-mode):not(.is-placeholder) {
-  transform: scale(0.95);
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 .deck-button.is-placeholder {
   border: 2px dashed rgba(255, 255, 255, 0.2);
   background: rgba(0, 0, 0, 0.1) !important;
   cursor: default;
   box-shadow: none;
+}
+
+.deck-button.is-placeholder .button-content {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.deck-button.is-placeholder .button-content::before,
+.deck-button.is-placeholder .button-content::after {
+  display: none;
 }
 
 .deck-button-glass {
@@ -576,10 +591,62 @@ function handleDragEnd() {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  transition: background-color 0.2s ease;
   overflow: hidden;
-  padding: 4px 2px;
+  padding: 8px 6px;
   box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  transition: transform 0.2s ease;
+  /* Uiverse label mask — fades bottom edge for depth */
+  mask-image: linear-gradient(to bottom, white 60%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, white 60%, transparent);
+}
+
+/* Uiverse top-dome highlight */
+.button-content::before {
+  content: '';
+  position: absolute;
+  left: -15%;
+  right: -15%;
+  bottom: 25%;
+  top: -100%;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+/* Uiverse inner gloss strip */
+.button-content::after {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 12%;
+  bottom: 40%;
+  border-radius: 22px 22px 0 0;
+  box-shadow: inset 0 10px 8px -10px rgba(255, 255, 255, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content {
+  transform: translateY(-4%);
+}
+
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content::before {
+  transform: translateY(-5%);
+}
+
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content::after {
+  opacity: 0.4;
+  transform: translateY(5%);
 }
 
 /* Special action types that render full content */
@@ -698,34 +765,16 @@ function handleDragEnd() {
 
 /* Enhanced shadows for different button states */
 .deck-button.edit-mode {
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.1),
     0 1px 3px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .deck-button.edit-mode:hover {
-  box-shadow: 
+  box-shadow:
     0 4px 15px rgba(0, 0, 0, 0.15),
     0 2px 5px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-/* Special shadow effects for different shapes */
-.deck-button.shape-circle {
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.deck-button.shape-hexagon,
-.deck-button.shape-diamond,
-.deck-button.shape-octagon {
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
