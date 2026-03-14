@@ -161,10 +161,11 @@
               />
               <button 
                 class="btn btn-secondary upload-btn" 
+                :disabled="uploadingBackground"
                 @click="($refs.backgroundFileInput as HTMLInputElement).click()"
               >
-                <FontAwesomeIcon :icon="['fas', 'upload']" />
-                Choose Image or GIF
+                <FontAwesomeIcon :icon="uploadingBackground ? ['fas', 'spinner'] : ['fas', 'upload']" :spin="uploadingBackground" />
+                {{ uploadingBackground ? 'Uploading...' : 'Choose Image or GIF' }}
               </button>
               <button 
                 v-if="isCustomBackground"
@@ -180,6 +181,41 @@
               <img :src="settings.dashboardBackground" alt="Custom Background" />
             </div>
             <p class="form-help">Upload your own image or GIF — it will be applied as the dashboard background immediately.</p>
+          </div>
+
+          <div class="form-group">
+            <label>Scene Background — {{ currentScene?.name ?? 'No scene' }}</label>
+            <p class="form-help" style="margin-bottom: var(--spacing-sm)">Override the background for the current scene only.</p>
+            <div class="upload-section">
+              <input 
+                ref="sceneBackgroundFileInput"
+                type="file" 
+                accept="image/*,.gif" 
+                @change="handleSceneBackgroundUpload"
+                class="file-input"
+                style="display: none"
+              />
+              <button 
+                class="btn btn-secondary upload-btn"
+                :disabled="uploadingSceneBackground || !currentScene"
+                @click="($refs.sceneBackgroundFileInput as HTMLInputElement).click()"
+              >
+                <FontAwesomeIcon :icon="uploadingSceneBackground ? ['fas', 'spinner'] : ['fas', 'image']" :spin="uploadingSceneBackground" />
+                {{ uploadingSceneBackground ? 'Uploading...' : 'Set Scene Background' }}
+              </button>
+              <button 
+                v-if="hasSceneBackground"
+                class="btn btn-danger"
+                @click="removeSceneBackground"
+                title="Remove scene background"
+              >
+                <FontAwesomeIcon :icon="['fas', 'trash']" />
+                Remove
+              </button>
+            </div>
+            <div v-if="hasSceneBackground" class="background-preview">
+              <img :src="currentScene!.background!.image" alt="Scene Background" />
+            </div>
           </div>
 
         </section>
@@ -504,6 +540,7 @@ import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import TouchModeSelector from '@/components/TouchModeSelector.vue'
 import apiClient from '@/api/client'
@@ -516,6 +553,7 @@ const router = useRouter()
 const settingsStore = useSettingsStore()
 const profilesStore = useProfilesStore()
 const dashboardStore = useDashboardStore()
+const notificationsStore = useNotificationsStore()
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
@@ -524,62 +562,126 @@ const activeTab = ref('appearance')
 
 // Custom Background State
 const backgroundFileInput = ref<HTMLInputElement | null>(null)
+const uploadingBackground = ref(false)
+const sceneBackgroundFileInput = ref<HTMLInputElement | null>(null)
+const uploadingSceneBackground = ref(false)
+
+const NAMED_BACKGROUNDS = ['ocean-breeze','sunset-glow','forest-mist','royal-purple','golden-hour','floating-particles','gradient-waves','geometric-patterns','aurora-borealis','starfield','bubble-float','neon-grid','floating-paths','floating-paths-v2','beams-background','default']
 
 // True when the dashboardBackground is a custom uploaded image URL
-const isCustomBackground = computed(() =>
-  settings.value.dashboardBackground.startsWith('/api/uploads/') ||
-  (settings.value.dashboardBackground.startsWith('http') && !['ocean-breeze','sunset-glow','forest-mist','royal-purple','golden-hour','floating-particles','gradient-waves','geometric-patterns','aurora-borealis','starfield','bubble-float','neon-grid','floating-paths','floating-paths-v2','beams-background','default'].includes(settings.value.dashboardBackground))
+const isCustomBackground = computed(() => {
+  const bg = settings.value.dashboardBackground
+  return bg.startsWith('/api/uploads/') ||
+    bg.startsWith('/uploads/') ||
+    (bg.startsWith('http') && !NAMED_BACKGROUNDS.includes(bg))
+})
+
+// Current scene background
+const currentScene = computed(() => dashboardStore.currentScene)
+const hasSceneBackground = computed(() =>
+  !!currentScene.value?.background?.image
 )
 
-// Handle background file upload
+// Handle global background file upload
 const handleBackgroundUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  
   if (!file) return
-  
-  // Validate file type
+
   const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
   if (!validTypes.includes(file.type)) {
-    alert('Please upload a valid image file (PNG, JPG, or GIF)')
+    notificationsStore.error('Invalid file', 'Please upload a PNG, JPG, or GIF image.')
     return
   }
-  
-  // Validate file size (max 10MB)
-  const maxSize = 10 * 1024 * 1024
-  if (file.size > maxSize) {
-    alert('File size must be less than 10MB')
+  if (file.size > 10 * 1024 * 1024) {
+    notificationsStore.error('File too large', 'Maximum file size is 10MB.')
     return
   }
-  
+
+  uploadingBackground.value = true
   try {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('type', 'dashboard_background')
-    
+
     const response = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    
+
     if (response.data.success) {
-      // Immediately apply as the active background
-      settingsStore.dashboardBackground = response.data.url
+      // Prepend /api so the URL matches the served route
+      const url = response.data.url.startsWith('/api')
+        ? response.data.url
+        : '/api' + response.data.url
+      settingsStore.dashboardBackground = url
+      notificationsStore.success('Background updated', 'Custom background applied successfully.')
     } else {
-      alert('Failed to upload background: ' + (response.data.error || 'Unknown error'))
+      notificationsStore.error('Upload failed', response.data.error || 'Unknown error')
     }
   } catch (error: any) {
-    console.error('Error uploading background:', error)
-    alert('Failed to upload background: ' + (error.message || 'Unknown error'))
+    notificationsStore.error('Upload failed', error.message || 'Unknown error')
   } finally {
+    uploadingBackground.value = false
+    if (target) target.value = ''
+  }
+}
+
+// Handle per-scene background upload
+const handleSceneBackgroundUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file || !currentScene.value) return
+
+  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+  if (!validTypes.includes(file.type)) {
+    notificationsStore.error('Invalid file', 'Please upload a PNG, JPG, or GIF image.')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    notificationsStore.error('File too large', 'Maximum file size is 10MB.')
+    return
+  }
+
+  uploadingSceneBackground.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'dashboard_background')
+
+    const response = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    if (response.data.success) {
+      const url = response.data.url.startsWith('/api')
+        ? response.data.url
+        : '/api' + response.data.url
+      dashboardStore.updateScene(currentScene.value!.id, {
+        background: { type: 'image', image: url }
+      })
+      notificationsStore.success('Scene background updated', `Background applied to "${currentScene.value!.name}".`)
+    } else {
+      notificationsStore.error('Upload failed', response.data.error || 'Unknown error')
+    }
+  } catch (error: any) {
+    notificationsStore.error('Upload failed', error.message || 'Unknown error')
+  } finally {
+    uploadingSceneBackground.value = false
     if (target) target.value = ''
   }
 }
 
 // Remove custom background
 const removeCustomBackground = () => {
-  if (confirm('Are you sure you want to remove the custom background?')) {
-    settingsStore.dashboardBackground = 'default'
-  }
+  settingsStore.dashboardBackground = 'default'
+  notificationsStore.success('Background removed', 'Reverted to default background.')
+}
+
+// Remove scene background
+const removeSceneBackground = () => {
+  if (!currentScene.value) return
+  dashboardStore.updateScene(currentScene.value.id, { background: undefined })
+  notificationsStore.success('Scene background removed', `Background cleared for "${currentScene.value.name}".`)
 }
 
 // App Integration State
