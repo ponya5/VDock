@@ -93,10 +93,7 @@ function editScene(scene: Scene) {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  background-color: var(--color-surface);
-  border-radius: var(--radius-md);
   padding: var(--spacing-xs);
-  border: 1px solid var(--color-border);
 }
 
 .scene-tab-container {
@@ -105,41 +102,51 @@ function editScene(scene: Scene) {
   gap: var(--spacing-xs);
 }
 
+/* Uiverse lenfear23 style */
 .scene-tab {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
+  outline: none;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--color-text-secondary);
-  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
-  font-weight: 500;
+  height: 44px;
+  padding: 0 var(--spacing-lg);
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 30px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
+  font-size: clamp(0.75rem, 1vw + 0.5rem, 0.9rem);
+  font-weight: 600;
+  color: #606060;
+  text-shadow: 0 1px #fff;
   white-space: nowrap;
   min-width: 0;
-  min-height: 44px;
 }
 
 .scene-tab:hover {
-  background-color: var(--color-surface-hover);
-  color: var(--color-text);
+  box-shadow:
+    0 4px 3px 1px #FCFCFC,
+    0 6px 8px #D6D7D9,
+    0 -4px 4px #CECFD1,
+    0 -6px 4px #FEFEFE,
+    inset 0 0 3px 3px #CECFD1;
 }
 
+.scene-tab:active,
 .scene-tab.active {
-  color: white;
-  box-shadow: var(--shadow-sm);
-  opacity: 1;
-}
-
-.scene-tab.active:hover {
-  opacity: 0.9;
+  box-shadow:
+    0 4px 3px 1px #FCFCFC,
+    0 6px 8px #D6D7D9,
+    0 -4px 4px #CECFD1,
+    0 -6px 4px #FEFEFE,
+    inset 0 0 5px 3px #999,
+    inset 0 0 30px #aaa;
+  color: #333;
 }
 
 .scene-icon {
-  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
+  font-size: clamp(0.75rem, 1vw + 0.5rem, 0.9rem);
   flex-shrink: 0;
 }
 
@@ -153,54 +160,79 @@ function editScene(scene: Scene) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  outline: none;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--color-text-secondary);
+  width: 44px;
+  height: 44px;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 30px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
   font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
+  color: #606060;
 }
 
 .add-scene-btn:hover {
-  background-color: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+  box-shadow:
+    0 4px 3px 1px #FCFCFC,
+    0 6px 8px #D6D7D9,
+    0 -4px 4px #CECFD1,
+    0 -6px 4px #FEFEFE,
+    inset 0 0 3px 3px #CECFD1;
+}
+
+.add-scene-btn:active {
+  box-shadow:
+    0 4px 3px 1px #FCFCFC,
+    0 6px 8px #D6D7D9,
+    0 -4px 4px #CECFD1,
+    0 -6px 4px #FEFEFE,
+    inset 0 0 5px 3px #999,
+    inset 0 0 30px #aaa;
 }
 
 .scene-edit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  outline: none;
+  cursor: pointer;
   width: 32px;
   height: 32px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--color-text-secondary);
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 30px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
   font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
-  opacity: 0.8;
+  color: #606060;
 }
 
 .scene-edit-btn:hover {
-  background-color: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-  opacity: 1;
+  box-shadow:
+    0 4px 3px 1px #FCFCFC,
+    0 6px 8px #D6D7D9,
+    0 -4px 4px #CECFD1,
+    0 -6px 4px #FEFEFE,
+    inset 0 0 3px 3px #CECFD1;
 }
 
-/* Responsive design */
+.scene-edit-btn:active {
+  box-shadow:
+    0 4px 3px 1px #FCFCFC,
+    0 6px 8px #D6D7D9,
+    0 -4px 4px #CECFD1,
+    0 -6px 4px #FEFEFE,
+    inset 0 0 5px 3px #999,
+    inset 0 0 30px #aaa;
+}
+
 @media (max-width: 768px) {
   .scene-name {
     max-width: 80px;
   }
-  
+
   .scene-tab {
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: 0 var(--spacing-sm);
   }
 }
 </style>
