@@ -16,10 +16,34 @@ import threading
 if getattr(sys, 'frozen', False):
     APPLICATION_PATH = Path(sys.executable).parent
 else:
-    APPLICATION_PATH = Path(__file__).parent
+    # Script may be run from scripts/ subdirectory or from repo root
+    _script_dir = Path(__file__).parent
+    _root_candidate = _script_dir.parent
+    if (_root_candidate / 'backend').exists():
+        APPLICATION_PATH = _root_candidate  # running from scripts/
+    else:
+        APPLICATION_PATH = _script_dir  # running from root (packaged)
 
 BACKEND_PATH = APPLICATION_PATH / 'backend'
 FRONTEND_PATH = APPLICATION_PATH / 'frontend'
+
+
+def find_npm():
+    """Find npm executable, checking PATH and common Windows install locations."""
+    import shutil
+    npm = shutil.which('npm')
+    if npm:
+        return npm
+    common = [
+        Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'nodejs' / 'npm.cmd',
+        Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'nodejs' / 'npm.cmd',
+        Path(os.environ.get('APPDATA', '')) / 'npm' / 'npm.cmd',
+        Path('C:/Program Files/nodejs/npm.cmd'),
+    ]
+    for p in common:
+        if p.exists():
+            return str(p)
+    return None
 
 
 def check_requirements():
@@ -30,52 +54,62 @@ def check_requirements():
         print("ERROR: Python not found. Please install Python 3.8+")
         return False
 
-    try:
-        subprocess.run(['npm', '--version'], capture_output=True, check=True, timeout=5)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("ERROR: Node.js not found. Please install Node.js")
+    npm = find_npm()
+    if not npm:
+        print("ERROR: Node.js/npm not found. Please install Node.js from https://nodejs.org")
         return False
 
+    print(f"  npm found: {npm}")
     return True
 
 
 def check_venv():
-    """Check if virtual environment exists."""
-    venv_path = BACKEND_PATH / 'venv' / 'Scripts' / 'activate.bat'
-    return venv_path.exists()
+    """Check if virtual environment exists (backend/venv or root .venv)."""
+    candidates = [
+        BACKEND_PATH / 'venv' / 'Scripts' / 'activate.bat',
+        APPLICATION_PATH / '.venv' / 'Scripts' / 'activate.bat',
+    ]
+    for c in candidates:
+        if c.exists():
+            return c.parent.parent  # return the venv root
+    return None
 
 
-def launch_backend():
+def launch_backend(venv_path: Path):
     """Launch backend server."""
     try:
-        cmd = f'cd /d "{BACKEND_PATH}" && call venv\\Scripts\\activate.bat && python app.py'
+        activate = venv_path / 'Scripts' / 'activate.bat'
+        cmd = f'cd /d "{BACKEND_PATH}" && call "{activate}" && python app.py'
         subprocess.Popen(
             cmd,
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        print("✓ Backend server started")
+        print("\u2713 Backend server started")
         return True
     except Exception as e:
-        print(f"✗ Failed to start backend: {e}")
+        print(f"\u2717 Failed to start backend: {e}")
         return False
 
 
 def launch_frontend():
     """Launch frontend development server."""
     try:
-        cmd = f'cd /d "{FRONTEND_PATH}" && npm run dev'
+        npm = find_npm()
+        if not npm:
+            raise FileNotFoundError('npm not found')
+        cmd = f'cd /d "{FRONTEND_PATH}" && "{npm}" run dev'
         subprocess.Popen(
             cmd,
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        print("✓ Frontend server started")
+        print("\u2713 Frontend server started")
         return True
     except Exception as e:
-        print(f"✗ Failed to start frontend: {e}")
+        print(f"\u2717 Failed to start frontend: {e}")
         return False
 
 
@@ -108,18 +142,19 @@ def main():
 
     # Check virtual environment
     print("Checking virtual environment...")
-    if not check_venv():
-        print("✗ Virtual environment not found")
-        print("⚠ Please run install.bat first\n")
+    venv = check_venv()
+    if not venv:
+        print("\u2717 Virtual environment not found")
+        print("\u26a0 Please run setup.bat first\n")
         input("Press Enter to exit...")
         return False
 
-    print("✓ Virtual environment found\n")
+    print(f"\u2713 Virtual environment found: {venv}\n")
 
     # Launch services
     print("Starting services...\n")
 
-    if not launch_backend():
+    if not launch_backend(venv):
         return False
 
     time.sleep(2)

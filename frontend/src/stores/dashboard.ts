@@ -39,36 +39,25 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   function migrateProfileToScenes(profile: Profile): Profile {
-    console.log('DashboardStore: migrating profile', profile)
-    console.log('DashboardStore: scenes count:', profile.scenes?.length)
-    console.log('DashboardStore: scenes data:', JSON.stringify(profile.scenes, null, 2))
-    
+            
     // If profile already has scenes, return as-is
     if (profile.scenes && profile.scenes.length > 0) {
-      console.log('DashboardStore: profile already has scenes')
-      console.log('DashboardStore: scene 0 pages:', profile.scenes[0]?.pages?.length)
-      console.log('DashboardStore: scene 0 page 0 buttons:', profile.scenes[0]?.pages?.[0]?.buttons?.length)
-      // Ensure dockedButtons exists - preserve existing if present
+                        // Ensure dockedButtons exists - preserve existing if present
       if (!profile.dockedButtons) {
         profile.dockedButtons = []
-        console.log('DashboardStore: added empty dockedButtons array')
-      } else {
-        console.log('DashboardStore: profile already has dockedButtons', profile.dockedButtons.length)
-      }
+              } else {
+              }
       return profile
     }
 
-    console.log('DashboardStore: migrating from pages to scenes')
-    // Migrate from old pages structure to scenes structure
+        // Migrate from old pages structure to scenes structure
     const migratedProfile = { ...profile }
     
     // PRESERVE existing dockedButtons or create empty array
     migratedProfile.dockedButtons = profile.dockedButtons || []
-    console.log('DashboardStore: preserved/initialized dockedButtons', migratedProfile.dockedButtons.length)
-    
+        
     if (profile.pages && profile.pages.length > 0) {
-      console.log('DashboardStore: creating scene from existing pages', profile.pages.length)
-      // Create a default scene with all existing pages
+            // Create a default scene with all existing pages
       migratedProfile.scenes = [{
         id: `scene_${Date.now()}`,
         name: 'Default Scene',
@@ -77,8 +66,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       // Remove old pages property
       delete (migratedProfile as any).pages
     } else {
-      console.log('DashboardStore: creating empty scene structure')
-      // Create empty scene structure
+            // Create empty scene structure
       migratedProfile.scenes = [{
         id: `scene_${Date.now()}`,
         name: 'Default Scene',
@@ -91,8 +79,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       }]
     }
 
-    console.log('DashboardStore: migrated profile', migratedProfile)
-    return migratedProfile
+        return migratedProfile
   }
 
   function addToHistory() {
@@ -314,14 +301,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!currentProfile.value) return false
     
     try {
-      console.log('DashboardStore: Saving profile...', {
-        id: currentProfile.value.id,
-        scenes: currentProfile.value.scenes.length,
-        dockedButtons: currentProfile.value.dockedButtons?.length || 0
-      })
-      const response = await apiClient.put(`/profiles/${currentProfile.value.id}`, currentProfile.value)
-      console.log('DashboardStore: Profile saved successfully', response.data.success)
-      return response.data.success
+            const response = await apiClient.put(`/profiles/${currentProfile.value.id}`, currentProfile.value)
+            return response.data.success
     } catch (error) {
       console.error('Failed to save profile:', error)
       return false
@@ -411,8 +392,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
     
     currentPage.value.buttons.push(button)
-    console.log('Added button:', button)
-    addToHistory()
+        addToHistory()
     // Auto-save profile after adding button
     saveProfile()
   }
@@ -443,8 +423,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     addToHistory()
     // Auto-save profile after moving button
     saveProfile()
-    console.log('Moved button:', buttonId, 'to:', newPosition)
-  }
+      }
 
   return {
     currentProfile,

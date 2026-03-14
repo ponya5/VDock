@@ -23,7 +23,7 @@ class AppMonitorService {
    */
   async start(pollInterval: number = 5000): Promise<boolean> {
     if (this.isMonitoring) {
-      console.log('App monitoring already running')
+      console.warn('App monitoring already running')
       return true
     }
 
@@ -40,7 +40,7 @@ class AppMonitorService {
         pollInterval
       )
 
-      console.log('App monitoring started')
+      console.warn('App monitoring started')
       return true
     } catch (error) {
       console.error('Failed to start app monitoring:', error)
@@ -69,7 +69,7 @@ class AppMonitorService {
       this.isMonitoring = false
       this.currentApp = null
 
-      console.log('App monitoring stopped')
+      console.warn('App monitoring stopped')
       return true
     } catch (error) {
       console.error('Failed to stop app monitoring:', error)
@@ -125,7 +125,7 @@ class AppMonitorService {
       const newExe = activeApp.exe
 
       if (currentExe !== newExe) {
-        console.log(`Active app changed: ${currentExe} -> ${newExe}`)
+        console.warn(`Active app changed: ${currentExe} -> ${newExe}`)
         this.currentApp = activeApp
 
         // Trigger callbacks

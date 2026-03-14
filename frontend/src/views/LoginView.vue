@@ -99,7 +99,7 @@ async function handleLogin() {
 }
 
 .login-header h1 {
-  font-size: 2.5rem;
+  font-size: clamp(2.00rem, 2vw + 1.25rem, 3.00rem);
   font-weight: bold;
   color: var(--color-primary);
   margin-bottom: var(--spacing-xs);
@@ -107,7 +107,7 @@ async function handleLogin() {
 
 .login-header p {
   color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .form-group {
@@ -128,13 +128,27 @@ async function handleLogin() {
   border-radius: var(--radius-md);
   color: var(--color-error);
   margin-bottom: var(--spacing-md);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .login-footer {
   margin-top: var(--spacing-lg);
   text-align: center;
   color: var(--color-text-secondary);
+}
+
+.w-full {
+  min-height: 48px; /* Touch target */
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    margin: var(--spacing-sm);
+    padding: var(--spacing-md);
+  }
+  .input {
+    min-height: 48px;
+  }
 }
 </style>
 

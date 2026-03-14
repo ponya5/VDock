@@ -276,12 +276,12 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   opacity: 0.9;
 }
 
 .header-title {
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   font-weight: 600;
   opacity: 0.9;
 }
@@ -304,29 +304,29 @@ onUnmounted(() => {
 }
 
 .weather-icon {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   opacity: 0.9;
 }
 
 .weather-temp {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   font-weight: 700;
   line-height: 1;
 }
 
 .temp-unit {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   opacity: 0.8;
 }
 
 .weather-description {
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   margin-bottom: var(--spacing-xs);
   opacity: 0.9;
 }
 
 .weather-location {
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   opacity: 0.7;
   margin-bottom: var(--spacing-md);
   display: flex;
@@ -347,7 +347,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
 }
 
 .loading-state,
@@ -409,7 +409,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
 }
 
 .weather-content-compact {
@@ -423,18 +423,18 @@ onUnmounted(() => {
 }
 
 .weather-icon-compact {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   margin-bottom: 0.25rem;
 }
 
 .weather-temp-compact {
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   font-weight: 600;
   line-height: 1;
 }
 
 .weather-desc-compact {
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   opacity: 0.8;
   line-height: 1;
   text-align: center;
@@ -449,13 +449,13 @@ onUnmounted(() => {
   background: rgba(255, 193, 7, 0.1);
   border: 1px solid rgba(255, 193, 7, 0.3);
   border-radius: 0.25rem;
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   color: #ffc107;
   opacity: 0.9;
 }
 
 .demo-mode-indicator svg {
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
 }
 </style>
 

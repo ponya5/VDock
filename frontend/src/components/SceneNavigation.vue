@@ -116,7 +116,7 @@ function editScene(scene: Scene) {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: 500;
   white-space: nowrap;
   min-width: 0;
@@ -139,7 +139,7 @@ function editScene(scene: Scene) {
 }
 
 .scene-icon {
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   flex-shrink: 0;
 }
 
@@ -161,7 +161,7 @@ function editScene(scene: Scene) {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .add-scene-btn:hover {
@@ -182,7 +182,7 @@ function editScene(scene: Scene) {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   opacity: 0.8;
 }
 

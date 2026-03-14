@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="buttonRef"
     class="deck-button"
     :class="buttonClasses"
     :style="buttonStyle"
@@ -145,9 +146,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Button } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useDoubleTap, useLongPress } from '@/composables/useGestures'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
@@ -155,6 +157,7 @@ import CalendarButton from './CalendarButton.vue'
 
 interface Props {
   button: Button
+  isPlaceholder?: boolean
   isEditMode?: boolean
   showLabels?: boolean
   showTooltips?: boolean
@@ -162,6 +165,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  isPlaceholder: false,
   isEditMode: false,
   showLabels: true,
   showTooltips: true,
@@ -174,7 +178,27 @@ const emit = defineEmits<{
   copy: [button: Button]
   delete: [buttonId: string]
   move: [buttonId: string, newPosition: { row: number; col: number }]
+  doubleTap: [button: Button]
+  longPress: [button: Button]
 }>()
+
+const buttonRef = ref<HTMLElement | null>(null)
+
+useDoubleTap(buttonRef, {
+  onDoubleTap: () => {
+    if (props.isEditMode && props.button.action) {
+      emit('click', props.button) // Double tap executes action in edit mode
+    }
+  }
+})
+
+useLongPress(buttonRef, {
+  onLongPress: () => {
+    if (!props.isEditMode) {
+      emit('longPress', props.button)
+    }
+  }
+})
 
 // Check if this is a special action type that renders its own content
 const isSpecialActionType = computed(() => {
@@ -217,6 +241,7 @@ const buttonClasses = computed(() => ({
   'shape-hexagon': props.button.shape === 'hexagon',
   'shape-diamond': props.button.shape === 'diamond',
   'shape-octagon': props.button.shape === 'octagon',
+  'is-placeholder': props.isPlaceholder,
   'edit-mode': props.isEditMode,
   'has-action': !!props.button.action,
   'disabled': !props.button.enabled,
@@ -365,14 +390,12 @@ function handleRightClick() {
 }
 
 function handleDragStart(event: DragEvent) {
-  console.log('DeckButton: drag start', props.button.label, 'edit mode:', props.isEditMode)
   if (!props.isEditMode) return
   
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/vdock-button', JSON.stringify(props.button))
     event.dataTransfer.effectAllowed = 'copyMove' // Allow both copy and move
-    console.log('DeckButton: drag data set', props.button)
-  }
+      }
 }
 
 function handleDragEnd() {
@@ -426,7 +449,7 @@ function handleDragEnd() {
   border-radius: var(--radius-full);
 }
 
-.deck-button.has-action:hover:not(.edit-mode) {
+.deck-button.has-action:hover:not(.edit-mode):not(.is-placeholder) {
   transform: scale(1.05);
   box-shadow: 
     0 8px 25px rgba(0, 0, 0, 0.25),
@@ -436,12 +459,32 @@ function handleDragEnd() {
   border-color: var(--color-primary);
 }
 
-.deck-button:active:not(.edit-mode) {
+.deck-button:active:not(.edit-mode):not(.is-placeholder) {
   transform: scale(0.95);
   box-shadow: 
     0 2px 8px rgba(0, 0, 0, 0.2),
     0 1px 2px rgba(0, 0, 0, 0.15),
     inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.deck-button.is-placeholder {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.1) !important;
+  cursor: default;
+  box-shadow: none;
+}
+
+.deck-button-glass {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+  backdrop-filter: var(--glass-blur, blur(10px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(10px));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.1));
+}
+
+.deck-button-glass:hover:not(.edit-mode):not(.is-placeholder) {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)), var(--glass-glow, 0 0 15px rgba(255, 255, 255, 0.3));
 }
 
 .edit-overlay {
@@ -471,7 +514,7 @@ function handleDragEnd() {
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   transition: all var(--transition-fast);
 }
 
@@ -616,7 +659,7 @@ function handleDragEnd() {
   color: white;
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;

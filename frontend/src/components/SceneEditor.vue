@@ -331,14 +331,14 @@ function deletePage(index: number) {
 }
 
 .modal-header h2 {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: bold;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: var(--spacing-xs);
@@ -391,7 +391,7 @@ function deletePage(index: number) {
 }
 
 .form-help {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
   margin-bottom: 0;
@@ -510,7 +510,7 @@ function deletePage(index: number) {
 .size-display span {
   font-weight: 500;
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   min-width: 40px;
 }
 
@@ -532,7 +532,7 @@ function deletePage(index: number) {
   border: 2px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   transition: all var(--transition-fast);
 }
 
@@ -547,7 +547,7 @@ function deletePage(index: number) {
   background-color: var(--color-primary);
   color: white;
   border-radius: var(--radius-full);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   margin-left: var(--spacing-xs);
 }
@@ -589,7 +589,7 @@ function deletePage(index: number) {
 
 .page-icon {
   color: var(--color-primary);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .page-name {
@@ -604,7 +604,7 @@ function deletePage(index: number) {
   border-radius: var(--radius-sm);
   background-color: var(--color-background);
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
 }
 

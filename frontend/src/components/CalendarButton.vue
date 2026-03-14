@@ -54,7 +54,7 @@ onUnmounted(() => {
 }
 
 .calendar-month {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -63,14 +63,14 @@ onUnmounted(() => {
 }
 
 .calendar-date {
-  font-size: 2.5rem;
+  font-size: clamp(2.00rem, 2vw + 1.25rem, 3.00rem);
   font-weight: 700;
   line-height: 1;
   margin-bottom: 2px;
 }
 
 .calendar-day {
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   font-weight: 500;
   opacity: 0.7;
   text-transform: capitalize;

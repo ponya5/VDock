@@ -272,7 +272,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
 }
 
 .notification-bell:hover {
@@ -289,7 +289,7 @@ onUnmounted(() => {
   right: 2px;
   background: var(--color-error);
   color: white;
-  font-size: 0.65rem;
+  font-size: clamp(0.52rem, 2vw + 0.33rem, 0.78rem);
   font-weight: 600;
   padding: 2px 5px;
   border-radius: 10px;
@@ -336,7 +336,7 @@ onUnmounted(() => {
 
 .panel-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   color: var(--color-text);
 }
 
@@ -379,7 +379,7 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
   transition: all var(--transition-fast);
   display: flex;
@@ -399,7 +399,7 @@ onUnmounted(() => {
 }
 
 .tab-count {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   background: rgba(255, 255, 255, 0.2);
   padding: 2px 6px;
   border-radius: 10px;
@@ -428,7 +428,7 @@ onUnmounted(() => {
 }
 
 .empty-icon {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   opacity: 0.3;
   margin-bottom: var(--spacing-md);
 }
@@ -481,7 +481,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .item-error .item-icon {
@@ -519,7 +519,7 @@ onUnmounted(() => {
 
 .item-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   font-weight: 600;
   color: var(--color-text);
   white-space: nowrap;
@@ -529,13 +529,13 @@ onUnmounted(() => {
 
 .item-time {
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
 }
 
 .item-message {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
@@ -549,7 +549,7 @@ onUnmounted(() => {
   border: none;
   color: var(--color-primary);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   padding: 4px;
   display: flex;
   align-items: center;
@@ -566,7 +566,7 @@ onUnmounted(() => {
   padding: var(--spacing-sm);
   background: var(--color-background);
   border-radius: var(--radius-sm);
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -587,7 +587,7 @@ onUnmounted(() => {
   background: var(--color-surface);
   color: var(--color-text);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -640,7 +640,7 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 8px 16px;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   transition: all var(--transition-fast);
   width: 100%;
 }

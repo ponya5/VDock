@@ -405,7 +405,7 @@ onUnmounted(() => {
 }
 
 .header-title {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
@@ -439,7 +439,7 @@ onUnmounted(() => {
   background: var(--color-primary-light);
   border-radius: var(--radius-sm);
   color: var(--color-primary);
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   flex-shrink: 0;
 }
 
@@ -452,7 +452,7 @@ onUnmounted(() => {
 }
 
 .metric-label {
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   color: var(--color-text-secondary);
   margin-bottom: 4px;
   display: flex;
@@ -463,7 +463,7 @@ onUnmounted(() => {
 }
 
 .refresh-indicator {
-  font-size: 0.6rem;
+  font-size: clamp(0.48rem, 2vw + 0.30rem, 0.72rem);
   opacity: 0.6;
   animation: fadeIn 0.3s ease;
 }
@@ -474,7 +474,7 @@ onUnmounted(() => {
 }
 
 .metric-value {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: 700;
   color: var(--color-text);
   line-height: 1;
@@ -544,7 +544,7 @@ onUnmounted(() => {
   gap: var(--spacing-xs);
   padding: var(--spacing-lg);
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   flex: 1;
 }
 

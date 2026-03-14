@@ -423,7 +423,7 @@ onMounted(async () => {
 
 .asset-picker-header h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -431,7 +431,7 @@ onMounted(async () => {
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: var(--spacing-xs);
@@ -475,7 +475,7 @@ onMounted(async () => {
   border-radius: var(--radius-md);
   background-color: var(--color-background);
   color: var(--color-text);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
 }
 
 .search-input:focus {
@@ -580,7 +580,7 @@ onMounted(async () => {
 
 .asset-count {
   margin-left: auto;
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   color: var(--color-text-secondary);
   background-color: var(--color-border);
   padding: 2px 6px;
@@ -611,7 +611,7 @@ onMounted(async () => {
 
 .loading-state svg,
 .empty-state svg {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   opacity: 0.5;
 }
 
@@ -676,7 +676,7 @@ onMounted(async () => {
 }
 
 .asset-icon {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
 }
 
 .gradient-preview {
@@ -699,7 +699,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
 }
 
 .asset-info {
@@ -712,7 +712,7 @@ onMounted(async () => {
 }
 
 .asset-name {
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   font-weight: 500;
   margin: 0 0 var(--spacing-xs) 0;
   color: var(--color-text);
@@ -730,7 +730,7 @@ onMounted(async () => {
 }
 
 .asset-tag {
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   padding: 2px 6px;
   background-color: var(--color-border);
   color: var(--color-text-secondary);
@@ -767,7 +767,7 @@ onMounted(async () => {
 }
 
 .pagination-info {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text-secondary);
 }
 
@@ -777,7 +777,7 @@ onMounted(async () => {
   border-radius: var(--radius-sm);
   background-color: var(--color-surface-solid);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -811,7 +811,7 @@ onMounted(async () => {
 }
 
 .selected-icon {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
 }
 
 .selected-gradient {
@@ -829,13 +829,13 @@ onMounted(async () => {
 
 .selected-details h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   color: var(--color-text);
 }
 
 .selected-details p {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: var(--color-text-secondary);
 }
 

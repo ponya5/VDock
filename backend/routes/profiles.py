@@ -14,6 +14,7 @@ profiles_bp = Blueprint('profiles', __name__)
 
 
 @profiles_bp.route('/api/profiles', methods=['GET'])
+@require_auth
 def get_profiles():
     """Get all profiles."""
     profile_files = FileManager.list_files(Config.PROFILES_DIR, '*.json')
@@ -40,14 +41,13 @@ def get_profiles():
                     
                 profiles.append(profile_data)
             except Exception as e:
-                from utils import setup_logger
-                logger = setup_logger('vdock')
                 logger.error(f"Error loading profile {file_path}: {e}")
     
     return jsonify({'profiles': profiles})
 
 
 @profiles_bp.route('/api/profiles/<profile_id>', methods=['GET'])
+@require_auth
 def get_profile(profile_id):
     """Get a specific profile."""
     file_path = Config.PROFILES_DIR / f"{profile_id}.json"
@@ -64,6 +64,7 @@ def get_profile(profile_id):
 
 
 @profiles_bp.route('/api/profiles', methods=['POST'])
+@require_auth
 def create_profile():
     """Create a new profile."""
     data = request.json
@@ -118,6 +119,7 @@ def create_profile():
 
 
 @profiles_bp.route('/api/profiles/<profile_id>', methods=['PUT'])
+@require_auth
 def update_profile(profile_id):
     """Update an existing profile."""
     data = request.json

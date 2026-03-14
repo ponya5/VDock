@@ -242,7 +242,7 @@ if (props.modelValue) {
 
 .file-size,
 .media-type {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -255,7 +255,7 @@ if (props.modelValue) {
   background-color: var(--color-error-bg);
   color: var(--color-error);
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .upload-info {
@@ -268,14 +268,14 @@ if (props.modelValue) {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin: 0;
 }
 
 .btn-sm {
   padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .btn-danger {

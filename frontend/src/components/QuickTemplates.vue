@@ -83,7 +83,7 @@ const filteredTemplates = computed(() => {
 
 .templates-header h3 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -122,7 +122,7 @@ const filteredTemplates = computed(() => {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -175,7 +175,7 @@ const filteredTemplates = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   flex-shrink: 0;
 }
 
@@ -186,7 +186,7 @@ const filteredTemplates = computed(() => {
 
 .template-name {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
@@ -194,7 +194,7 @@ const filteredTemplates = computed(() => {
 }
 
 .template-desc {
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;

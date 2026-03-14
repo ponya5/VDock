@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Theme, ServerConfig } from '@/types'
+import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -22,6 +22,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
   const dashboardBackground = ref('default')
+  const backgroundPreference = ref<'none' | 'particles' | 'waves'>('none')
   const startWithWindows = ref(false)
   const uiBrightness = ref(100) // UI brightness percentage (0-200)
   const showHeader = ref(true) // Show/hide dashboard header
@@ -71,6 +72,7 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
         dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
         dashboardBackground.value = settings.dashboardBackground || 'default'
+        backgroundPreference.value = settings.backgroundPreference || 'none'
         startWithWindows.value = settings.startWithWindows || false
         uiBrightness.value = settings.uiBrightness !== undefined ? settings.uiBrightness : 100
         showHeader.value = settings.showHeader !== false
@@ -99,6 +101,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
+      backgroundPreference: backgroundPreference.value,
       startWithWindows: startWithWindows.value,
       uiBrightness: uiBrightness.value,
       showHeader: showHeader.value,
@@ -116,7 +119,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, uiBrightness, showHeader, showRegularToasts, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, showRegularToasts, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -243,6 +246,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarEnabled,
     dockedSidebarWidth,
     dashboardBackground,
+    backgroundPreference,
     startWithWindows,
     uiBrightness,
     showHeader,

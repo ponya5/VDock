@@ -34,7 +34,7 @@ class AutoSceneSwitcher {
     
     if (started) {
       this.enabled = true
-      console.log('Auto scene switching enabled')
+      console.warn('Auto scene switching enabled')
     }
 
     return started
@@ -56,7 +56,7 @@ class AutoSceneSwitcher {
     
     if (stopped) {
       this.enabled = false
-      console.log('Auto scene switching disabled')
+      console.warn('Auto scene switching disabled')
     }
 
     return stopped
@@ -107,7 +107,7 @@ class AutoSceneSwitcher {
     )
 
     if (integration && integration.sceneId) {
-      console.log(`Switching to scene for app: ${app.exe}`)
+      console.warn(`Switching to scene for app: ${app.exe}`)
       
       // Trigger callbacks
       this.onSceneSwitchCallbacks.forEach(callback => {

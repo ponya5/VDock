@@ -281,3 +281,38 @@ class SystemMetrics:
         else:
             return {'error': f'Unknown metric type: {metric_type}'}
 
+    @staticmethod
+    def get_running_apps() -> List[Dict[str, Any]]:
+        """Get list of currently running applications"""
+        try:
+            apps = []
+            seen_names = set()
+
+            for proc in psutil.process_iter(['pid', 'name', 'exe', 'create_time']):
+                try:
+                    info = proc.info
+                    name = info['name']
+
+                    # Skip system processes and duplicates
+                    if (name and name not in seen_names and
+                            not name.startswith('System')):
+                        apps.append({
+                            'name': name,
+                            'exe': name.lower(),
+                            'pid': info['pid'],
+                            'path': info['exe'] if info['exe'] else '',
+                            'running_since': info['create_time']
+                        })
+                        seen_names.add(name)
+                except (psutil.NoSuchProcess, psutil.AccessDenied,
+                        psutil.ZombieProcess):
+                    continue
+
+            # Sort by name
+            apps.sort(key=lambda x: x['name'].lower())
+
+            return apps
+        except Exception as e:
+            logger.error(f"Error fetching running apps: {e}")
+            return []
+

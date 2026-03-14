@@ -282,18 +282,18 @@ onUnmounted(() => {
 }
 
 .refresh-indicator {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   opacity: 0.5;
   margin-left: auto;
 }
 
 .metric-icon {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   color: var(--color-primary);
 }
 
 .metric-label {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
@@ -307,7 +307,7 @@ onUnmounted(() => {
 }
 
 .value-number {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   font-weight: bold;
   color: var(--color-text);
   line-height: 1;
@@ -322,7 +322,7 @@ onUnmounted(() => {
 }
 
 .value-unit {
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   color: var(--color-text-secondary);
   font-weight: 500;
 }
@@ -354,7 +354,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   margin-top: var(--spacing-xs);
 }
 

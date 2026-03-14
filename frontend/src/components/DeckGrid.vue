@@ -1,10 +1,9 @@
 <template>
   <div 
     class="deck-grid" 
+    ref="gridRef"
     :class="{ 'drag-over': isDragOver }"
     :style="gridStyle"
-    @touchstart="handleTouchStart"
-    @touchend="handleTouchEnd"
     @dragover="handleDragOver"
     @drop="handleDrop"
     @dragenter="handleDragEnter"
@@ -22,11 +21,12 @@
           @edit="handleButtonEdit"
           @copy="handleButtonCopy"
           @delete="handleButtonDelete"
+          @double-tap="handleButtonDoubleTap"
+          @long-press="handleButtonLongPress"
     />
     
-    <!-- Button placeholders for empty slots - only show in edit mode -->
+    <!-- Button placeholders for empty slots - only show in edit mode or when receiving long-press -->
     <div
-      v-if="isEditMode"
       v-for="placeholder in emptySlots"
       :key="`placeholder-${placeholder.row}-${placeholder.col}`"
       class="button-placeholder"
@@ -36,6 +36,11 @@
       }"
       :style="placeholderStyle"
       @click="handlePlaceholderClick(placeholder.row, placeholder.col)"
+      @touchstart="handlePlaceholderTouchStart(placeholder.row, placeholder.col)"
+      @touchend="handlePlaceholderTouchEnd(placeholder.row, placeholder.col)"
+      @mousedown="handlePlaceholderTouchStart(placeholder.row, placeholder.col)"
+      @mouseup="handlePlaceholderTouchEnd(placeholder.row, placeholder.col)"
+      @mouseleave="handlePlaceholderTouchEnd(placeholder.row, placeholder.col)"
       @dragover="handlePlaceholderDragOver"
       @dragenter="(e) => handlePlaceholderDragEnter(e, placeholder)"
       @dragleave="(e) => handlePlaceholderDragLeave(e, placeholder)"
@@ -50,6 +55,8 @@ import { computed, ref } from 'vue'
 import type { Button, Page } from '@/types'
 import DeckButton from './DeckButton.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useSwipe, usePinch, useLongPress } from '@/composables/useGestures'
+import { useParallax } from '@/composables/useParallax'
 
 interface Props {
   page: Page
@@ -75,22 +82,50 @@ const emit = defineEmits<{
   buttonDelete: [buttonId: string]
   swipeLeft: []
   swipeRight: []
+  swipeUp: []
+  swipeDown: []
   actionDrop: [action: any, position: { row: number; col: number }]
   placeholderClick: [position: { row: number; col: number }]
+  placeholderLongPress: [position: { row: number; col: number }]
   buttonMove: [buttonId: string, newPosition: { row: number; col: number }]
+  doubleTap: [button: Button]
+  longPress: [button: Button]
 }>()
+
+const gridRef = ref<HTMLElement | null>(null)
+
+const { tiltX, tiltY } = useParallax(gridRef)
+
+const pinchScale = ref(1)
+usePinch(gridRef, {
+  onPinch: (scale) => {
+    pinchScale.value = Math.max(0.5, Math.min(2.0, scale))
+  }
+})
+
+useSwipe(gridRef, {
+  threshold: 50,
+  onSwipeEnd: (direction) => {
+    if (direction === 'LEFT') emit('swipeLeft')
+    if (direction === 'RIGHT') emit('swipeRight')
+    if (direction === 'UP') emit('swipeUp')
+    if (direction === 'DOWN') emit('swipeDown')
+  }
+})
 
 const gridStyle = computed(() => {
   const { rows, cols } = props.page.grid_config
+  const transformScale = props.buttonSize * pinchScale.value
+  
   return {
     display: 'grid',
-    gridTemplateRows: `repeat(${rows}, 1fr)`,
-    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+    gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
     gap: 'var(--spacing-xs)', // Always show small spacing between buttons
     width: '100%',
     height: '100%',
     padding: 'var(--spacing-md)',
-    transform: `scale(${props.buttonSize})`,
+    transform: `scale(${transformScale}) rotateX(${tiltX.value}deg) rotateY(${tiltY.value}deg)`,
     transformOrigin: 'center'
   }
 })
@@ -156,36 +191,17 @@ function handleButtonDelete(buttonId: string) {
   emit('buttonDelete', buttonId)
 }
 
+function handleButtonDoubleTap(button: Button) {
+  emit('doubleTap', button)
+}
 
-// Touch gesture handling for page swiping
-let touchStartX = 0
-let touchStartY = 0
+function handleButtonLongPress(button: Button) {
+  emit('longPress', button)
+}
+
+
 const isDragOver = ref(false)
 const highlightedSlot = ref<{ row: number; col: number } | null>(null)
-
-function handleTouchStart(e: TouchEvent) {
-  touchStartX = e.touches[0].clientX
-  touchStartY = e.touches[0].clientY
-}
-
-function handleTouchEnd(e: TouchEvent) {
-  if (!e.changedTouches.length) return
-  
-  const touchEndX = e.changedTouches[0].clientX
-  const touchEndY = e.changedTouches[0].clientY
-  
-  const diffX = touchEndX - touchStartX
-  const diffY = touchEndY - touchStartY
-  
-  // Only trigger if horizontal swipe is significant
-  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-    if (diffX > 0) {
-      emit('swipeRight')
-    } else {
-      emit('swipeLeft')
-    }
-  }
-}
 
 // Drag and drop handlers
 function handleDragOver(e: DragEvent) {
@@ -259,6 +275,16 @@ function handlePlaceholderDragOver(e: DragEvent) {
   e.stopPropagation()
 }
 
+function handlePlaceholderClick(row: number, col: number) {
+  if (props.isEditMode) {
+    emit('placeholderClick', { row, col })
+  }
+}
+
+// Since useLongPress is attached via ref/element usually, we'll manually watch placeholders,
+// but for simplicity in a v-for list, we'll implement a basic inline long-press timeout 
+// for the empty slots when NOT in edit mode to trigger edit mode.
+let placeholderTimeouts: Record<string, NodeJS.Timeout> = {}
 function handlePlaceholderDragEnter(e: DragEvent, placeholder: { row: number; col: number }) {
   e.preventDefault()
   e.stopPropagation()
@@ -273,19 +299,33 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   }
 }
 
-function handlePlaceholderClick(row: number, col: number) {
-  if (props.isEditMode) {
-    emit('placeholderClick', { row, col })
+// Emulate long press for placeholders
+function handlePlaceholderTouchStart(row: number, col: number) {
+  if (props.isEditMode) return;
+  const key = `${row}-${col}`;
+  placeholderTimeouts[key] = setTimeout(() => {
+    emit('placeholderLongPress', { row, col })
+  }, 500)
+}
+
+function handlePlaceholderTouchEnd(row: number, col: number) {
+  const key = `${row}-${col}`;
+  if (placeholderTimeouts[key]) {
+    clearTimeout(placeholderTimeouts[key]);
+    delete placeholderTimeouts[key];
   }
 }
 </script>
 
 <style scoped>
 .deck-grid {
-  background-color: var(--color-background);
+  background-color: transparent;
   user-select: none;
   touch-action: pan-y; /* Allow vertical scrolling but enable custom horizontal gestures */
   transition: all var(--transition-fast);
+  margin: 0 auto;
+  max-width: 100vw;
+  max-height: 100%;
 }
 
 .deck-grid.drag-over {
@@ -297,24 +337,24 @@ function handlePlaceholderClick(row: number, col: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-surface);
-  border: 2px dashed var(--color-border);
+  background-color: transparent;
+  border: 2px dashed transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  color: var(--color-text-secondary);
+  color: transparent;
   min-height: 60px;
   min-width: 60px;
-  /* Enhanced shadow for placeholder buttons */
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .button-placeholder.is-edit-mode {
   border-color: var(--color-primary-light);
   background-color: rgba(var(--color-primary-rgb, 74, 144, 226), 0.05);
+  color: var(--color-text-secondary);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .button-placeholder:hover {

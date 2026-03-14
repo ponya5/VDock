@@ -77,7 +77,7 @@ const emit = defineEmits<{
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
 }
 
 .nav-btn:hover:not(:disabled) {
@@ -105,7 +105,7 @@ const emit = defineEmits<{
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   display: flex;
   align-items: center;
   justify-content: center;

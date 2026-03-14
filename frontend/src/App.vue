@@ -1,5 +1,6 @@
 <template>
   <div id="app" class="theme-dark">
+    <BackgroundRenderer />
     <router-view />
     <NotificationCenter v-if="showNotifications" />
   </div>
@@ -14,6 +15,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import socketClient from '@/api/socket'
 import apiClient from '@/api/client'
 import NotificationCenter from '@/components/NotificationCenter.vue'
+import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()

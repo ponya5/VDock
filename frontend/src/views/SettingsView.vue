@@ -7,19 +7,20 @@
       </button>
     </header>
 
-    <div class="settings-tabs">
-      <button 
-        v-for="tab in tabs" 
-        :key="tab.id"
-        :class="['tab-button', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
-      >
-        <FontAwesomeIcon :icon="tab.icon" />
-        {{ tab.name }}
-      </button>
-    </div>
+    <div class="settings-layout-content">
+      <nav class="settings-nav-rail">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          :class="['nav-rail-item', { active: activeTab === tab.id }]"
+          @click="activeTab = tab.id"
+        >
+          <FontAwesomeIcon :icon="tab.icon" />
+          <span>{{ tab.name }}</span>
+        </button>
+      </nav>
 
-    <div class="settings-content">
+      <div class="settings-content">
       <!-- Appearance Tab -->
       <div v-if="activeTab === 'appearance'" class="tab-content">
         <section class="settings-section card">
@@ -101,6 +102,18 @@
             />
             <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
             <p class="form-help">Adjust the width of the docked sidebar (80-300px)</p>
+          </div>
+
+          <div class="form-group">
+            <label>Animated Background</label>
+            <div class="flex gap-sm">
+              <select v-model="settings.backgroundPreference" class="select" style="flex: 1">
+                <option value="none">None</option>
+                <option value="particles">Dark Veil (Particles)</option>
+                <option value="waves">Floating Lines (Waves)</option>
+              </select>
+            </div>
+            <p class="form-help">Choose an animated background effect for your dashboard</p>
           </div>
 
           <div class="form-group">
@@ -474,12 +487,13 @@
                 <button class="btn btn-secondary" @click="contactEmail">
                   <FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact
                 </button>
-                <span style="color: var(--color-text-secondary); font-size: 0.875rem;">Daniel Shalom. All rights reserved 2025 ©</span>
+                <span style="color: var(--color-text-secondary); font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);">Daniel Shalom. All rights reserved 2026 ©</span>
               </div>
             </div>
           </div>
         </section>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -603,20 +617,15 @@ const startWithWindowsStatus = ref<{success: boolean, message: string} | null>(n
 const serverHost = ref('localhost')
 const serverPort = ref(5000)
 
-// Get all scenes from current profile
 const availableScenes = computed(() => {
   const profile = profilesStore.currentProfile
   if (!profile) return []
   
   // Return all scenes from the profile
-  return profile.pages.flatMap(page => 
-    page.scenes.map(scene => ({
-      id: scene.id,
-      name: scene.name,
-      pageId: page.id,
-      pageName: page.name
-    }))
-  )
+  return (profile.scenes || []).map(scene => ({
+    id: scene.id,
+    name: scene.name
+  }))
 })
 
 const tabs = [
@@ -1060,48 +1069,105 @@ onUnmounted(() => {
 }
 
 .settings-header h1 {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   font-weight: bold;
 }
 
-.settings-tabs {
+.settings-layout-content {
   display: flex;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
+  flex: 1;
+  gap: var(--spacing-xl);
+  overflow: hidden;
+  min-height: 0;
 }
 
-.tab-button {
+.settings-nav-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  padding-right: var(--spacing-md);
+  overflow-y: auto;
+}
+
+.nav-rail-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
   border: none;
   background: none;
   color: var(--color-text-secondary);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md);
   transition: all var(--transition-fast);
-  font-size: 0.875rem;
+  font-size: clamp(0.90rem, 2vw + 0.56rem, 1.35rem);
   font-weight: 500;
+  min-height: 48px;
 }
 
-.tab-button:hover {
+.nav-rail-item:hover {
   color: var(--color-text);
   background-color: var(--color-surface);
 }
 
-.tab-button.active {
+.nav-rail-item.active {
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-  background-color: var(--color-surface);
+  background-color: var(--color-primary-light);
+  font-weight: 600;
 }
 
 .settings-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
+  flex: 1;
+  overflow-y: auto;
+  padding-right: var(--spacing-md);
   max-width: 800px;
+}
+
+@media (max-width: 768px) {
+  .settings-layout-content {
+    flex-direction: column;
+  }
+  
+  .settings-nav-rail {
+    flex-direction: row;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    padding-right: 0;
+    padding-bottom: var(--spacing-md);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  
+  .nav-rail-item {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    flex: 1;
+    min-width: 70px;
+  }
+  
+  .nav-rail-item span {
+    font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
+  }
+
+  /* App integration responsive */
+  .list-header {
+    display: none; /* Hide multi-col header on mobile */
+  }
+
+  .app-item {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .app-status, .app-scene, .app-actions {
+    justify-content: flex-start;
+  }
 }
 
 .tab-content {
@@ -1111,12 +1177,12 @@ onUnmounted(() => {
 }
 
 .settings-section h2 {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   font-weight: bold;
 }
 
 .form-help {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
   margin-bottom: 0;
@@ -1140,6 +1206,7 @@ onUnmounted(() => {
   gap: var(--spacing-sm);
   cursor: pointer;
   font-weight: normal;
+  min-height: 44px; /* Touch target */
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -1179,7 +1246,7 @@ onUnmounted(() => {
   padding: var(--spacing-xs) var(--spacing-sm);
   background-color: var(--color-background);
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
 }
 
@@ -1196,7 +1263,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
@@ -1248,7 +1315,7 @@ onUnmounted(() => {
   padding: var(--spacing-sm) var(--spacing-md);
   background-color: var(--color-background);
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-family: monospace;
 }
 
@@ -1259,7 +1326,7 @@ onUnmounted(() => {
 }
 
 .about-info h3 {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   font-weight: bold;
   color: var(--color-primary);
   margin-bottom: var(--spacing-xs);
@@ -1278,7 +1345,7 @@ onUnmounted(() => {
 }
 
 .feature-highlights h4 {
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: var(--spacing-sm);
@@ -1293,7 +1360,7 @@ onUnmounted(() => {
 .feature-highlights li {
   padding: var(--spacing-xs) 0;
   color: var(--color-text);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
@@ -1319,7 +1386,7 @@ onUnmounted(() => {
 
 .section-description {
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   margin-bottom: var(--spacing-lg);
 }
 
@@ -1336,7 +1403,7 @@ onUnmounted(() => {
   padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-surface);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1368,7 +1435,7 @@ onUnmounted(() => {
 }
 
 .app-icon {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-primary);
 }
 
@@ -1384,7 +1451,7 @@ onUnmounted(() => {
 }
 
 .app-exe {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   font-family: 'Courier New', monospace;
 }
@@ -1441,7 +1508,7 @@ onUnmounted(() => {
 }
 
 .status-text {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -1453,13 +1520,14 @@ onUnmounted(() => {
 
 .select-sm {
   padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
   color: var(--color-text);
   cursor: pointer;
   width: 100%;
+  min-height: 44px; /* Touch target */
 }
 
 .select-sm:focus {
@@ -1469,7 +1537,7 @@ onUnmounted(() => {
 
 .scene-placeholder {
   color: var(--color-text-secondary);
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
 }
 
 .app-actions {
@@ -1489,8 +1557,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px; /* Touch target */
+  height: 44px; /* Touch target */
 }
 
 .btn-icon:hover {
@@ -1517,7 +1585,7 @@ onUnmounted(() => {
   background: var(--color-primary-light);
   border-radius: var(--radius-sm);
   color: var(--color-primary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
   margin-top: var(--spacing-md);
 }
@@ -1538,10 +1606,11 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--spacing-sm);
   cursor: pointer;
+  min-height: 44px; /* Touch target */
 }
 
 .toggle-label {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
   color: var(--color-text);
 }
@@ -1555,12 +1624,12 @@ onUnmounted(() => {
   border: 1px solid #10b981;
   border-radius: var(--radius-md);
   color: #065f46;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   margin-top: var(--spacing-md);
 }
 
 .status-icon {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
 }
 
 .status-icon.success {

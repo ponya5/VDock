@@ -5,7 +5,7 @@
     <FloatingPathsBackgroundV2 v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths-v2'" />
     <BeamsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-beams-background'" />
     
-    <header v-if="settingsStore.showHeader" class="deck-header enhanced-header">
+    <header v-if="settingsStore.showHeader" class="deck-header dashboard-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
@@ -115,8 +115,21 @@
           @swipe-right="previousPage"
           @action-drop="handleActionDrop"
           @placeholder-click="handlePlaceholderClick"
+          @placeholder-long-press="handlePlaceholderLongPress"
           @button-move="handleButtonMove"
+          @swipe-up="nextScene"
+          @swipe-down="previousScene"
+          @long-press="handleDeckButtonLongPress"
+          @double-tap="handleButtonClick"
         />
+
+        <div v-if="currentScene && currentScene.pages.length > 1" class="page-indicator-wrapper">
+          <PageIndicator 
+            :total="currentScene.pages.length" 
+            :current="currentPageIndex" 
+            @select="setPage" 
+          />
+        </div>
 
         <div v-else class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
@@ -381,6 +394,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
 import type { Button, ActionResult, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
+import PageIndicator from '@/components/PageIndicator.vue'
 import PageNavigation from '@/components/PageNavigation.vue'
 import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
@@ -418,6 +432,18 @@ const currentPage = computed(() => dashboardStore.currentPage)
 const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
 const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
 const isEditMode = computed(() => dashboardStore.isEditMode)
+
+function nextScene() {
+  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
+  const nextIdx = (currentSceneIndex.value + 1) % currentProfile.value.scenes.length
+  setScene(currentProfile.value.scenes[nextIdx].id)
+}
+
+function previousScene() {
+  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
+  const prevIdx = (currentSceneIndex.value - 1 + currentProfile.value.scenes.length) % currentProfile.value.scenes.length
+  setScene(currentProfile.value.scenes[prevIdx].id)
+}
 
 const isEditingExistingScene = computed(() => {
   if (!editingScene.value || !currentProfile.value) return false
@@ -750,9 +776,41 @@ function closeSidebar() {
 
 function selectAction(action: any) {
   selectedAction.value = action
-  console.log('Selected action:', action)
-  // TODO: Implement action selection logic
-  // This could open a configuration dialog or directly apply the action
+  
+  if (!currentPage.value) return
+  
+  const config = currentPage.value.grid_config
+  let emptyPos = null
+  
+  // Find first available empty slot
+  outer: for (let r = 0; r < config.rows; r++) {
+    for (let c = 0; c < config.cols; c++) {
+      const isOccupied = currentPage.value.buttons.some(b => 
+        b.position.row <= r && r < b.position.row + b.size.rows &&
+        b.position.col <= c && c < b.position.col + b.size.cols
+      )
+      if (!isOccupied) {
+        emptyPos = { row: r, col: c }
+        break outer
+      }
+    }
+  }
+
+  if (emptyPos) {
+    const newButton = createPreconfiguredButton(action, emptyPos)
+    if (newButton && currentProfile.value && currentScene.value && currentPage.value) {
+      dashboardStore.addButton(
+        currentProfile.value.id,
+        currentScene.value.id,
+        currentPage.value.id,
+        newButton
+      )
+      // Open editor for the newly created button
+      editingButton.value = { ...newButton }
+    }
+  } else {
+    alert('No empty slots available on this page.')
+  }
 }
 
 // Drag and drop handlers
@@ -768,34 +826,52 @@ function handleDragEnd() {
 }
 
 function handleActionDrop(action: any, position: { row: number; col: number }) {
-  console.log('Action dropped:', action, 'at position:', position)
-  
+    
   // Create preconfigured button based on action type
   const button = createPreconfiguredButton(action, position)
   
   if (button) {
     // Add button to the current page
     dashboardStore.addButton(button)
-    console.log('Created button:', button)
-  }
+      }
 }
 
 
 function handleButtonMove(buttonId: string, newPosition: { row: number; col: number }) {
-  console.log('Moving button:', buttonId, 'to:', newPosition)
-  dashboardStore.moveButton(buttonId, newPosition)
+    dashboardStore.moveButton(buttonId, newPosition)
 }
 
 function handleButtonEdit(button: Button) {
-  console.log('Editing button:', button)
-  editingButton.value = { ...button }
+    editingButton.value = { ...button }
 }
 
 function handleButtonDelete(buttonId: string) {
-  console.log('Deleting button:', buttonId)
-  if (confirm('Are you sure you want to delete this button?')) {
+    if (confirm('Are you sure you want to delete this button?')) {
     dashboardStore.removeButton(buttonId)
   }
+}
+
+function handlePlaceholderLongPress(position: { row: number; col: number }) {
+  if (!dashboardStore.isEditMode) {
+    dashboardStore.toggleEditMode()
+  }
+  
+  // Optionally open editor right away
+  const newButton: Button = {
+    id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    position: position,
+    size: { rows: 1, cols: 1 },
+    enabled: true,
+    shape: 'rectangle'
+  }
+  editingButton.value = newButton
+}
+
+function handleDeckButtonLongPress(button: Button) {
+  if (!dashboardStore.isEditMode) {
+    dashboardStore.toggleEditMode()
+  }
+  editingButton.value = { ...button }
 }
 
 // Preconfigured button templates
@@ -1569,14 +1645,12 @@ if (!button.action) return
 
 
 async function handleSaveProfileFromEditor() {
-  console.log('DashboardView: saving profile from editor')
-  await saveProfile()
+    await saveProfile()
 }
 
 async function createDemoProfileForFirstTimeUser() {
   try {
-    console.log('Creating demo profile for first-time user...')
-    
+        
     // Create the demo profile
     const demoProfile = createDemoProfile()
     
@@ -1605,8 +1679,7 @@ async function createDemoProfileForFirstTimeUser() {
           { duration: 8000 }
         )
         
-        console.log('Demo profile created and loaded successfully')
-      } else {
+              } else {
         console.error('Failed to update demo profile with scenes')
       }
     } else {
@@ -1623,13 +1696,11 @@ async function createDemoProfileForFirstTimeUser() {
 }
 
 async function handleButtonSave(button: Button) {
-  console.log('DashboardView: handleButtonSave', button.id)
-  // Check if this is a docked button
+    // Check if this is a docked button
   const isDockedButton = currentProfile.value?.dockedButtons?.some(btn => btn.id === button.id)
   
   if (isDockedButton) {
-    console.log('DashboardView: saving docked button')
-    // Update docked button
+        // Update docked button
     const updatedDockedButtons = currentProfile.value?.dockedButtons?.map(btn => 
       btn.id === button.id ? button : btn
     ) || []
@@ -1651,16 +1722,14 @@ async function handleButtonSave(button: Button) {
     }
   } else {
     // Update regular button
-    console.log('DashboardView: saving regular button')
-    dashboardStore.updateButton(button.id, button)
+        dashboardStore.updateButton(button.id, button)
   }
   
   editingButton.value = null
 }
 
 async function handleDockedButtonDelete(buttonId: string) {
-  console.log('DashboardView: deleting docked button', buttonId)
-  if (currentProfile.value) {
+    if (currentProfile.value) {
     const updatedDockedButtons = currentProfile.value.dockedButtons?.filter(btn => btn.id !== buttonId) || []
     
     // Create updated profile and save it
@@ -1680,8 +1749,7 @@ async function handleDockedButtonDelete(buttonId: string) {
 }
 
 async function handleAddDockedButton(position: { row: number; col: number }) {
-  console.log('DashboardView: handleAddDockedButton at', position)
-  const newButton: Button = {
+    const newButton: Button = {
     id: `docked_${Date.now()}`,
     label: 'New Button',
     secondary_label: '',
@@ -1700,8 +1768,7 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
     enabled: true
   }
   
-  console.log('DashboardView: creating new docked button', newButton)
-  
+    
   if (currentProfile.value) {
     // Create updated profile with new docked button
     const updatedProfile = {
@@ -1709,8 +1776,7 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
       dockedButtons: [...(currentProfile.value.dockedButtons || []), newButton]
     }
     
-    console.log('DashboardView: setting updated profile with', updatedProfile.dockedButtons.length, 'docked buttons')
-    
+        
     // Use setProfile to trigger reactivity properly
     dashboardStore.setProfile(updatedProfile)
     await dashboardStore.saveProfile()
@@ -1723,19 +1789,15 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
 }
 
 async function handleDockedButtonDrop(event: DragEvent, position: { row: number; col: number }) {
-  console.log('DashboardView: handleDockedButtonDrop called at', position)
-  if (!event.dataTransfer) {
-    console.log('DashboardView: no dataTransfer')
-    return
+    if (!event.dataTransfer) {
+        return
   }
   
   try {
     const buttonData = event.dataTransfer.getData('application/vdock-button')
-    console.log('DashboardView: button data', buttonData)
-    if (buttonData) {
+        if (buttonData) {
       const button = JSON.parse(buttonData)
-      console.log('DashboardView: parsed button', button)
-      
+            
       // Create a copy of the button for docking at the specific position
       const dockedButton: Button = {
         ...button,
@@ -1744,8 +1806,7 @@ async function handleDockedButtonDrop(event: DragEvent, position: { row: number;
         size: { rows: 1, cols: 1 }
       }
       
-      console.log('DashboardView: created docked button', dockedButton)
-      
+            
       if (currentProfile.value) {
         // Create updated profile with new docked button
         const updatedProfile = {
@@ -1753,8 +1814,7 @@ async function handleDockedButtonDrop(event: DragEvent, position: { row: number;
           dockedButtons: [...(currentProfile.value.dockedButtons || []), dockedButton]
         }
         
-        console.log('DashboardView: setting updated profile with', updatedProfile.dockedButtons.length, 'docked buttons')
-        
+                
         // Use setProfile to trigger reactivity properly
         dashboardStore.setProfile(updatedProfile)
         
@@ -1763,11 +1823,9 @@ async function handleDockedButtonDrop(event: DragEvent, position: { row: number;
           message: `Button docked successfully`
         })
       } else {
-        console.log('DashboardView: no current profile')
-      }
+              }
     } else {
-      console.log('DashboardView: no button data found')
-    }
+          }
   } catch (err) {
     console.error('Failed to handle docked drop:', err)
     showActionResult({
@@ -1786,8 +1844,7 @@ function handleButtonCopy(button: Button) {
 }
 
 function handleDockedPlaceholderClick(position: { row: number; col: number }) {
-  console.log('DashboardView: docked placeholder clicked at', position)
-  if (clipboardButton.value && currentProfile.value) {
+    if (clipboardButton.value && currentProfile.value) {
     // Paste the copied button to the docked sidebar
     const pastedButton: Button = {
       ...clipboardButton.value,
@@ -1796,8 +1853,7 @@ function handleDockedPlaceholderClick(position: { row: number; col: number }) {
       size: { rows: 1, cols: 1 }
     }
     
-    console.log('DashboardView: pasting button to docked sidebar', pastedButton)
-    
+        
     // Create updated profile with pasted button
     const updatedProfile = {
       ...currentProfile.value,
@@ -1817,8 +1873,7 @@ function handleDockedPlaceholderClick(position: { row: number; col: number }) {
 }
 
 function handlePlaceholderClick(position: { row: number; col: number }) {
-  console.log('Placeholder clicked at:', position)
-  
+    
   if (clipboardButton.value) {
     // Paste the button at the clicked position
     const newButton: Button = {
@@ -1858,8 +1913,7 @@ function handlePlaceholderClick(position: { row: number; col: number }) {
     }
     
     dashboardStore.addButton(button)
-    console.log('Created button:', button)
-  }
+      }
 }
 
 
@@ -2033,7 +2087,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .profile-title-inline {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
@@ -2073,7 +2127,7 @@ function showActionResult(result: ActionResult) {
   align-items: center;
   justify-content: center;
   color: var(--color-text);
-  font-size: 1.4rem;
+  font-size: clamp(1.12rem, 2vw + 0.70rem, 1.68rem);
 }
 
 .avatar-status-indicator {
@@ -2096,7 +2150,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .profile-title {
-  font-size: 1.6rem;
+  font-size: clamp(1.28rem, 2vw + 0.80rem, 1.92rem);
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
@@ -2107,7 +2161,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .profile-subtitle {
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: var(--color-text-secondary);
   opacity: 0.8;
 }
@@ -2130,7 +2184,7 @@ function showActionResult(result: ActionResult) {
 
 .enhanced-btn .btn-label {
   margin-left: var(--spacing-xs);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   opacity: 0;
   transform: translateX(-10px);
   transition: all var(--transition-fast);
@@ -2185,7 +2239,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .no-profile-icon {
-  font-size: 4rem;
+  font-size: clamp(3.20rem, 2vw + 2.00rem, 4.80rem);
   opacity: 0.5;
 }
 
@@ -2232,7 +2286,7 @@ function showActionResult(result: ActionResult) {
   background-color: var(--color-background);
   color: var(--color-text);
   text-align: center;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .grid-input:focus {
@@ -2325,7 +2379,7 @@ function showActionResult(result: ActionResult) {
 
 .sidebar-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   color: var(--color-text-primary);
 }
 
@@ -2346,7 +2400,7 @@ function showActionResult(result: ActionResult) {
   border-radius: var(--radius-sm);
   background-color: var(--color-surface-solid);
   color: var(--color-text-primary);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
 }
 
 .search-input:focus {
@@ -2384,7 +2438,7 @@ function showActionResult(result: ActionResult) {
 
 .category-header svg {
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
 }
 
 .category-title {
@@ -2396,7 +2450,7 @@ function showActionResult(result: ActionResult) {
 
 .category-count {
   margin-left: auto;
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   color: var(--color-text-secondary);
 }
 
@@ -2435,7 +2489,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .btn-icon svg {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .category-actions {
@@ -2473,18 +2527,18 @@ function showActionResult(result: ActionResult) {
 
 .action-item svg {
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   width: 16px;
 }
 
 .action-item span {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text-primary);
 }
 
 .btn-sm {
   padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
 }
 
 .clickable {
@@ -2684,7 +2738,7 @@ function showActionResult(result: ActionResult) {
 .help-section h3 {
   color: var(--color-primary);
   margin-bottom: var(--spacing-md);
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -2748,7 +2802,7 @@ function showActionResult(result: ActionResult) {
   }
   
   .profile-title-inline {
-    font-size: 1rem;
+    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   }
   
   .enhanced-btn .btn-label {
@@ -2823,7 +2877,7 @@ function showActionResult(result: ActionResult) {
 /* Tablet (768px - 1365px) */
 @media (min-width: 768px) and (max-width: 1365px) {
   .profile-title-inline {
-    font-size: 1.1rem;
+    font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   }
   
   .enhanced-btn {
@@ -2857,7 +2911,7 @@ function showActionResult(result: ActionResult) {
   }
   
   .profile-title-inline {
-    font-size: 1.5rem;
+    font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   }
   
   .enhanced-avatar {
@@ -2867,7 +2921,7 @@ function showActionResult(result: ActionResult) {
   
   .enhanced-btn {
     padding: 1rem var(--spacing-lg);
-    font-size: 1rem;
+    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   }
   
   .edit-sidebar {
@@ -2899,7 +2953,7 @@ function showActionResult(result: ActionResult) {
   }
   
   .profile-title-inline {
-    font-size: 0.95rem;
+    font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
   }
 }
 
@@ -2938,7 +2992,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .btn-shortcut {
-  font-size: 0.65rem;
+  font-size: clamp(0.52rem, 2vw + 0.33rem, 0.78rem);
   padding: 0.15rem 0.4rem;
   background: rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-xs);
@@ -2952,7 +3006,7 @@ function showActionResult(result: ActionResult) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   font-weight: 500;
   transition: all 0.2s ease;
 }

@@ -2339,7 +2339,7 @@ onUnmounted(() => {
 }
 
 .modal-header h2 {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: bold;
 }
 
@@ -2352,7 +2352,7 @@ onUnmounted(() => {
 .save-profile-btn {
   background: var(--color-success);
   border: none;
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   color: white;
   cursor: pointer;
   padding: var(--spacing-xs) var(--spacing-sm);
@@ -2371,7 +2371,7 @@ onUnmounted(() => {
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: var(--spacing-xs);
@@ -2398,7 +2398,7 @@ onUnmounted(() => {
 }
 
 .small-label {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: normal;
   color: var(--color-text-secondary);
 }
@@ -2425,7 +2425,7 @@ onUnmounted(() => {
 }
 
 .form-help {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
   margin-bottom: 0;
@@ -2540,7 +2540,7 @@ onUnmounted(() => {
 .icon-size-display span {
   font-weight: 500;
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .restore-default-btn {
@@ -2551,7 +2551,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .restore-default-btn:hover {
@@ -2640,7 +2640,7 @@ onUnmounted(() => {
 .font-size-display span {
   font-weight: 600;
   color: var(--color-accent);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 /* Macro Editor Styles */
@@ -2668,7 +2668,7 @@ onUnmounted(() => {
 .step-number {
   font-weight: 600;
   color: var(--color-primary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .step-actions {
@@ -2684,7 +2684,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: var(--color-text);
   transition: all var(--transition-fast);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .btn-icon:hover:not(:disabled) {
@@ -2710,14 +2710,14 @@ onUnmounted(() => {
 }
 
 .small-label {
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   font-weight: 500;
   margin-bottom: var(--spacing-xs);
   display: block;
 }
 
 .form-help-sm {
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   color: var(--color-text-secondary);
   margin-top: 4px;
 }
@@ -2753,7 +2753,7 @@ onUnmounted(() => {
 }
 
 .btn-sm {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   padding: var(--spacing-xs) var(--spacing-sm);
 }
 
@@ -2784,7 +2784,7 @@ onUnmounted(() => {
 
 .info-message p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   line-height: 1.5;
 }
 
@@ -2851,7 +2851,7 @@ onUnmounted(() => {
 
 .hotkey-dropdown-header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -2918,7 +2918,7 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   min-height: 32px;
 }
 
@@ -2943,7 +2943,7 @@ onUnmounted(() => {
 }
 
 .combination-label {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-sm);
@@ -2966,7 +2966,7 @@ onUnmounted(() => {
   background: var(--color-primary);
   color: white;
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
 }
 
@@ -2982,7 +2982,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: clamp(8.0px, 2vw + 5.0px, 12.0px);
 }
 
 .remove-key:hover {
@@ -2996,7 +2996,7 @@ onUnmounted(() => {
 }
 
 .form-help {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
   line-height: 1.4;
@@ -3033,7 +3033,7 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
 }
 
@@ -3046,7 +3046,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.2);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
 }
 
@@ -3068,7 +3068,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: clamp(8.0px, 2vw + 5.0px, 12.0px);
 }
 
 .remove-step:hover {
@@ -3086,7 +3086,7 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
 }
 
@@ -3119,7 +3119,7 @@ onUnmounted(() => {
 
 .selector-header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -3170,7 +3170,7 @@ onUnmounted(() => {
 }
 
 .step-type-btn svg {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-primary);
 }
 
@@ -3181,7 +3181,7 @@ onUnmounted(() => {
 
 .step-type-btn small {
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .macro-step-editor {
@@ -3210,7 +3210,7 @@ onUnmounted(() => {
 
 .editor-header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -3293,7 +3293,7 @@ onUnmounted(() => {
   background: var(--color-primary);
   color: white;
   border-radius: var(--radius-sm);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .custom-icon {
@@ -3310,7 +3310,7 @@ onUnmounted(() => {
 .button-label {
   font-weight: 600;
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3318,7 +3318,7 @@ onUnmounted(() => {
 
 .button-action {
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3344,7 +3344,7 @@ onUnmounted(() => {
 .action-type-badge {
   padding: 2px 8px;
   border-radius: var(--radius-xs);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3390,13 +3390,13 @@ onUnmounted(() => {
 }
 
 .upload-icon {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   color: var(--color-primary);
   opacity: 0.7;
 }
 
 .upload-hint {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -3411,7 +3411,7 @@ onUnmounted(() => {
 
 .upload-preview h3 {
   margin: 0 0 1rem 0;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   color: var(--color-text);
 }
 
@@ -3435,7 +3435,7 @@ onUnmounted(() => {
 }
 
 .file-info {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text-secondary);
   margin: 0;
   text-align: center;
@@ -3451,7 +3451,7 @@ onUnmounted(() => {
 }
 
 .animation-preview-label {
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   font-weight: 500;
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-sm);
@@ -3471,12 +3471,12 @@ onUnmounted(() => {
 }
 
 .preview-icon {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   color: var(--color-primary);
 }
 
 .preview-placeholder {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
   color: var(--color-text-secondary);
 }
