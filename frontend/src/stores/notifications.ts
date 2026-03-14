@@ -41,14 +41,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const toasts = computed(() => {
     const settingsStore = useSettingsStore()
     const unreadNotifications = notifications.value.filter(n => !n.read)
-    
-    // If showRegularToasts is disabled, only show error toasts
-    if (!settingsStore.showRegularToasts) {
+
+    const level = settingsStore.toastLevel
+    if (level === 'off') return []
+    if (level === 'errors-only') {
       return unreadNotifications.filter(n => n.type === 'error').slice(-3)
     }
-    
-    // Otherwise show all types
-    return unreadNotifications.slice(-3) // Show last 3 unread
+    // 'all'
+    return unreadNotifications.slice(-3)
   })
   
   // Actions

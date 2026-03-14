@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="theme-dark">
+  <div id="app" class="theme-dark" :class="{ 'bg-animated': settingsStore.backgroundPreference !== 'none' }">
     <BackgroundRenderer />
     <router-view />
     <NotificationCenter v-if="showNotifications" />
@@ -68,6 +68,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #0a0a0a;
 }
 
 #app {
@@ -76,6 +77,10 @@ body {
   overflow: hidden;
   background-color: var(--color-background);
   color: var(--color-text);
+}
+
+#app.bg-animated {
+  background: transparent;
 }
 </style>
 

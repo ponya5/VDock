@@ -109,19 +109,34 @@ body {
   overflow-x: hidden;
 }
 
-/* Button Styles */
+/* Button Styles — Uiverse pill style */
 .btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: clamp(11px, 0.8vw + 8px, 16px);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
-  min-height: 36px; /* Increased for better touch targets */
+  outline: none;
+  cursor: pointer;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  min-height: 44px;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 30px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
+  font-size: clamp(11px, 0.8vw + 8px, 16px);
+  font-weight: 600;
+  color: #606060;
+  text-shadow: 0 1px #fff;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn:hover:not(:disabled) {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 3px 3px #CECFD1;
+}
+
+.btn:active:not(:disabled) {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
 }
 
 .btn:disabled {
@@ -129,51 +144,64 @@ body {
   cursor: not-allowed;
 }
 
+/* Variant overrides — keep pill shape, change color */
 .btn-primary {
-  background-color: var(--color-primary);
-  color: white;
+  background-image: linear-gradient(to top, #2980b9 0%, #3498db 80%, #5dade2 100%);
+  border-color: #1a6fa0;
+  color: #fff;
+  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  box-shadow: 0 4px 3px 1px rgba(52,152,219,0.3), 0 6px 8px rgba(41,128,185,0.4), 0 -4px 4px rgba(93,173,226,0.2), inset 0 0 3px 3px rgba(41,128,185,0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  box-shadow: 0 4px 3px 1px rgba(52,152,219,0.2), 0 6px 8px rgba(41,128,185,0.3), inset 0 0 5px 3px rgba(26,111,160,0.5), inset 0 0 20px rgba(26,111,160,0.3);
 }
 
 .btn-secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-border);
+  background-image: linear-gradient(to top, #c8cacc 0%, #f0f1f2 80%, #f8f9fa 100%);
+  border-color: #9fa2a5;
+  color: #505050;
+  text-shadow: 0 1px #fff;
 }
 
 .btn-accent {
-  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  background-image: linear-gradient(to top, #d97706 0%, #f59e0b 80%, #fbbf24 100%);
+  border-color: #b45309;
+  color: #fff;
+  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-accent:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 3px 1px rgba(251,191,36,0.3), 0 6px 8px rgba(245,158,11,0.4), inset 0 0 3px 3px rgba(180,83,9,0.2);
 }
 
 .btn-accent:disabled {
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  box-shadow: none;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  color: #aaa;
+  text-shadow: 0 1px #fff;
 }
 
 .btn-success {
-  background-color: var(--color-success);
-  color: white;
+  background-image: linear-gradient(to top, #1e8449 0%, #27ae60 80%, #52be80 100%);
+  border-color: #196f3d;
+  color: #fff;
+  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-danger {
-  background-color: var(--color-error);
-  color: white;
+  background-image: linear-gradient(to top, #c0392b 0%, #e74c3c 80%, #ec7063 100%);
+  border-color: #a93226;
+  color: #fff;
+  text-shadow: 0 1px rgba(0,0,0,0.3);
+}
+
+.btn-sm {
+  padding: 4px var(--spacing-md);
+  min-height: 32px;
+  font-size: clamp(10px, 0.6vw + 8px, 13px);
 }
 
 /* Input Styles */
@@ -320,108 +348,60 @@ body {
   background: var(--color-secondary);
 }
 
-/* ── btn-12: Uiverse striped hover effect (used for dashboard header actions) ── */
-.btn-12,
-.btn-12 *,
-.btn-12 :after,
-.btn-12 :before,
-.btn-12:after,
-.btn-12:before {
-  border: 0 solid;
+/* ── btn-12: Uiverse pill style (dashboard header actions) ── */
+.btn-12 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  cursor: pointer;
+  padding: 0.4rem 1rem;
+  min-height: 36px;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 30px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: clamp(0.6rem, 0.8vw + 0.35rem, 0.78rem);
+  font-weight: 600;
+  color: #606060;
+  text-shadow: 0 1px #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
   box-sizing: border-box;
 }
 
-.btn-12 {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-appearance: button;
-  background-color: rgba(255, 255, 255, 0.08);
-  background-image: none;
-  color: #fff;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: clamp(0.65rem, 1vw + 0.4rem, 0.8rem);
-  font-weight: 700;
-  line-height: 1.5;
-  margin: 0;
-  -webkit-mask-image: -webkit-radial-gradient(#000, #fff);
-  padding: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-radius: 99rem;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  overflow: hidden;
-  padding: 0.5rem 1rem;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  backdrop-filter: blur(10px);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  min-height: 36px;
+.btn-12:hover:not(:disabled) {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 3px 3px #CECFD1;
 }
 
-.btn-12:hover {
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+.btn-12:active:not(:disabled) {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
+}
+
+.btn-12:focus:not(:disabled) {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
 }
 
 .btn-12:disabled {
-  cursor: default;
+  cursor: not-allowed;
   opacity: 0.5;
 }
 
 .btn-12 span {
-  mix-blend-mode: difference;
-  position: relative;
-  z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-}
-
-.btn-12:after,
-.btn-12:before {
-  background: linear-gradient(
-    90deg,
-    #fff 25%,
-    transparent 0,
-    transparent 50%,
-    #fff 0,
-    #fff 75%,
-    transparent 0
-  );
-  content: "";
-  inset: 0;
-  position: absolute;
-  transform: translateY(var(--progress, 100%));
-  transition: transform 0.2s ease;
-}
-
-.btn-12:after {
-  --progress: -100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0,
-    transparent 25%,
-    #fff 0,
-    #fff 50%,
-    transparent 0,
-    transparent 75%,
-    #fff 0
-  );
-  z-index: -1;
-}
-
-.btn-12:hover:after,
-.btn-12:hover:before {
-  --progress: 0;
+  gap: 0.35rem;
 }
 
 /* Active/edit state variant */
 .btn-12.edit-active {
-  background-color: rgba(var(--color-primary-rgb), 0.3);
-  border-color: var(--color-primary);
-  box-shadow: 0 0 12px rgba(var(--color-primary-rgb), 0.4);
+  background-image: linear-gradient(to top, #1a6fa0 0%, #3498db 80%, #5dade2 100%);
+  border-color: #1a6fa0;
+  color: #fff;
+  text-shadow: 0 1px rgba(0,0,0,0.3);
+  box-shadow: 0 0 12px rgba(52, 152, 219, 0.4);
 }
 
 /* Enhanced Button Styles */

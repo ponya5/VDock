@@ -9,11 +9,7 @@
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
-          <div 
-            class="profile-avatar-container clickable" 
-            @click="settingsStore.showHeader = !settingsStore.showHeader"
-            title="Click to toggle header visibility"
-          >
+          <div class="profile-avatar-container">
             <img 
               v-if="currentProfile?.avatar" 
               :src="currentProfile.avatar" 
@@ -51,9 +47,20 @@
         </div>
 
         <div class="header-right">
+          <button
+            class="btn-hide-header"
+            @click="settingsStore.showHeader = !settingsStore.showHeader"
+            title="Hide header"
+            aria-label="Hide header"
+          >
+            <div>
+              <span><FontAwesomeIcon :icon="['fas', 'eye-slash']" /> Hide</span>
+            </div>
+          </button>
           <button class="btn-12" @click="showHelp = true" title="Help & Guide">
             <span><FontAwesomeIcon :icon="['fas', 'question-circle']" /> Help</span>
           </button>
+          <div class="header-right-separator"></div>
           <button class="btn-12" @click="router.push('/profiles')" title="Profiles">
             <span><FontAwesomeIcon :icon="['fas', 'users']" /> Profiles</span>
           </button>
@@ -94,29 +101,32 @@
       
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
-        <DeckGrid
-          v-if="currentPage"
-          :page="currentPage"
-          :is-edit-mode="isEditMode"
-          :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
-          :show-labels="settingsStore.showLabels"
-          :show-tooltips="settingsStore.showTooltips"
-          :compact="shouldUseCompactMode"
-          @button-click="handleButtonClick"
-          @button-edit="handleButtonEdit"
-          @button-copy="handleButtonCopy"
-          @button-delete="handleButtonDelete"
-          @swipe-left="nextPage"
-          @swipe-right="previousPage"
-          @action-drop="handleActionDrop"
-          @placeholder-click="handlePlaceholderClick"
-          @placeholder-long-press="handlePlaceholderLongPress"
-          @button-move="handleButtonMove"
-          @swipe-up="nextScene"
-          @swipe-down="previousScene"
-          @long-press="handleDeckButtonLongPress"
-          @double-tap="handleButtonClick"
-        />
+        <Transition :name="pageTransitionName" mode="out-in">
+          <DeckGrid
+            v-if="currentPage"
+            :key="currentPageIndex"
+            :page="currentPage"
+            :is-edit-mode="isEditMode"
+            :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
+            :show-labels="settingsStore.showLabels"
+            :show-tooltips="settingsStore.showTooltips"
+            :compact="shouldUseCompactMode"
+            @button-click="handleButtonClick"
+            @button-edit="handleButtonEdit"
+            @button-copy="handleButtonCopy"
+            @button-delete="handleButtonDelete"
+            @swipe-left="nextPage"
+            @swipe-right="previousPage"
+            @action-drop="handleActionDrop"
+            @placeholder-click="handlePlaceholderClick"
+            @placeholder-long-press="handlePlaceholderLongPress"
+            @button-move="handleButtonMove"
+            @swipe-up="nextScene"
+            @swipe-down="previousScene"
+            @long-press="handleDeckButtonLongPress"
+            @double-tap="handleButtonClick"
+          />
+        </Transition>
 
         <div v-if="currentScene && currentScene.pages.length > 1" class="page-indicator-wrapper">
           <PageIndicator 
@@ -248,6 +258,16 @@
           Add Page
         </button>
         <button
+          class="btn btn-danger btn-sm"
+          @click="deleteCurrentPage"
+          :disabled="!currentScene || currentScene.pages.length <= 1"
+          title="Delete current page"
+          style="margin-left: var(--spacing-sm);"
+        >
+          <FontAwesomeIcon :icon="['fas', 'trash']" />
+          Delete Page
+        </button>
+        <button
           class="btn btn-success btn-sm"
           @click="saveProfile"
           title="Save all changes to profile"
@@ -282,7 +302,7 @@
     />
 
     <!-- Action Result Toast -->
-    <div v-if="actionResult && !settingsStore.showRegularToasts && actionResult.success === false" class="action-toast error">
+    <div v-if="actionResult && settingsStore.toastLevel !== 'off' && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
 
@@ -316,6 +336,8 @@ import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBac
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDemoProfile, isFirstTimeUser } from '@/utils/demoProfile'
+import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
+import type { AppIntegration } from '@/types'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -329,6 +351,7 @@ const actionResult = ref<ActionResult | null>(null)
 const clipboardButton = ref<Button | null>(null)
 const showHelp = ref(false)
 const quickSearchRef = ref<InstanceType<typeof QuickSearch>>()
+const pageTransitionName = ref('page-slide-left')
 let actionResultTimeout: number | null = null
 
 // Sidebar state
@@ -375,9 +398,13 @@ const shouldUseCompactMode = computed(() => {
 })
 
 const dashboardBackgroundClass = computed(() => {
+  // When an animated overlay effect is active, let it show through
+  if (settingsStore.backgroundPreference !== 'none') {
+    return 'dashboard-bg-transparent'
+  }
+
   // First check if current page has a background
   if (currentPage.value?.background) {
-    // Page has its own background, don't apply dashboard background
     return ''
   }
 
@@ -385,11 +412,10 @@ const dashboardBackgroundClass = computed(() => {
   if (currentScene.value?.background?.image) {
     return 'dashboard-bg-custom'
   }
-  
+
   // Apply dashboard background when page background is null
   const bg = settingsStore.dashboardBackground
   if (bg === 'default') return ''
-  // Check if it's a custom uploaded image (URL)
   if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
     return 'dashboard-bg-custom'
   }
@@ -397,6 +423,9 @@ const dashboardBackgroundClass = computed(() => {
 })
 
 const dashboardBackgroundStyle = computed(() => {
+  // Animated background is active — keep everything transparent
+  if (settingsStore.backgroundPreference !== 'none') return {}
+
   // Check scene background first
   if (currentScene.value?.background?.image) {
     return {
@@ -588,6 +617,9 @@ const canUndo = computed(() => dashboardStore.canUndo)
 const canRedo = computed(() => dashboardStore.canRedo)
 
 const mainStyle = computed(() => {
+  // Animated background is active — don't paint over it
+  if (settingsStore.backgroundPreference !== 'none') return {}
+
   if (!currentPage.value?.background) return {}
   
   const bg = currentPage.value.background
@@ -630,6 +662,25 @@ onMounted(async () => {
     await createDemoProfileForFirstTimeUser()
   }
   
+  // Wire auto scene switching if enabled
+  const storedIntegrations = localStorage.getItem('appIntegrations')
+  const storedAutoSwitch = localStorage.getItem('autoSceneSwitching')
+  if (storedAutoSwitch === 'true' && storedIntegrations) {
+    try {
+      const integrations: AppIntegration[] = JSON.parse(storedIntegrations)
+      autoSceneSwitcher.initialize(integrations)
+      autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
+        const profile = dashboardStore.currentProfile
+        if (!profile) return
+        const idx = profile.scenes.findIndex(s => s.id === sceneId)
+        if (idx >= 0) dashboardStore.setScene(idx)
+      })
+      autoSceneSwitcher.enable()
+    } catch {
+      // ignore malformed stored data
+    }
+  }
+
   // Add keyboard shortcuts
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.metaKey) {
@@ -1472,14 +1523,17 @@ function editScene(scene: Scene) {
 }
 
 function setPage(index: number) {
+  pageTransitionName.value = index > currentPageIndex.value ? 'page-slide-left' : 'page-slide-right'
   dashboardStore.setPage(index)
 }
 
 function nextPage() {
+  pageTransitionName.value = 'page-slide-left'
   dashboardStore.nextPage()
 }
 
 function previousPage() {
+  pageTransitionName.value = 'page-slide-right'
   dashboardStore.previousPage()
 }
 
@@ -1878,6 +1932,17 @@ function addPageToCurrentScene() {
   }, 1500)
 }
 
+function deleteCurrentPage() {
+  if (!currentScene.value || !currentPage.value) return
+  if (currentScene.value.pages.length <= 1) {
+    notificationsStore.error('Cannot Delete', 'A scene must have at least one page.')
+    return
+  }
+  if (!confirm(`Delete "${currentPage.value.name}"? This cannot be undone.`)) return
+  dashboardStore.removePage(currentPage.value.id)
+  notificationsStore.success('Page Deleted', 'The page has been removed.')
+}
+
 async function saveProfile() {
   if (!currentProfile.value) {
     showActionResult({
@@ -1933,6 +1998,11 @@ function showActionResult(result: ActionResult) {
   flex-direction: column;
   width: 100%;
   height: 100%;
+}
+
+/* Transparent mode — lets animated background effects show through */
+.dashboard-bg-transparent {
+  background: transparent !important;
 }
 
 /* Enhanced Header Styles */
@@ -2093,6 +2163,16 @@ function showActionResult(result: ActionResult) {
 
 .header-right {
   justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.header-right-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0 var(--spacing-xs);
 }
 
 /* Enhanced Button Styles */
@@ -2899,6 +2979,126 @@ function showActionResult(result: ActionResult) {
   .deck-grid {
     gap: calc(var(--spacing-md) * 1.2);
   }
+}
+
+/* ── Hide-header button — Uiverse augustin_4687 style ── */
+.btn-hide-header {
+  --stone-50: #fafaf9;
+  --stone-800: #292524;
+  --yellow-400: #facc15;
+  font-size: clamp(0.6rem, 0.7vw + 0.35rem, 0.75rem);
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+  font-weight: bold;
+  line-height: 1;
+  padding: 1px;
+  transform: translate(-4px, -4px);
+  outline: 2px solid transparent;
+  outline-offset: 5px;
+  border-radius: 9999px;
+  background-color: var(--stone-800);
+  color: var(--stone-800);
+  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  text-align: center;
+  flex-shrink: 0;
+  box-shadow:
+    0.5px 0.5px 0 0 var(--stone-800), 1px 1px 0 0 var(--stone-800),
+    1.5px 1.5px 0 0 var(--stone-800), 2px 2px 0 0 var(--stone-800),
+    2.5px 2.5px 0 0 var(--stone-800), 3px 3px 0 0 var(--stone-800),
+    0 0 0 2px var(--stone-50), 0.5px 0.5px 0 2px var(--stone-50),
+    1px 1px 0 2px var(--stone-50), 1.5px 1.5px 0 2px var(--stone-50),
+    2px 2px 0 2px var(--stone-50), 2.5px 2.5px 0 2px var(--stone-50),
+    3px 3px 0 2px var(--stone-50), 3.5px 3.5px 0 2px var(--stone-50),
+    4px 4px 0 2px var(--stone-50);
+}
+
+.btn-hide-header:hover {
+  transform: translate(0, 0);
+  box-shadow: 0 0 0 2px var(--stone-50);
+}
+
+.btn-hide-header:active,
+.btn-hide-header:focus-visible {
+  outline-color: var(--yellow-400);
+}
+
+.btn-hide-header:focus-visible {
+  outline-style: dashed;
+}
+
+.btn-hide-header > div {
+  position: relative;
+  pointer-events: none;
+  background-color: var(--yellow-400);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.btn-hide-header > div::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(rgb(255 255 255 / 80%) 20%, transparent 20%),
+    radial-gradient(rgb(255 255 255 / 100%) 20%, transparent 20%);
+  background-position: 0 0, 4px 4px;
+  background-size: 8px 8px;
+  mix-blend-mode: hard-light;
+  animation: btn-hide-dots 0.5s infinite linear;
+}
+
+.btn-hide-header > div > span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
+  gap: 0.3rem;
+  color: var(--stone-800);
+  filter: drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.25));
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.btn-hide-header > div > span:active {
+  transform: translateY(2px);
+}
+
+@keyframes btn-hide-dots {
+  0%   { background-position: 0 0, 4px 4px; }
+  100% { background-position: 8px 0, 12px 4px; }
+}
+
+/* ── Page slide transitions ── */
+.page-slide-left-enter-active,
+.page-slide-left-leave-active,
+.page-slide-right-enter-active,
+.page-slide-right-leave-active {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease;
+  will-change: transform;
+}
+
+.page-slide-left-enter-from {
+  transform: translateX(6%);
+  opacity: 0;
+}
+.page-slide-left-leave-to {
+  transform: translateX(-6%);
+  opacity: 0;
+}
+
+.page-slide-right-enter-from {
+  transform: translateX(-6%);
+  opacity: 0;
+}
+.page-slide-right-leave-to {
+  transform: translateX(6%);
+  opacity: 0;
 }
 
 /* Glassmorphism Button Styles */
