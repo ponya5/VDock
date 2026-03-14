@@ -51,26 +51,21 @@
         </div>
 
         <div class="header-right">
-          <button class="btn btn-glass enhanced-btn" @click="showHelp = true" title="Help & Guide">
-            <FontAwesomeIcon :icon="['fas', 'question-circle']" />
-            <span class="btn-label">Help</span>
+          <button class="btn-12" @click="showHelp = true" title="Help & Guide">
+            <span><FontAwesomeIcon :icon="['fas', 'question-circle']" /> Help</span>
           </button>
-          <button class="btn btn-glass enhanced-btn" @click="router.push('/profiles')" title="Profiles">
-            <FontAwesomeIcon :icon="['fas', 'users']" />
-            <span class="btn-label">Profiles</span>
+          <button class="btn-12" @click="router.push('/profiles')" title="Profiles">
+            <span><FontAwesomeIcon :icon="['fas', 'users']" /> Profiles</span>
           </button>
           <button
-            class="btn enhanced-btn"
-            :class="isEditMode ? 'btn-glow edit-active' : 'btn-glass'"
+            :class="['btn-12', { 'edit-active': isEditMode }]"
             @click="toggleEditMode"
             title="Toggle Edit Mode"
           >
-            <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
-            <span class="btn-label">{{ isEditMode ? 'View' : 'Edit' }}</span>
+            <span><FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" /> {{ isEditMode ? 'View' : 'Edit' }}</span>
           </button>
-          <button class="btn btn-glass enhanced-btn" @click="router.push('/settings')" title="Settings">
-            <FontAwesomeIcon :icon="['fas', 'cog']" />
-            <span class="btn-label">Settings</span>
+          <button class="btn-12" @click="router.push('/settings')" title="Settings">
+            <span><FontAwesomeIcon :icon="['fas', 'cog']" /> Settings</span>
           </button>
         </div>
       </div>

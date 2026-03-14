@@ -162,6 +162,7 @@ interface Props {
   showLabels?: boolean
   showTooltips?: boolean
   compact?: boolean
+  buttonSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -169,7 +170,8 @@ const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   showLabels: true,
   showTooltips: true,
-  compact: false
+  compact: false,
+  buttonSize: 1.0
 })
 
 const emit = defineEmits<{
@@ -328,7 +330,12 @@ const buttonStyle = computed(() => {
 })
 
 const iconStyle = computed(() => {
-  const size = props.button.style?.iconSize || 32
+  // Scale icon size with buttonSize prop so label always has room
+  const baseSize = props.button.style?.iconSize || 32
+  const scale = props.buttonSize || 1.0
+  // When label is shown, cap icon at 55% of scaled size to leave room for label
+  const hasLabel = !!(props.button.label && props.showLabels)
+  const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
   return {
     width: `${size}px`,
     height: `${size}px`,
@@ -337,7 +344,10 @@ const iconStyle = computed(() => {
 })
 
 const mediaStyle = computed(() => {
-  const size = props.button.style?.iconSize || 32
+  const baseSize = props.button.style?.iconSize || 32
+  const scale = props.buttonSize || 1.0
+  const hasLabel = !!(props.button.label && props.showLabels)
+  const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
   return {
     width: `${size}px`,
     height: `${size}px`
@@ -345,16 +355,20 @@ const mediaStyle = computed(() => {
 })
 
 const labelStyle = computed(() => {
-  const fontSize = props.button.style?.fontSize || 16
+  const baseFontSize = props.button.style?.fontSize || 14
+  const scale = props.buttonSize || 1.0
+  const size = Math.max(10, Math.round(baseFontSize * scale))
   return {
-    fontSize: `${fontSize}px`
+    fontSize: `${size}px`
   }
 })
 
 const secondaryLabelStyle = computed(() => {
-  const fontSize = props.button.style?.fontSize || 16
+  const baseFontSize = props.button.style?.fontSize || 14
+  const scale = props.buttonSize || 1.0
+  const size = Math.max(9, Math.round(baseFontSize * scale * 0.75))
   return {
-    fontSize: `${fontSize * 0.75}px`
+    fontSize: `${size}px`
   }
 })
 
@@ -557,12 +571,15 @@ function handleDragEnd() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: 4px;
   text-align: center;
   width: 100%;
   height: 100%;
   border-radius: inherit;
   transition: background-color 0.2s ease;
+  overflow: hidden;
+  padding: 4px 2px;
+  box-sizing: border-box;
 }
 
 /* Special action types that render full content */
@@ -634,10 +651,18 @@ function handleDragEnd() {
 .button-label {
   font-weight: 600;
   word-wrap: break-word;
+  overflow-wrap: break-word;
   max-width: 100%;
+  width: 100%;
+  text-align: center;
   position: relative;
   z-index: 2;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1.2;
+  flex-shrink: 0;
+  /* Ensure label is always visible — never hidden */
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .button-secondary-label {
