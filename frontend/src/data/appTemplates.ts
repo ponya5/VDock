@@ -383,3 +383,113 @@ const designCreative: AppTemplate[] = [
     ],
   },
 ]
+
+// ─── Automation & Dev ────────────────────────────────────────────────────────
+const automationDev: AppTemplate[] = [
+  {
+    id: 'n8n',
+    name: 'n8n',
+    description: 'n8n workflow automation shortcuts',
+    icon: ['fas', 'diagram-project'],
+    logo: '/logos/n8n.png',
+    color: '#ea4b71',
+    buttons: [
+      { label: 'Open n8n', icon: ['fas', 'arrow-up-right-from-square'], action: url('http://localhost:5678'), tooltip: 'Open n8n local' },
+      { label: 'New Workflow', icon: ['fas', 'plus'], action: hk(['ctrl', 'alt', 'n']), tooltip: 'New workflow' },
+      { label: 'Execute', icon: ['fas', 'play'], action: hk(['ctrl', 'enter']), tooltip: 'Execute workflow' },
+      { label: 'Save', icon: ['fas', 'floppy-disk'], action: hk(['ctrl', 's']), tooltip: 'Save workflow' },
+      { label: 'Zoom Fit', icon: ['fas', 'expand'], action: hk(['ctrl', 'shift', 'h']), tooltip: 'Fit to screen' },
+    ],
+  },
+  {
+    id: 'zapier',
+    name: 'Zapier',
+    description: 'Zapier automation shortcuts',
+    icon: ['fas', 'bolt'],
+    logo: '/logos/zapier.png',
+    color: '#ff4a00',
+    buttons: [
+      { label: 'Open Zapier', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://zapier.com/app/dashboard'), tooltip: 'Open Zapier' },
+      { label: 'New Zap', icon: ['fas', 'plus'], action: url('https://zapier.com/app/zaps/new'), tooltip: 'Create new Zap' },
+      { label: 'My Zaps', icon: ['fas', 'list'], action: url('https://zapier.com/app/zaps'), tooltip: 'View all Zaps' },
+    ],
+  },
+  {
+    id: 'github',
+    name: 'GitHub',
+    description: 'GitHub shortcuts',
+    icon: ['fab', 'github'],
+    logo: '/logos/github.png',
+    color: '#24292e',
+    buttons: [
+      { label: 'Open GitHub', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://github.com'), tooltip: 'Open GitHub' },
+      { label: 'Pull Requests', icon: ['fas', 'code-pull-request'], action: url('https://github.com/pulls'), tooltip: 'My pull requests' },
+      { label: 'Issues', icon: ['fas', 'circle-dot'], action: url('https://github.com/issues'), tooltip: 'My issues' },
+      { label: 'Notifications', icon: ['fas', 'bell'], action: url('https://github.com/notifications'), tooltip: 'Notifications' },
+      { label: 'Copilot', icon: ['fas', 'robot'], action: url('https://github.com/copilot'), tooltip: 'GitHub Copilot' },
+    ],
+  },
+  {
+    id: 'crewai',
+    name: 'CrewAI',
+    description: 'CrewAI multi-agent framework shortcuts',
+    icon: ['fas', 'users'],
+    logo: '/logos/crewai.png',
+    color: '#e11d48',
+    buttons: [
+      { label: 'Open CrewAI', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://crewai.com'), tooltip: 'Open CrewAI' },
+      { label: 'Docs', icon: ['fas', 'book'], action: url('https://docs.crewai.com'), tooltip: 'CrewAI docs' },
+      { label: 'Run Crew', icon: ['fas', 'play'], action: cmd('crewai run'), tooltip: 'Run crew' },
+      { label: 'Train', icon: ['fas', 'graduation-cap'], action: cmd('crewai train'), tooltip: 'Train crew' },
+    ],
+  },
+  {
+    id: 'langgraph',
+    name: 'LangGraph',
+    description: 'LangGraph agent framework shortcuts',
+    icon: ['fas', 'diagram-project'],
+    logo: '/logos/langgraph.png',
+    color: '#1c7ed6',
+    buttons: [
+      { label: 'Open LangGraph', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://langchain-ai.github.io/langgraph'), tooltip: 'LangGraph docs' },
+      { label: 'LangSmith', icon: ['fas', 'chart-line'], action: url('https://smith.langchain.com'), tooltip: 'Open LangSmith' },
+    ],
+  },
+  {
+    id: 'aws-bedrock',
+    name: 'AWS Bedrock',
+    description: 'AWS Bedrock AI shortcuts',
+    icon: ['fab', 'aws'],
+    logo: '/logos/aws-bedrock.png',
+    color: '#ff9900',
+    buttons: [
+      { label: 'Open Bedrock', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://console.aws.amazon.com/bedrock'), tooltip: 'Open AWS Bedrock' },
+      { label: 'Playground', icon: ['fas', 'flask'], action: url('https://console.aws.amazon.com/bedrock/home#/text-playground'), tooltip: 'Text playground' },
+    ],
+  },
+  {
+    id: 'composio',
+    name: 'Composio',
+    description: 'Composio MCP integration shortcuts',
+    icon: ['fas', 'plug'],
+    logo: '/logos/composio.png',
+    color: '#6366f1',
+    buttons: [
+      { label: 'Open Composio', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://composio.dev'), tooltip: 'Open Composio' },
+      { label: 'MCP Servers', icon: ['fas', 'server'], action: url('https://mcp.composio.dev'), tooltip: 'MCP servers' },
+      { label: 'Docs', icon: ['fas', 'book'], action: url('https://docs.composio.dev'), tooltip: 'Documentation' },
+    ],
+  },
+  {
+    id: 'nango',
+    name: 'Nango',
+    description: 'Nango API integration shortcuts',
+    icon: ['fas', 'link'],
+    logo: '/logos/nango.png',
+    color: '#0ea5e9',
+    buttons: [
+      { label: 'Open Nango', icon: ['fas', 'arrow-up-right-from-square'], action: url('https://nango.dev'), tooltip: 'Open Nango' },
+      { label: 'Dashboard', icon: ['fas', 'gauge'], action: url('https://app.nango.dev'), tooltip: 'Nango dashboard' },
+    ],
+  },
+]
