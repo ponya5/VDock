@@ -183,7 +183,7 @@ function selectIcon(icon: string) {
   background-color: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-fast);

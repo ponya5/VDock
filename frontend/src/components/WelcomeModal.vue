@@ -198,7 +198,7 @@ onMounted(() => {
 
 .modal-header h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   color: var(--color-text);
   display: flex;
   align-items: center;
@@ -216,7 +216,7 @@ onMounted(() => {
 }
 
 .welcome-text {
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   line-height: 1.6;
   color: var(--color-text-secondary);
   text-align: center;
@@ -261,19 +261,19 @@ onMounted(() => {
   justify-content: center;
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   border-radius: var(--radius-full);
-  font-size: 2.5rem;
+  font-size: clamp(2.00rem, 2vw + 1.25rem, 3.00rem);
   color: white;
 }
 
 .option-card h3 {
   margin: 0 0 var(--spacing-sm);
-  font-size: 1.3rem;
+  font-size: clamp(1.04rem, 2vw + 0.65rem, 1.56rem);
   color: var(--color-text);
 }
 
 .option-card p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text-secondary);
 }
 
@@ -281,7 +281,7 @@ onMounted(() => {
   position: absolute;
   top: var(--spacing-md);
   right: var(--spacing-md);
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-primary);
 }
 
@@ -332,7 +332,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: white;
 }
 
@@ -345,12 +345,12 @@ onMounted(() => {
 
 .quick-info strong {
   color: var(--color-text);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .quick-info span {
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
 }
 
 .browse-more-btn {
@@ -403,7 +403,7 @@ onMounted(() => {
 
 .welcome-features li svg {
   color: var(--color-primary);
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   flex-shrink: 0;
 }
 
@@ -427,7 +427,7 @@ onMounted(() => {
   }
 
   .modal-header h1 {
-    font-size: 1.5rem;
+    font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   }
 }
 </style>

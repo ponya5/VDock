@@ -241,7 +241,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
 }
 
 .toast-success .toast-icon {
@@ -279,7 +279,7 @@ onUnmounted(() => {
 
 .toast-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -305,7 +305,7 @@ onUnmounted(() => {
 
 .toast-message {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   color: var(--color-text-secondary);
   line-height: 1.5;
 }
@@ -319,7 +319,7 @@ onUnmounted(() => {
   border: none;
   color: var(--color-primary);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
@@ -337,7 +337,7 @@ onUnmounted(() => {
   padding: var(--spacing-sm);
   background: var(--color-background);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -358,7 +358,7 @@ onUnmounted(() => {
   background: var(--color-surface);
   color: var(--color-text);
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   cursor: pointer;
   transition: all var(--transition-fast);
 }

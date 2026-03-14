@@ -57,8 +57,11 @@ class Scene:
     icon: Optional[str] = None
     color: Optional[str] = None
     pages: List[Page] = field(default_factory=list)
+    background: Optional[Dict[str, Any]] = None
     isActive: bool = False
     buttonSize: Optional[float] = None
+    triggeredByApp: Optional[str] = None
+    autoCreated: Optional[bool] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -76,8 +79,14 @@ class Scene:
             result['icon'] = self.icon
         if self.color is not None:
             result['color'] = self.color
+        if self.background is not None:
+            result['background'] = self.background
         if self.buttonSize is not None:
             result['buttonSize'] = self.buttonSize
+        if self.triggeredByApp is not None:
+            result['triggeredByApp'] = self.triggeredByApp
+        if self.autoCreated is not None:
+            result['autoCreated'] = self.autoCreated
         if self.created_at is not None:
             result['created_at'] = self.created_at
         if self.updated_at is not None:
@@ -96,8 +105,11 @@ class Scene:
             icon=data.get('icon'),
             color=data.get('color'),
             pages=pages,
+            background=data.get('background'),
             isActive=data.get('isActive', False),
             buttonSize=data.get('buttonSize'),
+            triggeredByApp=data.get('triggeredByApp'),
+            autoCreated=data.get('autoCreated'),
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at')
         )
@@ -125,7 +137,7 @@ class Profile:
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'pages': [page.to_dict() for page in self.pages],  # Backward compat
+            'pages': [page.to_dict() for page in self.pages],  # compat
             'scenes': [scene.to_dict() for scene in self.scenes],
             'dockedButtons': [btn.to_dict() for btn in self.dockedButtons],
             'theme': self.theme,

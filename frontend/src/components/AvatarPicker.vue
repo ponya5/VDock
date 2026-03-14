@@ -248,14 +248,14 @@ onMounted(() => {
 }
 
 .modal-header h2 {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: bold;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: var(--spacing-xs);
@@ -319,7 +319,7 @@ onMounted(() => {
 }
 
 .avatar-name {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   text-align: center;
   color: var(--color-text-secondary);
   font-weight: 500;
@@ -333,7 +333,7 @@ onMounted(() => {
 }
 
 .selected-avatar-info h3 {
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: bold;
   margin-bottom: var(--spacing-sm);
 }
@@ -367,7 +367,7 @@ onMounted(() => {
 }
 
 .loading-state svg {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   animation: spin 1s linear infinite;
 }
 
@@ -394,7 +394,7 @@ onMounted(() => {
 }
 
 .upload-section h3 {
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   font-weight: 600;
   margin-bottom: var(--spacing-sm);
   color: var(--color-text);
@@ -415,7 +415,7 @@ onMounted(() => {
 }
 
 .upload-help {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -454,7 +454,7 @@ onMounted(() => {
 
 .divider span {
   padding: 0 var(--spacing-md);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
@@ -462,7 +462,7 @@ onMounted(() => {
 }
 
 .btn-sm {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   padding: var(--spacing-xs) var(--spacing-sm);
 }
 

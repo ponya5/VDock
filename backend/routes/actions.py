@@ -16,10 +16,12 @@ def execute_action():
     
     action_data = data['action']
     
-    # Import here to avoid circular imports
-    from actions import ActionExecutor
-    action_executor = ActionExecutor()
+    # Import singleton to avoid circular imports
+    from app import action_executor
     
+    if action_executor is None:
+        return jsonify({'error': 'Action executor unavailable', 'success': False}), 503
+        
     result = action_executor.execute_action(action_data)
     
     return jsonify(result.to_dict())

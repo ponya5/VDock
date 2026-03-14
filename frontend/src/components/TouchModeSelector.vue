@@ -161,13 +161,13 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
 .selector-header h3 {
   margin: 0 0 var(--spacing-xs);
   color: var(--color-text);
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
 }
 
 .description {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .mode-options {
@@ -210,7 +210,7 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   justify-content: center;
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-primary);
 }
 
@@ -225,26 +225,26 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
 
 .mode-content h4 {
   margin: 0 0 2px;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   color: var(--color-text);
 }
 
 .mode-scale {
   margin: 0 0 4px;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-primary);
   font-weight: 600;
 }
 
 .mode-desc {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: var(--color-text-secondary);
 }
 
 .mode-check {
   flex-shrink: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-primary);
 }
 
@@ -257,7 +257,7 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
 
 .preview-section h4 {
   margin: 0 0 var(--spacing-md);
-  font-size: 0.95rem;
+  font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
   color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -302,7 +302,7 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--color-surface);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
 }
 
 .info-item .label {
@@ -325,7 +325,7 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   border: none;
   color: var(--color-primary);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -353,14 +353,14 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
 }
 
 .form-group label {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text);
   font-weight: 500;
 }
 
 .help-text {
   display: block;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   font-weight: 400;
   margin-top: 2px;
@@ -401,7 +401,7 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
 
 .slider-value {
   text-align: center;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   color: var(--color-primary);
   font-weight: 600;
   padding: var(--spacing-xs);
@@ -424,14 +424,14 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   margin-bottom: var(--spacing-sm);
   color: var(--color-primary);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
 }
 
 .touch-mode-tips ul {
   margin: 0;
   padding-left: var(--spacing-lg);
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   line-height: 1.6;
 }
 

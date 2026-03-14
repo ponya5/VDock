@@ -5,15 +5,11 @@
     <FloatingPathsBackgroundV2 v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths-v2'" />
     <BeamsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-beams-background'" />
     
-    <header v-if="settingsStore.showHeader" class="deck-header enhanced-header">
+    <header v-if="settingsStore.showHeader" class="deck-header dashboard-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
-          <div 
-            class="profile-avatar-container clickable" 
-            @click="settingsStore.showHeader = !settingsStore.showHeader"
-            title="Click to toggle header visibility"
-          >
+          <div class="profile-avatar-container">
             <img 
               v-if="currentProfile?.avatar" 
               :src="currentProfile.avatar" 
@@ -51,26 +47,32 @@
         </div>
 
         <div class="header-right">
-          <button class="btn btn-glass enhanced-btn" @click="showHelp = true" title="Help & Guide">
-            <FontAwesomeIcon :icon="['fas', 'question-circle']" />
-            <span class="btn-label">Help</span>
+          <button
+            class="btn-hide-header"
+            @click="settingsStore.showHeader = !settingsStore.showHeader"
+            title="Hide header"
+            aria-label="Hide header"
+          >
+            <div>
+              <span><FontAwesomeIcon :icon="['fas', 'eye-slash']" /> Hide</span>
+            </div>
           </button>
-          <button class="btn btn-glass enhanced-btn" @click="router.push('/profiles')" title="Profiles">
-            <FontAwesomeIcon :icon="['fas', 'users']" />
-            <span class="btn-label">Profiles</span>
+          <button class="btn-12" @click="showHelp = true" title="Help & Guide">
+            <span><FontAwesomeIcon :icon="['fas', 'question-circle']" /> Help</span>
+          </button>
+          <div class="header-right-separator"></div>
+          <button class="btn-12" @click="router.push('/profiles')" title="Profiles">
+            <span><FontAwesomeIcon :icon="['fas', 'users']" /> Profiles</span>
           </button>
           <button
-            class="btn enhanced-btn"
-            :class="isEditMode ? 'btn-glow edit-active' : 'btn-glass'"
+            :class="['btn-12', { 'edit-active': isEditMode }]"
             @click="toggleEditMode"
             title="Toggle Edit Mode"
           >
-            <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
-            <span class="btn-label">{{ isEditMode ? 'View' : 'Edit' }}</span>
+            <span><FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" /> {{ isEditMode ? 'View' : 'Edit' }}</span>
           </button>
-          <button class="btn btn-glass enhanced-btn" @click="router.push('/settings')" title="Settings">
-            <FontAwesomeIcon :icon="['fas', 'cog']" />
-            <span class="btn-label">Settings</span>
+          <button class="btn-12" @click="router.push('/settings')" title="Settings">
+            <span><FontAwesomeIcon :icon="['fas', 'cog']" /> Settings</span>
           </button>
         </div>
       </div>
@@ -99,24 +101,40 @@
       
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
-        <DeckGrid
-          v-if="currentPage"
-          :page="currentPage"
-          :is-edit-mode="isEditMode"
-          :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
-          :show-labels="settingsStore.showLabels"
-          :show-tooltips="settingsStore.showTooltips"
-          :compact="shouldUseCompactMode"
-          @button-click="handleButtonClick"
-          @button-edit="handleButtonEdit"
-          @button-copy="handleButtonCopy"
-          @button-delete="handleButtonDelete"
-          @swipe-left="nextPage"
-          @swipe-right="previousPage"
-          @action-drop="handleActionDrop"
-          @placeholder-click="handlePlaceholderClick"
-          @button-move="handleButtonMove"
-        />
+        <Transition :name="pageTransitionName" mode="out-in">
+          <DeckGrid
+            v-if="currentPage"
+            :key="currentPageIndex"
+            :page="currentPage"
+            :is-edit-mode="isEditMode"
+            :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
+            :show-labels="settingsStore.showLabels"
+            :show-tooltips="settingsStore.showTooltips"
+            :compact="shouldUseCompactMode"
+            @button-click="handleButtonClick"
+            @button-edit="handleButtonEdit"
+            @button-copy="handleButtonCopy"
+            @button-delete="handleButtonDelete"
+            @swipe-left="nextPage"
+            @swipe-right="previousPage"
+            @action-drop="handleActionDrop"
+            @placeholder-click="handlePlaceholderClick"
+            @placeholder-long-press="handlePlaceholderLongPress"
+            @button-move="handleButtonMove"
+            @swipe-up="nextScene"
+            @swipe-down="previousScene"
+            @long-press="handleDeckButtonLongPress"
+            @double-tap="handleButtonClick"
+          />
+        </Transition>
+
+        <div v-if="currentScene && currentScene.pages.length > 1" class="page-indicator-wrapper">
+          <PageIndicator 
+            :total="currentScene.pages.length" 
+            :current="currentPageIndex" 
+            @select="setPage" 
+          />
+        </div>
 
         <div v-else class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
@@ -240,6 +258,16 @@
           Add Page
         </button>
         <button
+          class="btn btn-danger btn-sm"
+          @click="deleteCurrentPage"
+          :disabled="!currentScene || currentScene.pages.length <= 1"
+          title="Delete current page"
+          style="margin-left: var(--spacing-sm);"
+        >
+          <FontAwesomeIcon :icon="['fas', 'trash']" />
+          Delete Page
+        </button>
+        <button
           class="btn btn-success btn-sm"
           @click="saveProfile"
           title="Save all changes to profile"
@@ -274,98 +302,12 @@
     />
 
     <!-- Action Result Toast -->
-    <div v-if="actionResult && !settingsStore.showRegularToasts && actionResult.success === false" class="action-toast error">
+    <div v-if="actionResult && settingsStore.toastLevel !== 'off' && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
 
     <!-- Help Modal -->
-    <div v-if="showHelp" class="modal-overlay" @click.self="showHelp = false">
-      <div class="help-modal modal">
-        <div class="modal-header">
-          <h2><FontAwesomeIcon :icon="['fas', 'question-circle']" /> VDock User Guide</h2>
-          <button class="close-btn" @click="showHelp = false">
-            <FontAwesomeIcon :icon="['fas', 'times']" />
-          </button>
-        </div>
-        <div class="help-content">
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'rocket']" /> Quick Start</h3>
-            <ol>
-              <li><strong>Toggle Edit Mode</strong>: Click the Edit button to add/modify buttons</li>
-              <li><strong>Add Buttons</strong>: Click empty cells or use the Actions sidebar</li>
-              <li><strong>Configure Actions</strong>: Choose what each button does (Hotkey, Program, URL, etc.)</li>
-              <li><strong>Save Changes</strong>: Click "Save Profile" button in footer</li>
-            </ol>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'keyboard']" /> Button Actions</h3>
-            <ul>
-              <li><strong>Hotkey</strong>: Send keyboard shortcuts (e.g., Ctrl+C, Ctrl+V)</li>
-              <li><strong>Program</strong>: Launch applications</li>
-              <li><strong>URL</strong>: Open websites in browser</li>
-              <li><strong>Command</strong>: Run shell commands</li>
-              <li><strong>Macro</strong>: Multi-step automation</li>
-              <li><strong>System</strong>: Volume, brightness, media controls</li>
-              <li><strong>Navigation</strong>: Navigate between pages</li>
-              <li><strong>Metrics</strong>: Display system stats (CPU, RAM, GPU)</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'layer-group']" /> Scenes & Pages</h3>
-            <ul>
-              <li><strong>Scenes</strong>: Different button layouts (Work, Gaming, Streaming)</li>
-              <li><strong>Pages</strong>: Multiple pages within each scene</li>
-              <li><strong>Add Page</strong>: Click "Add Page" button in footer</li>
-              <li><strong>Navigate</strong>: Use Next/Previous buttons (loops around)</li>
-              <li><strong>Edit Scene</strong>: Click edit icon next to scene name</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'exclamation-triangle']" /> Troubleshooting</h3>
-            <ul>
-              <li><strong>Hotkeys not working?</strong> Restart backend server (see docs/)</li>
-              <li><strong>Changes not saving?</strong> Click "Save Profile" button</li>
-              <li><strong>Buttons disappeared?</strong> Hard refresh browser (Ctrl+Shift+R)</li>
-              <li><strong>Backend not responding?</strong> Check if running at localhost:5000</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'book']" /> Documentation</h3>
-            <p>For detailed documentation, see:</p>
-            <ul>
-              <li><strong>Getting Started:</strong></li>
-              <li>• <code>docs/QUICKSTART.md</code> - Quick setup guide</li>
-              <li>• <code>docs/guides/INSTALLATION.md</code> - Complete installation</li>
-              <li>• <code>docs/guides/USER_GUIDE.md</code> - Complete user guide</li>
-              <li><strong>Advanced Features:</strong></li>
-              <li>• <code>docs/ASSET_SYSTEM_GUIDE.md</code> - Managing files & assets</li>
-              <li>• <code>docs/NEW_ACTION_TYPES_GUIDE.md</code> - Creating custom actions</li>
-              <li>• <code>docs/APP_INTEGRATION_GUIDE.md</code> - App integration</li>
-              <li><strong>Development & Deployment:</strong></li>
-              <li>• <code>docs/development/DEVELOPER_GUIDE.md</code> - Developer guide</li>
-              <li>• <code>docs/deployment/PRODUCTION_DEPLOYMENT.md</code> - Production setup</li>
-              <li>• <code>docs/CHANGELOG.md</code> - Version history</li>
-              <li><strong>Project Info:</strong></li>
-              <li>• <code>README.md</code> - Project overview</li>
-              <li>• <code>docs/README.md</code> - Documentation index</li>
-            </ul>
-          </div>
-
-          <div class="help-section">
-            <h3><FontAwesomeIcon :icon="['fas', 'envelope']" /> Support</h3>
-            <p>Need help?</p>
-            <ul>
-              <li><strong>Email</strong>: <a href="mailto:ponya81@gmail.com">ponya81@gmail.com</a></li>
-              <li><strong>GitHub</strong>: <a href="https://github.com/ponya5/VDock" target="_blank">Report Issues</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
+    <UserGuideModal v-if="showHelp" @close="showHelp = false" />
 
     <!-- Quick Search -->
     <QuickSearch ref="quickSearchRef" />
@@ -381,9 +323,11 @@ import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
 import type { Button, ActionResult, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
+import PageIndicator from '@/components/PageIndicator.vue'
 import PageNavigation from '@/components/PageNavigation.vue'
 import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
+import UserGuideModal from '@/components/UserGuideModal.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
 import QuickSearch from '@/components/QuickSearch.vue'
@@ -392,6 +336,8 @@ import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBac
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDemoProfile, isFirstTimeUser } from '@/utils/demoProfile'
+import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
+import type { AppIntegration } from '@/types'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -405,6 +351,7 @@ const actionResult = ref<ActionResult | null>(null)
 const clipboardButton = ref<Button | null>(null)
 const showHelp = ref(false)
 const quickSearchRef = ref<InstanceType<typeof QuickSearch>>()
+const pageTransitionName = ref('page-slide-left')
 let actionResultTimeout: number | null = null
 
 // Sidebar state
@@ -418,6 +365,18 @@ const currentPage = computed(() => dashboardStore.currentPage)
 const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
 const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
 const isEditMode = computed(() => dashboardStore.isEditMode)
+
+function nextScene() {
+  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
+  const nextIdx = (currentSceneIndex.value + 1) % currentProfile.value.scenes.length
+  setScene(currentProfile.value.scenes[nextIdx].id)
+}
+
+function previousScene() {
+  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
+  const prevIdx = (currentSceneIndex.value - 1 + currentProfile.value.scenes.length) % currentProfile.value.scenes.length
+  setScene(currentProfile.value.scenes[prevIdx].id)
+}
 
 const isEditingExistingScene = computed(() => {
   if (!editingScene.value || !currentProfile.value) return false
@@ -439,26 +398,47 @@ const shouldUseCompactMode = computed(() => {
 })
 
 const dashboardBackgroundClass = computed(() => {
+  // When an animated overlay effect is active, let it show through
+  if (settingsStore.backgroundPreference !== 'none') {
+    return 'dashboard-bg-transparent'
+  }
+
   // First check if current page has a background
   if (currentPage.value?.background) {
-    // Page has its own background, don't apply dashboard background
     return ''
   }
-  
+
+  // Check if current scene has a background
+  if (currentScene.value?.background?.image) {
+    return 'dashboard-bg-custom'
+  }
+
   // Apply dashboard background when page background is null
   const bg = settingsStore.dashboardBackground
   if (bg === 'default') return ''
-  // Check if it's a custom uploaded image (URL)
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
     return 'dashboard-bg-custom'
   }
   return `dashboard-bg-${bg}`
 })
 
 const dashboardBackgroundStyle = computed(() => {
+  // Animated background is active — keep everything transparent
+  if (settingsStore.backgroundPreference !== 'none') return {}
+
+  // Check scene background first
+  if (currentScene.value?.background?.image) {
+    return {
+      backgroundImage: `url(${currentScene.value.background.image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }
+  }
+
   const bg = settingsStore.dashboardBackground
   // Handle custom image backgrounds
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
     return {
       backgroundImage: `url(${bg})`,
       backgroundSize: 'cover',
@@ -637,6 +617,9 @@ const canUndo = computed(() => dashboardStore.canUndo)
 const canRedo = computed(() => dashboardStore.canRedo)
 
 const mainStyle = computed(() => {
+  // Animated background is active — don't paint over it
+  if (settingsStore.backgroundPreference !== 'none') return {}
+
   if (!currentPage.value?.background) return {}
   
   const bg = currentPage.value.background
@@ -679,6 +662,25 @@ onMounted(async () => {
     await createDemoProfileForFirstTimeUser()
   }
   
+  // Wire auto scene switching if enabled
+  const storedIntegrations = localStorage.getItem('appIntegrations')
+  const storedAutoSwitch = localStorage.getItem('autoSceneSwitching')
+  if (storedAutoSwitch === 'true' && storedIntegrations) {
+    try {
+      const integrations: AppIntegration[] = JSON.parse(storedIntegrations)
+      autoSceneSwitcher.initialize(integrations)
+      autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
+        const profile = dashboardStore.currentProfile
+        if (!profile) return
+        const idx = profile.scenes.findIndex(s => s.id === sceneId)
+        if (idx >= 0) dashboardStore.setScene(idx)
+      })
+      autoSceneSwitcher.enable()
+    } catch {
+      // ignore malformed stored data
+    }
+  }
+
   // Add keyboard shortcuts
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.metaKey) {
@@ -750,9 +752,41 @@ function closeSidebar() {
 
 function selectAction(action: any) {
   selectedAction.value = action
-  console.log('Selected action:', action)
-  // TODO: Implement action selection logic
-  // This could open a configuration dialog or directly apply the action
+  
+  if (!currentPage.value) return
+  
+  const config = currentPage.value.grid_config
+  let emptyPos = null
+  
+  // Find first available empty slot
+  outer: for (let r = 0; r < config.rows; r++) {
+    for (let c = 0; c < config.cols; c++) {
+      const isOccupied = currentPage.value.buttons.some(b => 
+        b.position.row <= r && r < b.position.row + b.size.rows &&
+        b.position.col <= c && c < b.position.col + b.size.cols
+      )
+      if (!isOccupied) {
+        emptyPos = { row: r, col: c }
+        break outer
+      }
+    }
+  }
+
+  if (emptyPos) {
+    const newButton = createPreconfiguredButton(action, emptyPos)
+    if (newButton && currentProfile.value && currentScene.value && currentPage.value) {
+      dashboardStore.addButton(
+        currentProfile.value.id,
+        currentScene.value.id,
+        currentPage.value.id,
+        newButton
+      )
+      // Open editor for the newly created button
+      editingButton.value = { ...newButton }
+    }
+  } else {
+    alert('No empty slots available on this page.')
+  }
 }
 
 // Drag and drop handlers
@@ -768,34 +802,52 @@ function handleDragEnd() {
 }
 
 function handleActionDrop(action: any, position: { row: number; col: number }) {
-  console.log('Action dropped:', action, 'at position:', position)
-  
+    
   // Create preconfigured button based on action type
   const button = createPreconfiguredButton(action, position)
   
   if (button) {
     // Add button to the current page
     dashboardStore.addButton(button)
-    console.log('Created button:', button)
-  }
+      }
 }
 
 
 function handleButtonMove(buttonId: string, newPosition: { row: number; col: number }) {
-  console.log('Moving button:', buttonId, 'to:', newPosition)
-  dashboardStore.moveButton(buttonId, newPosition)
+    dashboardStore.moveButton(buttonId, newPosition)
 }
 
 function handleButtonEdit(button: Button) {
-  console.log('Editing button:', button)
-  editingButton.value = { ...button }
+    editingButton.value = { ...button }
 }
 
 function handleButtonDelete(buttonId: string) {
-  console.log('Deleting button:', buttonId)
-  if (confirm('Are you sure you want to delete this button?')) {
+    if (confirm('Are you sure you want to delete this button?')) {
     dashboardStore.removeButton(buttonId)
   }
+}
+
+function handlePlaceholderLongPress(position: { row: number; col: number }) {
+  if (!dashboardStore.isEditMode) {
+    dashboardStore.toggleEditMode()
+  }
+  
+  // Optionally open editor right away
+  const newButton: Button = {
+    id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    position: position,
+    size: { rows: 1, cols: 1 },
+    enabled: true,
+    shape: 'rectangle'
+  }
+  editingButton.value = newButton
+}
+
+function handleDeckButtonLongPress(button: Button) {
+  if (!dashboardStore.isEditMode) {
+    dashboardStore.toggleEditMode()
+  }
+  editingButton.value = { ...button }
 }
 
 // Preconfigured button templates
@@ -1471,14 +1523,17 @@ function editScene(scene: Scene) {
 }
 
 function setPage(index: number) {
+  pageTransitionName.value = index > currentPageIndex.value ? 'page-slide-left' : 'page-slide-right'
   dashboardStore.setPage(index)
 }
 
 function nextPage() {
+  pageTransitionName.value = 'page-slide-left'
   dashboardStore.nextPage()
 }
 
 function previousPage() {
+  pageTransitionName.value = 'page-slide-right'
   dashboardStore.previousPage()
 }
 
@@ -1569,14 +1624,12 @@ if (!button.action) return
 
 
 async function handleSaveProfileFromEditor() {
-  console.log('DashboardView: saving profile from editor')
-  await saveProfile()
+    await saveProfile()
 }
 
 async function createDemoProfileForFirstTimeUser() {
   try {
-    console.log('Creating demo profile for first-time user...')
-    
+        
     // Create the demo profile
     const demoProfile = createDemoProfile()
     
@@ -1605,8 +1658,7 @@ async function createDemoProfileForFirstTimeUser() {
           { duration: 8000 }
         )
         
-        console.log('Demo profile created and loaded successfully')
-      } else {
+              } else {
         console.error('Failed to update demo profile with scenes')
       }
     } else {
@@ -1623,13 +1675,11 @@ async function createDemoProfileForFirstTimeUser() {
 }
 
 async function handleButtonSave(button: Button) {
-  console.log('DashboardView: handleButtonSave', button.id)
-  // Check if this is a docked button
+    // Check if this is a docked button
   const isDockedButton = currentProfile.value?.dockedButtons?.some(btn => btn.id === button.id)
   
   if (isDockedButton) {
-    console.log('DashboardView: saving docked button')
-    // Update docked button
+        // Update docked button
     const updatedDockedButtons = currentProfile.value?.dockedButtons?.map(btn => 
       btn.id === button.id ? button : btn
     ) || []
@@ -1651,16 +1701,14 @@ async function handleButtonSave(button: Button) {
     }
   } else {
     // Update regular button
-    console.log('DashboardView: saving regular button')
-    dashboardStore.updateButton(button.id, button)
+        dashboardStore.updateButton(button.id, button)
   }
   
   editingButton.value = null
 }
 
 async function handleDockedButtonDelete(buttonId: string) {
-  console.log('DashboardView: deleting docked button', buttonId)
-  if (currentProfile.value) {
+    if (currentProfile.value) {
     const updatedDockedButtons = currentProfile.value.dockedButtons?.filter(btn => btn.id !== buttonId) || []
     
     // Create updated profile and save it
@@ -1680,8 +1728,7 @@ async function handleDockedButtonDelete(buttonId: string) {
 }
 
 async function handleAddDockedButton(position: { row: number; col: number }) {
-  console.log('DashboardView: handleAddDockedButton at', position)
-  const newButton: Button = {
+    const newButton: Button = {
     id: `docked_${Date.now()}`,
     label: 'New Button',
     secondary_label: '',
@@ -1700,8 +1747,7 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
     enabled: true
   }
   
-  console.log('DashboardView: creating new docked button', newButton)
-  
+    
   if (currentProfile.value) {
     // Create updated profile with new docked button
     const updatedProfile = {
@@ -1709,8 +1755,7 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
       dockedButtons: [...(currentProfile.value.dockedButtons || []), newButton]
     }
     
-    console.log('DashboardView: setting updated profile with', updatedProfile.dockedButtons.length, 'docked buttons')
-    
+        
     // Use setProfile to trigger reactivity properly
     dashboardStore.setProfile(updatedProfile)
     await dashboardStore.saveProfile()
@@ -1723,19 +1768,15 @@ async function handleAddDockedButton(position: { row: number; col: number }) {
 }
 
 async function handleDockedButtonDrop(event: DragEvent, position: { row: number; col: number }) {
-  console.log('DashboardView: handleDockedButtonDrop called at', position)
-  if (!event.dataTransfer) {
-    console.log('DashboardView: no dataTransfer')
-    return
+    if (!event.dataTransfer) {
+        return
   }
   
   try {
     const buttonData = event.dataTransfer.getData('application/vdock-button')
-    console.log('DashboardView: button data', buttonData)
-    if (buttonData) {
+        if (buttonData) {
       const button = JSON.parse(buttonData)
-      console.log('DashboardView: parsed button', button)
-      
+            
       // Create a copy of the button for docking at the specific position
       const dockedButton: Button = {
         ...button,
@@ -1744,8 +1785,7 @@ async function handleDockedButtonDrop(event: DragEvent, position: { row: number;
         size: { rows: 1, cols: 1 }
       }
       
-      console.log('DashboardView: created docked button', dockedButton)
-      
+            
       if (currentProfile.value) {
         // Create updated profile with new docked button
         const updatedProfile = {
@@ -1753,8 +1793,7 @@ async function handleDockedButtonDrop(event: DragEvent, position: { row: number;
           dockedButtons: [...(currentProfile.value.dockedButtons || []), dockedButton]
         }
         
-        console.log('DashboardView: setting updated profile with', updatedProfile.dockedButtons.length, 'docked buttons')
-        
+                
         // Use setProfile to trigger reactivity properly
         dashboardStore.setProfile(updatedProfile)
         
@@ -1763,11 +1802,9 @@ async function handleDockedButtonDrop(event: DragEvent, position: { row: number;
           message: `Button docked successfully`
         })
       } else {
-        console.log('DashboardView: no current profile')
-      }
+              }
     } else {
-      console.log('DashboardView: no button data found')
-    }
+          }
   } catch (err) {
     console.error('Failed to handle docked drop:', err)
     showActionResult({
@@ -1786,8 +1823,7 @@ function handleButtonCopy(button: Button) {
 }
 
 function handleDockedPlaceholderClick(position: { row: number; col: number }) {
-  console.log('DashboardView: docked placeholder clicked at', position)
-  if (clipboardButton.value && currentProfile.value) {
+    if (clipboardButton.value && currentProfile.value) {
     // Paste the copied button to the docked sidebar
     const pastedButton: Button = {
       ...clipboardButton.value,
@@ -1796,8 +1832,7 @@ function handleDockedPlaceholderClick(position: { row: number; col: number }) {
       size: { rows: 1, cols: 1 }
     }
     
-    console.log('DashboardView: pasting button to docked sidebar', pastedButton)
-    
+        
     // Create updated profile with pasted button
     const updatedProfile = {
       ...currentProfile.value,
@@ -1817,8 +1852,7 @@ function handleDockedPlaceholderClick(position: { row: number; col: number }) {
 }
 
 function handlePlaceholderClick(position: { row: number; col: number }) {
-  console.log('Placeholder clicked at:', position)
-  
+    
   if (clipboardButton.value) {
     // Paste the button at the clicked position
     const newButton: Button = {
@@ -1858,8 +1892,7 @@ function handlePlaceholderClick(position: { row: number; col: number }) {
     }
     
     dashboardStore.addButton(button)
-    console.log('Created button:', button)
-  }
+      }
 }
 
 
@@ -1897,6 +1930,17 @@ function addPageToCurrentScene() {
       { duration: 8000 }
     )
   }, 1500)
+}
+
+function deleteCurrentPage() {
+  if (!currentScene.value || !currentPage.value) return
+  if (currentScene.value.pages.length <= 1) {
+    notificationsStore.error('Cannot Delete', 'A scene must have at least one page.')
+    return
+  }
+  if (!confirm(`Delete "${currentPage.value.name}"? This cannot be undone.`)) return
+  dashboardStore.removePage(currentPage.value.id)
+  notificationsStore.success('Page Deleted', 'The page has been removed.')
 }
 
 async function saveProfile() {
@@ -1954,6 +1998,11 @@ function showActionResult(result: ActionResult) {
   flex-direction: column;
   width: 100%;
   height: 100%;
+}
+
+/* Transparent mode — lets animated background effects show through */
+.dashboard-bg-transparent {
+  background: transparent !important;
 }
 
 /* Enhanced Header Styles */
@@ -2033,7 +2082,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .profile-title-inline {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
@@ -2073,7 +2122,7 @@ function showActionResult(result: ActionResult) {
   align-items: center;
   justify-content: center;
   color: var(--color-text);
-  font-size: 1.4rem;
+  font-size: clamp(1.12rem, 2vw + 0.70rem, 1.68rem);
 }
 
 .avatar-status-indicator {
@@ -2096,7 +2145,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .profile-title {
-  font-size: 1.6rem;
+  font-size: clamp(1.28rem, 2vw + 0.80rem, 1.92rem);
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
@@ -2107,13 +2156,23 @@ function showActionResult(result: ActionResult) {
 }
 
 .profile-subtitle {
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: var(--color-text-secondary);
   opacity: 0.8;
 }
 
 .header-right {
   justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.header-right-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0 var(--spacing-xs);
 }
 
 /* Enhanced Button Styles */
@@ -2130,7 +2189,7 @@ function showActionResult(result: ActionResult) {
 
 .enhanced-btn .btn-label {
   margin-left: var(--spacing-xs);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   opacity: 0;
   transform: translateX(-10px);
   transition: all var(--transition-fast);
@@ -2185,7 +2244,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .no-profile-icon {
-  font-size: 4rem;
+  font-size: clamp(3.20rem, 2vw + 2.00rem, 4.80rem);
   opacity: 0.5;
 }
 
@@ -2232,7 +2291,7 @@ function showActionResult(result: ActionResult) {
   background-color: var(--color-background);
   color: var(--color-text);
   text-align: center;
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .grid-input:focus {
@@ -2325,7 +2384,7 @@ function showActionResult(result: ActionResult) {
 
 .sidebar-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   color: var(--color-text-primary);
 }
 
@@ -2346,7 +2405,7 @@ function showActionResult(result: ActionResult) {
   border-radius: var(--radius-sm);
   background-color: var(--color-surface-solid);
   color: var(--color-text-primary);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
 }
 
 .search-input:focus {
@@ -2384,7 +2443,7 @@ function showActionResult(result: ActionResult) {
 
 .category-header svg {
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
 }
 
 .category-title {
@@ -2396,7 +2455,7 @@ function showActionResult(result: ActionResult) {
 
 .category-count {
   margin-left: auto;
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   color: var(--color-text-secondary);
 }
 
@@ -2435,7 +2494,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .btn-icon svg {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .category-actions {
@@ -2473,18 +2532,18 @@ function showActionResult(result: ActionResult) {
 
 .action-item svg {
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   width: 16px;
 }
 
 .action-item span {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   color: var(--color-text-primary);
 }
 
 .btn-sm {
   padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
 }
 
 .clickable {
@@ -2684,7 +2743,7 @@ function showActionResult(result: ActionResult) {
 .help-section h3 {
   color: var(--color-primary);
   margin-bottom: var(--spacing-md);
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -2748,7 +2807,7 @@ function showActionResult(result: ActionResult) {
   }
   
   .profile-title-inline {
-    font-size: 1rem;
+    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   }
   
   .enhanced-btn .btn-label {
@@ -2823,7 +2882,7 @@ function showActionResult(result: ActionResult) {
 /* Tablet (768px - 1365px) */
 @media (min-width: 768px) and (max-width: 1365px) {
   .profile-title-inline {
-    font-size: 1.1rem;
+    font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   }
   
   .enhanced-btn {
@@ -2857,7 +2916,7 @@ function showActionResult(result: ActionResult) {
   }
   
   .profile-title-inline {
-    font-size: 1.5rem;
+    font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   }
   
   .enhanced-avatar {
@@ -2867,7 +2926,7 @@ function showActionResult(result: ActionResult) {
   
   .enhanced-btn {
     padding: 1rem var(--spacing-lg);
-    font-size: 1rem;
+    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   }
   
   .edit-sidebar {
@@ -2899,7 +2958,7 @@ function showActionResult(result: ActionResult) {
   }
   
   .profile-title-inline {
-    font-size: 0.95rem;
+    font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
   }
 }
 
@@ -2922,6 +2981,126 @@ function showActionResult(result: ActionResult) {
   }
 }
 
+/* ── Hide-header button — Uiverse augustin_4687 style ── */
+.btn-hide-header {
+  --stone-50: #fafaf9;
+  --stone-800: #292524;
+  --yellow-400: #facc15;
+  font-size: clamp(0.6rem, 0.7vw + 0.35rem, 0.75rem);
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+  font-weight: bold;
+  line-height: 1;
+  padding: 1px;
+  transform: translate(-4px, -4px);
+  outline: 2px solid transparent;
+  outline-offset: 5px;
+  border-radius: 9999px;
+  background-color: var(--stone-800);
+  color: var(--stone-800);
+  border: none;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  text-align: center;
+  flex-shrink: 0;
+  box-shadow:
+    0.5px 0.5px 0 0 var(--stone-800), 1px 1px 0 0 var(--stone-800),
+    1.5px 1.5px 0 0 var(--stone-800), 2px 2px 0 0 var(--stone-800),
+    2.5px 2.5px 0 0 var(--stone-800), 3px 3px 0 0 var(--stone-800),
+    0 0 0 2px var(--stone-50), 0.5px 0.5px 0 2px var(--stone-50),
+    1px 1px 0 2px var(--stone-50), 1.5px 1.5px 0 2px var(--stone-50),
+    2px 2px 0 2px var(--stone-50), 2.5px 2.5px 0 2px var(--stone-50),
+    3px 3px 0 2px var(--stone-50), 3.5px 3.5px 0 2px var(--stone-50),
+    4px 4px 0 2px var(--stone-50);
+}
+
+.btn-hide-header:hover {
+  transform: translate(0, 0);
+  box-shadow: 0 0 0 2px var(--stone-50);
+}
+
+.btn-hide-header:active,
+.btn-hide-header:focus-visible {
+  outline-color: var(--yellow-400);
+}
+
+.btn-hide-header:focus-visible {
+  outline-style: dashed;
+}
+
+.btn-hide-header > div {
+  position: relative;
+  pointer-events: none;
+  background-color: var(--yellow-400);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.btn-hide-header > div::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(rgb(255 255 255 / 80%) 20%, transparent 20%),
+    radial-gradient(rgb(255 255 255 / 100%) 20%, transparent 20%);
+  background-position: 0 0, 4px 4px;
+  background-size: 8px 8px;
+  mix-blend-mode: hard-light;
+  animation: btn-hide-dots 0.5s infinite linear;
+}
+
+.btn-hide-header > div > span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
+  gap: 0.3rem;
+  color: var(--stone-800);
+  filter: drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.25));
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.btn-hide-header > div > span:active {
+  transform: translateY(2px);
+}
+
+@keyframes btn-hide-dots {
+  0%   { background-position: 0 0, 4px 4px; }
+  100% { background-position: 8px 0, 12px 4px; }
+}
+
+/* ── Page slide transitions ── */
+.page-slide-left-enter-active,
+.page-slide-left-leave-active,
+.page-slide-right-enter-active,
+.page-slide-right-leave-active {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease;
+  will-change: transform;
+}
+
+.page-slide-left-enter-from {
+  transform: translateX(6%);
+  opacity: 0;
+}
+.page-slide-left-leave-to {
+  transform: translateX(-6%);
+  opacity: 0;
+}
+
+.page-slide-right-enter-from {
+  transform: translateX(-6%);
+  opacity: 0;
+}
+.page-slide-right-leave-to {
+  transform: translateX(6%);
+  opacity: 0;
+}
+
 /* Glassmorphism Button Styles */
 .btn-glass {
   background: rgba(255, 255, 255, 0.1);
@@ -2938,7 +3117,7 @@ function showActionResult(result: ActionResult) {
 }
 
 .btn-shortcut {
-  font-size: 0.65rem;
+  font-size: clamp(0.52rem, 2vw + 0.33rem, 0.78rem);
   padding: 0.15rem 0.4rem;
   background: rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-xs);
@@ -2952,7 +3131,7 @@ function showActionResult(result: ActionResult) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   font-weight: 500;
   transition: all 0.2s ease;
 }

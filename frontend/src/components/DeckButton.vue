@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="buttonRef"
     class="deck-button"
     :class="buttonClasses"
     :style="buttonStyle"
@@ -145,9 +146,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Button } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useDoubleTap, useLongPress } from '@/composables/useGestures'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
@@ -155,17 +157,21 @@ import CalendarButton from './CalendarButton.vue'
 
 interface Props {
   button: Button
+  isPlaceholder?: boolean
   isEditMode?: boolean
   showLabels?: boolean
   showTooltips?: boolean
   compact?: boolean
+  buttonSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  isPlaceholder: false,
   isEditMode: false,
   showLabels: true,
   showTooltips: true,
-  compact: false
+  compact: false,
+  buttonSize: 1.0
 })
 
 const emit = defineEmits<{
@@ -174,7 +180,27 @@ const emit = defineEmits<{
   copy: [button: Button]
   delete: [buttonId: string]
   move: [buttonId: string, newPosition: { row: number; col: number }]
+  doubleTap: [button: Button]
+  longPress: [button: Button]
 }>()
+
+const buttonRef = ref<HTMLElement | null>(null)
+
+useDoubleTap(buttonRef, {
+  onDoubleTap: () => {
+    if (props.isEditMode && props.button.action) {
+      emit('click', props.button) // Double tap executes action in edit mode
+    }
+  }
+})
+
+useLongPress(buttonRef, {
+  onLongPress: () => {
+    if (!props.isEditMode) {
+      emit('longPress', props.button)
+    }
+  }
+})
 
 // Check if this is a special action type that renders its own content
 const isSpecialActionType = computed(() => {
@@ -217,6 +243,7 @@ const buttonClasses = computed(() => ({
   'shape-hexagon': props.button.shape === 'hexagon',
   'shape-diamond': props.button.shape === 'diamond',
   'shape-octagon': props.button.shape === 'octagon',
+  'is-placeholder': props.isPlaceholder,
   'edit-mode': props.isEditMode,
   'has-action': !!props.button.action,
   'disabled': !props.button.enabled,
@@ -303,7 +330,12 @@ const buttonStyle = computed(() => {
 })
 
 const iconStyle = computed(() => {
-  const size = props.button.style?.iconSize || 32
+  // Scale icon size with buttonSize prop so label always has room
+  const baseSize = props.button.style?.iconSize || 32
+  const scale = props.buttonSize || 1.0
+  // When label is shown, cap icon at 55% of scaled size to leave room for label
+  const hasLabel = !!(props.button.label && props.showLabels)
+  const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
   return {
     width: `${size}px`,
     height: `${size}px`,
@@ -312,7 +344,10 @@ const iconStyle = computed(() => {
 })
 
 const mediaStyle = computed(() => {
-  const size = props.button.style?.iconSize || 32
+  const baseSize = props.button.style?.iconSize || 32
+  const scale = props.buttonSize || 1.0
+  const hasLabel = !!(props.button.label && props.showLabels)
+  const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
   return {
     width: `${size}px`,
     height: `${size}px`
@@ -320,16 +355,20 @@ const mediaStyle = computed(() => {
 })
 
 const labelStyle = computed(() => {
-  const fontSize = props.button.style?.fontSize || 16
+  const baseFontSize = props.button.style?.fontSize || 14
+  const scale = props.buttonSize || 1.0
+  const size = Math.max(10, Math.round(baseFontSize * scale))
   return {
-    fontSize: `${fontSize}px`
+    fontSize: `${size}px`
   }
 })
 
 const secondaryLabelStyle = computed(() => {
-  const fontSize = props.button.style?.fontSize || 16
+  const baseFontSize = props.button.style?.fontSize || 14
+  const scale = props.buttonSize || 1.0
+  const size = Math.max(9, Math.round(baseFontSize * scale * 0.75))
   return {
-    fontSize: `${fontSize * 0.75}px`
+    fontSize: `${size}px`
   }
 })
 
@@ -365,14 +404,12 @@ function handleRightClick() {
 }
 
 function handleDragStart(event: DragEvent) {
-  console.log('DeckButton: drag start', props.button.label, 'edit mode:', props.isEditMode)
   if (!props.isEditMode) return
   
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/vdock-button', JSON.stringify(props.button))
     event.dataTransfer.effectAllowed = 'copyMove' // Allow both copy and move
-    console.log('DeckButton: drag data set', props.button)
-  }
+      }
 }
 
 function handleDragEnd() {
@@ -382,22 +419,51 @@ function handleDragEnd() {
 
 <style scoped>
 .deck-button {
+  --btn-bg: #080808;
+  --btn-radius: var(--radius-md);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md);
-  border: 2px solid var(--color-border);
+  padding: 0;
+  border: 0;
+  border-radius: var(--btn-radius);
+  background-color: var(--btn-bg);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   overflow: hidden;
   user-select: none;
-  /* Enhanced shadow for more alive UI */
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  min-width: 60px;
+  min-height: 60px;
+  outline: none;
+  box-shadow:
+    inset 0 0.3rem 0.9rem rgba(255, 255, 255, 0.3),
+    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.7),
+    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.5),
+    0 3rem 3rem rgba(0, 0, 0, 0.3),
+    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+}
+
+/* Uiverse hover state */
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover {
+  box-shadow:
+    inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.4),
+    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.7),
+    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.7),
+    0 3rem 3rem rgba(0, 0, 0, 0.3),
+    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+}
+
+/* Uiverse active/press state */
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.5),
+    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.8),
+    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.4),
+    0 3rem 3rem rgba(0, 0, 0, 0.3),
+    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
 }
 
 .deck-button[draggable="true"] {
@@ -406,12 +472,6 @@ function handleDragEnd() {
 
 .deck-button[draggable="true"]:active {
   cursor: grabbing;
-  transform: scale(0.95);
-  opacity: 0.8;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .deck-button.shape-rectangle {
@@ -426,22 +486,34 @@ function handleDragEnd() {
   border-radius: var(--radius-full);
 }
 
-.deck-button.has-action:hover:not(.edit-mode) {
-  transform: scale(1.05);
-  box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.25),
-    0 4px 8px rgba(0, 0, 0, 0.15),
-    0 0 20px rgba(var(--color-primary-rgb, 255, 107, 107), 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  border-color: var(--color-primary);
+.deck-button.is-placeholder {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.1) !important;
+  cursor: default;
+  box-shadow: none;
 }
 
-.deck-button:active:not(.edit-mode) {
-  transform: scale(0.95);
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 2px 4px rgba(0, 0, 0, 0.1);
+.deck-button.is-placeholder .button-content {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.deck-button.is-placeholder .button-content::before,
+.deck-button.is-placeholder .button-content::after {
+  display: none;
+}
+
+.deck-button-glass {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+  backdrop-filter: var(--glass-blur, blur(10px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(10px));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.1));
+}
+
+.deck-button-glass:hover:not(.edit-mode):not(.is-placeholder) {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)), var(--glass-glow, 0 0 15px rgba(255, 255, 255, 0.3));
 }
 
 .edit-overlay {
@@ -471,7 +543,7 @@ function handleDragEnd() {
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   transition: all var(--transition-fast);
 }
 
@@ -514,12 +586,67 @@ function handleDragEnd() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: 4px;
   text-align: center;
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  transition: background-color 0.2s ease;
+  overflow: hidden;
+  padding: 8px 6px;
+  box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  transition: transform 0.2s ease;
+  /* Uiverse label mask — fades bottom edge for depth */
+  mask-image: linear-gradient(to bottom, white 60%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, white 60%, transparent);
+}
+
+/* Uiverse top-dome highlight */
+.button-content::before {
+  content: '';
+  position: absolute;
+  left: -15%;
+  right: -15%;
+  bottom: 25%;
+  top: -100%;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+/* Uiverse inner gloss strip */
+.button-content::after {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 12%;
+  bottom: 40%;
+  border-radius: 22px 22px 0 0;
+  box-shadow: inset 0 10px 8px -10px rgba(255, 255, 255, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content {
+  transform: translateY(-4%);
+}
+
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content::before {
+  transform: translateY(-5%);
+}
+
+.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content::after {
+  opacity: 0.4;
+  transform: translateY(5%);
 }
 
 /* Special action types that render full content */
@@ -591,10 +718,18 @@ function handleDragEnd() {
 .button-label {
   font-weight: 600;
   word-wrap: break-word;
+  overflow-wrap: break-word;
   max-width: 100%;
+  width: 100%;
+  text-align: center;
   position: relative;
   z-index: 2;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1.2;
+  flex-shrink: 0;
+  /* Ensure label is always visible — never hidden */
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .button-secondary-label {
@@ -616,7 +751,7 @@ function handleDragEnd() {
   color: white;
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -630,34 +765,16 @@ function handleDragEnd() {
 
 /* Enhanced shadows for different button states */
 .deck-button.edit-mode {
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.1),
     0 1px 3px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .deck-button.edit-mode:hover {
-  box-shadow: 
+  box-shadow:
     0 4px 15px rgba(0, 0, 0, 0.15),
     0 2px 5px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-/* Special shadow effects for different shapes */
-.deck-button.shape-circle {
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.deck-button.shape-hexagon,
-.deck-button.shape-diamond,
-.deck-button.shape-octagon {
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 

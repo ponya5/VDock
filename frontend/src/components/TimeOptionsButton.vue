@@ -299,12 +299,12 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   opacity: 0.9;
 }
 
 .header-title {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   font-weight: 600;
   opacity: 0.9;
   text-transform: uppercase;
@@ -339,7 +339,7 @@ onUnmounted(() => {
 }
 
 .time-timezone {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   opacity: 0.7;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -352,7 +352,7 @@ onUnmounted(() => {
 }
 
 .timer-display {
-  font-size: 2.5rem;
+  font-size: clamp(2.00rem, 2vw + 1.25rem, 3.00rem);
   font-weight: 700;
   line-height: 1;
   margin-bottom: var(--spacing-md);
@@ -372,7 +372,7 @@ onUnmounted(() => {
   border: 2px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -397,7 +397,7 @@ onUnmounted(() => {
 }
 
 .countdown-display {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   font-weight: 700;
   line-height: 1;
   margin-bottom: var(--spacing-xs);
@@ -405,7 +405,7 @@ onUnmounted(() => {
 }
 
 .countdown-label {
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   opacity: 0.8;
   margin-bottom: var(--spacing-md);
 }
@@ -480,46 +480,46 @@ onUnmounted(() => {
 /* Container query responsive sizing */
 @container (max-width: 100px) {
   .time-main-compact {
-    font-size: 0.6rem;
+    font-size: clamp(0.48rem, 2vw + 0.30rem, 0.72rem);
   }
   .time-date-compact {
-    font-size: 0.4rem;
+    font-size: clamp(0.32rem, 2vw + 0.20rem, 0.48rem);
   }
 }
 
 @container (max-width: 120px) {
   .time-main-compact {
-    font-size: 0.65rem;
+    font-size: clamp(0.52rem, 2vw + 0.33rem, 0.78rem);
   }
   .time-date-compact {
-    font-size: 0.45rem;
+    font-size: clamp(0.36rem, 2vw + 0.23rem, 0.54rem);
   }
 }
 
 @container (min-width: 150px) {
   .time-main-compact {
-    font-size: 0.85rem;
+    font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   }
   .time-date-compact {
-    font-size: 0.55rem;
+    font-size: clamp(0.44rem, 2vw + 0.28rem, 0.66rem);
   }
 }
 
 @container (min-width: 180px) {
   .time-main-compact {
-    font-size: 1rem;
+    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   }
   .time-date-compact {
-    font-size: 0.6rem;
+    font-size: clamp(0.48rem, 2vw + 0.30rem, 0.72rem);
   }
 }
 
 @container (min-width: 220px) {
   .time-main-compact {
-    font-size: 1.2rem;
+    font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   }
   .time-date-compact {
-    font-size: 0.7rem;
+    font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   }
 }
 
@@ -535,7 +535,7 @@ onUnmounted(() => {
 }
 
 .timer-display-compact {
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -548,7 +548,7 @@ onUnmounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -578,7 +578,7 @@ onUnmounted(() => {
 }
 
 .countdown-display-compact {
-  font-size: 1.1rem;
+  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;

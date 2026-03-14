@@ -293,14 +293,14 @@ defineExpose({
 
 .search-icon {
   color: var(--color-text-secondary);
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
 }
 
 .search-input {
   flex: 1;
   border: none;
   background: transparent;
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
   color: var(--color-text);
   outline: none;
   padding: 0.5rem 0;
@@ -353,7 +353,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
   color: white;
   flex-shrink: 0;
 }
@@ -381,7 +381,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
   color: var(--color-text-secondary);
   margin-top: 0.25rem;
 }
@@ -401,7 +401,7 @@ defineExpose({
 }
 
 .search-empty svg {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   margin-bottom: var(--spacing-md);
   opacity: 0.5;
 }
@@ -415,7 +415,7 @@ defineExpose({
 .search-tips {
   display: flex;
   gap: var(--spacing-md);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
 }
 
@@ -430,7 +430,7 @@ kbd {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   font-family: monospace;
   color: var(--color-text);
 }
@@ -496,7 +496,7 @@ kbd {
   }
 
   .result-meta {
-    font-size: 0.7rem;
+    font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   }
 }
 </style>

@@ -301,9 +301,7 @@ function handleAvatarPickerSelect(avatar: Avatar) {
 }
 
 function editProfile(profile: any) {
-  console.log('Editing profile:', profile)
-  console.log('Profile avatar:', profile.avatar)
-  
+    
   editingProfile.value = profile
   editProfileName.value = profile.name
   editProfileDescription.value = profile.description || ''
@@ -311,8 +309,7 @@ function editProfile(profile: any) {
   
   // Set current avatar if exists
   if (profile.avatar) {
-    console.log('Setting editSelectedAvatar with:', profile.avatar)
-    editSelectedAvatar.value = {
+        editSelectedAvatar.value = {
       id: 'current',
       name: 'Current Avatar',
       url: profile.avatar,
@@ -320,8 +317,7 @@ function editProfile(profile: any) {
       category: 'characters'
     }
   } else {
-    console.log('No avatar found, setting editSelectedAvatar to null')
-    editSelectedAvatar.value = null
+        editSelectedAvatar.value = null
   }
   
   showEditModal.value = true
@@ -331,10 +327,7 @@ async function updateProfile() {
   if (!editingProfile.value || !editProfileName.value) return
 
   const avatarUrl = editSelectedAvatar.value?.url || editingProfile.value.avatar
-  console.log('Updating profile with avatar URL:', avatarUrl)
-  console.log('Selected avatar:', editSelectedAvatar.value)
-  console.log('Current profile avatar:', editingProfile.value.avatar)
-
+      
   const updatedProfile = await profilesStore.updateProfile(editingProfile.value.id, {
     name: editProfileName.value,
     description: editProfileDescription.value,
@@ -343,8 +336,7 @@ async function updateProfile() {
   })
 
   if (updatedProfile) {
-    console.log('Profile updated successfully:', updatedProfile)
-    showEditModal.value = false
+        showEditModal.value = false
     editingProfile.value = null
     editProfileName.value = ''
     editProfileDescription.value = ''
@@ -353,8 +345,7 @@ async function updateProfile() {
     
     // Force refresh profiles list to show updated avatar
     await profilesStore.loadProfiles()
-    console.log('Profiles reloaded:', profilesStore.profiles)
-  }
+      }
 }
 
 async function duplicateProfile(profileId: string) {
@@ -422,7 +413,7 @@ async function handleFileImport(event: Event) {
 }
 
 .profiles-header h1 {
-  font-size: 2rem;
+  font-size: clamp(1.60rem, 2vw + 1.00rem, 2.40rem);
   font-weight: bold;
 }
 
@@ -443,7 +434,7 @@ async function handleFileImport(event: Event) {
 }
 
 .loading-icon {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
 }
 
 .profiles-grid {
@@ -466,7 +457,7 @@ async function handleFileImport(event: Event) {
 }
 
 .profile-icon {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   color: var(--color-primary);
   text-align: center;
   display: flex;
@@ -483,14 +474,14 @@ async function handleFileImport(event: Event) {
 }
 
 .profile-info h3 {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   font-weight: bold;
   margin-bottom: var(--spacing-xs);
 }
 
 .profile-info p {
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   margin-bottom: var(--spacing-sm);
 }
 
@@ -499,7 +490,7 @@ async function handleFileImport(event: Event) {
   padding: var(--spacing-xs) var(--spacing-sm);
   background-color: var(--color-background);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
 }
 
@@ -514,7 +505,7 @@ async function handleFileImport(event: Event) {
   flex: 1;
   min-width: 0;
   padding: var(--spacing-xs);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   white-space: nowrap;
   aspect-ratio: 1;
   display: flex;
@@ -552,14 +543,14 @@ async function handleFileImport(event: Event) {
 }
 
 .modal-header h2 {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: bold;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: var(--spacing-xs);
@@ -612,7 +603,7 @@ async function handleFileImport(event: Event) {
   justify-content: center;
   gap: 2px;
   color: var(--color-text-secondary);
-  font-size: 0.7rem;
+  font-size: clamp(0.56rem, 2vw + 0.35rem, 0.84rem);
   width: 100%;
   height: 100%;
   text-align: center;
@@ -625,6 +616,75 @@ async function handleFileImport(event: Event) {
   margin-top: var(--spacing-lg);
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .profiles-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .header-actions .btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 48px;
+  }
+
+  .profiles-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-actions {
+    flex-wrap: wrap;
+  }
+  
+  .profile-actions .btn {
+    flex: 1 1 30%;
+    min-height: 48px;
+  }
+
+  .import-section {
+    width: 100%;
+    bottom: 0;
+    right: 0;
+    padding: var(--spacing-md);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: center;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    z-index: 100;
+  }
+  
+  .import-section .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .profiles-view {
+    padding-bottom: 80px; /* Space for fixed import section */
+  }
+
+  .profile-creator {
+    width: 90%;
+    max-height: 90vh;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 48px;
+  }
 }
 </style>
 

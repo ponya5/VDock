@@ -10,6 +10,7 @@ class AutoSceneSwitcher {
   private enabled: boolean = false
   private appIntegrations: AppIntegration[] = []
   private onSceneSwitchCallbacks: Array<(sceneId: string, appExe: string) => void> = []
+  private boundHandleAppChange: ((app: RunningApp) => void) | null = null
 
   /**
    * Initialize the auto scene switcher
@@ -26,37 +27,35 @@ class AutoSceneSwitcher {
       return true
     }
 
-    // Register callback for app changes
-    appMonitorService.onAppChange(this.handleAppChange.bind(this))
+    // Store bound reference so we can remove it later
+    this.boundHandleAppChange = this.handleAppChange.bind(this)
+    appMonitorService.onAppChange(this.boundHandleAppChange)
 
-    // Start monitoring
     const started = await appMonitorService.start()
     
     if (started) {
       this.enabled = true
-      console.log('Auto scene switching enabled')
+      console.warn('Auto scene switching enabled')
     }
 
     return started
   }
 
-  /**
-   * Disable auto scene switching
-   */
   async disable(): Promise<boolean> {
     if (!this.enabled) {
       return true
     }
 
-    // Unregister callback
-    appMonitorService.offAppChange(this.handleAppChange.bind(this))
+    if (this.boundHandleAppChange) {
+      appMonitorService.offAppChange(this.boundHandleAppChange)
+      this.boundHandleAppChange = null
+    }
 
-    // Stop monitoring
     const stopped = await appMonitorService.stop()
     
     if (stopped) {
       this.enabled = false
-      console.log('Auto scene switching disabled')
+      console.warn('Auto scene switching disabled')
     }
 
     return stopped
@@ -103,16 +102,15 @@ class AutoSceneSwitcher {
 
     // Find matching integration
     const integration = this.appIntegrations.find(
-      int => int.appExe === app.exe && int.enabled && int.autoSwitch
+      int => int.appExe === app.exe && int.enabled && int.sceneId
     )
 
     if (integration && integration.sceneId) {
-      console.log(`Switching to scene for app: ${app.exe}`)
+      console.warn(`Switching to scene for app: ${app.exe}`)
       
-      // Trigger callbacks
       this.onSceneSwitchCallbacks.forEach(callback => {
         try {
-          callback(integration.sceneId, app.exe)
+          callback(integration.sceneId!, app.exe)
         } catch (error) {
           console.error('Error in scene switch callback:', error)
         }

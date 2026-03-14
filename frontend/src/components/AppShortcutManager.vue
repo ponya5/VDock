@@ -318,12 +318,12 @@ function addCustomShortcut() {
 
 .header-title h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-text);
 }
 
 .header-title svg {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   color: var(--color-primary);
 }
 
@@ -332,7 +332,7 @@ function addCustomShortcut() {
   border: none;
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   padding: var(--spacing-xs);
   transition: all var(--transition-fast);
   border-radius: var(--radius-sm);
@@ -371,7 +371,7 @@ function addCustomShortcut() {
   border-radius: var(--radius-md);
   background-color: var(--color-surface);
   color: var(--color-text);
-  font-size: 0.95rem;
+  font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
   transition: all var(--transition-fast);
 }
 
@@ -395,7 +395,7 @@ function addCustomShortcut() {
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
 }
 
@@ -444,11 +444,11 @@ function addCustomShortcut() {
 .shortcut-name {
   font-weight: 600;
   color: var(--color-text);
-  font-size: 1rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
 }
 
 .shortcut-description {
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   color: var(--color-text-secondary);
 }
 
@@ -463,7 +463,7 @@ function addCustomShortcut() {
   background-color: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-family: 'Courier New', monospace;
   color: var(--color-text);
   box-shadow: 0 2px 0 var(--color-border);
@@ -484,7 +484,7 @@ function addCustomShortcut() {
 }
 
 .empty-state svg {
-  font-size: 3rem;
+  font-size: clamp(2.40rem, 2vw + 1.50rem, 3.60rem);
   opacity: 0.5;
 }
 
@@ -512,11 +512,11 @@ function addCustomShortcut() {
 .form-group label {
   font-weight: 500;
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 
 .form-help {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -542,7 +542,7 @@ function addCustomShortcut() {
 }
 
 .key-tag kbd {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .remove-key {
@@ -553,7 +553,7 @@ function addCustomShortcut() {
   padding: 0;
   display: flex;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .remove-key:hover {
@@ -567,7 +567,7 @@ function addCustomShortcut() {
   background: none;
   outline: none;
   color: var(--color-text);
-  font-size: 0.875rem;
+  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
 }
 </style>
 

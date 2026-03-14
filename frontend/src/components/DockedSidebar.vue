@@ -1,5 +1,5 @@
 <template>
-  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode }" :style="{ width: sidebarWidth }">
+  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode, 'is-mobile': isMobile }" :style="{ width: isMobile ? '100vw' : sidebarWidth }">
     <div 
       v-if="isEditMode"
       class="resize-handle"
@@ -32,7 +32,6 @@
       <!-- Render grid slots -->
       <template v-for="row in gridRows" :key="`row-${row}`">
         <template v-for="col in gridCols" :key="`slot-${row}-${col}`">
-          <!-- Existing button -->
           <DeckButton
             v-if="getButtonAt(row - 1, col - 1)"
             :button="getButtonAt(row - 1, col - 1)!"
@@ -43,6 +42,7 @@
             @edit="handleButtonEdit"
             @copy="handleButtonCopy"
             @delete="handleButtonDelete"
+            @long-press="handleButtonEdit"
           />
           
           <!-- Empty slot placeholder in edit mode -->
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { Button } from '@/types'
 import DeckButton from './DeckButton.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -106,6 +106,23 @@ const settingsStore = useSettingsStore()
 const isResizing = ref(false)
 const startX = ref(0)
 const startWidth = ref(0)
+const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+
+const handleWindowResize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleWindowResize)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', handleWindowResize)
+  }
+})
 
 // Use sidebar width from settings
 const sidebarWidth = computed(() => {
@@ -176,7 +193,6 @@ function handlePlaceholderDragLeave(event: DragEvent, row: number, col: number) 
 }
 
 function handlePlaceholderDrop(event: DragEvent, row: number, col: number) {
-  console.log('DockedSidebar: drop at', row, col)
   event.preventDefault()
   event.stopPropagation()
   dragOverSlot.value = null
@@ -234,14 +250,42 @@ function stopResize() {
 <style scoped>
 .docked-sidebar {
   height: 100%;
-  background-color: var(--color-surface-solid);
-  border-right: 1px solid var(--color-border);
+  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+  backdrop-filter: var(--glass-blur, blur(10px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(10px));
+  border-right: 2px solid var(--color-primary);
+  box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
   transition: none; /* Disable transition during resize */
   position: relative;
   z-index: 100;
   flex-shrink: 0;
+}
+
+.docked-sidebar.is-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  height: 80px;
+  width: 100vw !important;
+  border-right: none;
+  border-top: 2px solid var(--color-primary);
+  flex-direction: row;
+  z-index: 999;
+}
+
+.docked-sidebar.is-mobile .sidebar-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px !important;
+  width: 100vw;
+}
+
+.docked-sidebar.is-mobile .sidebar-header {
+  display: none;
 }
 
 .resize-handle {
@@ -283,7 +327,7 @@ function stopResize() {
 /* Removed clickable-header styles as we now use a proper button */
 
 .sidebar-header h3 {
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
@@ -298,7 +342,7 @@ function stopResize() {
   color: white;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -313,7 +357,7 @@ function stopResize() {
 }
 
 .header-toggle-button svg {
-  font-size: 0.8rem;
+  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
 }
 
 @keyframes button-pulse {
@@ -346,7 +390,7 @@ function stopResize() {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: white;
-  font-size: 0.75rem;
+  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
 }
 
 .add-btn:hover {
@@ -384,7 +428,7 @@ function stopResize() {
 }
 
 .placeholder-icon {
-  font-size: 1.25rem;
+  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
   color: var(--color-text-secondary);
   opacity: 0.5;
 }

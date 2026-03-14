@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Code Cleanup Analyzer",
+  "description": "Analyzes code for unused functions/classes/imports, duplicate or near-duplicate code, functions longer than ~40 lines, and dead code paths. Produces a prioritized list of changes grouped by file without making any edits.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the current workspace codebase for the following code quality issues:\n\n1. Unused functions, classes, and imports\n2. Duplicate or near-duplicate code that can be consolidated\n3. Functions longer than ~40 lines that should be split\n4. Any obvious dead code paths\n\nThoroughly examine the frontend (Vue/TypeScript) and backend (Python/Flask) source files. Look in:\n- frontend/src/components/\n- frontend/src/composables/\n- frontend/src/stores/\n- frontend/src/views/\n- frontend/src/utils/\n- frontend/src/services/\n- backend/actions/\n- backend/routes/\n- backend/auth/\n- backend/models/\n- backend/utils/\n\nAfter your analysis, produce a prioritized list of changes grouped by file. Assign each item a priority (High / Medium / Low) based on impact and risk. Do NOT edit any files — present the plan only so the user can review it first."
+  }
+}

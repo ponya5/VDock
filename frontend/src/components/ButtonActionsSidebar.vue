@@ -427,7 +427,7 @@ function selectAction(actionType: string) {
 }
 
 .sidebar-header h2 {
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   font-weight: 700;
   color: white;
   margin: 0;
@@ -437,7 +437,7 @@ function selectAction(actionType: string) {
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 1.5rem;
+  font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
   cursor: pointer;
   padding: var(--spacing-xs);
   transition: color 0.2s;
@@ -469,7 +469,7 @@ function selectAction(actionType: string) {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
   color: white;
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   outline: none;
   transition: all 0.2s;
 }
@@ -503,7 +503,7 @@ function selectAction(actionType: string) {
   border: none;
   border-radius: var(--radius-sm);
   color: white;
-  font-size: 0.95rem;
+  font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -516,7 +516,7 @@ function selectAction(actionType: string) {
 
 .category-header .count {
   margin-left: auto;
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -535,7 +535,7 @@ function selectAction(actionType: string) {
   border: none;
   border-radius: var(--radius-sm);
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;

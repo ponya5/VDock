@@ -4,6 +4,9 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, Optional
 from datetime import datetime
+import logging
+
+logger = logging.getLogger('vdock')
 
 
 class FileManager:
@@ -26,7 +29,7 @@ class FileManager:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"Error saving JSON file {file_path}: {e}")
+            logger.error('Error saving JSON file %s: %s', file_path, e)
             return False
     
     @staticmethod
@@ -45,7 +48,7 @@ class FileManager:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading JSON file {file_path}: {e}")
+            logger.error('Error loading JSON file %s: %s', file_path, e)
             return None
     
     @staticmethod
@@ -63,7 +66,7 @@ class FileManager:
                 file_path.unlink()
             return True
         except Exception as e:
-            print(f"Error deleting file {file_path}: {e}")
+            logger.error('Error deleting file %s: %s', file_path, e)
             return False
     
     @staticmethod
@@ -82,7 +85,7 @@ class FileManager:
             shutil.copy2(src, dst)
             return True
         except Exception as e:
-            print(f"Error copying file from {src} to {dst}: {e}")
+            logger.error('Error copying file from %s to %s: %s', src, dst, e)
             return False
     
     @staticmethod
@@ -101,7 +104,7 @@ class FileManager:
                 return []
             return list(directory.glob(pattern))
         except Exception as e:
-            print(f"Error listing files in {directory}: {e}")
+            logger.error('Error listing files in %s: %s', directory, e)
             return []
     
     @staticmethod

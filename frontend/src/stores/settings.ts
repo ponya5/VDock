@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Theme, ServerConfig } from '@/types'
+import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -22,10 +22,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
   const dashboardBackground = ref('default')
+  const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
   const startWithWindows = ref(false)
   const uiBrightness = ref(100) // UI brightness percentage (0-200)
   const showHeader = ref(true) // Show/hide dashboard header
-  const showRegularToasts = ref(true) // Show success/info/warning toasts (errors always shown)
+  const toastLevel = ref<'all' | 'errors-only' | 'off'>('all') // Toast display level
   
   // Touch mode settings
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
@@ -71,10 +72,18 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
         dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
         dashboardBackground.value = settings.dashboardBackground || 'default'
+        backgroundPreference.value = settings.backgroundPreference || 'none'
         startWithWindows.value = settings.startWithWindows || false
         uiBrightness.value = settings.uiBrightness !== undefined ? settings.uiBrightness : 100
         showHeader.value = settings.showHeader !== false
-        showRegularToasts.value = settings.showRegularToasts !== false
+        // migrate legacy boolean → new enum
+        if (settings.toastLevel) {
+          toastLevel.value = settings.toastLevel
+        } else if (settings.showRegularToasts === false) {
+          toastLevel.value = 'errors-only'
+        } else {
+          toastLevel.value = 'all'
+        }
         touchMode.value = settings.touchMode || 'normal'
         minimumTouchTargetSize.value = settings.minimumTouchTargetSize || 44
         defaultGridRows.value = settings.defaultGridRows || 3
@@ -99,10 +108,11 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
+      backgroundPreference: backgroundPreference.value,
       startWithWindows: startWithWindows.value,
       uiBrightness: uiBrightness.value,
       showHeader: showHeader.value,
-      showRegularToasts: showRegularToasts.value,
+      toastLevel: toastLevel.value,
       touchMode: touchMode.value,
       minimumTouchTargetSize: minimumTouchTargetSize.value,
       defaultGridRows: defaultGridRows.value,
@@ -116,7 +126,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, uiBrightness, showHeader, showRegularToasts, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -243,10 +253,11 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarEnabled,
     dockedSidebarWidth,
     dashboardBackground,
+    backgroundPreference,
     startWithWindows,
     uiBrightness,
     showHeader,
-    showRegularToasts,
+    toastLevel,
     touchMode,
     minimumTouchTargetSize,
     touchModeMultiplier,

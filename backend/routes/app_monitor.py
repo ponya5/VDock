@@ -97,3 +97,35 @@ def active_app():
             "message": "No active application tracked"
         }), 404
 
+
+@app_monitor_bp.route('/running-apps', methods=['GET'])
+@require_auth
+def running_apps():
+    """Get a list of all currently running applications."""
+    import logging
+    import psutil
+    logger = logging.getLogger('vdock')
+    try:
+        seen = set()
+        apps = []
+        for proc in psutil.process_iter(['pid', 'name', 'exe']):
+            try:
+                info = proc.info
+                exe = info.get('name') or ''
+                if not exe or exe in seen:
+                    continue
+                seen.add(exe)
+                apps.append({
+                    'name': exe.replace('.exe', '').replace('_', ' ').title(),
+                    'exe': exe,
+                    'pid': info.get('pid', 0),
+                    'path': info.get('exe') or ''
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        apps.sort(key=lambda a: a['name'].lower())
+        return jsonify(apps)
+    except Exception as e:
+        logger.error('Failed to get running apps: %s', e)
+        return jsonify({'error': str(e)}), 500
+
