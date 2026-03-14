@@ -390,7 +390,7 @@ const dashboardBackgroundClass = computed(() => {
   const bg = settingsStore.dashboardBackground
   if (bg === 'default') return ''
   // Check if it's a custom uploaded image (URL)
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
     return 'dashboard-bg-custom'
   }
   return `dashboard-bg-${bg}`
@@ -409,7 +409,7 @@ const dashboardBackgroundStyle = computed(() => {
 
   const bg = settingsStore.dashboardBackground
   // Handle custom image backgrounds
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('http')) {
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
     return {
       backgroundImage: `url(${bg})`,
       backgroundSize: 'cover',
