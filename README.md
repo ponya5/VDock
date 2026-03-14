@@ -66,15 +66,24 @@
 
 ## 🚀 Quick Start
 
-### Windows
-```cmd
-# Run the launcher directly
-launch.bat
-```
+### Prerequisites
+- **Python 3.9+** — [python.org/downloads](https://www.python.org/downloads/) (tick "Add Python to PATH")
+- **Node.js 16+** — [nodejs.org](https://nodejs.org/)
+
+### Install (Windows)
+
+1. Clone or download the repo
+2. Double-click **`setup.bat`** at the repo root
+3. The installer will:
+   - Create a Python virtual environment and install backend dependencies
+   - Run `npm install` for the frontend and Electron
+   - Create required data directories
+   - Place a **VDock** shortcut on your Desktop
+4. When prompted, press **Y** to launch immediately — or use the desktop shortcut any time
 
 ### First Launch
 1. Wait **5–10 seconds** for the backend to initialize
-2. Open your browser: **http://localhost:3000**
+2. The Electron window opens automatically at **http://localhost:3000**
 3. Default login: `admin` / `admin` ⚠️ *Change this in Settings → Security!*
 4. Pick a template or start blank → customize your first button layout
 

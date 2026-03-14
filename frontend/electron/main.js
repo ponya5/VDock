@@ -115,7 +115,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, '../../backend/Assets/VdIcon.ico')
+    icon: path.join(__dirname, '../public/vdock-icon.ico')
   })
 
   // Show window immediately
@@ -126,11 +126,12 @@ function createWindow() {
   console.log('Window minimized:', mainWindow.isMinimized())
   console.log('Window bounds:', mainWindow.getBounds())
 
-  // Load app - In both dev and production, load from backend server
-  // which serves the frontend files
+  // Load app
+  // Dev: load from Vite dev server (hot-reload). Prod: load from Flask which serves built dist.
+  const appUrl = isDev ? 'http://localhost:3000' : 'http://localhost:5000'
   setTimeout(() => {
-    console.log('Loading URL: http://localhost:5000')
-    mainWindow.loadURL('http://localhost:5000').then(() => {
+    console.log('Loading URL:', appUrl)
+    mainWindow.loadURL(appUrl).then(() => {
       console.log('URL loaded successfully')
       // Force show and focus after load
       mainWindow.show()
@@ -141,7 +142,7 @@ function createWindow() {
     }).catch((err) => {
       console.error('Failed to load URL:', err)
       // Show error in window
-      mainWindow.loadURL(`data:text/html,<html><body style="font-family: Arial; padding: 20px;"><h1>Failed to load VDock</h1><p>Error: ${err.message}</p><p>Please ensure the backend server is running on http://localhost:5000</p></body></html>`)
+      mainWindow.loadURL(`data:text/html,<html><body style="font-family: Arial; padding: 20px;"><h1>Failed to load VDock</h1><p>Error: ${err.message}</p><p>Please ensure the server is running on ${appUrl}</p></body></html>`)
     })
 
     // DevTools can be opened manually with F12 if needed
@@ -240,7 +241,7 @@ async function openSettings() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, '../../backend/Assets/VdIcon.ico')
+    icon: path.join(__dirname, '../public/vdock-icon.ico')
   })
 
   // Create HTML content for settings
@@ -353,7 +354,7 @@ async function createTrayMenu() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../../backend/Assets/VdIcon.ico')
+  const iconPath = path.join(__dirname, '../public/vdock-icon.ico')
   tray = new Tray(iconPath)
 
   tray.setToolTip('VDock - Virtual Stream Deck')

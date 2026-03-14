@@ -94,7 +94,7 @@ def launch_backend(venv_path: Path):
 
 
 def launch_frontend():
-    """Launch frontend development server."""
+    """Launch Vite dev server."""
     try:
         npm = find_npm()
         if not npm:
@@ -106,19 +106,46 @@ def launch_frontend():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        print("\u2713 Frontend server started")
+        print("\u2713 Vite dev server started")
         return True
     except Exception as e:
         print(f"\u2717 Failed to start frontend: {e}")
         return False
 
 
+def launch_electron():
+    """Launch Electron app if dependencies are present, otherwise fall back to browser."""
+    electron_dir = FRONTEND_PATH / 'electron'
+    node_modules = electron_dir / 'node_modules'
+
+    # Install electron deps if missing
+    if not node_modules.exists():
+        print("  Installing Electron dependencies...")
+        npm = find_npm()
+        if npm:
+            subprocess.run([npm, 'install'], cwd=str(electron_dir), check=False)
+
+    try:
+        npx = find_npm().replace('npm.cmd', 'npx.cmd') if find_npm() else 'npx'
+        subprocess.Popen(
+            [npx, 'electron', '.'],
+            cwd=str(electron_dir),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        print("\u2713 Electron launched")
+        return True
+    except Exception as e:
+        print(f"\u26a0 Electron launch failed ({e}), falling back to browser")
+        return False
+
+
 def open_browser():
-    """Open VDock in default browser."""
-    time.sleep(3)  # Wait for servers to initialize
+    """Open VDock in default browser (fallback when Electron is unavailable)."""
+    time.sleep(4)
     try:
         webbrowser.open('http://localhost:3000')
-        print("✓ Opening VDock in browser")
+        print("✓ Opening VDock in browser at http://localhost:3000")
     except Exception as e:
         print(f"⚠ Could not open browser: {e}")
         print("  Please open http://localhost:3000 manually")
@@ -162,9 +189,12 @@ def main():
     if not launch_frontend():
         return False
 
-    # Open browser
-    browser_thread = threading.Thread(target=open_browser, daemon=True)
-    browser_thread.start()
+    # Try Electron first, fall back to browser
+    time.sleep(3)
+    electron_ok = launch_electron()
+    if not electron_ok:
+        browser_thread = threading.Thread(target=open_browser, daemon=True)
+        browser_thread.start()
 
     # Display startup information
     print("\n" + "="*50)
@@ -172,9 +202,8 @@ def main():
     print("="*50)
     print("\nBackend:  http://localhost:5000")
     print("Frontend: http://localhost:3000")
-    print("\nDefault login:")
-    print("  Username: admin")
-    print("  Password: admin")
+    if not electron_ok:
+        print("\nOpening in browser (Electron not available)")
     print("\nBoth servers are running in the background.")
     print("Close this window to stop all services.\n")
 

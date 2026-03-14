@@ -19,7 +19,7 @@ if exist "%SHORTCUT%" (
 
 REM Create new shortcut pointing to Browser launcher
 echo Creating new shortcut...
-powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%\scripts\launchers\Launch-VDock-Browser.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%\scripts\vdock-icon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%\scripts\launchers\Launch-VDock-Browser.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%\frontend\public\vdock-icon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
 
 if exist "%SHORTCUT%" (
     echo ✓ Desktop shortcut created successfully: %SHORTCUT%

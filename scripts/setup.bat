@@ -1,141 +1,155 @@
 @echo off
-REM VDock Easy Installer for Windows
-REM This script will set up VDock automatically
+setlocal EnableDelayedExpansion
 
-echo ========================================
-echo    VDock Installation Wizard
-echo ========================================
+REM ============================================================
+REM  VDock Setup Installer
+REM  Installs all dependencies and creates a desktop shortcut
+REM ============================================================
+
+REM Resolve repo root (parent of the scripts\ folder)
+for %%I in ("%~dp0..") do set "ROOT=%%~fI"
+
+title VDock Setup
+
+echo.
+echo  ==========================================
+echo    VDock  ^|  Setup Installer
+echo  ==========================================
 echo.
 
-REM Check if Python is installed
-echo [1/6] Checking Python installation...
+REM ── [1/6] Python ─────────────────────────────────────────────
+echo  [1/6] Checking Python...
 python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Python is not installed!
-    echo Please install Python 3.9+ from https://www.python.org/downloads/
-    echo Make sure to check "Add Python to PATH" during installation.
-    pause
-    exit /b 1
+if errorlevel 1 (
+    echo  [ERROR] Python not found.
+    echo         Install Python 3.9+ from https://www.python.org/downloads/
+    echo         Make sure to tick "Add Python to PATH".
+    goto :fail
 )
-echo ✓ Python found
+for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo  [OK]    %%v
 
-REM Check if Node.js is installed
-echo [2/6] Checking Node.js installation...
+REM ── [2/6] Node.js ────────────────────────────────────────────
+echo  [2/6] Checking Node.js...
 node --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Node.js is not installed!
-    echo Please install Node.js from https://nodejs.org/
-    pause
-    exit /b 1
+if errorlevel 1 (
+    echo  [ERROR] Node.js not found.
+    echo         Install Node.js from https://nodejs.org/
+    goto :fail
 )
-echo ✓ Node.js found
+for /f "tokens=*" %%v in ('node --version 2^>^&1') do echo  [OK]    Node.js %%v
 
-REM Create Python virtual environment
-echo [3/6] Creating Python virtual environment...
-if not exist "backend\venv" (
-    cd backend
-    python -m venv venv
-    cd ..
-    echo ✓ Virtual environment created
+REM ── [3/6] Python virtual environment ─────────────────────────
+echo  [3/6] Setting up Python virtual environment...
+if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
+    python -m venv "%ROOT%\backend\venv"
+    if errorlevel 1 ( echo  [ERROR] Failed to create venv & goto :fail )
+    echo  [OK]    Virtual environment created
 ) else (
-    echo ✓ Virtual environment already exists
+    echo  [OK]    Virtual environment already exists
 )
 
-REM Install Python dependencies
-echo [4/6] Installing backend dependencies...
-cd backend
-call venv\Scripts\activate.bat
-pip install -r requirements.txt --quiet
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to install Python dependencies
-    pause
-    exit /b 1
-)
-cd ..
-echo ✓ Backend dependencies installed
+REM ── [4/6] Python dependencies ────────────────────────────────
+echo  [4/6] Installing backend dependencies...
+call "%ROOT%\backend\venv\Scripts\activate.bat"
+pip install -r "%ROOT%\backend\requirements.txt" --quiet --disable-pip-version-check
+if errorlevel 1 ( echo  [ERROR] pip install failed & goto :fail )
+echo  [OK]    Backend dependencies installed
 
-REM Install frontend dependencies
-echo [5/6] Installing frontend dependencies...
-cd frontend
-if not exist "node_modules" (
-    call npm install
-    if %errorlevel% neq 0 (
-        echo ERROR: Failed to install Node.js dependencies
-        pause
-        exit /b 1
-    )
-    echo ✓ Frontend dependencies installed
+REM ── [5/6] Node dependencies ──────────────────────────────────
+echo  [5/6] Installing frontend dependencies...
+
+if not exist "%ROOT%\frontend\node_modules" (
+    pushd "%ROOT%\frontend"
+    call npm install --silent
+    if errorlevel 1 ( echo  [ERROR] npm install failed ^(frontend^) & popd & goto :fail )
+    popd
+    echo  [OK]    Frontend node_modules installed
 ) else (
-    echo ✓ Frontend dependencies already installed
+    echo  [OK]    Frontend node_modules already present
 )
 
-REM Install Electron-specific dependencies
-echo [6/6] Installing Electron dependencies...
-cd electron
-if not exist "node_modules" (
-    call npm install
-    if %errorlevel% neq 0 (
-        echo ERROR: Failed to install Electron dependencies
-        cd ..\..
-        pause
-        exit /b 1
-    )
-    echo ✓ Electron dependencies installed
+if not exist "%ROOT%\frontend\electron\node_modules" (
+    pushd "%ROOT%\frontend\electron"
+    call npm install --silent
+    if errorlevel 1 ( echo  [ERROR] npm install failed ^(electron^) & popd & goto :fail )
+    popd
+    echo  [OK]    Electron node_modules installed
 ) else (
-    echo ✓ Electron dependencies already installed
+    echo  [OK]    Electron node_modules already present
 )
-cd ..\..
 
-REM Create data directories
-echo [7/7] Setting up data directories...
-if not exist "backend\data" mkdir "backend\data"
-if not exist "backend\data\profiles" mkdir "backend\data\profiles"
-if not exist "backend\data\uploads" mkdir "backend\data\uploads"
-echo ✓ Data directories created
+REM ── [6/6] Data directories ───────────────────────────────────
+echo  [6/6] Creating data directories...
+for %%d in (
+    "%ROOT%\backend\data"
+    "%ROOT%\backend\data\profiles"
+    "%ROOT%\backend\data\uploads"
+    "%ROOT%\backend\data\uploads\backgrounds"
+    "%ROOT%\backend\data\uploads\button_backgrounds"
+    "%ROOT%\backend\data\uploads\dashboard_backgrounds"
+    "%ROOT%\backend\data\plugins"
+    "%ROOT%\backend\data\themes"
+) do (
+    if not exist %%d mkdir %%d
+)
+echo  [OK]    Data directories ready
 
-REM Create desktop shortcut for Electron app
+REM ── Desktop shortcut ─────────────────────────────────────────
 echo.
-echo Creating desktop shortcut...
-set SCRIPT_DIR=%~dp0
-set DESKTOP=%USERPROFILE%\Desktop
-set SHORTCUT=%DESKTOP%\VDock.lnk
+echo  Creating desktop shortcut...
 
-powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%SCRIPT_DIR%launchers\Launch-VDock-Electron.bat'; $SC.WorkingDirectory = '%SCRIPT_DIR%'; $SC.IconLocation = '%SCRIPT_DIR%backend\Assets\VdIcon.ico'; $SC.Description = 'VDock Virtual Stream Deck'; $SC.Save()"
+set "LAUNCHER=%ROOT%\scripts\launchers\Launch-VDock-Electron.bat"
+set "ICON=%ROOT%\frontend\public\vdock-icon.ico"
+set "SHORTCUT=%USERPROFILE%\Desktop\VDock.lnk"
+
+powershell -NoProfile -Command ^
+  "$ws = New-Object -ComObject WScript.Shell;" ^
+  "$sc = $ws.CreateShortcut('%SHORTCUT%');" ^
+  "$sc.TargetPath = '%LAUNCHER%';" ^
+  "$sc.WorkingDirectory = '%ROOT%';" ^
+  "$sc.IconLocation = '%ICON%';" ^
+  "$sc.Description = 'VDock Virtual Stream Deck';" ^
+  "$sc.WindowStyle = 1;" ^
+  "$sc.Save()"
 
 if exist "%SHORTCUT%" (
-    echo ✓ Desktop shortcut created: VDock.lnk
+    echo  [OK]    Desktop shortcut created: VDock.lnk
 ) else (
-    echo ! Could not create desktop shortcut
+    echo  [WARN]  Could not create desktop shortcut ^(non-fatal^)
 )
 
+REM ── Done ─────────────────────────────────────────────────────
 echo.
-echo ========================================
-echo    Installation Complete!
-echo ========================================
+echo  ==========================================
+echo    Setup complete!
+echo  ==========================================
 echo.
-echo VDock has been installed successfully!
+echo  Launch VDock:
+echo    ^> Double-click the VDock icon on your desktop
+echo    ^> Or run:  scripts\launchers\Launch-VDock-Electron.bat
 echo.
-echo To start VDock:
-echo   1. Double-click "VDock" shortcut on your desktop
-echo   2. Or run: scripts\launchers\Launch-VDock-Electron.bat
+echo  URLs (once running):
+echo    Backend:   http://localhost:5000
+echo    Frontend:  http://localhost:3000
 echo.
-echo Default login: admin / admin
-echo Backend:  http://localhost:5000
-echo Frontend: http://localhost:3000
-echo.
-echo Would you like to start VDock now? (Y/N)
-set /p START_NOW=
 
-if /i "%START_NOW%"=="Y" (
+set /p "LAUNCH=  Start VDock now? [Y/N]: "
+if /i "!LAUNCH!"=="Y" (
     echo.
-    echo Starting VDock...
-    call launch.bat
-) else (
-    echo.
-    echo You can start VDock anytime by:
-    echo   - Double-clicking the desktop shortcut
-    echo   - Running launch.bat
+    echo  Starting VDock...
+    start "" "%LAUNCHER%"
 )
 
 echo.
 pause
+exit /b 0
+
+:fail
+echo.
+echo  ==========================================
+echo    Setup failed. Fix the error above and
+echo    run setup.bat again.
+echo  ==========================================
+echo.
+pause
+exit /b 1

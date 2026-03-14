@@ -165,6 +165,12 @@ frontend/electron/build/
 # Claude Code
 .claude/
 
+# Kiro
+.kiro/
+
+# GitHub config
+.github/
+
 # Temporary documentation
 ACTION_TEST_REPORT.md
 MEDIA_CONTROLS_FIX_SUMMARY.md

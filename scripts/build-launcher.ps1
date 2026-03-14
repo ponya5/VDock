@@ -13,7 +13,7 @@ Write-Host ""
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $LauncherScript = Join-Path $ProjectRoot "VDock-Launcher.py"
 $OutputDir = Join-Path $ProjectRoot "dist"
-$IconPath = Join-Path $ProjectRoot "scripts\vdock-icon.ico"
+$IconPath = Join-Path $ProjectRoot "frontend\public\vdock-icon.ico"
 
 # Check if PyInstaller is installed
 Write-Host "[1/3] Checking PyInstaller installation..." -ForegroundColor Yellow

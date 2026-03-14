@@ -1,50 +1,81 @@
 @echo off
 REM VDock Electron Desktop Launcher
-REM Double-click this file to launch VDock with Electron
+REM Starts backend, Vite dev server, then Electron
+
+setlocal
 
 echo ========================================
 echo    VDock Virtual Stream Deck (Electron)
 echo ========================================
 echo.
 
-REM Check if Node.js is installed
+REM Resolve repo root (two levels up from scripts\launchers\)
+set "ROOT=%~dp0..\.."
+pushd "%ROOT%"
+set "ROOT=%CD%"
+popd
+
+REM ── Check Node.js ────────────────────────────────────────────
 node --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Node.js not found!
-    echo Please install Node.js from https://nodejs.org
-    pause
-    exit /b 1
+    echo [ERROR] Node.js not found. Install from https://nodejs.org
+    pause & exit /b 1
 )
-
 echo [OK] Node.js found
-echo.
 
-REM Check if Electron dependencies are installed
-if not exist "frontend\electron\node_modules" (
-    echo [WARNING] Electron dependencies not found!
-    echo Installing Electron dependencies...
-    cd frontend\electron
+REM ── Check Python ─────────────────────────────────────────────
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python not found. Install from https://python.org
+    pause & exit /b 1
+)
+echo [OK] Python found
+
+REM ── Check virtual environment ─────────────────────────────────
+set "VENV=%ROOT%\backend\venv\Scripts\activate.bat"
+if not exist "%VENV%" set "VENV=%ROOT%\.venv\Scripts\activate.bat"
+if not exist "%VENV%" (
+    echo [ERROR] Virtual environment not found. Run setup.bat first.
+    pause & exit /b 1
+)
+echo [OK] Virtual environment found
+
+REM ── Install frontend deps if needed ───────────────────────────
+if not exist "%ROOT%\frontend\node_modules" (
+    echo [INFO] Installing frontend dependencies...
+    pushd "%ROOT%\frontend"
     call npm install
-    if errorlevel 1 (
-        echo [ERROR] Failed to install Electron dependencies
-        cd ..\..
-        pause
-        exit /b 1
-    )
-    cd ..\..
-    echo [OK] Electron dependencies installed
-) else (
-    echo [OK] Electron dependencies found
+    popd
 )
 
-echo.
-echo Starting VDock Electron App...
+REM ── Install electron deps if needed ───────────────────────────
+if not exist "%ROOT%\frontend\electron\node_modules" (
+    echo [INFO] Installing Electron dependencies...
+    pushd "%ROOT%\frontend\electron"
+    call npm install
+    popd
+)
+echo [OK] Dependencies ready
 echo.
 
-REM Launch the Electron app
-cd frontend\electron
-call npm start
+REM ── Start backend in a new window ─────────────────────────────
+echo [1/3] Starting backend server...
+start "VDock Backend" /min cmd /c "cd /d "%ROOT%\backend" && call "%VENV%" && python app.py"
+
+REM ── Start Vite dev server in a new window ─────────────────────
+echo [2/3] Starting Vite dev server...
+start "VDock Frontend" /min cmd /c "cd /d "%ROOT%\frontend" && npm run dev"
+
+REM ── Wait for servers to be ready ──────────────────────────────
+echo Waiting for servers to start...
+timeout /t 5 /nobreak >nul
+
+REM ── Launch Electron ───────────────────────────────────────────
+echo [3/3] Launching Electron...
+pushd "%ROOT%\frontend\electron"
+call npx electron .
+popd
 
 echo.
-echo VDock Electron app closed.
+echo VDock closed.
 pause
