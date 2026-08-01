@@ -774,7 +774,7 @@ function selectAction(action: any) {
   }
 
   if (emptyPos) {
-    const newButton = createPreconfiguredButton(action, emptyPos)
+    const newButton = resolveButtonForAction(action, emptyPos)
     if (newButton && currentProfile.value && currentScene.value && currentPage.value) {
       dashboardStore.addButton(
         currentProfile.value.id,
