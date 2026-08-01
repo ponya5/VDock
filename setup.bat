@@ -4,14 +4,15 @@ setlocal EnableDelayedExpansion
 REM ============================================================
 REM  VDock Setup Installer
 REM  Installs all dependencies and creates a desktop shortcut
+REM  Run this once before using launch.bat
 REM ============================================================
 
 REM Resolve repo root (this file lives at the repo root)
 set "ROOT=%~dp0"
-REM Strip trailing backslash
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
 title VDock Setup
+cd /d "%ROOT%"
 
 echo.
 echo  ==========================================
@@ -19,69 +20,127 @@ echo    VDock  ^|  Setup Installer
 echo  ==========================================
 echo.
 
-REM ── [1/6] Python ─────────────────────────────────────────────
-echo  [1/6] Checking Python...
+REM ── [1/7] Python ─────────────────────────────────────────────
+echo  [1/7] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
+    echo.
     echo  [ERROR] Python not found.
     echo         Install Python 3.9+ from https://www.python.org/downloads/
     echo         Make sure to tick "Add Python to PATH".
+    echo.
     goto :fail
 )
 for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo  [OK]    %%v
 
-REM ── [2/6] Node.js ────────────────────────────────────────────
-echo  [2/6] Checking Node.js...
+REM Warn if Python < 3.9
+for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set "PYVER=%%v"
+for /f "tokens=1,2 delims=." %%a in ("!PYVER!") do (
+    set "PYMAJ=%%a"
+    set "PYMIN=%%b"
+)
+if !PYMAJ! LSS 3 (
+    echo  [ERROR] Python 3.9+ required. Found !PYVER!
+    goto :fail
+)
+if !PYMAJ! EQU 3 if !PYMIN! LSS 9 (
+    echo  [ERROR] Python 3.9+ required. Found !PYVER!
+    goto :fail
+)
+
+REM ── [2/7] Node.js ────────────────────────────────────────────
+echo  [2/7] Checking Node.js...
+set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
 node --version >nul 2>&1
 if errorlevel 1 (
+    echo.
     echo  [ERROR] Node.js not found.
-    echo         Install Node.js from https://nodejs.org/
+    echo         Install Node.js 18+ from https://nodejs.org/
+    echo.
     goto :fail
 )
 for /f "tokens=*" %%v in ('node --version 2^>^&1') do echo  [OK]    Node.js %%v
 
-REM ── [3/6] Python virtual environment ─────────────────────────
-echo  [3/6] Setting up Python virtual environment...
+npm --version >nul 2>&1
+if errorlevel 1 (
+    echo  [ERROR] npm not found. Reinstall Node.js from https://nodejs.org/
+    goto :fail
+)
+for /f "tokens=*" %%v in ('npm --version 2^>^&1') do echo  [OK]    npm %%v
+
+REM ── [3/7] Python virtual environment ─────────────────────────
+echo  [3/7] Setting up Python virtual environment...
 if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
+    echo         Creating venv...
     python -m venv "%ROOT%\backend\venv"
-    if errorlevel 1 ( echo  [ERROR] Failed to create venv & goto :fail )
+    if errorlevel 1 (
+        echo  [ERROR] Failed to create virtual environment
+        goto :fail
+    )
     echo  [OK]    Virtual environment created
 ) else (
     echo  [OK]    Virtual environment already exists
 )
 
-REM ── [4/6] Python dependencies ────────────────────────────────
-echo  [4/6] Installing backend dependencies...
+REM ── [4/7] Python dependencies ────────────────────────────────
+echo  [4/7] Installing backend dependencies...
 call "%ROOT%\backend\venv\Scripts\activate.bat"
+
+REM Upgrade pip first to avoid build failures on newer Python versions
+echo         Upgrading pip...
+python -m pip install --upgrade pip --quiet --disable-pip-version-check
+if errorlevel 1 (
+    echo  [WARN]  pip upgrade failed (non-fatal, continuing)
+)
+
 pip install -r "%ROOT%\backend\requirements.txt" --quiet --disable-pip-version-check
-if errorlevel 1 ( echo  [ERROR] pip install failed & goto :fail )
+if errorlevel 1 (
+    echo.
+    echo  [ERROR] pip install failed.
+    echo         Check your internet connection, or try running setup.bat again.
+    echo.
+    goto :fail
+)
 echo  [OK]    Backend dependencies installed
 
-REM ── [5/6] Node dependencies ──────────────────────────────────
-echo  [5/6] Installing frontend dependencies...
+REM ── [5/7] Frontend Node dependencies ─────────────────────────
+echo  [5/7] Installing frontend dependencies...
 
 if not exist "%ROOT%\frontend\node_modules" (
+    echo         Running npm install in frontend\...
     pushd "%ROOT%\frontend"
-    call npm install --silent
-    if errorlevel 1 ( echo  [ERROR] npm install failed ^(frontend^) & popd & goto :fail )
+    call npm install --no-fund --no-audit 2>nul
+    if errorlevel 1 (
+        echo  [ERROR] npm install failed (frontend)
+        popd
+        goto :fail
+    )
     popd
     echo  [OK]    Frontend node_modules installed
 ) else (
-    echo  [OK]    Frontend node_modules already present
+    echo  [OK]    frontend\node_modules already present
 )
 
+REM ── [6/7] Electron Node dependencies ─────────────────────────
+echo  [6/7] Installing Electron dependencies...
+
 if not exist "%ROOT%\frontend\electron\node_modules" (
+    echo         Running npm install in frontend\electron\...
     pushd "%ROOT%\frontend\electron"
-    call npm install --silent
-    if errorlevel 1 ( echo  [ERROR] npm install failed ^(electron^) & popd & goto :fail )
+    call npm install --no-fund --no-audit 2>nul
+    if errorlevel 1 (
+        echo  [ERROR] npm install failed (electron)
+        popd
+        goto :fail
+    )
     popd
     echo  [OK]    Electron node_modules installed
 ) else (
-    echo  [OK]    Electron node_modules already present
+    echo  [OK]    frontend\electron\node_modules already present
 )
 
-REM ── [6/6] Data directories ───────────────────────────────────
-echo  [6/6] Creating data directories...
+REM ── [7/7] Data directories ───────────────────────────────────
+echo  [7/7] Creating data directories...
 for %%d in (
     "%ROOT%\backend\data"
     "%ROOT%\backend\data\profiles"
@@ -92,7 +151,7 @@ for %%d in (
     "%ROOT%\backend\data\plugins"
     "%ROOT%\backend\data\themes"
 ) do (
-    if not exist %%d mkdir %%d
+    if not exist %%d mkdir %%d 2>nul
 )
 echo  [OK]    Data directories ready
 
@@ -100,24 +159,17 @@ REM ── Desktop shortcut ─────────────────�
 echo.
 echo  Creating desktop shortcut...
 
-set "LAUNCHER=%ROOT%\scripts\launchers\Launch-VDock-Electron.bat"
+set "LAUNCHER=%ROOT%\launch.bat"
 set "ICON=%ROOT%\frontend\public\vdock-icon.ico"
 set "SHORTCUT=%USERPROFILE%\Desktop\VDock.lnk"
 
-powershell -NoProfile -Command ^
-  "$ws = New-Object -ComObject WScript.Shell;" ^
-  "$sc = $ws.CreateShortcut('%SHORTCUT%');" ^
-  "$sc.TargetPath = '%LAUNCHER%';" ^
-  "$sc.WorkingDirectory = '%ROOT%';" ^
-  "$sc.IconLocation = '%ICON%';" ^
-  "$sc.Description = 'VDock Virtual Stream Deck';" ^
-  "$sc.WindowStyle = 1;" ^
-  "$sc.Save()"
+powershell -NoProfile -NonInteractive -Command ^
+  "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%SHORTCUT%'); $sc.TargetPath = '%LAUNCHER%'; $sc.WorkingDirectory = '%ROOT%'; if (Test-Path '%ICON%') { $sc.IconLocation = '%ICON%' }; $sc.Description = 'VDock Virtual Stream Deck'; $sc.WindowStyle = 1; $sc.Save()" >nul 2>&1
 
 if exist "%SHORTCUT%" (
-    echo  [OK]    Desktop shortcut created: VDock.lnk
+    echo  [OK]    Desktop shortcut created
 ) else (
-    echo  [WARN]  Could not create desktop shortcut ^(non-fatal^)
+    echo  [WARN]  Could not create desktop shortcut (non-fatal)
 )
 
 REM ── Done ─────────────────────────────────────────────────────
@@ -126,9 +178,9 @@ echo  ==========================================
 echo    Setup complete!
 echo  ==========================================
 echo.
-echo  Launch VDock:
-echo    ^> Double-click the VDock icon on your desktop
-echo    ^> Or run:  scripts\launchers\Launch-VDock-Electron.bat
+echo  To launch VDock:
+echo    - Double-click VDock on your desktop, or
+echo    - Run: launch.bat from this folder
 echo.
 echo  URLs (once running):
 echo    Backend:   http://localhost:5000
@@ -139,7 +191,7 @@ set /p "LAUNCH=  Start VDock now? [Y/N]: "
 if /i "!LAUNCH!"=="Y" (
     echo.
     echo  Starting VDock...
-    start "" "%LAUNCHER%"
+    start "" "%ROOT%\launch.bat"
 )
 
 echo.

@@ -37,6 +37,11 @@
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
   
+  /* Easing tokens (shared) */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-io: cubic-bezier(0.4, 0, 0.2, 1);
+  
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -106,6 +111,10 @@ body {
   color: var(--color-text);
   min-height: 100vh;
   font-size: clamp(13px, 1vw + 10px, 18px);
+  overflow-x: hidden;
+}
+
+#app {
   overflow-x: hidden;
 }
 
@@ -551,8 +560,10 @@ body {
 }
 
 .deck-button-glow {
+  /* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+     hardcoded accent (#667eea) when --btn-brand is unresolved. */
   box-shadow: 
-    0 0 20px rgba(102, 126, 234, 0.4),
+    0 0 20px color-mix(in srgb, var(--btn-brand, #667eea) 40%, transparent),
     0 4px 15px rgba(0, 0, 0, 0.1),
     0 2px 4px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
@@ -561,7 +572,7 @@ body {
 
 .deck-button-glow:hover {
   box-shadow: 
-    0 0 30px rgba(102, 126, 234, 0.6),
+    0 0 30px color-mix(in srgb, var(--btn-brand, #667eea) 60%, transparent),
     0 8px 25px rgba(0, 0, 0, 0.2),
     0 4px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
@@ -570,14 +581,14 @@ body {
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 
-      0 0 20px rgba(102, 126, 234, 0.4),
+      0 0 20px color-mix(in srgb, var(--btn-brand, #667eea) 40%, transparent),
       0 4px 15px rgba(0, 0, 0, 0.1),
       0 2px 4px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   50% {
     box-shadow: 
-      0 0 30px rgba(102, 126, 234, 0.7),
+      0 0 30px color-mix(in srgb, var(--btn-brand, #667eea) 70%, transparent),
       0 6px 20px rgba(0, 0, 0, 0.15),
       0 3px 6px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -585,23 +596,25 @@ body {
 }
 
 /* Neon Effect */
+/* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+   hardcoded accent (#00f2ff) when --btn-brand is unresolved. */
 .deck-button-neon {
-  background: #1a1a2e !important;
-  border: 2px solid #00f2ff !important;
+  background: color-mix(in srgb, var(--btn-brand, #00f2ff) 10%, #1a1a2e) !important;
+  border: 2px solid color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
   box-shadow: 
-    0 0 10px #00f2ff,
-    0 0 20px #00f2ff,
-    0 0 30px #00f2ff,
-    0 0 40px #00f2ff !important;
-  color: #00f2ff !important;
+    0 0 10px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 20px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 30px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 40px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
+  color: color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
 }
 
 .deck-button-neon:hover {
   box-shadow: 
-    0 0 15px #00f2ff,
-    0 0 30px #00f2ff,
-    0 0 45px #00f2ff,
-    0 0 60px #00f2ff !important;
+    0 0 15px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 30px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 45px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 60px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
 }
 
 /* Metallic Effect */
@@ -688,33 +701,167 @@ body {
 }
 
 /* Emissive Effect */
+/* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+   hardcoded accent (#4a9eff) when --btn-brand is unresolved. */
 .deck-button-emissive {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
-  border: 2px solid #4a9eff !important;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--btn-brand, #4a9eff) 8%, #1a1a2e) 0%,
+    color-mix(in srgb, var(--btn-brand, #4a9eff) 8%, #16213e) 100%
+  ) !important;
+  border: 2px solid color-mix(in srgb, var(--btn-brand, #4a9eff) 100%, transparent) !important;
   box-shadow: 
-    0 0 10px rgba(74, 158, 255, 0.5),
-    0 0 20px rgba(74, 158, 255, 0.5),
-    0 0 40px rgba(74, 158, 255, 0.3),
-    inset 0 0 20px rgba(74, 158, 255, 0.1) !important;
-  color: #4a9eff !important;
+    0 0 10px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+    0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+    0 0 40px color-mix(in srgb, var(--btn-brand, #4a9eff) 30%, transparent),
+    inset 0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 10%, transparent) !important;
+  color: color-mix(in srgb, var(--btn-brand, #4a9eff) 100%, transparent) !important;
   animation: emissive-pulse 2s ease-in-out infinite;
 }
 
 @keyframes emissive-pulse {
   0%, 100% {
     box-shadow: 
-      0 0 10px rgba(74, 158, 255, 0.5),
-      0 0 20px rgba(74, 158, 255, 0.5),
-      0 0 40px rgba(74, 158, 255, 0.3),
-      inset 0 0 20px rgba(74, 158, 255, 0.1);
+      0 0 10px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+      0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+      0 0 40px color-mix(in srgb, var(--btn-brand, #4a9eff) 30%, transparent),
+      inset 0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 10%, transparent);
   }
   50% {
     box-shadow: 
-      0 0 15px rgba(74, 158, 255, 0.7),
-      0 0 30px rgba(74, 158, 255, 0.7),
-      0 0 60px rgba(74, 158, 255, 0.5),
-      inset 0 0 30px rgba(74, 158, 255, 0.2);
+      0 0 15px color-mix(in srgb, var(--btn-brand, #4a9eff) 70%, transparent),
+      0 0 30px color-mix(in srgb, var(--btn-brand, #4a9eff) 70%, transparent),
+      0 0 60px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+      inset 0 0 30px color-mix(in srgb, var(--btn-brand, #4a9eff) 20%, transparent);
   }
+}
+
+/* Fire Effect */
+.deck-button-fire {
+  background: linear-gradient(to top, color-mix(in srgb, var(--btn-brand, #ff4500) 80%, #000000) 0%, color-mix(in srgb, var(--btn-brand, #ff4500) 20%, #000000) 100%) !important;
+  box-shadow: 
+    0 0 15px color-mix(in srgb, var(--btn-brand, #ff4500) 60%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--btn-brand, #ff4500) 40%, transparent) !important;
+  animation: fire-flicker 1.5s ease-in-out infinite alternate;
+}
+@keyframes fire-flicker {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.02); filter: brightness(1.2); }
+}
+
+/* Plasma Effect */
+.deck-button-plasma {
+  background: radial-gradient(circle, color-mix(in srgb, var(--btn-brand, #da00ff) 60%, #0d001a) 0%, color-mix(in srgb, var(--btn-brand, #da00ff) 0%, #000000) 100%) !important;
+  box-shadow: 
+    0 0 20px color-mix(in srgb, var(--btn-brand, #da00ff) 50%, transparent),
+    inset 0 0 15px color-mix(in srgb, var(--btn-brand, #da00ff) 30%, transparent) !important;
+  animation: plasma-pulse 3s ease-in-out infinite;
+}
+@keyframes plasma-pulse {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(30deg); }
+}
+
+/* Particles Effect */
+.deck-button-particles {
+  background: color-mix(in srgb, var(--btn-brand, #ffd700) 0%, #000000) !important;
+  border: 1px solid color-mix(in srgb, var(--btn-brand, #ffd700) 30%, #333333) !important;
+  box-shadow: 
+    0 0 10px color-mix(in srgb, var(--btn-brand, #ffd700) 40%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--btn-brand, #ffd700) 20%, transparent) !important;
+  position: relative;
+}
+.deck-button-particles::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: 
+    radial-gradient(circle, var(--btn-brand, #ffd700) 10%, transparent 11%),
+    radial-gradient(circle, var(--btn-brand, #ffd700) 10%, transparent 11%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  opacity: 0.15;
+  animation: particles-move 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes particles-move {
+  0% { background-position: 0 0, 8px 8px; }
+  100% { background-position: 16px 32px, 24px 40px; }
+}
+
+/* Aurora Effect */
+.deck-button-aurora {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--btn-brand, #00ff88) 10%, #05160e) 0%, color-mix(in srgb, var(--btn-brand, #00ff88) 0%, #000000) 100%) !important;
+  box-shadow: 
+    0 0 15px color-mix(in srgb, var(--btn-brand, #00ff88) 30%, transparent),
+    inset 0 0 15px color-mix(in srgb, var(--btn-brand, #00ff88) 20%, transparent) !important;
+  position: relative;
+  overflow: hidden;
+}
+.deck-button-aurora::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--btn-brand, #00ff88) 20%, transparent) 0%, transparent 70%);
+  animation: aurora-wave 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes aurora-wave {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-10%, 10%) rotate(180deg); }
+}
+
+/* Scanline Effect */
+.deck-button-scanline {
+  background: color-mix(in srgb, var(--btn-brand, #00f3ff) 5%, #050505) !important;
+  border: 1px solid color-mix(in srgb, var(--btn-brand, #00f3ff) 20%, #222222) !important;
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--btn-brand, #00f3ff) 15%, transparent) !important;
+  position: relative;
+  overflow: hidden;
+}
+.deck-button-scanline::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+.deck-button-scanline::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  background: color-mix(in srgb, var(--btn-brand, #00f3ff) 20%, transparent);
+  animation: scanline-move 3s linear infinite;
+  pointer-events: none;
+}
+@keyframes scanline-move {
+  0% { top: -10px; }
+  100% { top: 110%; }
+}
+
+/* Rain Effect */
+.deck-button-rain {
+  background: color-mix(in srgb, var(--btn-brand, #0077ff) 0%, #020208) !important;
+  border: 1px solid color-mix(in srgb, var(--btn-brand, #0077ff) 25%, #222222) !important;
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--btn-brand, #0077ff) 10%, transparent) !important;
+  position: relative;
+  overflow: hidden;
+}
+.deck-button-rain::before {
+  content: '';
+  position: absolute;
+  top: -100%; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--btn-brand, #0077ff) 40%, transparent));
+  animation: rain-fall 1.5s linear infinite;
+  pointer-events: none;
+}
+@keyframes rain-fall {
+  0% { top: -100%; }
+  100% { top: 100%; }
 }
 
 /* Button Shape Variants */
@@ -760,8 +907,15 @@ body {
   }
 }
 
+/* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+   hardcoded theme accent (--color-primary, #ff6b6b) when --btn-brand is unresolved. */
 .btn-shimmer {
-  background: linear-gradient(90deg, var(--color-primary) 0%, rgba(255, 255, 255, 0.2) 50%, var(--color-primary) 100%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-brand, var(--color-primary, #ff6b6b)) 100%, transparent) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    color-mix(in srgb, var(--btn-brand, var(--color-primary, #ff6b6b)) 100%, transparent) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
@@ -1333,4 +1487,264 @@ body {
       "grid";
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Phase 4 Animations ── */
+
+/* --- Icon Loop Animations --- */
+.loop-squash {
+  animation: icon-squash 1.5s infinite var(--ease-io);
+  transform-origin: bottom center;
+}
+.loop-bob {
+  animation: icon-bob 1.8s infinite var(--ease-io);
+}
+.loop-spin {
+  animation: icon-spin 3s infinite linear;
+}
+.loop-pulse {
+  animation: icon-pulse 2s infinite var(--ease-io);
+}
+.loop-swing {
+  animation: icon-swing 2.2s infinite var(--ease-io);
+  transform-origin: top center;
+}
+.loop-flip {
+  animation: icon-flip 2.5s infinite var(--ease-io);
+}
+.loop-jump {
+  animation: icon-jump 1.6s infinite var(--ease-spring);
+  transform-origin: bottom center;
+}
+
+@keyframes icon-squash {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.15, 0.85); }
+}
+@keyframes icon-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes icon-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+@keyframes icon-swing {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(15deg); }
+}
+@keyframes icon-flip {
+  0%, 100% { transform: rotateY(0deg); }
+  50% { transform: rotateY(180deg); }
+}
+@keyframes icon-jump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-8px) scale(0.95, 1.05); }
+  50% { transform: translateY(0) scale(1.05, 0.95); }
+}
+
+/* --- Grid Transitions --- */
+/* Scale out and fade current buttons */
+.grid-transition-out {
+  animation: grid-out 220ms var(--ease-out) forwards;
+}
+
+/* Sweep effect keyframes and styles */
+.grid-transition-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.grid-transition-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-25deg) translateX(-100%);
+  animation: sweep-light-bar 620ms var(--ease-io) forwards;
+}
+
+/* Scale in from 1.18x and fade in new buttons */
+.grid-transition-in {
+  animation: grid-in 340ms var(--ease-spring) forwards;
+}
+
+@keyframes grid-out {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0; }
+}
+@keyframes sweep-light-bar {
+  0% { transform: skewX(-25deg) translateX(-100%); }
+  100% { transform: skewX(-25deg) translateX(200%); }
+}
+@keyframes grid-in {
+  0% { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Alternate Grid Transition Styles */
+/* flip */
+.grid-transition-flip {
+  animation: grid-flip-in 620ms var(--ease-spring) forwards;
+}
+@keyframes grid-flip-in {
+  0% { transform: rotateY(90deg); opacity: 0; }
+  100% { transform: rotateY(0deg); opacity: 1; }
+}
+
+/* iris */
+.grid-transition-iris {
+  animation: grid-iris-in 620ms var(--ease-out) forwards;
+}
+@keyframes grid-iris-in {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* cascade */
+.grid-transition-cascade {
+  animation: grid-cascade-in 620ms var(--ease-spring) forwards;
+}
+@keyframes grid-cascade-in {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* glitch */
+.grid-transition-glitch {
+  animation: grid-glitch-in 400ms steps(2, end) forwards;
+}
+@keyframes grid-glitch-in {
+  0% { transform: translate(4px, -2px) skewX(10deg); opacity: 0.5; }
+  20% { transform: translate(-3px, 3px) skewX(-15deg); opacity: 0.7; }
+  40% { transform: translate(0); opacity: 1; }
+}
+
+/* dissolve */
+.grid-transition-dissolve {
+  animation: grid-dissolve-in 620ms var(--ease-out) forwards;
+}
+@keyframes grid-dissolve-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* --- Ambient Overlays --- */
+.ambient-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.ambient-overlay-cell {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  width: 100%;
+  height: 100%;
+}
+
+.ambient-overlay-inner {
+  position: absolute;
+  width: var(--grid-width, 100%);
+  height: var(--grid-height, 100%);
+  transform: translate(var(--offset-x, 0px), var(--offset-y, 0px));
+}
+
+/* Overlay Styles - using transform and opacity for motion */
+.overlay-light-sweep {
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.15) 50%, transparent 60%);
+  background-size: 200% 200%;
+  animation: overlay-sweep 4s infinite linear;
+}
+
+.overlay-aurora {
+  background: linear-gradient(90deg, #00ff87, #60efff, #0061ff, #ffe066);
+  background-size: 400% 100%;
+  animation: overlay-shift 8s infinite linear;
+  opacity: 0.12;
+}
+
+.overlay-plasma {
+  background: radial-gradient(circle at 30% 30%, #ff007f 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, #7f00ff 0%, transparent 50%);
+  background-size: 200% 200%;
+  animation: overlay-sweep 6s infinite ease-in-out;
+  opacity: 0.15;
+}
+
+.overlay-rainbow {
+  background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+  background-size: 200% 100%;
+  animation: overlay-shift 5s infinite linear;
+  opacity: 0.1;
+}
+
+.overlay-fire-wall {
+  background: linear-gradient(0deg, #ff4500, #ff8c00, transparent);
+  background-size: 100% 200%;
+  animation: overlay-sweep-vertical 3s infinite linear;
+  opacity: 0.15;
+}
+
+.overlay-scanline {
+  background: linear-gradient(180deg, rgba(0, 243, 255, 0.1) 50%, transparent 50%);
+  background-size: 100% 10px;
+  animation: overlay-scanline-anim 10s infinite linear;
+  opacity: 0.4;
+}
+
+.overlay-rain {
+  background: linear-gradient(180deg, transparent, rgba(0, 119, 255, 0.2), transparent);
+  background-size: 100% 150px;
+  animation: overlay-scanline-anim 3s infinite linear;
+  opacity: 0.3;
+}
+
+/* Tap Ripple Effect Overlay */
+.tap-ripple {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple-out 600ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes overlay-sweep {
+  0% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translate(-20px, -20px); opacity: 0.12; }
+  50% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translate(20px, 20px); opacity: 0.18; }
+  100% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translate(-20px, -20px); opacity: 0.12; }
+}
+@keyframes overlay-sweep-vertical {
+  0% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translateY(-20px); opacity: 0.12; }
+  50% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translateY(20px); opacity: 0.18; }
+  100% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translateY(-20px); opacity: 0.12; }
+}
+@keyframes overlay-shift {
+  0% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) scale(1); opacity: 0.1; }
+  50% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) scale(1.05); opacity: 0.15; }
+  100% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) scale(1); opacity: 0.1; }
+}
+@keyframes overlay-scanline-anim {
+  0% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translateY(0); }
+  100% { transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) translateY(10px); }
+}
+@keyframes ripple-out {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
 }

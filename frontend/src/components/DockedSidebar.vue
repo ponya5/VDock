@@ -1,6 +1,6 @@
 <template>
-  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode, 'is-mobile': isMobile }" :style="{ width: isMobile ? '100vw' : sidebarWidth }">
-    <div 
+  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode, 'is-mobile': isMobile, 'is-narrow': isNarrow, 'is-open': sidebarOpen }" :style="{ width: isMobile ? '100vw' : sidebarWidth }">
+    <div
       v-if="isEditMode"
       class="resize-handle"
       @mousedown="startResize"
@@ -25,7 +25,11 @@
       </button>
     </div>
 
-    <div 
+    <button v-if="isNarrow" class="sidebar-close-btn" @click="toggleSidebar">
+      <FontAwesomeIcon :icon="['fas', 'times']" />
+    </button>
+
+    <div
       class="sidebar-grid"
       :style="gridStyle"
     >
@@ -44,7 +48,7 @@
             @delete="handleButtonDelete"
             @long-press="handleButtonEdit"
           />
-          
+
           <!-- Empty slot placeholder in edit mode -->
           <div
             v-else-if="isEditMode"
@@ -62,6 +66,15 @@
       </template>
     </div>
   </div>
+
+  <button
+    v-if="isNarrow && !sidebarOpen"
+    class="sidebar-toggle-btn"
+    @click="toggleSidebar"
+    aria-label="Open sidebar"
+  >
+    <FontAwesomeIcon :icon="['fas', 'bars']" />
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -107,9 +120,12 @@ const isResizing = ref(false)
 const startX = ref(0)
 const startWidth = ref(0)
 const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+const isNarrow = ref(typeof window !== 'undefined' ? window.innerWidth < 480 : false)
+const sidebarOpen = ref(false)
 
 const handleWindowResize = () => {
   isMobile.value = window.innerWidth < 768
+  isNarrow.value = window.innerWidth < 480
 }
 
 onMounted(() => {
@@ -134,7 +150,7 @@ const gridStyle = computed(() => {
   // Make buttons roughly square based on the sidebar width
   const cellWidth = settingsStore.dockedSidebarWidth - 32 // Subtract padding
   const baseCellHeight = cellWidth * props.buttonSize
-  
+
   return {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -145,6 +161,10 @@ const gridStyle = computed(() => {
     overflow: 'auto'
   }
 })
+
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value
+}
 
 function getButtonAt(row: number, col: number): Button | undefined {
   return props.dockedButtons.find(
@@ -196,7 +216,7 @@ function handlePlaceholderDrop(event: DragEvent, row: number, col: number) {
   event.preventDefault()
   event.stopPropagation()
   dragOverSlot.value = null
-  
+
   emit('buttonDrop', event, { row, col })
 }
 
@@ -219,11 +239,11 @@ function handlePlaceholderClick(row: number, col: number) {
 // Resize functionality
 function startResize(event: MouseEvent) {
   if (!props.isEditMode) return
-  
+
   isResizing.value = true
   startX.value = event.clientX
   startWidth.value = settingsStore.dockedSidebarWidth
-  
+
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
   document.body.style.cursor = 'col-resize'
@@ -232,7 +252,7 @@ function startResize(event: MouseEvent) {
 
 function handleResize(event: MouseEvent) {
   if (!isResizing.value) return
-  
+
   const delta = event.clientX - startX.value
   const newWidth = Math.max(80, Math.min(300, startWidth.value + delta))
   settingsStore.dockedSidebarWidth = newWidth
@@ -437,5 +457,64 @@ function stopResize() {
   color: var(--color-primary);
   opacity: 1;
 }
-</style>
 
+/* Narrow overlay mode */
+@media (max-width: 480px) {
+  .docked-sidebar.is-narrow {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    width: 200px !important;
+    z-index: 999;
+    transition: left 0.2s ease;
+    border-right: 2px solid var(--color-primary);
+    border-top: none;
+    flex-direction: column;
+  }
+
+  .docked-sidebar.is-narrow.is-open {
+    left: 0;
+  }
+}
+
+.sidebar-toggle-btn {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 200;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.12));
+  background: var(--glass-bg, rgba(0,0,0,0.4));
+  backdrop-filter: blur(8px);
+  color: var(--color-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.sidebar-close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.sidebar-close-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+</style>
