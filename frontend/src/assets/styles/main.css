@@ -37,6 +37,11 @@
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
   
+  /* Easing tokens (shared) */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-io: cubic-bezier(0.4, 0, 0.2, 1);
+  
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -551,8 +556,10 @@ body {
 }
 
 .deck-button-glow {
+  /* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+     hardcoded accent (#667eea) when --btn-brand is unresolved. */
   box-shadow: 
-    0 0 20px rgba(102, 126, 234, 0.4),
+    0 0 20px color-mix(in srgb, var(--btn-brand, #667eea) 40%, transparent),
     0 4px 15px rgba(0, 0, 0, 0.1),
     0 2px 4px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
@@ -561,7 +568,7 @@ body {
 
 .deck-button-glow:hover {
   box-shadow: 
-    0 0 30px rgba(102, 126, 234, 0.6),
+    0 0 30px color-mix(in srgb, var(--btn-brand, #667eea) 60%, transparent),
     0 8px 25px rgba(0, 0, 0, 0.2),
     0 4px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
@@ -570,14 +577,14 @@ body {
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 
-      0 0 20px rgba(102, 126, 234, 0.4),
+      0 0 20px color-mix(in srgb, var(--btn-brand, #667eea) 40%, transparent),
       0 4px 15px rgba(0, 0, 0, 0.1),
       0 2px 4px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   50% {
     box-shadow: 
-      0 0 30px rgba(102, 126, 234, 0.7),
+      0 0 30px color-mix(in srgb, var(--btn-brand, #667eea) 70%, transparent),
       0 6px 20px rgba(0, 0, 0, 0.15),
       0 3px 6px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -585,23 +592,25 @@ body {
 }
 
 /* Neon Effect */
+/* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+   hardcoded accent (#00f2ff) when --btn-brand is unresolved. */
 .deck-button-neon {
-  background: #1a1a2e !important;
-  border: 2px solid #00f2ff !important;
+  background: color-mix(in srgb, var(--btn-brand, #00f2ff) 10%, #1a1a2e) !important;
+  border: 2px solid color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
   box-shadow: 
-    0 0 10px #00f2ff,
-    0 0 20px #00f2ff,
-    0 0 30px #00f2ff,
-    0 0 40px #00f2ff !important;
-  color: #00f2ff !important;
+    0 0 10px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 20px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 30px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 40px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
+  color: color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
 }
 
 .deck-button-neon:hover {
   box-shadow: 
-    0 0 15px #00f2ff,
-    0 0 30px #00f2ff,
-    0 0 45px #00f2ff,
-    0 0 60px #00f2ff !important;
+    0 0 15px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 30px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 45px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent),
+    0 0 60px color-mix(in srgb, var(--btn-brand, #00f2ff) 100%, transparent) !important;
 }
 
 /* Metallic Effect */
@@ -688,32 +697,38 @@ body {
 }
 
 /* Emissive Effect */
+/* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+   hardcoded accent (#4a9eff) when --btn-brand is unresolved. */
 .deck-button-emissive {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
-  border: 2px solid #4a9eff !important;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--btn-brand, #4a9eff) 8%, #1a1a2e) 0%,
+    color-mix(in srgb, var(--btn-brand, #4a9eff) 8%, #16213e) 100%
+  ) !important;
+  border: 2px solid color-mix(in srgb, var(--btn-brand, #4a9eff) 100%, transparent) !important;
   box-shadow: 
-    0 0 10px rgba(74, 158, 255, 0.5),
-    0 0 20px rgba(74, 158, 255, 0.5),
-    0 0 40px rgba(74, 158, 255, 0.3),
-    inset 0 0 20px rgba(74, 158, 255, 0.1) !important;
-  color: #4a9eff !important;
+    0 0 10px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+    0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+    0 0 40px color-mix(in srgb, var(--btn-brand, #4a9eff) 30%, transparent),
+    inset 0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 10%, transparent) !important;
+  color: color-mix(in srgb, var(--btn-brand, #4a9eff) 100%, transparent) !important;
   animation: emissive-pulse 2s ease-in-out infinite;
 }
 
 @keyframes emissive-pulse {
   0%, 100% {
     box-shadow: 
-      0 0 10px rgba(74, 158, 255, 0.5),
-      0 0 20px rgba(74, 158, 255, 0.5),
-      0 0 40px rgba(74, 158, 255, 0.3),
-      inset 0 0 20px rgba(74, 158, 255, 0.1);
+      0 0 10px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+      0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+      0 0 40px color-mix(in srgb, var(--btn-brand, #4a9eff) 30%, transparent),
+      inset 0 0 20px color-mix(in srgb, var(--btn-brand, #4a9eff) 10%, transparent);
   }
   50% {
     box-shadow: 
-      0 0 15px rgba(74, 158, 255, 0.7),
-      0 0 30px rgba(74, 158, 255, 0.7),
-      0 0 60px rgba(74, 158, 255, 0.5),
-      inset 0 0 30px rgba(74, 158, 255, 0.2);
+      0 0 15px color-mix(in srgb, var(--btn-brand, #4a9eff) 70%, transparent),
+      0 0 30px color-mix(in srgb, var(--btn-brand, #4a9eff) 70%, transparent),
+      0 0 60px color-mix(in srgb, var(--btn-brand, #4a9eff) 50%, transparent),
+      inset 0 0 30px color-mix(in srgb, var(--btn-brand, #4a9eff) 20%, transparent);
   }
 }
 
@@ -760,8 +775,15 @@ body {
   }
 }
 
+/* Brand-parametric: color-mix() with var(--btn-brand); falls back to the original
+   hardcoded theme accent (--color-primary, #ff6b6b) when --btn-brand is unresolved. */
 .btn-shimmer {
-  background: linear-gradient(90deg, var(--color-primary) 0%, rgba(255, 255, 255, 0.2) 50%, var(--color-primary) 100%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-brand, var(--color-primary, #ff6b6b)) 100%, transparent) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    color-mix(in srgb, var(--btn-brand, var(--color-primary, #ff6b6b)) 100%, transparent) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }

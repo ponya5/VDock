@@ -150,6 +150,7 @@ import { computed, ref } from 'vue'
 import type { Button } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDoubleTap, useLongPress } from '@/composables/useGestures'
+import { resolveBrandTint } from '@/utils/brandTint'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
@@ -273,7 +274,7 @@ const buttonClasses = computed(() => ({
 const buttonStyle = computed(() => {
   const { position = { row: 0, col: 0 }, size = { rows: 1, cols: 1 }, style } = props.button
 
-  const baseStyle = {
+  const baseStyle: Record<string, string | number | undefined> = {
     gridRow: `${position.row + 1} / span ${size.rows}`,
     gridColumn: `${position.col + 1} / span ${size.cols}`,
     opacity: style?.opacity || 1,
@@ -287,6 +288,15 @@ const buttonStyle = computed(() => {
       ? 'center' : undefined,
     backgroundRepeat: (props.button.media_url && props.button.media_type !== 'video') 
       ? 'no-repeat' : undefined
+  }
+
+  // --btn-brand parametrizes the colour of brand-aware effects (glow/neon/emissive/shimmer)
+  // via color-mix() in main.css. Full preset/layer wiring lands in later phases — for now
+  // `style.glowColor` is the explicit source. Left unset when absent, so the CSS fallback
+  // (var(--btn-brand, <default>)) resolves to each effect's existing hardcoded colour.
+  const brandTint = resolveBrandTint(style?.glowColor)
+  if (brandTint !== undefined) {
+    baseStyle['--btn-brand'] = brandTint
   }
 
   // Apply enhanced styling based on effect type

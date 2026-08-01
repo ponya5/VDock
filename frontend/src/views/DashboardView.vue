@@ -338,6 +338,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDemoProfile, isFirstTimeUser } from '@/utils/demoProfile'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import type { AppIntegration } from '@/types'
+import { presetRegistry, presetToButton } from '@/data/presets'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -850,25 +851,22 @@ function handleDeckButtonLongPress(button: Button) {
   editingButton.value = { ...button }
 }
 
-// Preconfigured button templates
-function createPreconfiguredButton(action: any, position: { row: number; col: number }): Button {
+// Button creation — looks up a matching preset in the registry (task 3.8, replacing
+// the former ~640-line switch statement) and falls back to a minimal placeholder
+// button for the handful of action ids that have no registered preset (custom
+// media placeholders and not-yet-implemented action types like macro/hotkey-picker/
+// OBS controls — see system.ts's "NOTE on scope" comment for what was excluded).
+function createFallbackButton(action: any, position: { row: number; col: number }): Button {
   const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  
-  // Base button configuration
+
   const baseButton: Button = {
     id: buttonId,
     label: action.name,
     icon_type: 'fontawesome',
     icon: action.icon,
     shape: 'rounded',
-    position: {
-      row: position.row,
-      col: position.col
-    },
-    size: {
-      rows: 1,
-      cols: 1
-    },
+    position: { row: position.row, col: position.col },
+    size: { rows: 1, cols: 1 },
     style: {
       backgroundColor: '#2c3e50',
       textColor: '#ffffff'
@@ -876,622 +874,27 @@ function createPreconfiguredButton(action: any, position: { row: number; col: nu
     enabled: true
   }
 
-  // Action-specific configurations
-  switch (action.id) {
-    case 'shutdown':
-      return {
-        ...baseButton,
-        label: 'Shutdown',
-        icon: ['fas', 'power-off'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'shutdown' }
-        }
-      }
-
-    case 'restart':
-      return {
-        ...baseButton,
-        label: 'Restart',
-        icon: ['fas', 'redo'],
-        style: { ...baseButton.style, backgroundColor: '#f39c12' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'restart' }
-        }
-      }
-
-    case 'sleep':
-      return {
-        ...baseButton,
-        label: 'Sleep',
-        icon: ['fas', 'moon'],
-        style: { ...baseButton.style, backgroundColor: '#9b59b6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'sleep' }
-        }
-      }
-
-    case 'lock':
-      return {
-        ...baseButton,
-        label: 'Lock',
-        icon: ['fas', 'lock'],
-        style: { ...baseButton.style, backgroundColor: '#34495e' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'lock_screen' }
-        }
-      }
-
-    case 'fullscreen':
-      return {
-        ...baseButton,
-        label: 'Full Screen',
-        icon: ['fas', 'expand'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'system_control',
-          config: { action: 'fullscreen' }
-        }
-      }
-
-    case 'volume-up':
-      return {
-        ...baseButton,
-        label: 'Volume Up',
-        icon: ['fas', 'volume-up'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_up', step: 2000 }
-        }
-      }
-
-    case 'volume-down':
-      return {
-        ...baseButton,
-        label: 'Volume Down',
-        icon: ['fas', 'volume-down'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_down', step: 2000 }
-        }
-      }
-
-    case 'play-pause':
-      return {
-        ...baseButton,
-        label: 'Play/Pause',
-        icon: ['fas', 'play'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_play_pause' }
-        }
-      }
-
-    case 'next-track':
-      return {
-        ...baseButton,
-        label: 'Next Track',
-        icon: ['fas', 'forward'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_next' }
-        }
-      }
-
-    case 'prev-track':
-      return {
-        ...baseButton,
-        label: 'Previous Track',
-        icon: ['fas', 'backward'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_previous' }
-        }
-      }
-
-    case 'stop':
-      return {
-        ...baseButton,
-        label: 'Stop',
-        icon: ['fas', 'stop'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_stop' }
-        }
-      }
-
-    case 'screenshot':
-      return {
-        ...baseButton,
-        label: 'Screenshot',
-        icon: ['fas', 'camera'],
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'screenshot', path: 'screenshot.png' }
-        }
-      }
-
-    case 'open-url':
-      return {
-        ...baseButton,
-        label: 'Open URL',
-        icon: ['fas', 'globe'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_url', url: 'https://example.com' }
-        }
-      }
-
-    case 'brightness-up':
-      return {
-        ...baseButton,
-        label: 'Brightness Up',
-        icon: ['fas', 'sun'],
-        style: { ...baseButton.style, backgroundColor: '#f1c40f' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'brightness_up', step: 10 }
-        }
-      }
-
-    case 'brightness-down':
-      return {
-        ...baseButton,
-        label: 'Brightness Down',
-        icon: ['fas', 'moon'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'brightness_down', step: 10 }
-        }
-      }
-
-    case 'open-app':
-      return {
-        ...baseButton,
-        label: 'Open App',
-        icon: ['fas', 'rocket'],
-        style: { ...baseButton.style, backgroundColor: '#e67e22' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'notepad.exe' }
-        }
-      }
-
-    case 'open-folder':
-      return {
-        ...baseButton,
-        label: 'Open Folder',
-        icon: ['fas', 'folder-open'],
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_folder', path: 'C:\\' }
-        }
-      }
-
-    case 'open-file':
-      return {
-        ...baseButton,
-        label: 'Open File',
-        icon: ['fas', 'file'],
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_file', path: 'C:\\Windows\\System32\\notepad.exe' }
-        }
-      }
-
-
-    case 'custom-icon':
-      return {
-        ...baseButton,
-        label: 'Custom Icon',
-        icon_type: 'custom',
-        icon: '',
-        media_type: 'image',
-        media_url: '',
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' }
-      }
-
-    // Monitor Metrics
-    case 'metric_memory':
-    case 'metric_cpu_usage':
-    case 'metric_cpu_frequency':
-    case 'metric_internet_speed':
-    case 'metric_harddisk':
-    case 'metric_gpu_temperature':
-    case 'metric_gpu_frequency':
-    case 'metric_gpu_usage':
-    case 'metric_gpu_memory_freq':
-    case 'metric_gpu_memory_usage':
-      return {
-        ...baseButton,
-        label: action.name,
-        icon: action.icon,
-        size: { rows: 1, cols: 1 },
-        style: { ...baseButton.style, backgroundColor: '#2980b9' },
-        action: {
-          type: action.id as any,
-          config: { refresh_interval: 10 }
-        }
-      }
-
-    // Time
-    case 'time_world_clock':
-      return {
-        ...baseButton,
-        label: 'World Clock',
-        icon: ['fas', 'globe'],
-        size: { rows: 1, cols: 1 },
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'time_world_clock',
-          config: { timezone: 'local' }
-        }
-      }
-
-    case 'time_timer':
-      return {
-        ...baseButton,
-        label: 'Timer',
-        icon: ['fas', 'stopwatch'],
-        size: { rows: 2, cols: 2 },
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'time_timer',
-          config: { timer_duration: 0 }
-        }
-      }
-
-    case 'time_countdown':
-      return {
-        ...baseButton,
-        label: 'Countdown',
-        icon: ['fas', 'hourglass-half'],
-        size: { rows: 2, cols: 2 },
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'time_countdown',
-          config: { countdown_target: '' }
-        }
-      }
-
-    // Weather
-    case 'weather':
-      return {
-        ...baseButton,
-        label: 'Weather',
-        icon: ['fas', 'cloud-sun'],
-        size: { rows: 1, cols: 1 },
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'weather',
-          config: { weather_location: 'auto', refresh_interval: 15, temperature_unit: 'C' }
-        }
-      }
-
-    // Navigation
-    case 'next-page':
-      return {
-        ...baseButton,
-        label: 'Next Page',
-        icon: ['fas', 'arrow-right'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'next_page',
-          config: {}
-        }
-      }
-
-    case 'previous-page':
-      return {
-        ...baseButton,
-        label: 'Previous Page',
-        icon: ['fas', 'arrow-left'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'previous_page',
-          config: {}
-        }
-      }
-
-    case 'home-page':
-      return {
-        ...baseButton,
-        label: 'Home',
-        icon: ['fas', 'home'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'home_page',
-          config: {}
-        }
-      }
-
-    // New System Actions
-    case 'empty-recycle-bin':
-      return {
-        ...baseButton,
-        label: 'Empty Recycle Bin',
-        icon: ['fas', 'trash-alt'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'empty_recycle_bin' }
-        }
-      }
-
-    case 'task-manager':
-      return {
-        ...baseButton,
-        label: 'Task Manager',
-        icon: ['fas', 'tasks'],
-        style: { ...baseButton.style, backgroundColor: '#34495e' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'taskmgr.exe' }
-        }
-      }
-
-    case 'control-panel':
-      return {
-        ...baseButton,
-        label: 'Control Panel',
-        icon: ['fas', 'cog'],
-        style: { ...baseButton.style, backgroundColor: '#7f8c8d' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'control.exe' }
-        }
-      }
-
-    case 'device-manager':
-      return {
-        ...baseButton,
-        label: 'Device Manager',
-        icon: ['fas', 'hard-drive'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'devmgmt.msc' }
-        }
-      }
-
-    // New Web & Apps Actions
-    case 'run-command':
-      return {
-        ...baseButton,
-        label: 'Run Command',
-        icon: ['fas', 'terminal'],
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'run_command', command: 'echo Hello' }
-        }
-      }
-
-    case 'close-app':
-      return {
-        ...baseButton,
-        label: 'Close App',
-        icon: ['fas', 'times-circle'],
-        style: { ...baseButton.style, backgroundColor: '#c0392b' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'close_app', app_name: 'notepad.exe' }
-        }
-      }
-
-    // Audio Control Actions
-    case 'mute':
-      return {
-        ...baseButton,
-        label: 'Mute',
-        icon: ['fas', 'volume-mute'],
-        style: { ...baseButton.style, backgroundColor: '#e67e22' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_mute' }
-        }
-      }
-
-    case 'microphone-mute':
-      return {
-        ...baseButton,
-        label: 'Mute Mic',
-        icon: ['fas', 'microphone-slash'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'microphone_mute' }
-        }
-      }
-
-    case 'microphone-unmute':
-      return {
-        ...baseButton,
-        label: 'Unmute Mic',
-        icon: ['fas', 'microphone'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'microphone_unmute' }
-        }
-      }
-
-    // Quick Launch Actions
-    case 'launch-browser':
-      return {
-        ...baseButton,
-        label: 'Browser',
-        icon: ['fas', 'globe'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_url', url: 'https://www.google.com' }
-        }
-      }
-
-    case 'launch-file-explorer':
-      return {
-        ...baseButton,
-        label: 'File Explorer',
-        icon: ['fas', 'folder'],
-        style: { ...baseButton.style, backgroundColor: '#f39c12' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'explorer.exe' }
-        }
-      }
-
-    case 'launch-calculator':
-      return {
-        ...baseButton,
-        label: 'Calculator',
-        icon: ['fas', 'calculator'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'calc.exe' }
-        }
-      }
-
-    case 'launch-notepad':
-      return {
-        ...baseButton,
-        label: 'Notepad',
-        icon: ['fas', 'file-alt'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'notepad.exe' }
-        }
-      }
-
-    case 'launch-cmd':
-      return {
-        ...baseButton,
-        label: 'Command Prompt',
-        icon: ['fas', 'terminal'],
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'cmd.exe' }
-        }
-      }
-
-    case 'launch-powershell':
-      return {
-        ...baseButton,
-        label: 'PowerShell',
-        icon: ['fas', 'terminal'],
-        style: { ...baseButton.style, backgroundColor: '#34495e' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'powershell.exe' }
-        }
-      }
-
-    case 'launch-paint':
-      return {
-        ...baseButton,
-        label: 'Paint',
-        icon: ['fas', 'paint-brush'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'mspaint.exe' }
-        }
-      }
-
-    case 'launch-snipping-tool':
-      return {
-        ...baseButton,
-        label: 'Snipping Tool',
-        icon: ['fas', 'cut'],
-        style: { ...baseButton.style, backgroundColor: '#9b59b6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'SnippingTool.exe' }
-        }
-      }
-
-    // Window Management Actions
-    case 'minimize-window':
-      return {
-        ...baseButton,
-        label: 'Minimize',
-        icon: ['fas', 'window-minimize'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Win', 'Down'] }
-        }
-      }
-
-    case 'maximize-window':
-      return {
-        ...baseButton,
-        label: 'Maximize',
-        icon: ['fas', 'window-maximize'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Win', 'Up'] }
-        }
-      }
-
-    case 'close-window':
-      return {
-        ...baseButton,
-        label: 'Close Window',
-        icon: ['fas', 'window-close'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Alt', 'F4'] }
-        }
-      }
-
-    case 'switch-window':
-      return {
-        ...baseButton,
-        label: 'Switch Window',
-        icon: ['fas', 'window-restore'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Alt', 'Tab'] }
-        }
-      }
-
-    case 'show-desktop':
-      return {
-        ...baseButton,
-        label: 'Show Desktop',
-        icon: ['fas', 'desktop'],
-        style: { ...baseButton.style, backgroundColor: '#7f8c8d' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Win', 'D'] }
-        }
-      }
-
-    default:
-      return baseButton
+  if (action.id === 'custom-icon') {
+    return {
+      ...baseButton,
+      label: 'Custom Icon',
+      icon_type: 'custom',
+      icon: '',
+      media_type: 'image',
+      media_url: '',
+      style: { ...baseButton.style, backgroundColor: '#2c3e50' }
+    }
   }
+
+  return baseButton
+}
+
+function createPreconfiguredButton(action: any, position: { row: number; col: number }): Button {
+  const preset = presetRegistry.find((p) => p.id === action.id)
+  if (preset) {
+    return presetToButton(preset, position)
+  }
+  return createFallbackButton(action, position)
 }
 
 function setScene(index: number) {
@@ -3079,25 +2482,25 @@ function showActionResult(result: ActionResult) {
 .page-slide-left-leave-active,
 .page-slide-right-enter-active,
 .page-slide-right-leave-active {
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease;
+  transition: transform 0.34s var(--ease-io), opacity 0.34s ease;
   will-change: transform;
 }
 
 .page-slide-left-enter-from {
-  transform: translateX(6%);
+  transform: translateX(34%);
   opacity: 0;
 }
 .page-slide-left-leave-to {
-  transform: translateX(-6%);
+  transform: translateX(-34%);
   opacity: 0;
 }
 
 .page-slide-right-enter-from {
-  transform: translateX(-6%);
+  transform: translateX(-34%);
   opacity: 0;
 }
 .page-slide-right-leave-to {
-  transform: translateX(6%);
+  transform: translateX(34%);
   opacity: 0;
 }
 
