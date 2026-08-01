@@ -3,7 +3,6 @@ import type { AxiosInstance, AxiosError } from 'axios'
 
 class ApiClient {
   private client: AxiosInstance
-  private authToken: string | null = null
   private notificationsStore: any = null
 
   constructor() {
@@ -12,13 +11,9 @@ class ApiClient {
       timeout: 30000
     })
 
-    // Request interceptor to add auth token and handle content type
+    // Request interceptor to handle content type
     this.client.interceptors.request.use(
       (config) => {
-        if (this.authToken) {
-          config.headers.Authorization = `Bearer ${this.authToken}`
-        }
-        
         // Set Content-Type to application/json for non-FormData requests
         if (!(config.data instanceof FormData)) {
           config.headers['Content-Type'] = 'application/json'
@@ -77,17 +72,11 @@ class ApiClient {
     // Handle specific status codes
     switch (response.status) {
       case 401:
-        // Token expired or invalid
-        this.setAuthToken(null)
-        localStorage.removeItem('vdock_token')
-        this.notificationsStore.warning(
-          'Session Expired',
-          'Your session has expired. Please log in again.',
-          { duration: 5000 }
+        this.notificationsStore.error(
+          'Unauthorized',
+          'The server rejected this request as unauthenticated.',
+          { duration: 6000 }
         )
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 1000)
         break
 
       case 403:
@@ -184,10 +173,6 @@ class ApiClient {
           { duration: 6000 }
         )
     }
-  }
-
-  setAuthToken(token: string | null) {
-    this.authToken = token
   }
 
   async get(url: string, params?: any) {

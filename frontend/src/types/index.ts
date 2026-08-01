@@ -179,6 +179,7 @@ export interface Scene {
   buttonSize?: number // Size multiplier for scene buttons
   triggeredByApp?: string // App executable name that triggers this scene
   autoCreated?: boolean // Whether this scene was auto-created by app integration
+  isDefault?: boolean // Whether this is the profile's factory-reset-able default scene
   transition_style?: 'light-bar' | 'flip' | 'iris' | 'cascade' | 'glitch' | 'dissolve'
   stagger_order?: 'by-column' | 'by-row' | 'diagonal' | 'random' | 'none'
   overlay_style?: 'none' | 'light-sweep' | 'aurora' | 'plasma' | 'rainbow' | 'fire-wall' | 'scanline' | 'rain'

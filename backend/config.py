@@ -17,7 +17,7 @@ class Config:
     PORT = int(os.environ.get('PORT', 5000))
     
     # Security settings
-    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'True').lower() == 'true'  # Auth enabled by default
+    REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'False').lower() == 'true'  # No login screen in the UI; opt in via env var
     AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD') or 'admin'  # Defaults to admin
     TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
     

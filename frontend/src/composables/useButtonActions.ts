@@ -326,11 +326,10 @@ export function useButtonActions() {
         })
       }
     } else {
-      dashboardStore.updateButton(button.id, button).then(() => {
-        showActionResult({
-          success: true,
-          message: `Button saved`
-        })
+      dashboardStore.updateButton(button.id, button)
+      showActionResult({
+        success: true,
+        message: `Button saved`
       })
     }
     editingButton.value = null

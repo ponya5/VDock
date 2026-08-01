@@ -2,6 +2,30 @@
   <div class="settings-view">
     <header class="settings-header">
       <h1>Settings</h1>
+      <div class="settings-search">
+        <FontAwesomeIcon :icon="['fas', 'search']" class="settings-search-icon" />
+        <input
+          v-model="settingsSearch"
+          type="text"
+          class="settings-search-input"
+          placeholder="Find a setting..."
+          @keydown.esc="settingsSearch = ''"
+        />
+        <div v-if="settingsSearch && searchMatches.length > 0" class="settings-search-results">
+          <button
+            v-for="match in searchMatches"
+            :key="match.tabId + (match.subTab || '')"
+            class="settings-search-result"
+            @click="jumpToSearchResult(match)"
+          >
+            <FontAwesomeIcon :icon="match.icon" />
+            <span>{{ match.label }}</span>
+          </button>
+        </div>
+        <div v-else-if="settingsSearch" class="settings-search-results">
+          <div class="settings-search-empty">No matching settings</div>
+        </div>
+      </div>
       <button class="btn btn-secondary" @click="router.push('/')">
         <FontAwesomeIcon :icon="['fas', 'arrow-left']" /> Back
       </button>
@@ -246,32 +270,9 @@
         <div v-if="activeTab === 'server'" class="tab-content">
           <div class="tab-page-header">
             <h2>Server Configuration</h2>
-            <p>Manage authentication, startup, and connection settings.</p>
+            <p>Manage startup and connection settings.</p>
           </div>
           <div class="settings-grid">
-            <section class="settings-section card">
-              <h2>Authentication</h2>
-              <div class="toggle-row">
-                <div>
-                  <label class="toggle-row-label">Enable Authentication</label>
-                  <p class="form-help">Require password to access the application</p>
-                </div>
-                <label class="toggle-switch"><input v-model="settings.authEnabled" type="checkbox" @change="handleAuthToggle" /><span class="toggle-slider"></span></label>
-              </div>
-              <div v-if="settings.authEnabled" class="instruction-box">
-                <h4><FontAwesomeIcon :icon="['fas', 'key']" /> Password Configuration</h4>
-                <ol>
-                  <li>Open <code>backend/.env</code> in a text editor</li>
-                  <li>Set <code>AUTH_PASSWORD=your-password</code></li>
-                  <li>Save and restart VDock</li>
-                </ol>
-                <p class="security-note">
-                  <FontAwesomeIcon :icon="['fas', 'shield-alt']" />
-                  Use a strong password with 12+ characters.
-                </p>
-              </div>
-            </section>
-
             <section class="settings-section card">
               <h2>Startup</h2>
               <div class="toggle-row">
@@ -294,19 +295,14 @@
 
             <section class="settings-section card">
               <h2>Connection</h2>
-              <div class="form-group">
-                <label>Server Host</label>
-                <input v-model="serverHost" type="text" class="input" placeholder="localhost" @change="updateServerConfig" />
-              </div>
-              <div class="form-group">
-                <label>Server Port</label>
-                <input v-model.number="serverPort" type="number" class="input" min="1024" max="65535" placeholder="5000" @change="updateServerConfig" />
-              </div>
               <div v-if="serverConfig" class="server-info">
                 <div class="info-row"><span class="info-label">Host</span><span class="info-value">{{ serverConfig.host }}</span></div>
                 <div class="info-row"><span class="info-label">Port</span><span class="info-value">{{ serverConfig.port }}</span></div>
                 <div class="info-row"><span class="info-label">Auth</span><span class="info-value">{{ serverConfig.require_auth ? 'Enabled' : 'Disabled' }}</span></div>
               </div>
+              <p class="form-help mt-md">
+                Host and port are set via <code>HOST</code>/<code>PORT</code> environment variables in <code>backend/.env</code> and require restarting VDock to change &mdash; they can't be changed live from here.
+              </p>
             </section>
           </div>
         </div>
@@ -315,9 +311,26 @@
         <div v-if="activeTab === 'integration'" class="tab-content">
           <div class="tab-page-header">
             <h2>App Integration</h2>
-            <p>Automatically switch scenes when monitored applications become active.</p>
+            <p>Widget data sources and automatic scene switching for monitored applications.</p>
           </div>
           <div class="settings-grid">
+            <section class="settings-section card">
+              <h2>Weather Widget Location</h2>
+              <div class="form-group">
+                <label>Location Source</label>
+                <select v-model="settings.weatherLocationMode" class="select">
+                  <option value="auto">Use my current location</option>
+                  <option value="manual">Set a city manually</option>
+                </select>
+              </div>
+              <div v-if="settings.weatherLocationMode === 'manual'" class="form-group" style="margin-top: var(--spacing-sm)">
+                <label>City</label>
+                <input v-model="settings.weatherManualCity" type="text" class="input" placeholder="e.g. Tel Aviv" @keyup.enter="refreshWeatherWidget" />
+                <p class="form-help">Used to fetch weather for the dashboard widget</p>
+              </div>
+              <p v-else class="form-help">Requires location permission in your browser. If denied, falls back to the manual city above if set.</p>
+            </section>
+
             <section class="settings-section card">
               <h2>Auto Scene Switching</h2>
               <div class="toggle-row">
@@ -409,6 +422,14 @@
         <div v-if="activeTab === 'about'" class="tab-content">
           <div class="settings-grid">
             <section class="settings-section card">
+              <h2>Help</h2>
+              <p class="form-help mb-md">New to VDock? Walk through the quick start guide.</p>
+              <button class="btn btn-primary" @click="settingsStore.showHelpGuide = true">
+                <FontAwesomeIcon :icon="['fas', 'question-circle']" /> Open Help &amp; Guide
+              </button>
+            </section>
+
+            <section class="settings-section card">
               <h2>About VDock</h2>
               <div class="about-info">
                 <h3>VDock</h3>
@@ -452,7 +473,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
@@ -466,12 +487,14 @@ import AppShortcutManager from '@/components/AppShortcutManager.vue'
 import { hasShortcuts, getTopShortcutsForApp, type AppShortcut } from '@/data/appShortcuts'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
+import { useWeather } from '@/composables/useWeather'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const profilesStore = useProfilesStore()
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
+const { refresh: refreshWeatherWidget } = useWeather()
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
@@ -587,8 +610,6 @@ const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
 const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
 const startWithWindowsStatus = ref<{success: boolean, message: string} | null>(null)
-const serverHost = ref('localhost')
-const serverPort = ref(5000)
 
 const availableScenes = computed(() => {
   const profile = profilesStore.currentProfile
@@ -600,16 +621,50 @@ const tabs = [
   { id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'] },
   { id: 'templates', name: 'Templates', icon: ['fas', 'layer-group'] },
   { id: 'server', name: 'Server', icon: ['fas', 'server'] },
-  { id: 'integration', name: 'Integration', icon: ['fas', 'plug'] },
+  { id: 'integration', name: 'Widgets & Integration', icon: ['fas', 'plug'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
 
-function clearRecentActions() { if (confirm('Clear all recent actions?')) settingsStore.clearRecentActions() }
-
-async function handleAuthToggle() {
-  const success = await settingsStore.updateAuthSetting(settings.value.authEnabled)
-  if (!success) { settings.value.authEnabled = !settings.value.authEnabled; alert('Failed to update authentication setting') }
+interface SettingsSearchEntry {
+  label: string
+  keywords: string
+  tabId: string
+  subTab?: 'display' | 'background'
+  icon: [string, string]
 }
+
+const settingsSearchIndex: SettingsSearchEntry[] = [
+  { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'display', icon: ['fas', 'hand-pointer'] },
+  { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'display', icon: ['fas', 'th-large'] },
+  { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'display', icon: ['fas', 'bell'] },
+  { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'display', icon: ['fas', 'columns'] },
+  { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
+  { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
+  { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
+  { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
+  { label: 'Startup', keywords: 'startup boot autostart', tabId: 'server', icon: ['fas', 'power-off'] },
+  { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'integration', icon: ['fas', 'cloud-sun'] },
+  { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
+  { label: 'Running Applications', keywords: 'running apps processes', tabId: 'integration', icon: ['fas', 'desktop'] },
+  { label: 'About VDock', keywords: 'version about info', tabId: 'about', icon: ['fas', 'info-circle'] }
+]
+
+const settingsSearch = ref('')
+const searchMatches = computed(() => {
+  const query = settingsSearch.value.trim().toLowerCase()
+  if (!query) return []
+  return settingsSearchIndex.filter(
+    (entry) => entry.label.toLowerCase().includes(query) || entry.keywords.includes(query)
+  )
+})
+
+function jumpToSearchResult(match: SettingsSearchEntry) {
+  activeTab.value = match.tabId
+  if (match.subTab) appearanceSubTab.value = match.subTab
+  settingsSearch.value = ''
+}
+
+function clearRecentActions() { if (confirm('Clear all recent actions?')) settingsStore.clearRecentActions() }
 
 async function handleStartOnBootToggle() {
   try {
@@ -644,11 +699,6 @@ async function handleStartWithWindowsToggle() {
 }
 
 function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support' }
-
-function updateServerConfig() {
-  localStorage.setItem('vdock_server_host', serverHost.value)
-  localStorage.setItem('vdock_server_port', serverPort.value.toString())
-}
 
 async function refreshRunningApps() {
   loadingApps.value = true
@@ -727,7 +777,10 @@ function handleAddShortcut(shortcut: AppShortcut) {
   alert(`Added "${shortcut.name}" to scene!`)
 }
 
-function saveAppIntegrations() { localStorage.setItem('appIntegrations', JSON.stringify(appIntegrations.value)) }
+function saveAppIntegrations() {
+  localStorage.setItem('appIntegrations', JSON.stringify(appIntegrations.value))
+  autoSceneSwitcher.updateIntegrations(appIntegrations.value)
+}
 
 function loadAppIntegrations() {
   const stored = localStorage.getItem('appIntegrations')
@@ -738,13 +791,15 @@ function loadAppIntegrations() {
   if (autoSwitchStored) autoSwitchingEnabled.value = autoSwitchStored === 'true'
 }
 
+// Actual scene-switching callback is owned by App.vue for the app's whole
+// lifetime; this only flips the enabled state the singleton acts on.
 async function toggleAutoSwitching() {
   const newValue = !autoSwitchingEnabled.value
   try {
     if (newValue) {
       autoSceneSwitcher.initialize(appIntegrations.value)
       const success = await autoSceneSwitcher.enable()
-      if (success) { autoSwitchingEnabled.value = true; localStorage.setItem('autoSceneSwitching', 'true'); autoSceneSwitcher.onSceneSwitch(handleAutoSceneSwitch) }
+      if (success) { autoSwitchingEnabled.value = true; localStorage.setItem('autoSceneSwitching', 'true') }
       else alert('Failed to enable auto scene switching')
     } else {
       const success = await autoSceneSwitcher.disable()
@@ -754,29 +809,11 @@ async function toggleAutoSwitching() {
   } catch { alert('Error toggling auto scene switching') }
 }
 
-function handleAutoSceneSwitch(sceneId: string, _appExe: string) {
-  const profile = dashboardStore.currentProfile
-  if (!profile) return
-  const idx = profile.scenes.findIndex(s => s.id === sceneId)
-  if (idx >= 0) dashboardStore.setScene(idx)
-}
-
 onMounted(async () => {
   settingsStore.loadServerConfig()
   loadAppIntegrations()
-  const savedHost = localStorage.getItem('vdock_server_host')
-  const savedPort = localStorage.getItem('vdock_server_port')
-  if (savedHost) serverHost.value = savedHost
-  if (savedPort) serverPort.value = parseInt(savedPort)
   if (activeTab.value === 'integration') await refreshRunningApps()
-  if (autoSwitchingEnabled.value) {
-    autoSceneSwitcher.initialize(appIntegrations.value)
-    await autoSceneSwitcher.enable()
-    autoSceneSwitcher.onSceneSwitch(handleAutoSceneSwitch)
-  }
 })
-
-onUnmounted(() => { if (autoSwitchingEnabled.value) autoSceneSwitcher.offSceneSwitch(handleAutoSceneSwitch) })
 </script>
 
 <style scoped>
@@ -805,6 +842,80 @@ onUnmounted(() => { if (autoSwitchingEnabled.value) autoSceneSwitcher.offSceneSw
   font-size: clamp(16px, 1.2vw + 12px, 24px);
   font-weight: 600;
   margin: 0;
+}
+
+.settings-search {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+  margin: 0 var(--spacing-lg);
+}
+
+.settings-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.settings-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px 8px 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border, var(--color-border));
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.settings-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #3498db);
+}
+
+.settings-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--glass-bg, rgba(20, 20, 25, 0.95));
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  border: 1px solid var(--glass-border, var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow, var(--shadow-md));
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.settings-search-result {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-search-result:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.settings-search-empty {
+  padding: 10px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
 }
 
 .settings-layout-content {

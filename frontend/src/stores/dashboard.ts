@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { Profile, Page, Button, Scene } from '@/types'
 import apiClient from '@/api/client'
 import { useSettingsStore } from './settings'
+import { createDefaultScene } from '@/utils/defaultProfile'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const currentProfile = ref<Profile | null>(null)
@@ -29,13 +30,47 @@ export const useDashboardStore = defineStore('dashboard', () => {
   function setProfile(profile: Profile) {
     // Migrate old profiles from pages to scenes structure
     const migratedProfile = migrateProfileToScenes(profile)
-    
+
+    // Every profile must have exactly one isDefault scene. Older/existing profiles
+    // won't have one yet — append the factory default scene. Appending (rather than
+    // prepending) keeps scene index 0 pointing at whatever scene was already first,
+    // so migration never silently swaps which scene an existing user lands on.
+    if (!migratedProfile.scenes.some((s) => s.isDefault)) {
+      migratedProfile.scenes = [...migratedProfile.scenes, createDefaultScene()]
+    }
+
     currentProfile.value = migratedProfile
     currentSceneIndex.value = 0
     currentPageIndex.value = 0
-    // Reset history when loading a new profile
+    // Reset history when loading a new profile. Loading never writes — the
+    // migration above is in-memory only and rides along with the next real edit's
+    // auto-save, same as migrateProfileToScenes.
     history.value = [JSON.parse(JSON.stringify(migratedProfile))]
     historyIndex.value = 0
+  }
+
+  /**
+   * Resets the given scene back to its factory layout (see `createDefaultScene`).
+   * No-ops if `sceneId` doesn't refer to the profile's default scene — this must
+   * never be able to wipe a user's custom scene.
+   */
+  function resetScene(sceneId: string) {
+    if (!currentProfile.value) return
+    const scene = currentProfile.value.scenes.find((s) => s.id === sceneId)
+    if (!scene || !scene.isDefault) return
+
+    const fresh = createDefaultScene()
+    scene.name = fresh.name
+    scene.icon = fresh.icon
+    scene.color = fresh.color
+    scene.pages = fresh.pages
+    scene.buttonSize = fresh.buttonSize
+    scene.overlay_style = fresh.overlay_style
+    scene.transition_style = fresh.transition_style
+    scene.stagger_order = fresh.stagger_order
+
+    addToHistory()
+    saveProfile()
   }
 
   function migrateProfileToScenes(profile: Profile): Profile {
@@ -444,6 +479,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     addScene,
     removeScene,
     updateScene,
+    resetScene,
     setPage,
     nextPage,
     previousPage,

@@ -55,7 +55,7 @@
 
         <div class="header-right">
           <button
-            class="btn-hide-header"
+            class="btn-hide-header btn-12 animate-tap"
             @click="settingsStore.showHeader = false"
             title="Hide header"
             aria-label="Hide header"
@@ -63,9 +63,6 @@
             <div>
               <span><FontAwesomeIcon :icon="['fas', 'eye-slash']" /> Hide</span>
             </div>
-          </button>
-          <button class="btn-12 animate-tap" @click="emit('showHelp')" title="Help & Guide">
-            <span><FontAwesomeIcon :icon="['fas', 'question-circle']" /> Help</span>
           </button>
           <div class="header-right-separator"></div>
           <button class="btn-12 animate-tap" @click="emit('navigateProfiles')" title="Profiles">
@@ -107,7 +104,6 @@ interface Props {
 defineProps<Props>()
 const emit = defineEmits<{
   toggleEdit: []
-  showHelp: []
   navigateSettings: []
   navigateProfiles: []
   setScene: [index: number]
@@ -180,5 +176,162 @@ useSwipe(triggerRef, {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Thin header shell (spec 4.7) */
+.deck-header {
+  position: relative;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.4rem 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Replace the dated glossy .btn-12 look with the app's dark-glass language
+   (matches .pill-container in GlassPillSceneSelector.vue) — scoped to this
+   header only, .btn-12 isn't used anywhere else. */
+.header-right .btn-12 {
+  padding: 0.5rem 0.9rem;
+  min-height: 36px;
+  background: var(--glass-bg, rgba(0, 0, 0, 0.25));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  text-shadow: none;
+  box-shadow: none;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header-right .btn-12:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.header-right .btn-12:active:not(:disabled),
+.header-right .btn-12:focus:not(:disabled) {
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.4);
+}
+
+.header-right .btn-12.edit-active {
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.35), rgba(52, 152, 219, 0.7));
+  border-color: rgba(52, 152, 219, 0.6);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(52, 152, 219, 0.45);
+}
+
+.header-background {
+  position: absolute;
+  inset: 0;
+  background: var(--glass-bg, rgba(0, 0, 0, 0.25));
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 0;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.profile-avatar-container {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.profile-avatar,
+.profile-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+
+.profile-avatar {
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.avatar-status-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2ecc71;
+  border: 2px solid rgba(0, 0, 0, 0.4);
+}
+
+.profile-title-inline {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.header-right-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .profile-title-inline {
+    display: none;
+  }
+  .header-center {
+    display: none;
+  }
 }
 </style>

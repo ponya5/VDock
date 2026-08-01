@@ -121,11 +121,18 @@ const startX = ref(0)
 const startWidth = ref(0)
 const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
 const isNarrow = ref(typeof window !== 'undefined' ? window.innerWidth < 480 : false)
+// 7" 1024x600 touch screen (spec 2): cap effective sidebar width so it
+// doesn't eat the grid's horizontal space. Computed in JS (not CSS) so
+// gridStyle's cell-height math below stays in sync with the real width.
+const isCompactScreen = ref(
+  typeof window !== 'undefined' ? window.innerWidth <= 1100 || window.innerHeight <= 650 : false
+)
 const sidebarOpen = ref(false)
 
 const handleWindowResize = () => {
   isMobile.value = window.innerWidth < 768
   isNarrow.value = window.innerWidth < 480
+  isCompactScreen.value = window.innerWidth <= 1100 || window.innerHeight <= 650
 }
 
 onMounted(() => {
@@ -140,15 +147,21 @@ onUnmounted(() => {
   }
 })
 
-// Use sidebar width from settings
+// Use sidebar width from settings, capped on compact/7" screens
+const effectiveSidebarWidth = computed(() => {
+  return isCompactScreen.value
+    ? Math.min(settingsStore.dockedSidebarWidth, 100)
+    : settingsStore.dockedSidebarWidth
+})
+
 const sidebarWidth = computed(() => {
-  return `${settingsStore.dockedSidebarWidth}px`
+  return `${effectiveSidebarWidth.value}px`
 })
 
 const gridStyle = computed(() => {
   // Calculate cell height based on sidebar width
   // Make buttons roughly square based on the sidebar width
-  const cellWidth = settingsStore.dockedSidebarWidth - 32 // Subtract padding
+  const cellWidth = effectiveSidebarWidth.value - 32 // Subtract padding
   const baseCellHeight = cellWidth * props.buttonSize
 
   return {

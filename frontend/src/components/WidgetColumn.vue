@@ -10,25 +10,31 @@
     <section class="widget-card widget-weather">
       <div class="weather-header">
         <span class="weather-title">Weather</span>
-        <span class="weather-location">London, UK</span>
+        <span class="weather-location">{{ weather?.location || (weatherLoading ? 'Locating...' : '—') }}</span>
       </div>
-      <div class="weather-body">
-        <FontAwesomeIcon :icon="['fas', 'cloud-sun']" class="weather-large-icon" />
-        <div class="weather-info">
-          <span class="weather-temp">21°C</span>
-          <span class="weather-desc">Partly Cloudy</span>
-        </div>
+      <div v-if="weatherError" class="weather-error">
+        <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+        <span>{{ weatherError }}</span>
       </div>
-      <div class="weather-details">
-        <div class="detail-item">
-          <FontAwesomeIcon :icon="['fas', 'tint']" />
-          <span>64%</span>
+      <template v-else>
+        <div class="weather-body">
+          <FontAwesomeIcon :icon="weather?.icon || ['fas', 'cloud-sun']" class="weather-large-icon" />
+          <div class="weather-info">
+            <span class="weather-temp">{{ weather ? `${weather.temperature}°C` : '--°C' }}</span>
+            <span class="weather-desc">{{ weather?.description || (weatherLoading ? 'Loading...' : '') }}</span>
+          </div>
         </div>
-        <div class="detail-item">
-          <FontAwesomeIcon :icon="['fas', 'wind']" />
-          <span>12 km/h</span>
+        <div class="weather-details">
+          <div class="detail-item">
+            <FontAwesomeIcon :icon="['fas', 'tint']" />
+            <span>{{ weather ? `${weather.humidity}%` : '--%' }}</span>
+          </div>
+          <div class="detail-item">
+            <FontAwesomeIcon :icon="['fas', 'wind']" />
+            <span>{{ weather ? `${weather.windSpeed} km/h` : '-- km/h' }}</span>
+          </div>
         </div>
-      </div>
+      </template>
     </section>
 
     <!-- Calendar & Schedule Widget -->
@@ -53,9 +59,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useWeather } from '@/composables/useWeather'
 
 const time = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
+
+const { weather, loading: weatherLoading, error: weatherError, start: startWeather, stop: stopWeather } = useWeather()
 
 interface EventItem {
   id: number
@@ -90,10 +99,12 @@ onMounted(() => {
   timer = setInterval(() => {
     time.value = new Date()
   }, 1000)
+  startWeather()
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  stopWeather()
 })
 </script>
 
@@ -205,6 +216,15 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
 }
 
+.weather-error {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.75rem;
+  color: #f39c12;
+  padding: var(--spacing-xs) 0;
+}
+
 .weather-details {
   display: flex;
   justify-content: space-between;
@@ -279,5 +299,28 @@ onUnmounted(() => {
 .event-time {
   font-size: 0.6rem;
   color: var(--color-text-secondary);
+}
+
+/* 7" 1024x600 touch screen (spec 2): vertical space is scarce, horizontal
+   is at a premium once the grid + docked sidebar are on screen too. */
+@media (max-width: 1100px), (max-height: 650px) {
+  .widget-column {
+    width: 140px;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs);
+  }
+
+  .widget-card {
+    padding: var(--spacing-xs);
+  }
+
+  .clock-time {
+    font-size: 1.3rem;
+  }
+
+  .schedule-events {
+    max-height: 90px;
+    overflow-y: auto;
+  }
 }
 </style>

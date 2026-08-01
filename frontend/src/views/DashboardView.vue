@@ -12,8 +12,7 @@
       :current-scene-index="currentSceneIndex"
       :current-page-index="currentPageIndex"
       :is-edit-mode="isEditMode"
-      @toggle-edit="toggleEditMode"
-      @show-help="showHelp = true"
+      @toggle-edit="dashboardStore.toggleEditMode"
       @navigate-settings="router.push('/settings')"
       @navigate-profiles="router.push('/profiles')"
       @set-scene="setScene"
@@ -47,10 +46,8 @@
       />
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
-        <Transition :name="pageTransitionName" mode="out-in">
+        <template v-if="currentPage">
           <DeckGrid
-            v-if="currentPage"
-            :key="currentPageIndex"
             :page="currentPage"
             :is-edit-mode="isEditMode"
             :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
@@ -73,7 +70,7 @@
             @double-tap="handleButtonClick"
             @exit-edit-mode="dashboardStore.toggleEditMode"
           />
-        </Transition>
+        </template>
 
         <div v-if="!currentPage" class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
@@ -153,6 +150,7 @@
       :is-editing="isEditingExistingScene"
       @save="handleSceneSave"
       @delete="handleSceneDelete"
+      @reset="handleSceneReset"
       @close="editingScene = null"
     />
 
@@ -160,9 +158,6 @@
     <div v-if="actionResult && settingsStore.toastLevel !== 'off' && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
-
-    <!-- Help Modal -->
-    <UserGuideModal v-if="showHelp" @close="showHelp = false" />
   </div>
 </template>
 
@@ -176,7 +171,6 @@ import { useNotificationsStore } from '@/stores/notifications'
 import type { Button, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
-import UserGuideModal from '@/components/UserGuideModal.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
 import DeckHeader from '@/components/DeckHeader.vue'
@@ -189,9 +183,7 @@ import FloatingPathsBackground from '@/components/backgrounds/FloatingPathsBackg
 import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBackgroundV2.vue'
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { createDemoProfile } from '@/utils/demoProfile'
-import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
-import type { AppIntegration } from '@/types'
+import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useButtonActions } from '@/composables/useButtonActions'
 
 const router = useRouter()
@@ -201,8 +193,6 @@ const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 
 const editingScene = ref<Scene | null>(null)
-const showHelp = ref(false)
-const pageTransitionName = ref('page-slide-left')
 
 // Composables logic
 const {
@@ -603,17 +593,14 @@ function editScene(scene: Scene) {
 }
 
 function setPage(index: number) {
-  pageTransitionName.value = index > currentPageIndex.value ? 'page-slide-left' : 'page-slide-right'
   dashboardStore.setPage(index)
 }
 
 function nextPage() {
-  pageTransitionName.value = 'page-slide-left'
   dashboardStore.nextPage()
 }
 
 function previousPage() {
-  pageTransitionName.value = 'page-slide-right'
   dashboardStore.previousPage()
 }
 
@@ -629,6 +616,12 @@ function handleSceneSave(scene: Scene) {
 function handleSceneDelete(sceneId: string) {
   dashboardStore.removeScene(sceneId)
   editingScene.value = null
+}
+
+function handleSceneReset(sceneId: string) {
+  dashboardStore.resetScene(sceneId)
+  editingScene.value = null
+  notificationsStore.success('Scene Reset', 'Scene restored to its default layout.')
 }
 
 function deleteCurrentPage() {
@@ -667,32 +660,27 @@ async function handleSaveProfileFromEditor() {
   await saveProfile()
 }
 
-async function createDemoProfileForFirstTimeUser() {
+async function createDefaultProfileForFirstTimeUser() {
   try {
-    const demoProfile = createDemoProfile()
+    const defaultProfile = createDefaultProfile()
     const createdProfile = await profilesStore.createProfile({
-      name: demoProfile.name,
-      description: demoProfile.description,
-      theme: demoProfile.theme
+      name: defaultProfile.name,
+      description: defaultProfile.description,
+      theme: defaultProfile.theme
     })
-    
+
     if (createdProfile) {
       const updatedProfile = await profilesStore.updateProfile(createdProfile.id, {
-        ...demoProfile,
+        ...defaultProfile,
         id: createdProfile.id
       })
-      
+
       if (updatedProfile) {
         dashboardStore.setProfile(updatedProfile)
-        notificationsStore.success(
-          'Welcome to VDock!',
-          'We\'ve created a demo profile to get you started. Explore the buttons to see what VDock can do!',
-          { duration: 8000 }
-        )
       }
     }
   } catch (error) {
-    console.error('Error creating demo profile:', error)
+    console.error('Error creating default profile:', error)
   }
 }
 
@@ -711,41 +699,31 @@ function previousScene() {
 onMounted(async () => {
   // Load last used profile or first available profile
   const lastProfileId = localStorage.getItem('vdock_last_profile')
+  let profileLoaded = false
   if (lastProfileId) {
     const profile = await profilesStore.getProfile(lastProfileId)
     if (profile) {
       dashboardStore.setProfile(profile)
+      profileLoaded = true
     }
-  } else {
+  }
+  if (!profileLoaded) {
     await profilesStore.loadProfiles()
     if (profilesStore.profiles.length > 0) {
       const profile = await profilesStore.getProfile(profilesStore.profiles[0].id)
       if (profile) {
         dashboardStore.setProfile(profile)
+        profileLoaded = true
       }
-    } else {
-      await createDemoProfileForFirstTimeUser()
     }
   }
-  
-  // Wire auto scene switching
-  const storedIntegrations = localStorage.getItem('appIntegrations')
-  const storedAutoSwitch = localStorage.getItem('autoSceneSwitching')
-  if (storedAutoSwitch === 'true' && storedIntegrations) {
-    try {
-      const integrations: AppIntegration[] = JSON.parse(storedIntegrations)
-      autoSceneSwitcher.initialize(integrations)
-      autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
-        const profile = dashboardStore.currentProfile
-        if (!profile) return
-        const idx = profile.scenes.findIndex(s => s.id === sceneId)
-        if (idx >= 0) dashboardStore.setScene(idx)
-      })
-      autoSceneSwitcher.enable()
-    } catch {
-      // ignore
-    }
+  if (!profileLoaded) {
+    await createDefaultProfileForFirstTimeUser()
   }
+
+  // Auto scene switching is bootstrapped once, globally, in App.vue —
+  // registering it here too would leak a duplicate listener on every
+  // Dashboard mount (see App.vue for the single owner).
 
   // Keyboard shortcut listener
   const handleKeyDown = (event: KeyboardEvent) => {

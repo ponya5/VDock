@@ -6,13 +6,10 @@ class SocketClient {
   private actionCallbacks: Map<number, (result: ActionResult) => void> = new Map()
   private actionIdCounter = 0
 
-  connect(token: string) {
+  connect() {
     const url = import.meta.env.VITE_WS_URL || 'http://127.0.0.1:5000'
-    
+
     this.socket = io(url, {
-      auth: {
-        token
-      },
       transports: ['websocket', 'polling']
     })
 

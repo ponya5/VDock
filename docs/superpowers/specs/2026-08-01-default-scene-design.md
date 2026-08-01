@@ -44,10 +44,23 @@ reused by first-run bootstrap, migration, and reset.
 ### 3. Migration for existing profiles
 
 In the dashboard store's `setProfile(profile)` (`frontend/src/stores/dashboard.ts`):
-if no scene in `profile.scenes` has `isDefault: true`, insert one (via
-`createDefaultScene()`) at the front of the array, then persist through the normal
-auto-save path. This is idempotent — once a profile has a flagged scene, reloading it
-(e.g. switching profiles and back) does not insert another.
+if no scene in `profile.scenes` has `isDefault: true`, append one (via
+`createDefaultScene()`) to the end of the array. This is idempotent — once a profile
+has a flagged scene, reloading it (e.g. switching profiles and back) does not insert
+another.
+
+The scene is appended, not prepended: `setProfile` always resets
+`currentSceneIndex` to `0`, so inserting at the front would silently change which
+scene an existing user lands on every time they open the app (their real first scene
+would shift to index 1). Appending leaves index 0 pointing at whatever was already
+first.
+
+The migration is in-memory only — `setProfile` does not call `saveProfile()`. Loading
+a profile must never trigger a write (existing property test, "loading a profile
+never triggers a write"); this matches how the existing `migrateProfileToScenes` step
+already behaves. The inserted default scene is persisted the next time the profile is
+saved for any other reason (e.g. the user's next edit), same as any other in-memory
+migration.
 
 **Known tradeoff:** profiles that went through the *old*, unflagged bootstrap already
 have a manually-created "Home" scene. Migration can't detect that scene is "the same

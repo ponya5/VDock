@@ -180,9 +180,16 @@
       </div>
 
       <div class="modal-footer">
-        <button 
-          v-if="isEditing" 
-          class="btn btn-danger" 
+        <button
+          v-if="isEditing && editedScene.isDefault"
+          class="btn btn-secondary"
+          @click="resetScene"
+        >
+          <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset to Default
+        </button>
+        <button
+          v-else-if="isEditing"
+          class="btn btn-danger"
           @click="deleteScene"
         >
           <FontAwesomeIcon :icon="['fas', 'trash']" /> Delete Scene
@@ -220,6 +227,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   save: [scene: Scene]
   delete: [sceneId: string]
+  reset: [sceneId: string]
   close: []
 }>()
 
@@ -344,6 +352,12 @@ function handleSave() {
 function deleteScene() {
   if (confirm(`Are you sure you want to delete "${editedScene.value.name}"? This action cannot be undone.`)) {
     emit('delete', editedScene.value.id)
+  }
+}
+
+function resetScene() {
+  if (confirm(`Reset "${editedScene.value.name}" back to its default layout? Your edits to this scene will be lost.`)) {
+    emit('reset', editedScene.value.id)
   }
 }
 

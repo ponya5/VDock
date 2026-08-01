@@ -48,15 +48,19 @@ export const useSettingsStore = defineStore('settings', () => {
   const defaultGridRows = ref(3)
   const defaultGridCols = ref(3)
 
-  // Authentication settings
-  const authEnabled = ref(false)
-
   // System settings
   const startOnBoot = ref(false)
 
   // Search settings
   const recentActions = ref<string[]>([])
   const maxRecentActions = 10
+
+  // Weather widget settings
+  const weatherLocationMode = ref<'auto' | 'manual'>('auto')
+  const weatherManualCity = ref('')
+
+  // Help guide modal (transient UI state, not persisted, shared across routes)
+  const showHelpGuide = ref(false)
 
   // Load settings from localStorage
   function loadSettings() {
@@ -88,9 +92,10 @@ export const useSettingsStore = defineStore('settings', () => {
         minimumTouchTargetSize.value = settings.minimumTouchTargetSize || 44
         defaultGridRows.value = settings.defaultGridRows || 3
         defaultGridCols.value = settings.defaultGridCols || 3
-        authEnabled.value = settings.authEnabled || false
         startOnBoot.value = settings.startOnBoot || false
         recentActions.value = settings.recentActions || []
+        weatherLocationMode.value = settings.weatherLocationMode || 'auto'
+        weatherManualCity.value = settings.weatherManualCity || ''
       } catch (err) {
         console.error('Failed to load settings:', err)
       }
@@ -117,16 +122,17 @@ export const useSettingsStore = defineStore('settings', () => {
       minimumTouchTargetSize: minimumTouchTargetSize.value,
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
-      authEnabled: authEnabled.value,
       startOnBoot: startOnBoot.value,
-      recentActions: recentActions.value
+      recentActions: recentActions.value,
+      weatherLocationMode: weatherLocationMode.value,
+      weatherManualCity: weatherManualCity.value
     }
     localStorage.setItem('vdock_settings', JSON.stringify(settings))
   }
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, authEnabled, recentActions],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, recentActions, weatherLocationMode, weatherManualCity],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -179,8 +185,6 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       const response = await apiClient.get('/config')
       serverConfig.value = response.data.config
-      // Sync authEnabled with server config
-      authEnabled.value = response.data.config.require_auth
     } catch (err) {
       console.error('Failed to load server config:', err)
     }
@@ -220,20 +224,6 @@ export const useSettingsStore = defineStore('settings', () => {
     recentActions.value = []
   }
 
-  async function updateAuthSetting(enabled: boolean): Promise<boolean> {
-    try {
-      const success = await updateServerConfig({ require_auth: enabled })
-      if (success) {
-        authEnabled.value = enabled
-        return true
-      }
-      return false
-    } catch (err) {
-      console.error('Failed to update auth setting:', err)
-      return false
-    }
-  }
-
   // Initialize
   loadSettings()
   applyTouchModeStyles()
@@ -263,16 +253,17 @@ export const useSettingsStore = defineStore('settings', () => {
     touchModeMultiplier,
     defaultGridRows,
     defaultGridCols,
-    authEnabled,
     startOnBoot,
     recentActions,
+    weatherLocationMode,
+    weatherManualCity,
+    showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,
     loadServerConfig,
     updateServerConfig,
     addRecentAction,
     clearRecentActions,
-    updateAuthSetting,
     saveSettings,
     loadSettings
   }
