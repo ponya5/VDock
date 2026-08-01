@@ -15,7 +15,6 @@
     "@fortawesome/vue-fontawesome": "^3.0.5",
     "@vueuse/core": "^10.7.0",
     "axios": "^1.6.2",
-    "fuse.js": "^7.0.0",
     "pinia": "^2.1.7",
     "socket.io-client": "^4.6.1",
     "sortablejs": "^1.15.1",

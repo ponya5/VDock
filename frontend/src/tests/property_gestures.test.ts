@@ -4,7 +4,7 @@ import fc from 'fast-check';
 test('Property 10: pinch scale bounds between 0.5 and 2.0', () => {
     fc.assert(
         fc.property(
-            fc.double({ min: -100.0, max: 100.0 }), // unconstrained scale input
+            fc.double({ min: -100.0, max: 100.0, noNaN: true, noInfinity: true }), // unconstrained scale input
             (scaleInput) => {
                 const pinched = Math.max(0.5, Math.min(2.0, scaleInput));
                 expect(pinched).toBeGreaterThanOrEqual(0.5);

@@ -5,82 +5,29 @@
     <FloatingPathsBackgroundV2 v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths-v2'" />
     <BeamsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-beams-background'" />
     
-    <header v-if="settingsStore.showHeader" class="deck-header dashboard-header">
-      <div class="header-background"></div>
-      <div class="header-content">
-        <div class="header-left">
-          <div class="profile-avatar-container">
-            <img 
-              v-if="currentProfile?.avatar" 
-              :src="currentProfile.avatar" 
-              :alt="currentProfile.name"
-              class="profile-avatar enhanced-avatar"
-            />
-            <div v-else class="profile-avatar-placeholder enhanced-avatar">
-              <FontAwesomeIcon :icon="['fas', 'user']" />
-            </div>
-            <div class="avatar-status-indicator"></div>
-          </div>
-          <h1 class="profile-title-inline">{{ currentProfile?.name || 'VDock' }}</h1>
-          <SceneNavigation
-            v-if="currentProfile && currentProfile.scenes.length > 0"
-            :scenes="currentProfile.scenes"
-            :current-scene-index="currentSceneIndex"
-            :is-edit-mode="isEditMode"
-            @set-scene="setScene"
-            @add-scene="addScene"
-            @edit-scene="editScene"
-            class="enhanced-scene-nav"
-          />
-        </div>
-
-        <div class="header-center">
-          <PageNavigation
-            v-if="currentScene && currentScene.pages.length > 1"
-            :pages="currentScene.pages"
-            :current-page="currentPageIndex"
-            @previous="previousPage"
-            @next="nextPage"
-            @go-to="setPage"
-            class="enhanced-page-nav"
-          />
-        </div>
-
-        <div class="header-right">
-          <button
-            class="btn-hide-header"
-            @click="settingsStore.showHeader = !settingsStore.showHeader"
-            title="Hide header"
-            aria-label="Hide header"
-          >
-            <div>
-              <span><FontAwesomeIcon :icon="['fas', 'eye-slash']" /> Hide</span>
-            </div>
-          </button>
-          <button class="btn-12" @click="showHelp = true" title="Help & Guide">
-            <span><FontAwesomeIcon :icon="['fas', 'question-circle']" /> Help</span>
-          </button>
-          <div class="header-right-separator"></div>
-          <button class="btn-12" @click="router.push('/profiles')" title="Profiles">
-            <span><FontAwesomeIcon :icon="['fas', 'users']" /> Profiles</span>
-          </button>
-          <button
-            :class="['btn-12', { 'edit-active': isEditMode }]"
-            @click="toggleEditMode"
-            title="Toggle Edit Mode"
-          >
-            <span><FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" /> {{ isEditMode ? 'View' : 'Edit' }}</span>
-          </button>
-          <button class="btn-12" @click="router.push('/settings')" title="Settings">
-            <span><FontAwesomeIcon :icon="['fas', 'cog']" /> Settings</span>
-          </button>
-        </div>
-      </div>
-    </header>
+    <!-- Decomposed Header component -->
+    <DeckHeader
+      :current-profile="currentProfile"
+      :current-scene="currentScene"
+      :current-scene-index="currentSceneIndex"
+      :current-page-index="currentPageIndex"
+      :is-edit-mode="isEditMode"
+      @toggle-edit="toggleEditMode"
+      @show-help="showHelp = true"
+      @navigate-settings="router.push('/settings')"
+      @navigate-profiles="router.push('/profiles')"
+      @set-scene="setScene"
+      @add-scene="addScene"
+      @edit-scene="editScene"
+      @set-page="setPage"
+      @previous-page="previousPage"
+      @next-page="nextPage"
+    />
 
     <main class="deck-main" :style="mainStyle">
       <!-- Docked Sidebar -->
       <DockedSidebar
+        v-slot:default
         v-if="settingsStore.dockedSidebarEnabled && currentPage"
         :docked-buttons="currentProfile?.dockedButtons || []"
         :grid-rows="currentPage.grid_config.rows"
@@ -98,7 +45,6 @@
         @placeholder-click="handleDockedPlaceholderClick"
         @toggle-header="settingsStore.showHeader = !settingsStore.showHeader"
       />
-      
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
         <Transition :name="pageTransitionName" mode="out-in">
@@ -118,25 +64,18 @@
             @swipe-left="nextPage"
             @swipe-right="previousPage"
             @action-drop="handleActionDrop"
-            @placeholder-click="handlePlaceholderClick"
+            @placeholder-click="onPlaceholderClick"
             @placeholder-long-press="handlePlaceholderLongPress"
             @button-move="handleButtonMove"
             @swipe-up="nextScene"
             @swipe-down="previousScene"
             @long-press="handleDeckButtonLongPress"
             @double-tap="handleButtonClick"
+            @exit-edit-mode="dashboardStore.toggleEditMode"
           />
         </Transition>
 
-        <div v-if="currentScene && currentScene.pages.length > 1" class="page-indicator-wrapper">
-          <PageIndicator 
-            :total="currentScene.pages.length" 
-            :current="currentPageIndex" 
-            @select="setPage" 
-          />
-        </div>
-
-        <div v-else class="no-profile">
+        <div v-if="!currentPage" class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
           <p>No profile loaded</p>
           <button class="btn btn-primary" @click="router.push('/profiles')">
@@ -145,141 +84,57 @@
         </div>
       </div>
 
-      <!-- Edit Sidebar -->
-      <aside v-if="isEditMode" class="edit-sidebar">
-        <div class="sidebar-header">
-          <h3>Button Actions</h3>
-          <button class="btn btn-sm btn-secondary" @click="closeSidebar" title="Close Sidebar">
-            <FontAwesomeIcon :icon="['fas', 'times']" />
-          </button>
-        </div>
+      <!-- Widget Column (displayed in non-edit mode) -->
+      <WidgetColumn v-if="!isEditMode && showWidgets" />
 
-        <div class="sidebar-content">
-          <div class="search-section">
-            <input 
-              v-model="actionSearch" 
-              type="text" 
-              placeholder="Search actions..." 
-              class="search-input"
-            />
-          </div>
-
-          <div class="categories-section">
-            <div 
-              v-for="(category, index) in filteredCategories" 
-              :key="category.id"
-              class="category-group"
-            >
-              <div 
-                class="category-header" 
-                @click="toggleCategory(category.id)"
-              >
-                <div class="category-title">
-                  <FontAwesomeIcon 
-                    :icon="['fas', expandedCategories.includes(category.id) ? 'chevron-down' : 'chevron-right']" 
-                  />
-                  <span>{{ category.name }}</span>
-                  <span class="category-count">({{ category.actions.length }})</span>
-                </div>
-                <div class="category-controls" v-if="!actionSearch" @click.stop>
-                  <button 
-                    class="btn-icon" 
-                    :disabled="index === 0"
-                    @click="moveCategoryUp(index)"
-                    title="Move Up"
-                  >
-                    <FontAwesomeIcon :icon="['fas', 'arrow-up']" />
-                  </button>
-                  <button 
-                    class="btn-icon" 
-                    :disabled="index === actionCategories.length - 1"
-                    @click="moveCategoryDown(index)"
-                    title="Move Down"
-                  >
-                    <FontAwesomeIcon :icon="['fas', 'arrow-down']" />
-                  </button>
-                </div>
-              </div>
-
-              <div 
-                v-if="expandedCategories.includes(category.id)" 
-                class="category-actions"
-              >
-                <div 
-                  v-for="action in category.actions" 
-                  :key="action.id"
-                  class="action-item"
-                  draggable="true"
-                  @click="selectAction(action)"
-                  @dragstart="handleDragStart($event, action)"
-                  @dragend="handleDragEnd"
-                >
-                  <FontAwesomeIcon :icon="action.icon" />
-                  <span>{{ action.name }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <!-- Decomposed Edit Sidebar component -->
+      <EditSidebar
+        v-if="isEditMode"
+        v-model:action-search="actionSearch"
+        :expanded-categories="expandedCategories"
+        :filtered-categories="filteredCategories"
+        @toggle-category="toggleCategory"
+        @move-category-up="moveCategoryUp"
+        @move-category-down="moveCategoryDown"
+        @select-action="selectAction"
+        @close="closeSidebar"
+      />
     </main>
 
-    <footer v-if="isEditMode" class="deck-footer" :class="{ 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
-      <div class="footer-section">
-        <label>Grid Size:</label>
-        <div class="grid-controls">
-          <input
-            v-model.number="currentPage.grid_config.rows"
-            type="number"
-            min="1"
-            max="10"
-            class="grid-input"
-            title="Rows"
-          />
-          <span>×</span>
-          <input
-            v-model.number="currentPage.grid_config.cols"
-            type="number"
-            min="1"
-            max="10"
-            class="grid-input"
-            title="Columns"
-          />
-        </div>
-      </div>
+    <!-- Decomposed Footer component -->
+    <DeckFooter
+      :is-edit-mode="isEditMode"
+      :total-pages="currentScene?.pages.length || 1"
+      :current-page-index="currentPageIndex"
+      :grid-rows="currentPage?.grid_config.rows || 3"
+      :grid-cols="currentPage?.grid_config.cols || 3"
+      :scenes="currentProfile?.scenes || []"
+      :current-scene-index="currentSceneIndex"
+      @set-page="setPage"
+      @set-scene="setScene"
+      @add-page="addPageToCurrentScene"
+      @delete-page="deleteCurrentPage"
+      @save-profile="saveProfile"
+      @update-rows="updateGridRows"
+      @update-cols="updateGridCols"
+    />
 
-      <div class="footer-section">
-        <button
-          class="btn btn-primary btn-sm"
-          @click="addPageToCurrentScene"
-          title="Add new page to current scene"
-        >
-          <FontAwesomeIcon :icon="['fas', 'plus']" />
-          Add Page
-        </button>
-        <button
-          class="btn btn-danger btn-sm"
-          @click="deleteCurrentPage"
-          :disabled="!currentScene || currentScene.pages.length <= 1"
-          title="Delete current page"
-          style="margin-left: var(--spacing-sm);"
-        >
-          <FontAwesomeIcon :icon="['fas', 'trash']" />
-          Delete Page
-        </button>
-        <button
-          class="btn btn-success btn-sm"
-          @click="saveProfile"
-          title="Save all changes to profile"
-          style="margin-left: var(--spacing-sm);"
-        >
-          <FontAwesomeIcon :icon="['fas', 'save']" />
-          Save Profile
-        </button>
-      </div>
+    <!-- Quick Add Picker Modal -->
+    <QuickAddPicker
+      :visible="quickAddVisible"
+      :position="quickAddPosition"
+      @select="onQuickAddSelect"
+      @close="quickAddVisible = false"
+    />
 
-      <div class="footer-section footer-spacer"></div>
-    </footer>
+    <!-- Global OnScreenKeypad Component -->
+    <OnScreenKeypad
+      :visible="keypadVisible"
+      :model-value="keypadValue"
+      @update:modelValue="handleKeypadUpdate"
+      @close="handleKeypadClose"
+      class="global-onscreen-keypad"
+    />
 
     <!-- Button Editor Modal -->
     <ButtonEditor
@@ -308,9 +163,6 @@
 
     <!-- Help Modal -->
     <UserGuideModal v-if="showHelp" @close="showHelp = false" />
-
-    <!-- Quick Search -->
-    <QuickSearch ref="quickSearchRef" />
   </div>
 </template>
 
@@ -321,23 +173,26 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useProfilesStore } from '@/stores/profiles'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
-import type { Button, ActionResult, Scene } from '@/types'
+import type { Button, Scene } from '@/types'
 import DeckGrid from '@/components/DeckGrid.vue'
-import PageIndicator from '@/components/PageIndicator.vue'
-import PageNavigation from '@/components/PageNavigation.vue'
-import SceneNavigation from '@/components/SceneNavigation.vue'
 import ButtonEditor from '@/components/ButtonEditor.vue'
 import UserGuideModal from '@/components/UserGuideModal.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
-import QuickSearch from '@/components/QuickSearch.vue'
+import DeckHeader from '@/components/DeckHeader.vue'
+import DeckFooter from '@/components/DeckFooter.vue'
+import WidgetColumn from '@/components/WidgetColumn.vue'
+import EditSidebar from '@/components/EditSidebar.vue'
+import QuickAddPicker from '@/components/QuickAddPicker.vue'
+import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
 import FloatingPathsBackground from '@/components/backgrounds/FloatingPathsBackground.vue'
 import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBackgroundV2.vue'
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { createDemoProfile, isFirstTimeUser } from '@/utils/demoProfile'
+import { createDemoProfile } from '@/utils/demoProfile'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import type { AppIntegration } from '@/types'
+import { useButtonActions } from '@/composables/useButtonActions'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -345,111 +200,99 @@ const profilesStore = useProfilesStore()
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 
-const editingButton = ref<Button | null>(null)
 const editingScene = ref<Scene | null>(null)
-const actionResult = ref<ActionResult | null>(null)
-const clipboardButton = ref<Button | null>(null)
 const showHelp = ref(false)
-const quickSearchRef = ref<InstanceType<typeof QuickSearch>>()
 const pageTransitionName = ref('page-slide-left')
-let actionResultTimeout: number | null = null
 
-// Sidebar state
-const actionSearch = ref('')
-const expandedCategories = ref<string[]>(['quick-launch', 'system', 'audio', 'media', 'window-management', 'web', 'text', 'metrics', 'time', 'weather', 'navigation'])
-const selectedAction = ref<any>(null)
+// Composables logic
+const {
+  editingButton,
+  clipboardButton,
+  selectedAction,
+  actionResult,
+  showActionResult,
+  handleButtonClick,
+  handleButtonEdit,
+  handleButtonCopy,
+  handleButtonDelete,
+  handleButtonMove,
+  handleActionDrop,
+  handlePlaceholderClick,
+  handlePlaceholderLongPress,
+  handleDeckButtonLongPress,
+  handleAddDockedButton,
+  handleDockedButtonDelete,
+  handleDockedButtonDrop,
+  handleDockedPlaceholderClick,
+  handleButtonSave,
+  selectAction
+} = useButtonActions()
 
-const currentProfile = computed(() => dashboardStore.currentProfile)
-const currentScene = computed(() => dashboardStore.currentScene)
-const currentPage = computed(() => dashboardStore.currentPage)
-const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
-const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
-const isEditMode = computed(() => dashboardStore.isEditMode)
+// Quick Add and Widget states
+const quickAddVisible = ref(false)
+const quickAddPosition = ref({ row: 0, col: 0 })
+const showWidgets = ref(true)
 
-function nextScene() {
-  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
-  const nextIdx = (currentSceneIndex.value + 1) % currentProfile.value.scenes.length
-  setScene(currentProfile.value.scenes[nextIdx].id)
+function onPlaceholderClick(position: { row: number; col: number }) {
+  if (clipboardButton.value) {
+    handlePlaceholderClick(position)
+  } else {
+    quickAddPosition.value = position
+    quickAddVisible.value = true
+  }
 }
 
-function previousScene() {
-  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
-  const prevIdx = (currentSceneIndex.value - 1 + currentProfile.value.scenes.length) % currentProfile.value.scenes.length
-  setScene(currentProfile.value.scenes[prevIdx].id)
-}
-
-const isEditingExistingScene = computed(() => {
-  if (!editingScene.value || !currentProfile.value) return false
-  return currentProfile.value.scenes.some(scene => scene.id === editingScene.value!.id)
-})
-
-// Determine if compact mode should be used for weather/time buttons
-const shouldUseCompactMode = computed(() => {
-  if (!currentPage.value) return false
-  
-  // Check if any button in the current page is weather or time-related
-  return currentPage.value.buttons.some(button => {
-    const actionType = button.action?.type
-    return actionType === 'weather' || 
-           actionType === 'time_world_clock' || 
-           actionType === 'time_timer' || 
-           actionType === 'time_countdown'
+function onQuickAddSelect(button: Button) {
+  dashboardStore.addButton(button)
+  quickAddVisible.value = false
+  showActionResult({
+    success: true,
+    message: `Button added`
   })
-})
+}
 
-const dashboardBackgroundClass = computed(() => {
-  // When an animated overlay effect is active, let it show through
-  if (settingsStore.backgroundPreference !== 'none') {
-    return 'dashboard-bg-transparent'
+// Global Virtual Keyboard logic
+const keypadVisible = ref(false)
+const keypadValue = ref('')
+let activeInputElement: HTMLInputElement | HTMLTextAreaElement | null = null
+
+function handleGlobalFocus(event: FocusEvent) {
+  const target = event.target as HTMLElement
+  if (
+    target &&
+    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
+    !(target as HTMLInputElement).readOnly &&
+    (target as HTMLInputElement).type !== 'checkbox' &&
+    (target as HTMLInputElement).type !== 'radio' &&
+    (target as HTMLInputElement).type !== 'file'
+  ) {
+    activeInputElement = target as HTMLInputElement | HTMLTextAreaElement
+    keypadValue.value = activeInputElement.value || ''
+    keypadVisible.value = true
   }
+}
 
-  // First check if current page has a background
-  if (currentPage.value?.background) {
-    return ''
+function handleKeypadUpdate(newValue: string) {
+  keypadValue.value = newValue
+  if (activeInputElement) {
+    activeInputElement.value = newValue
+    activeInputElement.dispatchEvent(new Event('input', { bubbles: true }))
+    activeInputElement.dispatchEvent(new Event('change', { bubbles: true }))
   }
+}
 
-  // Check if current scene has a background
-  if (currentScene.value?.background?.image) {
-    return 'dashboard-bg-custom'
-  }
+function handleKeypadClose() {
+  keypadVisible.value = false
+  activeInputElement = null
+}
 
-  // Apply dashboard background when page background is null
-  const bg = settingsStore.dashboardBackground
-  if (bg === 'default') return ''
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
-    return 'dashboard-bg-custom'
-  }
-  return `dashboard-bg-${bg}`
-})
+// Sidebar categories state
+const actionSearch = ref('')
+const expandedCategories = ref<string[]>([
+  'quick-launch', 'system', 'audio', 'media', 'window-management', 
+  'web', 'text', 'metrics', 'time', 'weather', 'navigation'
+])
 
-const dashboardBackgroundStyle = computed(() => {
-  // Animated background is active — keep everything transparent
-  if (settingsStore.backgroundPreference !== 'none') return {}
-
-  // Check scene background first
-  if (currentScene.value?.background?.image) {
-    return {
-      backgroundImage: `url(${currentScene.value.background.image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-
-  const bg = settingsStore.dashboardBackground
-  // Handle custom image backgrounds
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
-    return {
-      backgroundImage: `url(${bg})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-  return {}
-})
-
-// Button action categories
 const actionCategories = ref([
   {
     id: 'quick-launch',
@@ -602,10 +445,8 @@ const actionCategories = ref([
   }
 ])
 
-// Filtered categories based on search
 const filteredCategories = computed(() => {
   if (!actionSearch.value) return actionCategories.value
-  
   return actionCategories.value.map(category => ({
     ...category,
     actions: category.actions.filter(action => 
@@ -613,112 +454,14 @@ const filteredCategories = computed(() => {
     )
   })).filter(category => category.actions.length > 0)
 })
-const canUndo = computed(() => dashboardStore.canUndo)
-const canRedo = computed(() => dashboardStore.canRedo)
 
-const mainStyle = computed(() => {
-  // Animated background is active — don't paint over it
-  if (settingsStore.backgroundPreference !== 'none') return {}
+const currentProfile = computed(() => dashboardStore.currentProfile)
+const currentScene = computed(() => dashboardStore.currentScene)
+const currentPage = computed(() => dashboardStore.currentPage)
+const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
+const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
+const isEditMode = computed(() => dashboardStore.isEditMode)
 
-  if (!currentPage.value?.background) return {}
-  
-  const bg = currentPage.value.background
-  if (bg.type === 'solid') {
-    return { backgroundColor: bg.color }
-  } else if (bg.type === 'gradient' && bg.gradient) {
-    return {
-      background: `linear-gradient(${bg.gradient.direction || '135deg'}, ${bg.gradient.from}, ${bg.gradient.to})`
-    }
-  } else if (bg.type === 'image' && bg.image) {
-    return {
-      backgroundImage: `url(${bg.image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center'
-    }
-  }
-  return {}
-})
-
-onMounted(async () => {
-  // Load last used profile or first available profile
-  const lastProfileId = localStorage.getItem('vdock_last_profile')
-  if (lastProfileId) {
-    const profile = await profilesStore.getProfile(lastProfileId)
-    if (profile) {
-      dashboardStore.setProfile(profile)
-      return
-    }
-  }
-
-  // Load first available profile or create demo profile for first-time users
-  await profilesStore.loadProfiles()
-  if (profilesStore.profiles.length > 0) {
-    const profile = await profilesStore.getProfile(profilesStore.profiles[0].id)
-    if (profile) {
-      dashboardStore.setProfile(profile)
-    }
-  } else {
-    // First-time user: create demo profile
-    await createDemoProfileForFirstTimeUser()
-  }
-  
-  // Wire auto scene switching if enabled
-  const storedIntegrations = localStorage.getItem('appIntegrations')
-  const storedAutoSwitch = localStorage.getItem('autoSceneSwitching')
-  if (storedAutoSwitch === 'true' && storedIntegrations) {
-    try {
-      const integrations: AppIntegration[] = JSON.parse(storedIntegrations)
-      autoSceneSwitcher.initialize(integrations)
-      autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
-        const profile = dashboardStore.currentProfile
-        if (!profile) return
-        const idx = profile.scenes.findIndex(s => s.id === sceneId)
-        if (idx >= 0) dashboardStore.setScene(idx)
-      })
-      autoSceneSwitcher.enable()
-    } catch {
-      // ignore malformed stored data
-    }
-  }
-
-  // Add keyboard shortcuts
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.ctrlKey || event.metaKey) {
-      if (event.key === 'v' && clipboardButton.value) {
-        // Ctrl+V to paste at current position (if in edit mode)
-        if (isEditMode.value) {
-          event.preventDefault()
-          showActionResult({
-            success: true,
-            message: 'Click on a placeholder to paste the button'
-          })
-        }
-      }
-    }
-  }
-  
-  document.addEventListener('keydown', handleKeyDown)
-  
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown)
-  })
-})
-
-watch(currentProfile, (profile) => {
-  if (profile) {
-    localStorage.setItem('vdock_last_profile', profile.id)
-  }
-})
-
-function toggleEditMode() {
-  dashboardStore.toggleEditMode()
-}
-
-function openQuickSearch() {
-  quickSearchRef.value?.open()
-}
-
-// Sidebar methods
 function toggleCategory(categoryId: string) {
   const index = expandedCategories.value.indexOf(categoryId)
   if (index > -1) {
@@ -750,752 +493,89 @@ function closeSidebar() {
   dashboardStore.toggleEditMode()
 }
 
-function selectAction(action: any) {
-  selectedAction.value = action
-  
-  if (!currentPage.value) return
-  
-  const config = currentPage.value.grid_config
-  let emptyPos = null
-  
-  // Find first available empty slot
-  outer: for (let r = 0; r < config.rows; r++) {
-    for (let c = 0; c < config.cols; c++) {
-      const isOccupied = currentPage.value.buttons.some(b => 
-        b.position.row <= r && r < b.position.row + b.size.rows &&
-        b.position.col <= c && c < b.position.col + b.size.cols
-      )
-      if (!isOccupied) {
-        emptyPos = { row: r, col: c }
-        break outer
-      }
+// Background preferences
+const dashboardBackgroundClass = computed(() => {
+  if (settingsStore.backgroundPreference !== 'none') {
+    return 'dashboard-bg-transparent'
+  }
+  if (currentPage.value?.background) {
+    return ''
+  }
+  if (currentScene.value?.background?.image) {
+    return 'dashboard-bg-custom'
+  }
+  const bg = settingsStore.dashboardBackground
+  if (bg === 'default') return ''
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
+    return 'dashboard-bg-custom'
+  }
+  return `dashboard-bg-${bg}`
+})
+
+const dashboardBackgroundStyle = computed(() => {
+  if (settingsStore.backgroundPreference !== 'none') return {}
+  if (currentScene.value?.background?.image) {
+    return {
+      backgroundImage: `url(${currentScene.value.background.image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
     }
   }
-
-  if (emptyPos) {
-    const newButton = createPreconfiguredButton(action, emptyPos)
-    if (newButton && currentProfile.value && currentScene.value && currentPage.value) {
-      dashboardStore.addButton(
-        currentProfile.value.id,
-        currentScene.value.id,
-        currentPage.value.id,
-        newButton
-      )
-      // Open editor for the newly created button
-      editingButton.value = { ...newButton }
+  const bg = settingsStore.dashboardBackground
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
+    return {
+      backgroundImage: `url(${bg})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
     }
-  } else {
-    alert('No empty slots available on this page.')
   }
-}
+  return {}
+})
 
-// Drag and drop handlers
-function handleDragStart(event: DragEvent, action: any) {
-  if (event.dataTransfer) {
-    event.dataTransfer.setData('application/vdock-action', JSON.stringify(action))
-    event.dataTransfer.effectAllowed = 'copy'
+const mainStyle = computed(() => {
+  if (settingsStore.backgroundPreference !== 'none') return {}
+  if (!currentPage.value?.background) return {}
+  const bg = currentPage.value.background
+  if (bg.type === 'solid') {
+    return { backgroundColor: bg.color }
+  } else if (bg.type === 'gradient' && bg.gradient) {
+    return {
+      background: `linear-gradient(${bg.gradient.direction || '135deg'}, ${bg.gradient.from}, ${bg.gradient.to})`
+    }
+  } else if (bg.type === 'image' && bg.image) {
+    return {
+      backgroundImage: `url(${bg.image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
+    }
   }
-}
+  return {}
+})
 
-function handleDragEnd() {
-  // Clean up any drag state if needed
-}
+const shouldUseCompactMode = computed(() => {
+  if (!currentPage.value) return false
+  return currentPage.value.buttons.some(button => {
+    const actionType = button.action?.type
+    return actionType === 'weather' || 
+           actionType === 'time_world_clock' || 
+           actionType === 'time_timer' || 
+           actionType === 'time_countdown'
+  })
+})
 
-function handleActionDrop(action: any, position: { row: number; col: number }) {
-    
-  // Create preconfigured button based on action type
-  const button = createPreconfiguredButton(action, position)
-  
-  if (button) {
-    // Add button to the current page
-    dashboardStore.addButton(button)
-      }
-}
+const isEditingExistingScene = computed(() => {
+  if (!editingScene.value || !currentProfile.value) return false
+  return currentProfile.value.scenes.some(scene => scene.id === editingScene.value!.id)
+})
 
-
-function handleButtonMove(buttonId: string, newPosition: { row: number; col: number }) {
-    dashboardStore.moveButton(buttonId, newPosition)
-}
-
-function handleButtonEdit(button: Button) {
-    editingButton.value = { ...button }
-}
-
-function handleButtonDelete(buttonId: string) {
-    if (confirm('Are you sure you want to delete this button?')) {
-    dashboardStore.removeButton(buttonId)
+// Navigation & Scene handlers
+function setScene(sceneId: string) {
+  const idx = currentProfile.value?.scenes.findIndex(s => s.id === sceneId)
+  if (idx !== undefined && idx >= 0) {
+    dashboardStore.setScene(idx)
   }
-}
-
-function handlePlaceholderLongPress(position: { row: number; col: number }) {
-  if (!dashboardStore.isEditMode) {
-    dashboardStore.toggleEditMode()
-  }
-  
-  // Optionally open editor right away
-  const newButton: Button = {
-    id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    position: position,
-    size: { rows: 1, cols: 1 },
-    enabled: true,
-    shape: 'rectangle'
-  }
-  editingButton.value = newButton
-}
-
-function handleDeckButtonLongPress(button: Button) {
-  if (!dashboardStore.isEditMode) {
-    dashboardStore.toggleEditMode()
-  }
-  editingButton.value = { ...button }
-}
-
-// Preconfigured button templates
-function createPreconfiguredButton(action: any, position: { row: number; col: number }): Button {
-  const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  
-  // Base button configuration
-  const baseButton: Button = {
-    id: buttonId,
-    label: action.name,
-    icon_type: 'fontawesome',
-    icon: action.icon,
-    shape: 'rounded',
-    position: {
-      row: position.row,
-      col: position.col
-    },
-    size: {
-      rows: 1,
-      cols: 1
-    },
-    style: {
-      backgroundColor: '#2c3e50',
-      textColor: '#ffffff'
-    },
-    enabled: true
-  }
-
-  // Action-specific configurations
-  switch (action.id) {
-    case 'shutdown':
-      return {
-        ...baseButton,
-        label: 'Shutdown',
-        icon: ['fas', 'power-off'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'shutdown' }
-        }
-      }
-
-    case 'restart':
-      return {
-        ...baseButton,
-        label: 'Restart',
-        icon: ['fas', 'redo'],
-        style: { ...baseButton.style, backgroundColor: '#f39c12' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'restart' }
-        }
-      }
-
-    case 'sleep':
-      return {
-        ...baseButton,
-        label: 'Sleep',
-        icon: ['fas', 'moon'],
-        style: { ...baseButton.style, backgroundColor: '#9b59b6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'sleep' }
-        }
-      }
-
-    case 'lock':
-      return {
-        ...baseButton,
-        label: 'Lock',
-        icon: ['fas', 'lock'],
-        style: { ...baseButton.style, backgroundColor: '#34495e' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'lock_screen' }
-        }
-      }
-
-    case 'fullscreen':
-      return {
-        ...baseButton,
-        label: 'Full Screen',
-        icon: ['fas', 'expand'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'system_control',
-          config: { action: 'fullscreen' }
-        }
-      }
-
-    case 'volume-up':
-      return {
-        ...baseButton,
-        label: 'Volume Up',
-        icon: ['fas', 'volume-up'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_up', step: 2000 }
-        }
-      }
-
-    case 'volume-down':
-      return {
-        ...baseButton,
-        label: 'Volume Down',
-        icon: ['fas', 'volume-down'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_down', step: 2000 }
-        }
-      }
-
-    case 'play-pause':
-      return {
-        ...baseButton,
-        label: 'Play/Pause',
-        icon: ['fas', 'play'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_play_pause' }
-        }
-      }
-
-    case 'next-track':
-      return {
-        ...baseButton,
-        label: 'Next Track',
-        icon: ['fas', 'forward'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_next' }
-        }
-      }
-
-    case 'prev-track':
-      return {
-        ...baseButton,
-        label: 'Previous Track',
-        icon: ['fas', 'backward'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_previous' }
-        }
-      }
-
-    case 'stop':
-      return {
-        ...baseButton,
-        label: 'Stop',
-        icon: ['fas', 'stop'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'media_stop' }
-        }
-      }
-
-    case 'screenshot':
-      return {
-        ...baseButton,
-        label: 'Screenshot',
-        icon: ['fas', 'camera'],
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'screenshot', path: 'screenshot.png' }
-        }
-      }
-
-    case 'open-url':
-      return {
-        ...baseButton,
-        label: 'Open URL',
-        icon: ['fas', 'globe'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_url', url: 'https://example.com' }
-        }
-      }
-
-    case 'brightness-up':
-      return {
-        ...baseButton,
-        label: 'Brightness Up',
-        icon: ['fas', 'sun'],
-        style: { ...baseButton.style, backgroundColor: '#f1c40f' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'brightness_up', step: 10 }
-        }
-      }
-
-    case 'brightness-down':
-      return {
-        ...baseButton,
-        label: 'Brightness Down',
-        icon: ['fas', 'moon'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'brightness_down', step: 10 }
-        }
-      }
-
-    case 'open-app':
-      return {
-        ...baseButton,
-        label: 'Open App',
-        icon: ['fas', 'rocket'],
-        style: { ...baseButton.style, backgroundColor: '#e67e22' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'notepad.exe' }
-        }
-      }
-
-    case 'open-folder':
-      return {
-        ...baseButton,
-        label: 'Open Folder',
-        icon: ['fas', 'folder-open'],
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_folder', path: 'C:\\' }
-        }
-      }
-
-    case 'open-file':
-      return {
-        ...baseButton,
-        label: 'Open File',
-        icon: ['fas', 'file'],
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_file', path: 'C:\\Windows\\System32\\notepad.exe' }
-        }
-      }
-
-
-    case 'custom-icon':
-      return {
-        ...baseButton,
-        label: 'Custom Icon',
-        icon_type: 'custom',
-        icon: '',
-        media_type: 'image',
-        media_url: '',
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' }
-      }
-
-    // Monitor Metrics
-    case 'metric_memory':
-    case 'metric_cpu_usage':
-    case 'metric_cpu_frequency':
-    case 'metric_internet_speed':
-    case 'metric_harddisk':
-    case 'metric_gpu_temperature':
-    case 'metric_gpu_frequency':
-    case 'metric_gpu_usage':
-    case 'metric_gpu_memory_freq':
-    case 'metric_gpu_memory_usage':
-      return {
-        ...baseButton,
-        label: action.name,
-        icon: action.icon,
-        size: { rows: 1, cols: 1 },
-        style: { ...baseButton.style, backgroundColor: '#2980b9' },
-        action: {
-          type: action.id as any,
-          config: { refresh_interval: 10 }
-        }
-      }
-
-    // Time
-    case 'time_world_clock':
-      return {
-        ...baseButton,
-        label: 'World Clock',
-        icon: ['fas', 'globe'],
-        size: { rows: 1, cols: 1 },
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'time_world_clock',
-          config: { timezone: 'local' }
-        }
-      }
-
-    case 'time_timer':
-      return {
-        ...baseButton,
-        label: 'Timer',
-        icon: ['fas', 'stopwatch'],
-        size: { rows: 2, cols: 2 },
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'time_timer',
-          config: { timer_duration: 0 }
-        }
-      }
-
-    case 'time_countdown':
-      return {
-        ...baseButton,
-        label: 'Countdown',
-        icon: ['fas', 'hourglass-half'],
-        size: { rows: 2, cols: 2 },
-        style: { ...baseButton.style, backgroundColor: '#8e44ad' },
-        action: {
-          type: 'time_countdown',
-          config: { countdown_target: '' }
-        }
-      }
-
-    // Weather
-    case 'weather':
-      return {
-        ...baseButton,
-        label: 'Weather',
-        icon: ['fas', 'cloud-sun'],
-        size: { rows: 1, cols: 1 },
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'weather',
-          config: { weather_location: 'auto', refresh_interval: 15, temperature_unit: 'C' }
-        }
-      }
-
-    // Navigation
-    case 'next-page':
-      return {
-        ...baseButton,
-        label: 'Next Page',
-        icon: ['fas', 'arrow-right'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'next_page',
-          config: {}
-        }
-      }
-
-    case 'previous-page':
-      return {
-        ...baseButton,
-        label: 'Previous Page',
-        icon: ['fas', 'arrow-left'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'previous_page',
-          config: {}
-        }
-      }
-
-    case 'home-page':
-      return {
-        ...baseButton,
-        label: 'Home',
-        icon: ['fas', 'home'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'home_page',
-          config: {}
-        }
-      }
-
-    // New System Actions
-    case 'empty-recycle-bin':
-      return {
-        ...baseButton,
-        label: 'Empty Recycle Bin',
-        icon: ['fas', 'trash-alt'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'empty_recycle_bin' }
-        }
-      }
-
-    case 'task-manager':
-      return {
-        ...baseButton,
-        label: 'Task Manager',
-        icon: ['fas', 'tasks'],
-        style: { ...baseButton.style, backgroundColor: '#34495e' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'taskmgr.exe' }
-        }
-      }
-
-    case 'control-panel':
-      return {
-        ...baseButton,
-        label: 'Control Panel',
-        icon: ['fas', 'cog'],
-        style: { ...baseButton.style, backgroundColor: '#7f8c8d' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'control.exe' }
-        }
-      }
-
-    case 'device-manager':
-      return {
-        ...baseButton,
-        label: 'Device Manager',
-        icon: ['fas', 'hard-drive'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'devmgmt.msc' }
-        }
-      }
-
-    // New Web & Apps Actions
-    case 'run-command':
-      return {
-        ...baseButton,
-        label: 'Run Command',
-        icon: ['fas', 'terminal'],
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'run_command', command: 'echo Hello' }
-        }
-      }
-
-    case 'close-app':
-      return {
-        ...baseButton,
-        label: 'Close App',
-        icon: ['fas', 'times-circle'],
-        style: { ...baseButton.style, backgroundColor: '#c0392b' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'close_app', app_name: 'notepad.exe' }
-        }
-      }
-
-    // Audio Control Actions
-    case 'mute':
-      return {
-        ...baseButton,
-        label: 'Mute',
-        icon: ['fas', 'volume-mute'],
-        style: { ...baseButton.style, backgroundColor: '#e67e22' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'volume_mute' }
-        }
-      }
-
-    case 'microphone-mute':
-      return {
-        ...baseButton,
-        label: 'Mute Mic',
-        icon: ['fas', 'microphone-slash'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'microphone_mute' }
-        }
-      }
-
-    case 'microphone-unmute':
-      return {
-        ...baseButton,
-        label: 'Unmute Mic',
-        icon: ['fas', 'microphone'],
-        style: { ...baseButton.style, backgroundColor: '#27ae60' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'microphone_unmute' }
-        }
-      }
-
-    // Quick Launch Actions
-    case 'launch-browser':
-      return {
-        ...baseButton,
-        label: 'Browser',
-        icon: ['fas', 'globe'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_url', url: 'https://www.google.com' }
-        }
-      }
-
-    case 'launch-file-explorer':
-      return {
-        ...baseButton,
-        label: 'File Explorer',
-        icon: ['fas', 'folder'],
-        style: { ...baseButton.style, backgroundColor: '#f39c12' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'explorer.exe' }
-        }
-      }
-
-    case 'launch-calculator':
-      return {
-        ...baseButton,
-        label: 'Calculator',
-        icon: ['fas', 'calculator'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'calc.exe' }
-        }
-      }
-
-    case 'launch-notepad':
-      return {
-        ...baseButton,
-        label: 'Notepad',
-        icon: ['fas', 'file-alt'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'notepad.exe' }
-        }
-      }
-
-    case 'launch-cmd':
-      return {
-        ...baseButton,
-        label: 'Command Prompt',
-        icon: ['fas', 'terminal'],
-        style: { ...baseButton.style, backgroundColor: '#2c3e50' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'cmd.exe' }
-        }
-      }
-
-    case 'launch-powershell':
-      return {
-        ...baseButton,
-        label: 'PowerShell',
-        icon: ['fas', 'terminal'],
-        style: { ...baseButton.style, backgroundColor: '#34495e' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'powershell.exe' }
-        }
-      }
-
-    case 'launch-paint':
-      return {
-        ...baseButton,
-        label: 'Paint',
-        icon: ['fas', 'paint-brush'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'mspaint.exe' }
-        }
-      }
-
-    case 'launch-snipping-tool':
-      return {
-        ...baseButton,
-        label: 'Snipping Tool',
-        icon: ['fas', 'cut'],
-        style: { ...baseButton.style, backgroundColor: '#9b59b6' },
-        action: {
-          type: 'cross_platform',
-          config: { action: 'open_app', path: 'SnippingTool.exe' }
-        }
-      }
-
-    // Window Management Actions
-    case 'minimize-window':
-      return {
-        ...baseButton,
-        label: 'Minimize',
-        icon: ['fas', 'window-minimize'],
-        style: { ...baseButton.style, backgroundColor: '#95a5a6' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Win', 'Down'] }
-        }
-      }
-
-    case 'maximize-window':
-      return {
-        ...baseButton,
-        label: 'Maximize',
-        icon: ['fas', 'window-maximize'],
-        style: { ...baseButton.style, backgroundColor: '#16a085' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Win', 'Up'] }
-        }
-      }
-
-    case 'close-window':
-      return {
-        ...baseButton,
-        label: 'Close Window',
-        icon: ['fas', 'window-close'],
-        style: { ...baseButton.style, backgroundColor: '#e74c3c' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Alt', 'F4'] }
-        }
-      }
-
-    case 'switch-window':
-      return {
-        ...baseButton,
-        label: 'Switch Window',
-        icon: ['fas', 'window-restore'],
-        style: { ...baseButton.style, backgroundColor: '#3498db' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Alt', 'Tab'] }
-        }
-      }
-
-    case 'show-desktop':
-      return {
-        ...baseButton,
-        label: 'Show Desktop',
-        icon: ['fas', 'desktop'],
-        style: { ...baseButton.style, backgroundColor: '#7f8c8d' },
-        action: {
-          type: 'hotkey',
-          config: { keys: ['Win', 'D'] }
-        }
-      }
-
-    default:
-      return baseButton
-  }
-}
-
-function setScene(index: number) {
-  dashboardStore.setScene(index)
 }
 
 function addScene() {
@@ -1509,8 +589,8 @@ function addScene() {
       name: 'Page 1',
       buttons: [],
       grid_config: {
-        rows: 4,
-        cols: 5
+        rows: 3,
+        cols: 3
       }
     }],
     isActive: false,
@@ -1539,10 +619,8 @@ function previousPage() {
 
 function handleSceneSave(scene: Scene) {
   if (isEditingExistingScene.value) {
-    // Editing existing scene
     dashboardStore.updateScene(scene.id, scene)
   } else {
-    // Creating new scene
     dashboardStore.addScene(scene)
   }
   editingScene.value = null
@@ -1553,87 +631,45 @@ function handleSceneDelete(sceneId: string) {
   editingScene.value = null
 }
 
-async function handleButtonClick(button: Button) {
-if (!button.action) return
-
-  // Handle UI control actions locally in the frontend
-  if (button.action.type === 'ui_control') {
-    const action = button.action.config.action
-    const step = button.action.config.step || 10
-    
-    if (action === 'ui_brightness_up') {
-      const newBrightness = Math.min(200, settingsStore.uiBrightness + step)
-      settingsStore.uiBrightness = newBrightness
-      showActionResult({
-        success: true,
-        message: `UI brightness: ${newBrightness}%`
-      })
-      return
-    } else if (action === 'ui_brightness_down') {
-      const newBrightness = Math.max(10, settingsStore.uiBrightness - step)
-      settingsStore.uiBrightness = newBrightness
-      showActionResult({
-        success: true,
-        message: `UI brightness: ${newBrightness}%`
-      })
-      return
-    } else if (action === 'ui_brightness_set') {
-      const value = button.action.config.value || 100
-      settingsStore.uiBrightness = value
-      showActionResult({
-        success: true,
-        message: `UI brightness set to ${value}%`
-      })
-      return
-    } else if (action === 'toggle_header') {
-      settingsStore.showHeader = !settingsStore.showHeader
-      showActionResult({
-        success: true,
-        message: settingsStore.showHeader ? 'Header shown' : 'Header hidden'
-      })
-      return
-    }
-  }
-
-  // Skip execution for display-only action types (weather, time, metrics)
-  const displayOnlyTypes = [
-    'weather',
-    'time_world_clock',
-    'time_timer', 
-    'time_countdown',
-    'metric_memory',
-    'metric_cpu_usage',
-    'metric_cpu_frequency',
-    'metric_internet_speed',
-    'metric_harddisk',
-    'metric_gpu_temperature',
-    'metric_gpu_frequency',
-    'metric_gpu_usage',
-    'metric_gpu_memory_freq',
-    'metric_gpu_memory_usage'
-  ]
-
-  if (displayOnlyTypes.includes(button.action.type)) {
-    // These buttons are display-only and don't need to execute actions
+function deleteCurrentPage() {
+  if (!currentScene.value || currentScene.value.pages.length <= 1) {
+    notificationsStore.error('Cannot Delete', 'A scene must have at least one page.')
     return
   }
-
-  const result = await dashboardStore.executeButtonAction(button)
-  showActionResult(result)
+  if (!currentPage.value) return
+  if (!confirm(`Delete "${currentPage.value.name}"? This cannot be undone.`)) return
+  dashboardStore.removePage(currentPageIndex.value)
+  notificationsStore.success('Page Deleted', 'The page has been removed.')
 }
 
+function addPageToCurrentScene() {
+  dashboardStore.addPage()
+}
+
+function updateGridRows(rows: number) {
+  if (currentPage.value) {
+    currentPage.value.grid_config.rows = rows
+  }
+}
+
+function updateGridCols(cols: number) {
+  if (currentPage.value) {
+    currentPage.value.grid_config.cols = cols
+  }
+}
+
+async function saveProfile() {
+  await dashboardStore.saveProfile()
+  notificationsStore.success('Profile Saved', 'All profile modifications stored.')
+}
 
 async function handleSaveProfileFromEditor() {
-    await saveProfile()
+  await saveProfile()
 }
 
 async function createDemoProfileForFirstTimeUser() {
   try {
-        
-    // Create the demo profile
     const demoProfile = createDemoProfile()
-    
-    // Save it via the profiles store
     const createdProfile = await profilesStore.createProfile({
       name: demoProfile.name,
       description: demoProfile.description,
@@ -1641,596 +677,142 @@ async function createDemoProfileForFirstTimeUser() {
     })
     
     if (createdProfile) {
-      // Update the created profile with our demo scenes and buttons
       const updatedProfile = await profilesStore.updateProfile(createdProfile.id, {
         ...demoProfile,
-        id: createdProfile.id // Keep the server-generated ID
+        id: createdProfile.id
       })
       
       if (updatedProfile) {
-        // Load the demo profile
         dashboardStore.setProfile(updatedProfile)
-        
-        // Show welcome notification
         notificationsStore.success(
           'Welcome to VDock!',
           'We\'ve created a demo profile to get you started. Explore the buttons to see what VDock can do!',
           { duration: 8000 }
         )
-        
-              } else {
-        console.error('Failed to update demo profile with scenes')
       }
-    } else {
-      console.error('Failed to create demo profile')
     }
   } catch (error) {
     console.error('Error creating demo profile:', error)
-    notificationsStore.error(
-      'Setup Error',
-      'Failed to create demo profile. You can create your own profile from the Profiles page.',
-      { duration: 6000 }
-    )
   }
 }
 
-async function handleButtonSave(button: Button) {
-    // Check if this is a docked button
-  const isDockedButton = currentProfile.value?.dockedButtons?.some(btn => btn.id === button.id)
-  
-  if (isDockedButton) {
-        // Update docked button
-    const updatedDockedButtons = currentProfile.value?.dockedButtons?.map(btn => 
-      btn.id === button.id ? button : btn
-    ) || []
-    
-    if (currentProfile.value) {
-      // Create updated profile and save it
-      const updatedProfile = {
-        ...currentProfile.value,
-        dockedButtons: updatedDockedButtons
-      }
-      
-      dashboardStore.setProfile(updatedProfile)
-      await dashboardStore.saveProfile()
-      
-      showActionResult({
-        success: true,
-        message: 'Docked button updated'
-      })
+function nextScene() {
+  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
+  const nextIdx = (currentSceneIndex.value + 1) % currentProfile.value.scenes.length
+  setScene(currentProfile.value.scenes[nextIdx].id)
+}
+
+function previousScene() {
+  if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
+  const prevIdx = (currentSceneIndex.value - 1 + currentProfile.value.scenes.length) % currentProfile.value.scenes.length
+  setScene(currentProfile.value.scenes[prevIdx].id)
+}
+
+onMounted(async () => {
+  // Load last used profile or first available profile
+  const lastProfileId = localStorage.getItem('vdock_last_profile')
+  if (lastProfileId) {
+    const profile = await profilesStore.getProfile(lastProfileId)
+    if (profile) {
+      dashboardStore.setProfile(profile)
     }
   } else {
-    // Update regular button
-        dashboardStore.updateButton(button.id, button)
-  }
-  
-  editingButton.value = null
-}
-
-async function handleDockedButtonDelete(buttonId: string) {
-    if (currentProfile.value) {
-    const updatedDockedButtons = currentProfile.value.dockedButtons?.filter(btn => btn.id !== buttonId) || []
-    
-    // Create updated profile and save it
-    const updatedProfile = {
-      ...currentProfile.value,
-      dockedButtons: updatedDockedButtons
-    }
-    
-    dashboardStore.setProfile(updatedProfile)
-    await dashboardStore.saveProfile()
-    
-    showActionResult({
-      success: true,
-      message: 'Docked button deleted'
-    })
-  }
-}
-
-async function handleAddDockedButton(position: { row: number; col: number }) {
-    const newButton: Button = {
-    id: `docked_${Date.now()}`,
-    label: 'New Button',
-    secondary_label: '',
-    icon: ['fas', 'star'],
-    icon_type: 'fontawesome',
-    media_url: null,
-    media_type: null,
-    shape: 'rounded',
-    position: { row: position.row, col: position.col },
-    size: { rows: 1, cols: 1 },
-    style: {
-      backgroundColor: '#3498db',
-      textColor: '#ffffff'
-    },
-    tooltip: '',
-    enabled: true
-  }
-  
-    
-  if (currentProfile.value) {
-    // Create updated profile with new docked button
-    const updatedProfile = {
-      ...currentProfile.value,
-      dockedButtons: [...(currentProfile.value.dockedButtons || []), newButton]
-    }
-    
-        
-    // Use setProfile to trigger reactivity properly
-    dashboardStore.setProfile(updatedProfile)
-    await dashboardStore.saveProfile()
-    
-    showActionResult({
-      success: true,
-      message: `Button added to docked sidebar`
-    })
-  }
-}
-
-async function handleDockedButtonDrop(event: DragEvent, position: { row: number; col: number }) {
-    if (!event.dataTransfer) {
-        return
-  }
-  
-  try {
-    const buttonData = event.dataTransfer.getData('application/vdock-button')
-        if (buttonData) {
-      const button = JSON.parse(buttonData)
-            
-      // Create a copy of the button for docking at the specific position
-      const dockedButton: Button = {
-        ...button,
-        id: `docked_${Date.now()}`,
-        position: { row: position.row, col: position.col },
-        size: { rows: 1, cols: 1 }
+    await profilesStore.loadProfiles()
+    if (profilesStore.profiles.length > 0) {
+      const profile = await profilesStore.getProfile(profilesStore.profiles[0].id)
+      if (profile) {
+        dashboardStore.setProfile(profile)
       }
-      
-            
-      if (currentProfile.value) {
-        // Create updated profile with new docked button
-        const updatedProfile = {
-          ...currentProfile.value,
-          dockedButtons: [...(currentProfile.value.dockedButtons || []), dockedButton]
-        }
-        
-                
-        // Use setProfile to trigger reactivity properly
-        dashboardStore.setProfile(updatedProfile)
-        
-        showActionResult({
-          success: true,
-          message: `Button docked successfully`
-        })
-      } else {
-              }
     } else {
-          }
-  } catch (err) {
-    console.error('Failed to handle docked drop:', err)
-    showActionResult({
-      success: false,
-      message: `Failed to dock button: ${err}`
-    })
-  }
-}
-
-function handleButtonCopy(button: Button) {
-  clipboardButton.value = { ...button }
-  showActionResult({
-    success: true,
-    message: `Button "${button.label}" copied to clipboard`
-  })
-}
-
-function handleDockedPlaceholderClick(position: { row: number; col: number }) {
-    if (clipboardButton.value && currentProfile.value) {
-    // Paste the copied button to the docked sidebar
-    const pastedButton: Button = {
-      ...clipboardButton.value,
-      id: `docked_${Date.now()}`,
-      position: { row: position.row, col: position.col },
-      size: { rows: 1, cols: 1 }
+      await createDemoProfileForFirstTimeUser()
     }
-    
-        
-    // Create updated profile with pasted button
-    const updatedProfile = {
-      ...currentProfile.value,
-      dockedButtons: [...(currentProfile.value.dockedButtons || []), pastedButton]
-    }
-    
-    dashboardStore.setProfile(updatedProfile)
-    
-    showActionResult({
-      success: true,
-      message: 'Button pasted to docked sidebar'
-    })
-  } else {
-    // No clipboard, add a new button
-    handleAddDockedButton(position)
-  }
-}
-
-function handlePlaceholderClick(position: { row: number; col: number }) {
-    
-  if (clipboardButton.value) {
-    // Paste the button at the clicked position
-    const newButton: Button = {
-      ...clipboardButton.value,
-      id: `button_${Date.now()}`,
-      label: `${clipboardButton.value.label} (Copy)`,
-      position: { row: position.row, col: position.col }
-    }
-    
-    dashboardStore.addButton(newButton)
-    showActionResult({
-      success: true,
-      message: `Button "${newButton.label}" pasted`
-    })
-  } else {
-    // Create a default button at the clicked position
-    const buttonId = `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const button: Button = {
-      id: buttonId,
-      label: 'New Button',
-      icon_type: 'fontawesome',
-      icon: ['fas', 'home'],
-      shape: 'rounded',
-      position: {
-        row: position.row,
-        col: position.col
-      },
-      size: {
-        rows: 1,
-        cols: 1
-      },
-      style: {
-        backgroundColor: '#2c3e50',
-        textColor: '#ffffff'
-      },
-      enabled: true
-    }
-    
-    dashboardStore.addButton(button)
-      }
-}
-
-
-function addPageToCurrentScene() {
-  if (!currentScene.value) {
-    showActionResult({
-      success: false,
-      message: 'No scene selected'
-    })
-    return
-  }
-
-  const pageNumber = currentScene.value.pages.length + 1
-  dashboardStore.addPage({
-    id: `page_${Date.now()}`,
-    name: `Page ${pageNumber}`,
-    buttons: [],
-    grid_config: {
-      rows: settingsStore.defaultGridRows || 4,
-      cols: settingsStore.defaultGridCols || 5
-    }
-  })
-
-  showActionResult({
-    success: true,
-    message: `Page ${pageNumber} added to ${currentScene.value.name}`
-  })
-
-  // Show recommendation toast for page navigation buttons
-  setTimeout(() => {
-    notificationsStore.info(
-      'Page Added Successfully!',
-      `Page ${pageNumber} has been added to "${currentScene.value.name}". Consider adding page navigation buttons to easily switch between pages.`,
-      'You can find page navigation actions in the "Navigation" category when editing buttons.',
-      { duration: 8000 }
-    )
-  }, 1500)
-}
-
-function deleteCurrentPage() {
-  if (!currentScene.value || !currentPage.value) return
-  if (currentScene.value.pages.length <= 1) {
-    notificationsStore.error('Cannot Delete', 'A scene must have at least one page.')
-    return
-  }
-  if (!confirm(`Delete "${currentPage.value.name}"? This cannot be undone.`)) return
-  dashboardStore.removePage(currentPage.value.id)
-  notificationsStore.success('Page Deleted', 'The page has been removed.')
-}
-
-async function saveProfile() {
-  if (!currentProfile.value) {
-    showActionResult({
-      success: false,
-      message: 'No profile loaded'
-    })
-    return
-  }
-
-  const success = await dashboardStore.saveProfile()
-
-  if (success) {
-    showActionResult({
-      success: true,
-      message: 'Profile saved successfully'
-    })
-  } else {
-    showActionResult({
-      success: false,
-      message: 'Failed to save profile'
-    })
-  }
-}
-
-function showActionResult(result: ActionResult) {
-  // Use new notification system
-  if (result.success) {
-    notificationsStore.success('Action Executed', result.message)
-  } else {
-    notificationsStore.error(
-      'Action Failed',
-      result.message,
-      result.data?.details || undefined
-    )
   }
   
-  // Keep old toast for backward compatibility during transition
-  actionResult.value = result
-
-  if (actionResultTimeout) {
-    clearTimeout(actionResultTimeout)
+  // Wire auto scene switching
+  const storedIntegrations = localStorage.getItem('appIntegrations')
+  const storedAutoSwitch = localStorage.getItem('autoSceneSwitching')
+  if (storedAutoSwitch === 'true' && storedIntegrations) {
+    try {
+      const integrations: AppIntegration[] = JSON.parse(storedIntegrations)
+      autoSceneSwitcher.initialize(integrations)
+      autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
+        const profile = dashboardStore.currentProfile
+        if (!profile) return
+        const idx = profile.scenes.findIndex(s => s.id === sceneId)
+        if (idx >= 0) dashboardStore.setScene(idx)
+      })
+      autoSceneSwitcher.enable()
+    } catch {
+      // ignore
+    }
   }
 
-  actionResultTimeout = setTimeout(() => {
-    actionResult.value = null
-  }, 3000)
-}
+  // Keyboard shortcut listener
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      if (event.key === 'v' && clipboardButton.value) {
+        if (isEditMode.value) {
+          event.preventDefault()
+          showActionResult({
+            success: true,
+            message: 'Click on a placeholder to paste the button'
+          })
+        }
+      }
+    }
+  }
+  document.addEventListener('keydown', handleKeyDown)
+  
+  document.addEventListener('focusin', handleGlobalFocus)
+
+  onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyDown)
+    document.removeEventListener('focusin', handleGlobalFocus)
+  })
+})
+
+watch(currentProfile, (profile) => {
+  if (profile) {
+    localStorage.setItem('vdock_last_profile', profile.id)
+  }
+})
 </script>
 
 <style scoped>
 .dashboard-view {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Transparent mode — lets animated background effects show through */
 .dashboard-bg-transparent {
   background: transparent !important;
 }
 
-/* Enhanced Header Styles */
-.deck-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-md);
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  position: relative;
-  overflow: hidden;
-}
-
-.enhanced-header {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-}
-
-.header-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, 
-    rgba(102, 126, 234, 0.05) 0%, 
-    rgba(118, 75, 162, 0.05) 50%, 
-    rgba(255, 107, 107, 0.05) 100%);
-  animation: headerGradientShift 10s ease-in-out infinite;
-}
-
-@keyframes headerGradientShift {
-  0%, 100% {
-    background: linear-gradient(135deg, 
-      rgba(102, 126, 234, 0.05) 0%, 
-      rgba(118, 75, 162, 0.05) 50%, 
-      rgba(255, 107, 107, 0.05) 100%);
-  }
-  50% {
-    background: linear-gradient(135deg, 
-      rgba(255, 107, 107, 0.05) 0%, 
-      rgba(102, 126, 234, 0.05) 50%, 
-      rgba(118, 75, 162, 0.05) 100%);
-  }
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  position: relative;
-  z-index: 1;
-}
-
-.header-left,
-.header-right {
-  flex: 1;
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
-}
-
-.header-left {
-  flex-direction: row;
-  align-items: center;
-}
-
-/* Enhanced Profile Header */
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.profile-title-inline {
-  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0;
-  white-space: nowrap;
-}
-
-.profile-avatar-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.enhanced-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: all var(--transition-normal);
-}
-
-.enhanced-avatar:hover {
-  transform: scale(1.05);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.profile-avatar-placeholder.enhanced-avatar {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text);
-  font-size: clamp(1.12rem, 2vw + 0.70rem, 1.68rem);
-}
-
-.avatar-status-indicator {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 12px;
-  height: 12px;
-  background: linear-gradient(135deg, #4ade80, #22c55e);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  animation: pulse 2s infinite;
-}
-
-.profile-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.profile-title {
-  font-size: clamp(1.28rem, 2vw + 0.80rem, 1.92rem);
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0;
-  background: linear-gradient(135deg, var(--color-text), var(--color-primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.profile-subtitle {
-  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
-  color: var(--color-text-secondary);
-  opacity: 0.8;
-}
-
-.header-right {
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
-}
-
-.header-right-separator {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.15);
-  flex-shrink: 0;
-  align-self: center;
-  margin: 0 var(--spacing-xs);
-}
-
-/* Enhanced Button Styles */
-.enhanced-btn {
-  position: relative;
-  padding: 0.75rem var(--spacing-md); /* Increased vertical padding for better touch targets */
-  min-height: 44px; /* Minimum 44px for accessibility */
-  border-radius: var(--radius-lg);
-  font-weight: 500;
-  transition: all var(--transition-normal);
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-}
-
-.enhanced-btn .btn-label {
-  margin-left: var(--spacing-xs);
-  font-size: clamp(0.68rem, 2vw + 0.42rem, 1.02rem);
-  opacity: 0;
-  transform: translateX(-10px);
-  transition: all var(--transition-fast);
-}
-
-.enhanced-btn:hover .btn-label {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.edit-active {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)) !important;
-  color: white !important;
-  box-shadow: 0 0 20px rgba(var(--color-primary-rgb, 255, 107, 107), 0.4);
-}
-
-.edit-active .btn-label {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-/* Enhanced Navigation */
-.enhanced-scene-nav,
-.enhanced-page-nav {
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-xs);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.header-center {
-  flex: 2;
-  display: flex;
-  justify-content: center;
-}
-
 .deck-main {
   flex: 1;
-  overflow: hidden;
   display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.3s var(--ease-io);
+}
+
+.main-content.with-sidebar {
+  margin-right: 0; /* Decomposed sidebar handles its own layout next to grid inside flex container */
+}
+
+.main-content.with-docked-sidebar {
+  margin-left: 0;
 }
 
 .no-profile {
@@ -2248,58 +830,6 @@ function showActionResult(result: ActionResult) {
   opacity: 0.5;
 }
 
-.deck-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: var(--spacing-md);
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  margin-right: 350px; /* Account for edit sidebar width */
-  gap: var(--spacing-md);
-  position: relative;
-  z-index: 10;
-  min-height: 60px;
-  width: calc(100% - 350px);
-}
-
-.deck-footer.with-docked-sidebar {
-  margin-left: 280px; /* Account for docked sidebar width */
-}
-
-.footer-section {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.footer-spacer {
-  flex: 1;
-}
-
-.grid-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.grid-input {
-  width: 50px;
-  padding: var(--spacing-xs);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-background);
-  color: var(--color-text);
-  text-align: center;
-  font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
-}
-
-.grid-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-
 .action-toast {
   position: fixed;
   bottom: var(--spacing-lg);
@@ -2307,13 +837,8 @@ function showActionResult(result: ActionResult) {
   padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  animation: slideUp var(--transition-normal);
+  animation: slideUp 0.3s var(--ease-out);
   z-index: 1000;
-}
-
-.action-toast.success {
-  background-color: var(--color-success);
-  color: white;
 }
 
 .action-toast.error {
@@ -2332,746 +857,12 @@ function showActionResult(result: ActionResult) {
   }
 }
 
-/* Sidebar Styles */
-.deck-main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.main-content {
-  flex: 1;
-  transition: all var(--transition-medium);
-  display: flex;
-  flex-direction: column;
-}
-
-.main-content.with-sidebar {
-  margin-right: 350px;
-}
-
-.main-content.with-docked-sidebar {
-  margin-left: 16px;
-}
-
-.main-content.with-sidebar.with-docked-sidebar {
-  margin-left: 16px;
-  margin-right: 350px;
-}
-
-.edit-sidebar {
+.global-onscreen-keypad {
   position: fixed;
-  top: 0;
-  right: 0;
-  width: 350px;
-  height: 100vh;
-  background-color: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  z-index: 1000;
-  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface-solid);
-}
-
-.sidebar-header h3 {
-  margin: 0;
-  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
-  color: var(--color-text-primary);
-}
-
-.sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-sm);
-}
-
-.search-section {
-  margin-bottom: var(--spacing-md);
-}
-
-.search-input {
-  width: 100%;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-surface-solid);
-  color: var(--color-text-primary);
-  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-.categories-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.category-group {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.category-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-sm);
-  background-color: var(--color-surface-solid);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-  gap: var(--spacing-xs);
-}
-
-.category-header:hover {
-  background-color: var(--color-surface-hover);
-}
-
-.category-header svg {
-  color: var(--color-text-secondary);
-  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
-}
-
-.category-title {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  flex: 1;
-}
-
-.category-count {
-  margin-left: auto;
-  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
-  color: var(--color-text-secondary);
-}
-
-.category-controls {
-  display: flex;
-  gap: var(--spacing-xs);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.category-header:hover .category-controls {
-  opacity: 1;
-}
-
-.btn-icon {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-  color: var(--color-primary);
-}
-
-.btn-icon:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.btn-icon svg {
-  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
-}
-
-.category-actions {
-  border-top: 1px solid var(--color-border);
-  background-color: var(--color-surface);
-}
-
-.action-item {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-sm);
-  cursor: grab;
-  transition: all var(--transition-fast);
-  gap: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.action-item:last-child {
-  border-bottom: none;
-}
-
-.action-item:hover {
-  background-color: var(--color-surface-hover);
-  transform: translateX(2px);
-}
-
-.action-item:active {
-  cursor: grabbing;
-  transform: scale(0.98);
-}
-
-.action-item[draggable="true"] {
-  user-select: none;
-}
-
-.action-item svg {
-  color: var(--color-text-secondary);
-  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
-  width: 16px;
-}
-
-.action-item span {
-  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
-  color: var(--color-text-primary);
-}
-
-.btn-sm {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
-}
-
-.clickable {
-  cursor: pointer;
-  transition: transform var(--transition-fast);
-}
-
-.clickable:hover {
-  transform: scale(1.05);
-}
-
-/* Dashboard Background Styles */
-.dashboard-view.dashboard-bg-ocean-breeze {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.dashboard-view.dashboard-bg-sunset-glow {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.dashboard-view.dashboard-bg-forest-mist {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.dashboard-view.dashboard-bg-royal-purple {
-  background: linear-gradient(135deg, #b721ff 0%, #21d4fd 100%);
-}
-
-.dashboard-view.dashboard-bg-golden-hour {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-}
-
-/* Animated Backgrounds */
-.dashboard-view.dashboard-bg-floating-particles {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.dashboard-view.dashboard-bg-gradient-waves {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  background-size: 200% 200%;
-  animation: gradientShift 15s ease infinite;
-}
-
-.dashboard-view.dashboard-bg-geometric-patterns {
-  background: 
-    linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%),
-    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.05) 10px, rgba(255,255,255,.05) 20px);
-}
-
-.dashboard-view.dashboard-bg-aurora-borealis {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  background-size: 400% 400%;
-  animation: aurora 20s ease infinite;
-}
-
-.dashboard-view.dashboard-bg-starfield {
-  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
-  position: relative;
-}
-
-.dashboard-view.dashboard-bg-bubble-float {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.dashboard-view.dashboard-bg-neon-grid {
-  background: #0a0a0a;
-  background-image:
-    linear-gradient(rgba(102, 126, 234, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(102, 126, 234, 0.3) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
-
-/* Floating Paths Background */
-.dashboard-view.dashboard-bg-floating-paths {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.dashboard-view.dashboard-bg-floating-paths::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
   bottom: 0;
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(74, 0, 224, 0.1) 0%, transparent 50%);
-  animation: floatingPathsShift 30s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Beams Background */
-.dashboard-view.dashboard-bg-beams-background {
-  background: linear-gradient(135deg, #0f1729 0%, #1a2f4f 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.dashboard-view.dashboard-bg-beams-background::before {
-  content: '';
-  position: absolute;
-  top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    linear-gradient(105deg, rgba(100, 200, 255, 0.08) 0%, transparent 30%),
-    linear-gradient(205deg, rgba(100, 200, 255, 0.06) 0%, transparent 40%),
-    linear-gradient(305deg, rgba(150, 200, 255, 0.04) 0%, transparent 50%);
-  animation: beamsShift 20s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Custom Background (applied via inline styles) */
-.dashboard-view.dashboard-bg-custom {
-  /* Styles are applied via computed backgroundStyle */
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes aurora {
-  0% { background-position: 0% 50%; }
-  25% { background-position: 50% 100%; }
-  50% { background-position: 100% 50%; }
-  75% { background-position: 50% 0%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes floatingPathsShift {
-  0% {
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(74, 0, 224, 0.1) 0%, transparent 50%);
-  }
-  50% {
-    background:
-      radial-gradient(ellipse at 40% 60%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 60% 40%, rgba(74, 0, 224, 0.15) 0%, transparent 50%);
-  }
-  100% {
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(74, 0, 224, 0.1) 0%, transparent 50%);
-  }
-}
-
-@keyframes beamsShift {
-  0% {
-    background:
-      linear-gradient(105deg, rgba(100, 200, 255, 0.08) 0%, transparent 30%),
-      linear-gradient(205deg, rgba(100, 200, 255, 0.06) 0%, transparent 40%),
-      linear-gradient(305deg, rgba(150, 200, 255, 0.04) 0%, transparent 50%);
-  }
-  50% {
-    background:
-      linear-gradient(115deg, rgba(100, 200, 255, 0.12) 0%, transparent 35%),
-      linear-gradient(215deg, rgba(100, 200, 255, 0.1) 0%, transparent 45%),
-      linear-gradient(315deg, rgba(150, 200, 255, 0.08) 0%, transparent 55%);
-  }
-  100% {
-    background:
-      linear-gradient(105deg, rgba(100, 200, 255, 0.08) 0%, transparent 30%),
-      linear-gradient(205deg, rgba(100, 200, 255, 0.06) 0%, transparent 40%),
-      linear-gradient(305deg, rgba(150, 200, 255, 0.04) 0%, transparent 50%);
-  }
-}
-
-/* Help Modal */
-.help-modal {
-  max-width: 800px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.help-content {
-  padding: var(--spacing-lg);
-}
-
-.help-section {
-  margin-bottom: var(--spacing-xl);
-  padding: var(--spacing-md);
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--color-primary);
-}
-
-.help-section h3 {
-  color: var(--color-primary);
-  margin-bottom: var(--spacing-md);
-  font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.help-section ul,
-.help-section ol {
-  margin-left: var(--spacing-lg);
-  line-height: 1.8;
-}
-
-.help-section li {
-  margin-bottom: var(--spacing-sm);
-}
-
-.help-section li strong {
-  color: var(--color-text);
-}
-
-.help-section code {
-  background: var(--color-background);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  font-family: monospace;
-  color: var(--color-primary);
-}
-
-.help-section a {
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-.help-section a:hover {
-  text-decoration: underline;
-}
-
-/* =============================================
-   RESPONSIVE STYLES
-   ============================================= */
-
-/* Mobile (< 768px) */
-@media (max-width: 767px) {
-  .deck-header {
-    padding: var(--spacing-sm);
-  }
-  
-  .header-content {
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-  }
-  
-  .header-left,
-  .header-right {
-    flex: 1 1 100%;
-    justify-content: center;
-  }
-  
-  .header-center {
-    flex: 1 1 100%;
-    order: 3;
-  }
-  
-  .profile-title-inline {
-    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
-  }
-  
-  .enhanced-btn .btn-label {
-    display: none; /* Hide labels on mobile */
-  }
-  
-  .enhanced-avatar {
-    width: 36px;
-    height: 36px;
-  }
-  
-  /* Stack page navigation on mobile */
-  .enhanced-page-nav,
-  .enhanced-scene-nav {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  /* Mobile footer */
-  .deck-footer {
-    flex-wrap: wrap;
-    padding: var(--spacing-sm);
-    margin-right: 0;
-    margin-left: 0;
-  }
-  
-  .footer-section {
-    flex: 1 1 auto;
-  }
-  
-  /* Hide edit sidebar on mobile, show as modal instead */
-  .edit-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    z-index: 2000;
-  }
-  
-  /* Full width main content on mobile */
-  .main-content {
-    margin-right: 0 !important;
-    margin-left: 0 !important;
-  }
-  
-  .main-content.with-sidebar {
-    margin-right: 0 !important;
-  }
-  
-  .main-content.with-docked-sidebar {
-    margin-left: 0 !important;
-  }
-  
-  /* Action toast on mobile */
-  .action-toast {
-    bottom: var(--spacing-md);
-    right: var(--spacing-md);
-    left: var(--spacing-md);
-    width: auto;
-  }
-  
-  /* Help modal on mobile */
-  .help-modal {
-    width: 100%;
-    max-height: 90vh;
-    margin: 5vh 0;
-  }
-}
-
-/* Tablet (768px - 1365px) */
-@media (min-width: 768px) and (max-width: 1365px) {
-  .profile-title-inline {
-    font-size: clamp(0.88rem, 2vw + 0.55rem, 1.32rem);
-  }
-  
-  .enhanced-btn {
-    padding: 0.5rem var(--spacing-sm);
-  }
-  
-  .edit-sidebar {
-    width: 300px;
-  }
-  
-  .main-content.with-sidebar {
-    margin-right: 300px;
-  }
-  
-  .deck-footer {
-    margin-right: 300px;
-  }
-}
-
-/* Large Desktop (1366px - 1919px) */
-@media (min-width: 1366px) and (max-width: 1919px) {
-  .deck-header {
-    padding: var(--spacing-lg);
-  }
-}
-
-/* 4K and Ultra-Wide (>= 1920px) */
-@media (min-width: 1920px) {
-  .deck-header {
-    padding: var(--spacing-xl);
-  }
-  
-  .profile-title-inline {
-    font-size: clamp(1.20rem, 2vw + 0.75rem, 1.80rem);
-  }
-  
-  .enhanced-avatar {
-    width: 56px;
-    height: 56px;
-  }
-  
-  .enhanced-btn {
-    padding: 1rem var(--spacing-lg);
-    font-size: clamp(0.80rem, 2vw + 0.50rem, 1.20rem);
-  }
-  
-  .edit-sidebar {
-    width: 400px;
-  }
-  
-  .main-content.with-sidebar {
-    margin-right: 400px;
-  }
-  
-  .deck-footer {
-    margin-right: 400px;
-  }
-  
-  .action-toast {
-    width: 500px;
-  }
-}
-
-/* Landscape mobile */
-@media (max-width: 767px) and (orientation: landscape) {
-  .deck-header {
-    padding: var(--spacing-xs) var(--spacing-sm);
-  }
-  
-  .enhanced-avatar {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .profile-title-inline {
-    font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
-  }
-}
-
-/* Touch device specific */
-@media (hover: none) and (pointer: coarse) {
-  .enhanced-btn {
-    min-height: var(--min-touch-target, 44px);
-    min-width: var(--min-touch-target, 44px);
-  }
-  
-  /* Remove hover-dependent label showing */
-  .enhanced-btn .btn-label {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  
-  /* Larger grid gaps for touch */
-  .deck-grid {
-    gap: calc(var(--spacing-md) * 1.2);
-  }
-}
-
-/* ── Hide-header button — Uiverse augustin_4687 style ── */
-.btn-hide-header {
-  --stone-50: #fafaf9;
-  --stone-800: #292524;
-  --yellow-400: #facc15;
-  font-size: clamp(0.6rem, 0.7vw + 0.35rem, 0.75rem);
-  cursor: pointer;
-  position: relative;
-  font-family: inherit;
-  font-weight: bold;
-  line-height: 1;
-  padding: 1px;
-  transform: translate(-4px, -4px);
-  outline: 2px solid transparent;
-  outline-offset: 5px;
-  border-radius: 9999px;
-  background-color: var(--stone-800);
-  color: var(--stone-800);
-  border: none;
-  transition: transform 150ms ease, box-shadow 150ms ease;
-  text-align: center;
-  flex-shrink: 0;
-  box-shadow:
-    0.5px 0.5px 0 0 var(--stone-800), 1px 1px 0 0 var(--stone-800),
-    1.5px 1.5px 0 0 var(--stone-800), 2px 2px 0 0 var(--stone-800),
-    2.5px 2.5px 0 0 var(--stone-800), 3px 3px 0 0 var(--stone-800),
-    0 0 0 2px var(--stone-50), 0.5px 0.5px 0 2px var(--stone-50),
-    1px 1px 0 2px var(--stone-50), 1.5px 1.5px 0 2px var(--stone-50),
-    2px 2px 0 2px var(--stone-50), 2.5px 2.5px 0 2px var(--stone-50),
-    3px 3px 0 2px var(--stone-50), 3.5px 3.5px 0 2px var(--stone-50),
-    4px 4px 0 2px var(--stone-50);
-}
-
-.btn-hide-header:hover {
-  transform: translate(0, 0);
-  box-shadow: 0 0 0 2px var(--stone-50);
-}
-
-.btn-hide-header:active,
-.btn-hide-header:focus-visible {
-  outline-color: var(--yellow-400);
-}
-
-.btn-hide-header:focus-visible {
-  outline-style: dashed;
-}
-
-.btn-hide-header > div {
-  position: relative;
-  pointer-events: none;
-  background-color: var(--yellow-400);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 9999px;
-  overflow: hidden;
-}
-
-.btn-hide-header > div::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  opacity: 0.5;
-  background-image:
-    radial-gradient(rgb(255 255 255 / 80%) 20%, transparent 20%),
-    radial-gradient(rgb(255 255 255 / 100%) 20%, transparent 20%);
-  background-position: 0 0, 4px 4px;
-  background-size: 8px 8px;
-  mix-blend-mode: hard-light;
-  animation: btn-hide-dots 0.5s infinite linear;
-}
-
-.btn-hide-header > div > span {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.45rem 0.85rem;
-  gap: 0.3rem;
-  color: var(--stone-800);
-  filter: drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.25));
-  white-space: nowrap;
-  min-height: 36px;
-}
-
-.btn-hide-header > div > span:active {
-  transform: translateY(2px);
-}
-
-@keyframes btn-hide-dots {
-  0%   { background-position: 0 0, 4px 4px; }
-  100% { background-position: 8px 0, 12px 4px; }
+  width: 100vw;
+  z-index: 2000;
 }
 
 /* ── Page slide transitions ── */
@@ -3079,81 +870,68 @@ function showActionResult(result: ActionResult) {
 .page-slide-left-leave-active,
 .page-slide-right-enter-active,
 .page-slide-right-leave-active {
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease;
+  transition: transform 0.34s var(--ease-io), opacity 0.34s ease;
   will-change: transform;
 }
 
 .page-slide-left-enter-from {
-  transform: translateX(6%);
+  transform: translateX(34%);
   opacity: 0;
 }
 .page-slide-left-leave-to {
-  transform: translateX(-6%);
+  transform: translateX(-34%);
   opacity: 0;
 }
 
 .page-slide-right-enter-from {
-  transform: translateX(-6%);
+  transform: translateX(-34%);
   opacity: 0;
 }
 .page-slide-right-leave-to {
-  transform: translateX(6%);
+  transform: translateX(34%);
   opacity: 0;
 }
 
-/* Glassmorphism Button Styles */
-.btn-glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
+/* Frosted glass header */
+:deep(.dashboard-header) {
+  background: rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
 }
 
-.btn-glass:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
-.btn-shortcut {
-  font-size: clamp(0.52rem, 2vw + 0.33rem, 0.78rem);
-  padding: 0.15rem 0.4rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: var(--radius-xs);
-  margin-left: 0.5rem;
-  font-family: monospace;
-  opacity: 0.7;
-}
-
-.enhanced-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.enhanced-btn .btn-label {
-  white-space: nowrap;
-}
-
-/* Smooth animations for better UX */
-.dashboard-view {
-  animation: fadeInView 0.3s ease-out;
-}
-
-@keyframes fadeInView {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* Responsive .deck-main at <768px — sidebar becomes bottom drawer */
+@media (max-width: 768px) {
+  .deck-main {
+    flex-direction: column;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .main-content {
+    flex: 1;
+  }
+}
+
+/* Dashboard grid layout */
+.dashboard-layout {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  width: 100vw;
+}
+
+@media (max-width: 480px) {
+  .dashboard-layout {
+    grid-template-areas:
+      "header"
+      "main"
+      "footer";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
   }
 }
 </style>
-

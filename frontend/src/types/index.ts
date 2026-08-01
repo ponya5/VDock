@@ -46,6 +46,22 @@ export type ButtonEffect = 'none' | 'glass' | 'neumorphism' | 'gradient' | 'glow
 
 export type ButtonAnimation = 'none' | 'pulse' | 'shimmer' | 'bounce' | 'rotate'
 
+export type IconType = 'logo' | 'fontawesome' | 'gif' | 'lottie'
+
+export type IconLoop = 'squash' | 'bob' | 'spin' | 'pulse' | 'swing' | 'flip' | 'jump'
+
+export type BehaviourType = 'none' | 'pulse' | 'float' | 'breathe' | 'tilt'
+
+export type EffectType = ButtonEffect | 'fire' | 'plasma' | 'particles' | 'aurora' | 'scanline' | 'rain'
+
+export interface ButtonLayers {
+  fill?: { type: 'none' | 'solid' | 'gradient' | 'tint' | 'image' | 'video'; value?: string }
+  effect?: { type: EffectType; tint: 'brand' | string; intensity?: number }
+  icon?: { type: IconType; value: string | string[]; loop?: IconLoop; size?: number }
+  label?: { text: string; secondary?: string }
+  behaviour?: BehaviourType
+}
+
 export interface MacroStep {
   type: 'hotkey' | 'delay' | 'text' | 'click'
   keys?: string[]
@@ -123,6 +139,7 @@ export interface Button {
   position: ButtonPosition
   size: ButtonSize
   style?: ButtonStyle
+  layers?: ButtonLayers
   tooltip?: string
   enabled: boolean
 }
@@ -162,6 +179,10 @@ export interface Scene {
   buttonSize?: number // Size multiplier for scene buttons
   triggeredByApp?: string // App executable name that triggers this scene
   autoCreated?: boolean // Whether this scene was auto-created by app integration
+  transition_style?: 'light-bar' | 'flip' | 'iris' | 'cascade' | 'glitch' | 'dissolve'
+  stagger_order?: 'by-column' | 'by-row' | 'diagonal' | 'random' | 'none'
+  overlay_style?: 'none' | 'light-sweep' | 'aurora' | 'plasma' | 'rainbow' | 'fire-wall' | 'scanline' | 'rain'
+  overlay_mode?: 'keys' | 'full-bleed'
   created_at?: string
   updated_at?: string
 }
