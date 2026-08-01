@@ -86,9 +86,7 @@ each other once their prerequisites are met.
     - Implemented via static parsing of new `transition` / `animation-timing-function` declarations introduced in this feature's CSS changes
 
 - [x] 2. Checkpoint — Foundations
-  - Ensure the app builds, the retuned page-slide transition plays correctly, and existing effects still render with their current default colours when no brand tint is supplied. Ask the user if questions arise.
-
-- [ ] 3. Phase 2 — Preset registry
+  - Ensure the app builds, the retuned page-slide transition plays correctly, and existing effects still render with their current default colours when no brand tint is supplied. Ask the - [x] 3. Phase 2 — Preset registry
   - [x] 3.1 Define preset types and registry scaffolding
     - Create `frontend/src/data/presets/types.ts` with the `ButtonPreset` and `PresetCategory` interfaces from the design document
     - Create `frontend/src/data/presets/index.ts` exporting the combined registry, a category lookup, and a keyword/name match function
@@ -117,64 +115,65 @@ each other once their prerequisites are met.
     - Ensure the function does not mutate `preset` or any registry entry
     - _Requirements: 1.7_
 
-  - [-]* 3.7 Write property test for presetToButton purity and correctness (Property 3)
+  - [x]* 3.7 Write property test for presetToButton purity and correctness (Property 3)
     - **Property 3: presetToButton is pure and correctly derived**
     - **Validates: Requirements 1.7, 8.7**
 
-  - [-] 3.8 Replace `createPreconfiguredButton` call sites with `presetToButton`
+  - [x] 3.8 Replace `createPreconfiguredButton` call sites with `presetToButton`
     - Remove the ~640-line `switch` statement in `DashboardView.vue`
     - Update all call sites to use `presetToButton(preset, position)` against the new registry
     - _Requirements: 1.2_
 
-- [ ] 4. Checkpoint — Preset registry
+- [x] 4. Checkpoint — Preset registry
   - Ensure every existing system action and app preset still creates a working button, and `DashboardView.vue` no longer contains the hardcoded switch statement. Ask the user if questions arise.
 
-- [ ] 5. Phase 3 — Button layer model
-  - [ ] 5.1 Add `ButtonLayers` type and extend `Button`
+- [x] 5. Phase 3 — Button layer model
+  - [x] 5.1 Add `ButtonLayers` type and extend `Button`
     - Add `ButtonLayers`, `IconType`, `IconLoop`, and `BehaviourType` to `frontend/src/types/index.ts`
     - Add optional `layers?: ButtonLayers` to the existing `Button` interface without altering any existing field
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 5.2 Implement `resolveButtonVisual(button)`
+  - [x] 5.2 Implement `resolveButtonVisual(button)`
     - Add a pure function that resolves any `Button` (with or without `layers`) into an explicit `{ fill, effect, icon, label }` description
     - For each of the four slots, use the `layers` field when set, falling back to the corresponding legacy field (`icon`, `media_url`/`media_type`, `style`) when unset
     - Guarantee no slot ever resolves to `undefined`
     - _Requirements: 2.3, 2.4, 2.6_
 
-  - [ ]* 5.3 Write property test for total, precedence-respecting visual resolution (Property 4)
+  - [x]* 5.3 Write property test for total, precedence-respecting visual resolution (Property 4)
     - **Property 4: Visual resolution is total and respects layer-over-legacy precedence**
     - **Validates: Requirements 2.3, 2.4, 2.6**
 
-  - [ ] 5.4 Rewrite `DeckButton.vue` to render from `resolveButtonVisual`
+  - [x] 5.4 Rewrite `DeckButton.vue` to render from `resolveButtonVisual`
     - Replace direct reads of `icon` / `media_url` / `style` with the resolved visual description
     - Render the Effect_Layer behind the Icon_Layer simultaneously when both are present
     - _Requirements: 2.3, 2.4, 2.5_
 
-  - [ ] 5.5 Implement the 7 new CSS effect classes (fire, plasma, particles, aurora, scanline, rain)
+  - [x] 5.5 Implement the 7 new CSS effect classes (fire, plasma, particles, aurora, scanline, rain)
     - Add CSS-only implementations wired through the brand-parametric pattern from task 1.3
     - _Requirements: 2.4 (effect layer support), 3.1, 3.2_
 
-  - [ ] 5.6 Implement lazy `layers` write-on-save without touching untouched buttons
+  - [x] 5.6 Implement lazy `layers` write-on-save without touching untouched buttons
     - When a button is edited through the layer-aware editor and saved, write its `layers` field to the profile
     - Ensure buttons not edited in the same save operation remain byte-for-byte unchanged
     - _Requirements: 2.7_
 
-  - [ ]* 5.7 Write property test for save isolation (Property 5)
+  - [x]* 5.7 Write property test for save isolation (Property 5)
     - **Property 5: Saving edited buttons never alters untouched buttons**
     - **Validates: Requirements 2.7**
 
-  - [ ]* 5.8 Write property test for legacy profile backward compatibility (Property 24)
+  - [x]* 5.8 Write property test for legacy profile backward compatibility (Property 24)
     - **Property 24: Legacy profiles load and render without error**
     - **Validates: Requirements 2.3, 14.1, 14.3**
 
-  - [ ]* 5.9 Write property test for load-never-writes (Property 25)
+  - [x]* 5.9 Write property test for load-never-writes (Property 25)
     - **Property 25: Loading a profile never triggers a write**
     - **Validates: Requirements 14.2**
 
-  - [ ] 5.10 Regression-check the 10 existing effects, 10 existing animations, and 10 existing backgrounds
+  - [x] 5.10 Regression-check the 10 existing effects, 10 existing animations, and 10 existing backgrounds
     - Manually verify each pre-existing effect/animation/background still renders correctly through the new `resolveButtonVisual` path
     - _Requirements: 14.4_
 
+- [x] 6. Checkpoint — Layer model
 - [ ] 6. Checkpoint — Layer model
   - Ensure all buttons (legacy and layer-based) render correctly, no existing profile fails to load, and the profile-save path only touches edited buttons. Ask the user if questions arise.
 

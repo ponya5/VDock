@@ -10,10 +10,10 @@
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
   >
-    <!-- Video background for video media -->
+    <!-- Video background for video media (from resolved fill) -->
     <video
-      v-if="button.media_url && button.media_type === 'video'"
-      :src="button.media_url"
+      v-if="resolvedVisual.fill.type === 'video' && resolvedVisual.fill.value"
+      :src="resolvedVisual.fill.value"
       class="button-video-background"
       autoplay
       loop
@@ -89,53 +89,41 @@
         v-else-if="button.action?.type === 'calendar'"
       />
       
-      <div v-else-if="button.icon || button.media_url" class="button-icon">
+      <div v-else-if="resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
         <!-- Media (Video/GIF/Image) - Priority over icons -->
-        <div v-if="button.media_url" class="media-container">
+        <div v-if="resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value" class="media-container">
           <img 
-            v-if="button.media_type === 'gif' || button.media_type === 'image'" 
-            :src="button.media_url" 
+            :src="resolvedVisual.fill.value" 
             :style="mediaStyle"
             alt="Button media"
             class="media-element"
           />
-          <video 
-            v-else-if="button.media_type === 'video'" 
-            :src="button.media_url" 
-            :style="mediaStyle"
-            autoplay
-            loop
-            muted
-            playsinline
-            alt="Button video"
-            class="media-element"
-          />
         </div>
         
-        <!-- FontAwesome Icon - Only show if no media -->
+        <!-- FontAwesome Icon -->
         <FontAwesomeIcon 
-          v-else-if="button.icon_type === 'fontawesome'" 
-          :icon="Array.isArray(button.icon) ? button.icon : parseIcon(button.icon)" 
+          v-else-if="resolvedVisual.icon.type === 'fontawesome'" 
+          :icon="Array.isArray(resolvedVisual.icon.value) ? resolvedVisual.icon.value : parseIcon(resolvedVisual.icon.value as string)" 
           :style="iconStyle"
-          class="fontawesome-icon"
+          :class="['fontawesome-icon', resolvedVisual.icon.loop !== 'none' ? `loop-${resolvedVisual.icon.loop}` : '']"
         />
         
-        <!-- Custom Image Icon - Only show if no media -->
+        <!-- Custom Image Icon / Logo -->
         <img 
-          v-else-if="button.icon_type === 'custom'" 
-          :src="button.icon" 
+          v-else-if="resolvedVisual.icon.type === 'custom' || resolvedVisual.icon.type === 'logo'" 
+          :src="Array.isArray(resolvedVisual.icon.value) ? resolvedVisual.icon.value[0] : resolvedVisual.icon.value" 
           :style="iconStyle"
           alt="Button icon"
-          class="custom-icon"
+          :class="['custom-icon', resolvedVisual.icon.loop !== 'none' ? `loop-${resolvedVisual.icon.loop}` : '']"
         />
       </div>
 
-      <div v-if="button.label && showLabels && !isSpecialActionType" class="button-label" :style="labelStyle">
-        {{ button.label }}
+      <div v-if="resolvedVisual.label.text && showLabels && !isSpecialActionType" class="button-label" :style="labelStyle">
+        {{ resolvedVisual.label.text }}
       </div>
 
-      <div v-if="button.secondary_label && showLabels && !isSpecialActionType" class="button-secondary-label" :style="secondaryLabelStyle">
-        {{ button.secondary_label }}
+      <div v-if="resolvedVisual.label.secondary && showLabels && !isSpecialActionType" class="button-secondary-label" :style="secondaryLabelStyle">
+        {{ resolvedVisual.label.secondary }}
       </div>
     </div>
 
@@ -151,6 +139,7 @@ import type { Button } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDoubleTap, useLongPress } from '@/composables/useGestures'
 import { resolveBrandTint } from '@/utils/brandTint'
+import { resolveButtonVisual, resolveButtonBrandTint } from '@/utils/buttonVisual'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
@@ -164,6 +153,7 @@ interface Props {
   showTooltips?: boolean
   compact?: boolean
   buttonSize?: number
+  gridIndex?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -172,7 +162,8 @@ const props = withDefaults(defineProps<Props>(), {
   showLabels: true,
   showTooltips: true,
   compact: false,
-  buttonSize: 1.0
+  buttonSize: 1.0,
+  gridIndex: 0
 })
 
 const emit = defineEmits<{
@@ -237,82 +228,120 @@ const getMetricFromActionType = computed(() => {
   return metricMap[type] || ''
 })
 
-const buttonClasses = computed(() => ({
-  'shape-rectangle': props.button.shape === 'rectangle',
-  'shape-rounded': props.button.shape === 'rounded',
-  'shape-circle': props.button.shape === 'circle',
-  'shape-hexagon': props.button.shape === 'hexagon',
-  'shape-diamond': props.button.shape === 'diamond',
-  'shape-octagon': props.button.shape === 'octagon',
-  'is-placeholder': props.isPlaceholder,
-  'edit-mode': props.isEditMode,
-  'has-action': !!props.button.action,
-  'disabled': !props.button.enabled,
-  'deck-button-enhanced': props.button.style?.enhanced,
-  'deck-button-glass': props.button.style?.effect === 'glass',
-  'deck-button-neumorphism': props.button.style?.effect === 'neumorphism',
-  'deck-button-gradient': props.button.style?.effect === 'gradient',
-  'deck-button-glow': props.button.style?.effect === 'glow',
-  'deck-button-neon': props.button.style?.effect === 'neon',
-  'deck-button-metallic': props.button.style?.effect === 'metallic',
-  'deck-button-liquid': props.button.style?.effect === 'liquid',
-  'deck-button-holographic': props.button.style?.effect === 'holographic',
-  'deck-button-shadow': props.button.style?.effect === 'shadow',
-  'deck-button-emissive': props.button.style?.effect === 'emissive',
-  'btn-pulse': props.button.style?.animation === 'pulse',
-  'btn-shimmer': props.button.style?.animation === 'shimmer',
-  'btn-bounce': props.button.style?.animation === 'bounce',
-  'btn-rotate': props.button.style?.animation === 'rotate',
-  'btn-wiggle': props.button.style?.animation === 'wiggle',
-  'btn-float': props.button.style?.animation === 'float',
-  'btn-scale': props.button.style?.animation === 'scale',
-  'btn-slide': props.button.style?.animation === 'slide',
-  'btn-fade': props.button.style?.animation === 'fade',
-  'btn-spin': props.button.style?.animation === 'spin'
-}))
+const resolvedVisual = computed(() => resolveButtonVisual(props.button))
+
+const buttonClasses = computed(() => {
+  const vis = resolvedVisual.value
+  const anim = props.button.layers?.behaviour ?? props.button.style?.animation ?? 'none'
+
+  return {
+    'shape-rectangle': props.button.shape === 'rectangle',
+    'shape-rounded': props.button.shape === 'rounded',
+    'shape-circle': props.button.shape === 'circle',
+    'shape-hexagon': props.button.shape === 'hexagon',
+    'shape-diamond': props.button.shape === 'diamond',
+    'shape-octagon': props.button.shape === 'octagon',
+    'is-placeholder': props.isPlaceholder,
+    'edit-mode': props.isEditMode,
+    'has-action': !!props.button.action,
+    'disabled': !props.button.enabled,
+    'deck-button-enhanced': props.button.style?.enhanced,
+    
+    // Effects from resolvedVisual
+    'deck-button-glass': vis.effect.type === 'glass',
+    'deck-button-neumorphism': vis.effect.type === 'neumorphism',
+    'deck-button-gradient': vis.effect.type === 'gradient',
+    'deck-button-glow': vis.effect.type === 'glow',
+    'deck-button-neon': vis.effect.type === 'neon',
+    'deck-button-metallic': vis.effect.type === 'metallic',
+    'deck-button-liquid': vis.effect.type === 'liquid',
+    'deck-button-holographic': vis.effect.type === 'holographic',
+    'deck-button-shadow': vis.effect.type === 'shadow',
+    'deck-button-emissive': vis.effect.type === 'emissive',
+    
+    // New CSS Effects
+    'deck-button-fire': vis.effect.type === 'fire',
+    'deck-button-plasma': vis.effect.type === 'plasma',
+    'deck-button-particles': vis.effect.type === 'particles',
+    'deck-button-aurora': vis.effect.type === 'aurora',
+    'deck-button-scanline': vis.effect.type === 'scanline',
+    'deck-button-rain': vis.effect.type === 'rain',
+
+    // Animations (mapped from behaviour layer or legacy style.animation)
+    'btn-pulse': anim === 'pulse',
+    'btn-shimmer': anim === 'shimmer',
+    'btn-bounce': anim === 'bounce',
+    'btn-rotate': anim === 'rotate',
+    'btn-wiggle': anim === 'wiggle',
+    'btn-float': anim === 'float',
+    'btn-scale': anim === 'scale',
+    'btn-slide': anim === 'slide',
+    'btn-fade': anim === 'fade',
+    'btn-spin': anim === 'spin'
+  }
+})
 
 const buttonStyle = computed(() => {
   const { position = { row: 0, col: 0 }, size = { rows: 1, cols: 1 }, style } = props.button
+  const vis = resolvedVisual.value
 
   const baseStyle: Record<string, string | number | undefined> = {
     gridRow: `${position.row + 1} / span ${size.rows}`,
     gridColumn: `${position.col + 1} / span ${size.cols}`,
     opacity: style?.opacity || 1,
     fontSize: style?.fontSize ? `${style.fontSize}px` : '0.875rem',
-    // Only use background image for non-video media
-    backgroundImage: (props.button.media_url && props.button.media_type !== 'video') 
-      ? `url(${props.button.media_url})` : undefined,
-    backgroundSize: (props.button.media_url && props.button.media_type !== 'video') 
-      ? 'cover' : undefined,
-    backgroundPosition: (props.button.media_url && props.button.media_type !== 'video') 
-      ? 'center' : undefined,
-    backgroundRepeat: (props.button.media_url && props.button.media_type !== 'video') 
-      ? 'no-repeat' : undefined
+    // Background image for visual image fill
+    backgroundImage: (vis.fill.type === 'image' && vis.fill.value) 
+      ? `url(${vis.fill.value})` : undefined,
+    backgroundSize: vis.fill.type === 'image' ? 'cover' : undefined,
+    backgroundPosition: vis.fill.type === 'image' ? 'center' : undefined,
+    backgroundRepeat: vis.fill.type === 'image' ? 'no-repeat' : undefined
   }
 
-  // --btn-brand parametrizes the colour of brand-aware effects (glow/neon/emissive/shimmer)
-  // via color-mix() in main.css. Full preset/layer wiring lands in later phases — for now
-  // `style.glowColor` is the explicit source. Left unset when absent, so the CSS fallback
-  // (var(--btn-brand, <default>)) resolves to each effect's existing hardcoded colour.
-  const brandTint = resolveBrandTint(style?.glowColor)
+  // Resolve and set --btn-brand custom property
+  const brandTint = resolveButtonBrandTint(props.button)
   if (brandTint !== undefined) {
     baseStyle['--btn-brand'] = brandTint
   }
 
+  if (vis.fill.type === 'gradient' && vis.fill.value) {
+    return {
+      ...baseStyle,
+      background: vis.fill.value,
+      color: style?.textColor || '#ffffff'
+    }
+  } else if (vis.fill.type === 'solid' && vis.fill.value) {
+    return {
+      ...baseStyle,
+      backgroundColor: vis.fill.value,
+      color: style?.textColor || 'var(--color-text)',
+      borderColor: style?.borderColor || 'var(--color-border)',
+      borderWidth: style?.borderWidth ? `${style.borderWidth}px` : '2px'
+    }
+  } else if (vis.fill.type === 'tint') {
+    return {
+      ...baseStyle,
+      backgroundColor: brandTint || 'var(--color-primary)',
+      color: style?.textColor || '#ffffff',
+      borderColor: style?.borderColor || 'var(--color-border)',
+      borderWidth: style?.borderWidth ? `${style.borderWidth}px` : '2px'
+    }
+  }
+
   // Apply enhanced styling based on effect type
-  if (style?.effect === 'glass') {
+  if (vis.effect.type === 'glass') {
     // Glass effect styles are handled by CSS classes
     return {
       ...baseStyle,
       color: style?.textColor || 'rgba(255, 255, 255, 0.9)'
     }
-  } else if (style?.effect === 'neumorphism') {
+  } else if (vis.effect.type === 'neumorphism') {
     // Neumorphism styles are handled by CSS classes
     return {
       ...baseStyle,
       color: style?.textColor || 'var(--color-text)'
     }
-  } else if (style?.effect === 'gradient') {
+  } else if (vis.effect.type === 'gradient') {
     // Custom gradient or default
     const gradient = style?.gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     return {
@@ -320,7 +349,7 @@ const buttonStyle = computed(() => {
       background: gradient,
       color: style?.textColor || '#ffffff'
     }
-  } else if (style?.effect === 'glow') {
+  } else if (vis.effect.type === 'glow') {
     return {
       ...baseStyle,
       backgroundColor: style?.backgroundColor || 'var(--color-primary)',
@@ -340,28 +369,44 @@ const buttonStyle = computed(() => {
 })
 
 const iconStyle = computed(() => {
+  const vis = resolvedVisual.value
   // Scale icon size with buttonSize prop so label always has room
-  const baseSize = props.button.style?.iconSize || 32
+  const baseSize = vis.icon.size || 32
   const scale = props.buttonSize || 1.0
-  // When label is shown, cap icon at 55% of scaled size to leave room for label
-  const hasLabel = !!(props.button.label && props.showLabels)
+  // When label is shown, cap icon at 75% of scaled size to leave room for label
+  const hasLabel = !!(vis.label.text && props.showLabels)
   const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
-  return {
+  
+  const styleObj: Record<string, string | number | undefined> = {
     width: `${size}px`,
     height: `${size}px`,
     fontSize: `${size}px`
   }
+
+  if (vis.icon.loop && vis.icon.loop !== 'none') {
+    styleObj.animationDelay = `${(props.gridIndex * 137) % 1900}ms`
+  }
+
+  return styleObj
 })
 
 const mediaStyle = computed(() => {
+  const vis = resolvedVisual.value
   const baseSize = props.button.style?.iconSize || 32
   const scale = props.buttonSize || 1.0
-  const hasLabel = !!(props.button.label && props.showLabels)
+  const hasLabel = !!(vis.label.text && props.showLabels)
   const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
-  return {
+  
+  const styleObj: Record<string, string | number | undefined> = {
     width: `${size}px`,
     height: `${size}px`
   }
+
+  if (vis.icon.loop && vis.icon.loop !== 'none') {
+    styleObj.animationDelay = `${(props.gridIndex * 137) % 1900}ms`
+  }
+
+  return styleObj
 })
 
 const labelStyle = computed(() => {
@@ -393,6 +438,7 @@ const buttonContentStyle = computed(() => {
 })
 
 function parseIcon(iconString: string) {
+  if (!iconString) return ['fas', 'question']
   // Format: "fas fa-home" or "fab fa-twitter"
   const parts = iconString.split(' ')
   if (parts.length === 2) {

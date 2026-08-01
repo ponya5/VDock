@@ -804,8 +804,8 @@ function handleDragEnd() {
 
 function handleActionDrop(action: any, position: { row: number; col: number }) {
     
-  // Create preconfigured button based on action type
-  const button = createPreconfiguredButton(action, position)
+  // Create a button from the matching preset (falls back for unmigrated action ids)
+  const button = resolveButtonForAction(action, position)
   
   if (button) {
     // Add button to the current page
@@ -889,7 +889,7 @@ function createFallbackButton(action: any, position: { row: number; col: number 
   return baseButton
 }
 
-function createPreconfiguredButton(action: any, position: { row: number; col: number }): Button {
+function resolveButtonForAction(action: any, position: { row: number; col: number }): Button {
   const preset = presetRegistry.find((p) => p.id === action.id)
   if (preset) {
     return presetToButton(preset, position)

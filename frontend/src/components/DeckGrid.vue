@@ -17,12 +17,14 @@
       :show-labels="showLabels"
       :show-tooltips="showTooltips"
       :compact="compact"
-          @click="handleButtonClick"
-          @edit="handleButtonEdit"
-          @copy="handleButtonCopy"
-          @delete="handleButtonDelete"
-          @double-tap="handleButtonDoubleTap"
-          @long-press="handleButtonLongPress"
+      :grid-index="button.position.row * renderedPage.grid_config.cols + button.position.col"
+      :class="cellClasses[`${button.position.row}-${button.position.col}`]"
+      @click="handleButtonClick"
+      @edit="handleButtonEdit"
+      @copy="handleButtonCopy"
+      @delete="handleButtonDelete"
+      @double-tap="handleButtonDoubleTap"
+      @long-press="handleButtonLongPress"
     />
     
     <!-- Button placeholders for empty slots - only show in edit mode or when receiving long-press -->
@@ -30,10 +32,13 @@
       v-for="placeholder in emptySlots"
       :key="`placeholder-${placeholder.row}-${placeholder.col}`"
       class="button-placeholder"
-      :class="{ 
-        'is-edit-mode': isEditMode,
-        'is-highlighted': highlightedSlot?.row === placeholder.row && highlightedSlot?.col === placeholder.col
-      }"
+      :class="[
+        { 
+          'is-edit-mode': isEditMode,
+          'is-highlighted': highlightedSlot?.row === placeholder.row && highlightedSlot?.col === placeholder.col
+        },
+        cellClasses[`${placeholder.row}-${placeholder.col}`]
+      ]"
       :style="placeholderStyle"
       @click="handlePlaceholderClick(placeholder.row, placeholder.col)"
       @touchstart="handlePlaceholderTouchStart(placeholder.row, placeholder.col)"
@@ -47,16 +52,30 @@
     >
       <FontAwesomeIcon :icon="['fas', 'plus']" />
     </div>
+
+    <!-- Ambient Deck Overlay -->
+    <DeckOverlay
+      v-if="dashboardStore.currentScene?.overlay_style && dashboardStore.currentScene.overlay_style !== 'none'"
+      :active="true"
+      :style="dashboardStore.currentScene.overlay_style"
+      :mode="dashboardStore.currentScene.overlay_mode || 'keys'"
+      :rows="renderedPage.grid_config.rows"
+      :cols="renderedPage.grid_config.cols"
+      :buttons="visibleButtons"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Button, Page } from '@/types'
 import DeckButton from './DeckButton.vue'
+import DeckOverlay from './DeckOverlay.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useSwipe, usePinch, useLongPress } from '@/composables/useGestures'
 import { useParallax } from '@/composables/useParallax'
+import { useGridTransition } from '@/composables/useGridTransition'
+import { useDashboardStore } from '@/stores/dashboard'
 
 interface Props {
   page: Page
@@ -93,6 +112,32 @@ const emit = defineEmits<{
 }>()
 
 const gridRef = ref<HTMLElement | null>(null)
+const dashboardStore = useDashboardStore()
+
+const renderedPage = ref<Page>({ ...props.page })
+const { cellClasses, triggerTransition } = useGridTransition()
+
+// Watch page.id and animate staggered grid transitions
+watch(() => props.page.id, async (newVal, oldVal) => {
+  if (newVal === oldVal) return
+
+  const scene = dashboardStore.currentScene
+  const transitionStyle = scene?.transition_style || 'light-bar'
+  const staggerOrder = scene?.stagger_order || 'by-column'
+  const rows = props.page.grid_config.rows
+  const cols = props.page.grid_config.cols
+
+  await triggerTransition(rows, cols, staggerOrder, transitionStyle, () => {
+    renderedPage.value = props.page
+  })
+})
+
+// Deep watch props.page to sync updates (e.g. edits) when ID doesn't change
+watch(() => props.page, (newPage) => {
+  if (newPage.id === renderedPage.value.id) {
+    renderedPage.value = newPage
+  }
+}, { deep: true })
 
 const { tiltX, tiltY } = useParallax(gridRef)
 
@@ -114,7 +159,7 @@ useSwipe(gridRef, {
 })
 
 const gridStyle = computed(() => {
-  const { rows, cols } = props.page.grid_config
+  const { rows, cols } = renderedPage.value.grid_config
   const transformScale = props.buttonSize * pinchScale.value
   
   return {
@@ -131,15 +176,15 @@ const gridStyle = computed(() => {
 })
 
 const visibleButtons = computed(() => {
-  return props.page.buttons.filter(btn => btn.enabled)
+  return renderedPage.value.buttons.filter(btn => btn.enabled)
 })
 
 const emptySlots = computed(() => {
-  const { rows, cols } = props.page.grid_config
+  const { rows, cols } = renderedPage.value.grid_config
   const occupiedPositions = new Set()
   
   // Mark occupied positions (including multi-cell buttons) - only count enabled buttons
-  props.page.buttons.filter(btn => btn.enabled).forEach(button => {
+  renderedPage.value.buttons.filter(btn => btn.enabled).forEach(button => {
     const { row, col } = button.position
     const { rows: buttonRows, cols: buttonCols } = button.size
     
@@ -165,7 +210,7 @@ const emptySlots = computed(() => {
 })
 
 const placeholderStyle = computed(() => {
-  const { rows, cols } = props.page.grid_config
+  const { rows, cols } = renderedPage.value.grid_config
   const buttonSize = Math.min(100 / Math.max(rows, cols), 80) // Dynamic sizing
   
   return {

@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import fc from 'fast-check';
 import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { resolveBrandTint } from '../utils/brandTint';
 
 // Feature: vdock-ui-redesign, Property 6: Brand tint resolves with correct precedence and fallback
@@ -68,7 +69,7 @@ describe('Feature: vdock-ui-redesign, Property 6: Brand tint resolves with corre
 
   test('main.css provides a hardcoded default fallback for --btn-brand on glow, neon, emissive, and shimmer effects', () => {
     const css = readFileSync(
-      new URL('../assets/styles/main.css', import.meta.url),
+      resolve(__dirname, '../assets/styles/main.css'),
       'utf-8'
     );
 

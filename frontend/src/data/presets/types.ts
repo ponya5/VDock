@@ -10,47 +10,13 @@
 // rather than duplicated. Keep this file's definitions in sync with design.md section
 // 4.2 (effects) and 4.4 (icon loops) until that consolidation happens.
 
-import type { ButtonAction } from '@/types'
+import type { ButtonAction, EffectType, IconLoop } from '@/types'
 
 /**
  * Preset category. Every preset registered in the Preset_Registry must use one of
  * these values (Property 1: Preset categories are always valid).
  */
 export type PresetCategory = 'recent' | 'ai' | 'dev' | 'media' | 'social' | 'news' | 'system'
-
-/**
- * Visual effect applied to the Effect_Layer (layer 2) of a button.
- *
- * Existing effects (already implemented, see design.md "Current State"):
- * 'glass' | 'neumorphism' | 'gradient' | 'glow' | 'neon' | 'metallic' | 'liquid' |
- * 'holographic' | 'shadow' | 'emissive'
- *
- * Placeholder effects for the Phase 3 layer model (design.md section 4.2 / task 5.5),
- * not yet implemented as CSS classes:
- * 'fire' | 'plasma' | 'particles' | 'aurora' | 'scanline' | 'rain'
- */
-export type EffectType =
-  | 'glass'
-  | 'neumorphism'
-  | 'gradient'
-  | 'glow'
-  | 'neon'
-  | 'metallic'
-  | 'liquid'
-  | 'holographic'
-  | 'shadow'
-  | 'emissive'
-  | 'fire'
-  | 'plasma'
-  | 'particles'
-  | 'aurora'
-  | 'scanline'
-  | 'rain'
-
-/**
- * Per-icon loop animation (design.md section 4.4 "Per-icon loops").
- */
-export type IconLoop = 'squash' | 'bob' | 'spin' | 'pulse' | 'swing' | 'flip' | 'jump'
 
 /**
  * A single entry in the Preset_Registry. Data-driven replacement for the ~640-line
