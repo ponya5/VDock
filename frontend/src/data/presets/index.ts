@@ -128,6 +128,17 @@ export function presetToButton(preset: ButtonPreset, position: ButtonPosition): 
   // convention from task 1.3/1.4.
   const glowColor = preset.brand.glow ?? preset.brand.primary
 
+  const layers = {
+    fill: { type: 'solid' as const, value: 'var(--color-surface)' },
+    effect: preset.effect ? { type: preset.effect, tint: glowColor } : undefined,
+    icon: {
+      type: preset.icon.type,
+      value: icon,
+      loop: preset.icon.loop ?? 'none'
+    },
+    label: { text: preset.name }
+  }
+
   return {
     id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     label: preset.name,
@@ -146,6 +157,7 @@ export function presetToButton(preset: ButtonPreset, position: ButtonPosition): 
         : {}),
       glowColor
     },
+    layers,
     // Shallow-copy action and its config so later edits to the returned Button (or
     // its action.config) can never mutate the registry entry's `preset.action`.
     action: { ...preset.action, config: { ...preset.action.config } } as ButtonAction,
