@@ -9,6 +9,7 @@
     @contextmenu.prevent="handleRightClick"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
+    @pointerdown="triggerRipple"
   >
     <!-- Video background for video media (from resolved fill) -->
     <video
@@ -34,7 +35,7 @@
 
     <div class="button-content" :style="buttonContentStyle">
       <!-- Individual Metric Displays -->
-      <PerformanceMonitorButton 
+      <PerformanceMonitorButton
         v-if="isMetricActionType && getMetricFromActionType"
         :metrics="[getMetricFromActionType]"
         :refresh-interval="button.action?.config?.refresh_interval || 10"
@@ -43,7 +44,7 @@
         :custom-media-url="button.media_url"
         :custom-media-type="button.media_type"
       />
-      
+
       <!-- World Clock -->
       <TimeOptionsButton
         v-else-if="button.action?.type === 'time_world_clock'"
@@ -53,7 +54,7 @@
         :font-size="button.action?.config?.font_size || 1.0"
         :icon-size="button.style?.iconSize || 32"
       />
-      
+
       <!-- Timer -->
       <TimeOptionsButton
         v-else-if="button.action?.type === 'time_timer'"
@@ -63,7 +64,7 @@
         :font-size="button.action?.config?.font_size || 1.0"
         :icon-size="button.style?.iconSize || 32"
       />
-      
+
       <!-- Countdown -->
       <TimeOptionsButton
         v-else-if="button.action?.type === 'time_countdown'"
@@ -73,7 +74,7 @@
         :font-size="button.action?.config?.font_size || 1.0"
         :icon-size="button.style?.iconSize || 32"
       />
-      
+
       <!-- Weather -->
       <WeatherQueryButton
         v-else-if="button.action?.type === 'weather'"
@@ -83,35 +84,35 @@
         :compact="compact"
         :icon-size="button.style?.iconSize || 32"
       />
-      
+
       <!-- Calendar -->
       <CalendarButton
         v-else-if="button.action?.type === 'calendar'"
       />
-      
+
       <div v-else-if="resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
         <!-- Media (Video/GIF/Image) - Priority over icons -->
         <div v-if="resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value" class="media-container">
-          <img 
-            :src="resolvedVisual.fill.value" 
+          <img
+            :src="resolvedVisual.fill.value"
             :style="mediaStyle"
             alt="Button media"
             class="media-element"
           />
         </div>
-        
+
         <!-- FontAwesome Icon -->
-        <FontAwesomeIcon 
-          v-else-if="resolvedVisual.icon.type === 'fontawesome'" 
-          :icon="Array.isArray(resolvedVisual.icon.value) ? resolvedVisual.icon.value : parseIcon(resolvedVisual.icon.value as string)" 
+        <FontAwesomeIcon
+          v-else-if="resolvedVisual.icon.type === 'fontawesome'"
+          :icon="Array.isArray(resolvedVisual.icon.value) ? resolvedVisual.icon.value : parseIcon(resolvedVisual.icon.value as string)"
           :style="iconStyle"
           :class="['fontawesome-icon', resolvedVisual.icon.loop !== 'none' ? `loop-${resolvedVisual.icon.loop}` : '']"
         />
-        
+
         <!-- Custom Image Icon / Logo -->
-        <img 
-          v-else-if="resolvedVisual.icon.type === 'custom' || resolvedVisual.icon.type === 'logo'" 
-          :src="Array.isArray(resolvedVisual.icon.value) ? resolvedVisual.icon.value[0] : resolvedVisual.icon.value" 
+        <img
+          v-else-if="resolvedVisual.icon.type === 'custom' || resolvedVisual.icon.type === 'logo'"
+          :src="Array.isArray(resolvedVisual.icon.value) ? resolvedVisual.icon.value[0] : resolvedVisual.icon.value"
           :style="iconStyle"
           alt="Button icon"
           :class="['custom-icon', resolvedVisual.icon.loop !== 'none' ? `loop-${resolvedVisual.icon.loop}` : '']"
@@ -130,6 +131,9 @@
     <div v-if="button.tooltip && !isEditMode && showTooltips" class="button-tooltip">
       {{ button.tooltip }}
     </div>
+
+    <!-- Ripple container -->
+    <span class="ripple-container" aria-hidden="true"></span>
   </div>
 </template>
 
@@ -140,6 +144,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDoubleTap, useLongPress } from '@/composables/useGestures'
 import { resolveBrandTint } from '@/utils/brandTint'
 import { resolveButtonVisual, resolveButtonBrandTint } from '@/utils/buttonVisual'
+import { vibrate } from '@/utils/haptics'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
@@ -209,7 +214,7 @@ const isMetricActionType = computed(() => {
 const getMetricFromActionType = computed(() => {
   const type = props.button.action?.type
   if (!type || !type.startsWith('metric_')) return ''
-  
+
   const metricMap: Record<string, string> = {
     'metric_memory': 'memory',
     'metric_cpu_usage': 'cpu_usage',
@@ -224,7 +229,7 @@ const getMetricFromActionType = computed(() => {
     'metric_gpu_memory_freq': 'gpu_memory_frequency',
     'metric_gpu_memory_usage': 'gpu_memory_usage',
   }
-  
+
   return metricMap[type] || ''
 })
 
@@ -246,7 +251,7 @@ const buttonClasses = computed(() => {
     'has-action': !!props.button.action,
     'disabled': !props.button.enabled,
     'deck-button-enhanced': props.button.style?.enhanced,
-    
+
     // Effects from resolvedVisual
     'deck-button-glass': vis.effect.type === 'glass',
     'deck-button-neumorphism': vis.effect.type === 'neumorphism',
@@ -258,7 +263,7 @@ const buttonClasses = computed(() => {
     'deck-button-holographic': vis.effect.type === 'holographic',
     'deck-button-shadow': vis.effect.type === 'shadow',
     'deck-button-emissive': vis.effect.type === 'emissive',
-    
+
     // New CSS Effects
     'deck-button-fire': vis.effect.type === 'fire',
     'deck-button-plasma': vis.effect.type === 'plasma',
@@ -291,7 +296,7 @@ const buttonStyle = computed(() => {
     opacity: style?.opacity || 1,
     fontSize: style?.fontSize ? `${style.fontSize}px` : '0.875rem',
     // Background image for visual image fill
-    backgroundImage: (vis.fill.type === 'image' && vis.fill.value) 
+    backgroundImage: (vis.fill.type === 'image' && vis.fill.value)
       ? `url(${vis.fill.value})` : undefined,
     backgroundSize: vis.fill.type === 'image' ? 'cover' : undefined,
     backgroundPosition: vis.fill.type === 'image' ? 'center' : undefined,
@@ -376,7 +381,7 @@ const iconStyle = computed(() => {
   // When label is shown, cap icon at 75% of scaled size to leave room for label
   const hasLabel = !!(vis.label.text && props.showLabels)
   const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
-  
+
   const styleObj: Record<string, string | number | undefined> = {
     width: `${size}px`,
     height: `${size}px`,
@@ -396,7 +401,7 @@ const mediaStyle = computed(() => {
   const scale = props.buttonSize || 1.0
   const hasLabel = !!(vis.label.text && props.showLabels)
   const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
-  
+
   const styleObj: Record<string, string | number | undefined> = {
     width: `${size}px`,
     height: `${size}px`
@@ -461,7 +466,7 @@ function handleRightClick() {
 
 function handleDragStart(event: DragEvent) {
   if (!props.isEditMode) return
-  
+
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/vdock-button', JSON.stringify(props.button))
     event.dataTransfer.effectAllowed = 'copyMove' // Allow both copy and move
@@ -470,6 +475,30 @@ function handleDragStart(event: DragEvent) {
 
 function handleDragEnd() {
   // Clean up any drag state if needed
+}
+
+function triggerRipple(event: PointerEvent) {
+  if (!buttonRef.value) return
+  // Call haptics on press (non-placeholder, non-edit-mode)
+  if (!props.isEditMode && props.button.enabled) {
+    vibrate(50)
+  }
+
+  const btn = buttonRef.value
+  const rect = btn.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+
+  const ripple = document.createElement('span')
+  ripple.className = 'ripple-wave'
+  ripple.style.left = `${x}px`
+  ripple.style.top = `${y}px`
+
+  const container = btn.querySelector('.ripple-container')
+  if (container) {
+    container.appendChild(ripple)
+    ripple.addEventListener('animationend', () => ripple.remove(), { once: true })
+  }
 }
 </script>
 
@@ -513,7 +542,7 @@ function handleDragEnd() {
 
 /* Uiverse active/press state */
 .deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):active {
-  transform: translateY(4px);
+  transform: scale(0.94);
   box-shadow:
     inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.5),
     inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.8),
@@ -873,6 +902,45 @@ function handleDragEnd() {
 
 .deck-button.disabled .button-content {
   pointer-events: none;
+}
+
+/* Ripple effect */
+.ripple-container {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ripple-wave {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple-expand 0.55s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) forwards;
+  pointer-events: none;
+}
+
+@keyframes ripple-expand {
+  to {
+    transform: translate(-50%, -50%) scale(80);
+    opacity: 0;
+  }
+}
+
+/* Glow pulse on trigger */
+.deck-button.triggered {
+  animation: glow-pulse 0.4s ease-out forwards;
+}
+
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 52, 152, 219), 0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb, 52, 152, 219), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 52, 152, 219), 0); }
 }
 </style>
 

@@ -71,6 +71,7 @@
             @swipe-down="previousScene"
             @long-press="handleDeckButtonLongPress"
             @double-tap="handleButtonClick"
+            @exit-edit-mode="dashboardStore.toggleEditMode"
           />
         </Transition>
 
@@ -889,5 +890,48 @@ watch(currentProfile, (profile) => {
 .page-slide-right-leave-to {
   transform: translateX(34%);
   opacity: 0;
+}
+
+/* Frosted glass header */
+:deep(.dashboard-header) {
+  background: rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+}
+
+/* Responsive .deck-main at <768px — sidebar becomes bottom drawer */
+@media (max-width: 768px) {
+  .deck-main {
+    flex-direction: column;
+  }
+
+  .main-content {
+    flex: 1;
+  }
+}
+
+/* Dashboard grid layout */
+.dashboard-layout {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  width: 100vw;
+}
+
+@media (max-width: 480px) {
+  .dashboard-layout {
+    grid-template-areas:
+      "header"
+      "main"
+      "footer";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
 }
 </style>

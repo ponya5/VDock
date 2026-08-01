@@ -29,12 +29,12 @@
             <div class="avatar-status-indicator"></div>
           </div>
           <h1 class="profile-title-inline">{{ currentProfile?.name || 'VDock' }}</h1>
-          <SceneNavigation
+          <GlassPillSceneSelector
             v-if="currentProfile && currentProfile.scenes.length > 0"
             :scenes="currentProfile.scenes"
             :current-scene-index="currentSceneIndex"
             :is-edit-mode="isEditMode"
-            @set-scene="emit('setScene', $event)"
+            @scene-change="emit('setScene', $event)"
             @add-scene="emit('addScene')"
             @edit-scene="emit('editScene', $event)"
             class="enhanced-scene-nav"
@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import SceneNavigation from './SceneNavigation.vue'
+import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useSwipe } from '@/composables/useGestures'

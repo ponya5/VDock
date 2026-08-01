@@ -114,6 +114,10 @@ body {
   overflow-x: hidden;
 }
 
+#app {
+  overflow-x: hidden;
+}
+
 /* Button Styles — Uiverse pill style */
 .btn {
   display: inline-flex;
