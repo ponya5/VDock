@@ -61,7 +61,7 @@ if errorlevel 1 (
 )
 for /f "tokens=*" %%v in ('node --version 2^>^&1') do echo  [OK]    Node.js %%v
 
-npm --version >nul 2>&1
+call npm --version >nul 2>&1
 if errorlevel 1 (
     echo  [ERROR] npm not found. Reinstall Node.js from https://nodejs.org/
     goto :fail
@@ -109,13 +109,16 @@ echo  [5/7] Installing frontend dependencies...
 if not exist "%ROOT%\frontend\node_modules" (
     echo         Running npm install in frontend\...
     pushd "%ROOT%\frontend"
-    call npm install --no-fund --no-audit 2>nul
-    if errorlevel 1 (
-        echo  [ERROR] npm install failed (frontend)
-        popd
+    call npm install --no-fund --no-audit
+    set "NPM_EXIT=!errorlevel!"
+    popd
+    if not exist "%ROOT%\frontend\node_modules" (
+        echo  [ERROR] npm install failed (frontend^) exit=!NPM_EXIT!
         goto :fail
     )
-    popd
+    if not "!NPM_EXIT!"=="0" (
+        echo  [WARN]  npm reported exit !NPM_EXIT! but node_modules exists; continuing
+    )
     echo  [OK]    Frontend node_modules installed
 ) else (
     echo  [OK]    frontend\node_modules already present
@@ -127,13 +130,16 @@ echo  [6/7] Installing Electron dependencies...
 if not exist "%ROOT%\frontend\electron\node_modules" (
     echo         Running npm install in frontend\electron\...
     pushd "%ROOT%\frontend\electron"
-    call npm install --no-fund --no-audit 2>nul
-    if errorlevel 1 (
-        echo  [ERROR] npm install failed (electron)
-        popd
+    call npm install --no-fund --no-audit
+    set "NPM_EXIT=!errorlevel!"
+    popd
+    if not exist "%ROOT%\frontend\electron\node_modules" (
+        echo  [ERROR] npm install failed (electron^) exit=!NPM_EXIT!
         goto :fail
     )
-    popd
+    if not "!NPM_EXIT!"=="0" (
+        echo  [WARN]  npm reported exit !NPM_EXIT! but node_modules exists; continuing
+    )
     echo  [OK]    Electron node_modules installed
 ) else (
     echo  [OK]    frontend\electron\node_modules already present
@@ -161,7 +167,11 @@ echo  Creating desktop shortcut...
 
 set "LAUNCHER=%ROOT%\launch.bat"
 set "ICON=%ROOT%\frontend\public\vdock-icon.ico"
-set "SHORTCUT=%USERPROFILE%\Desktop\VDock.lnk"
+
+REM Resolve real Desktop path (supports OneDrive-backed desktops)
+for /f "usebackq delims=" %%d in (`powershell -NoProfile -NonInteractive -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP_DIR=%%d"
+if not defined DESKTOP_DIR set "DESKTOP_DIR=%USERPROFILE%\Desktop"
+set "SHORTCUT=%DESKTOP_DIR%\VDock.lnk"
 
 powershell -NoProfile -NonInteractive -Command ^
   "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%SHORTCUT%'); $sc.TargetPath = '%LAUNCHER%'; $sc.WorkingDirectory = '%ROOT%'; if (Test-Path '%ICON%') { $sc.IconLocation = '%ICON%' }; $sc.Description = 'VDock Virtual Stream Deck'; $sc.WindowStyle = 1; $sc.Save()" >nul 2>&1
@@ -169,7 +179,7 @@ powershell -NoProfile -NonInteractive -Command ^
 if exist "%SHORTCUT%" (
     echo  [OK]    Desktop shortcut created
 ) else (
-    echo  [WARN]  Could not create desktop shortcut (non-fatal)
+    echo  [WARN]  Could not create desktop shortcut ^(non-fatal^)
 )
 
 REM ── Done ─────────────────────────────────────────────────────

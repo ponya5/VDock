@@ -9,18 +9,27 @@ Get VDock up and running in minutes!
 
 ## Automated Setup (Windows)
 
-Run the setup script:
-
 ```bash
 setup.bat
 ```
 
-This will:
+Then launch with `launch.bat` (or the Desktop **VDock** shortcut).
+
+## Automated Setup (macOS)
+
+```bash
+chmod +x setup.sh launch.sh
+./setup.sh
+```
+
+Then launch with `./launch.sh` (or double-click Desktop **VDock.command**).
+
+Both installers will:
 1. Check prerequisites
 2. Create Python virtual environment
 3. Install backend dependencies
-4. Install frontend dependencies
-5. Copy configuration files
+4. Install frontend + Electron dependencies
+5. Create data directories and a desktop launcher
 
 ## Manual Setup
 

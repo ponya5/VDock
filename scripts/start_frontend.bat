@@ -3,6 +3,6 @@ REM Start VDock Frontend
 
 echo Starting VDock Frontend...
 cd frontend
-npm run dev
+call npm run dev
 pause
 

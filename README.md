@@ -79,7 +79,26 @@
    - Run `npm install` for the frontend and Electron
    - Create required data directories
    - Place a **VDock** shortcut on your Desktop
-4. When prompted, press **Y** to launch immediately — or use the desktop shortcut any time
+4. When prompted, press **Y** to launch immediately — or use the desktop shortcut / `launch.bat` any time
+
+### Install (macOS)
+
+1. Clone or download the repo
+2. In Terminal, from the repo root:
+
+```bash
+chmod +x setup.sh launch.sh
+./setup.sh
+```
+
+3. The installer will:
+   - Create a Python virtual environment and install backend dependencies
+   - Run `npm install` for the frontend and Electron
+   - Create required data directories
+   - Place a **VDock.command** launcher on your Desktop
+4. When prompted, press **Y** to launch immediately — or double-click **VDock.command** / run `./launch.sh` any time
+
+> **Tip:** If macOS blocks `VDock.command`, right-click it → **Open** the first time (or allow it in System Settings → Privacy & Security).
 
 ### First Launch
 1. Wait **5–10 seconds** for the backend to initialize
