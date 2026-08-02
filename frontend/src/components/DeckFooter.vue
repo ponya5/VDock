@@ -56,27 +56,11 @@
       </button>
     </div>
 
-    <!-- Right Side: Scene Pills -->
-    <div class="footer-right">
-      <div v-if="scenes.length > 0" class="scene-pills">
-        <button
-          v-for="(scene, idx) in scenes"
-          :key="scene.id"
-          class="scene-pill touch-target"
-          :class="{ active: currentSceneIndex === idx }"
-          @click="emit('setScene', idx)"
-        >
-          <FontAwesomeIcon v-if="scene.icon" :icon="scene.icon.split(':')" class="scene-pill-icon" />
-          <span>{{ scene.name }}</span>
-        </button>
-      </div>
-    </div>
   </footer>
 </template>
 
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { Scene } from '@/types'
 
 interface Props {
   isEditMode: boolean
@@ -84,14 +68,11 @@ interface Props {
   currentPageIndex: number
   gridRows: number
   gridCols: number
-  scenes: Scene[]
-  currentSceneIndex: number
 }
 
 defineProps<Props>()
 const emit = defineEmits<{
   setPage: [index: number]
-  setScene: [index: number]
   addPage: []
   deletePage: []
   saveProfile: []
@@ -106,7 +87,7 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 52px;
+  min-height: 44px;
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border);
   padding: 0 var(--spacing-md);
@@ -170,52 +151,6 @@ const emit = defineEmits<{
   text-align: center;
   font-family: inherit;
   font-size: 0.9rem;
-}
-
-.footer-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 1;
-}
-
-.scene-pills {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.scene-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  color: var(--color-text-secondary);
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s var(--ease-out);
-  padding: 0 var(--spacing-sm);
-  min-height: 32px;
-  min-width: 44px;
-}
-
-.scene-pill:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--color-text);
-}
-
-.scene-pill.active {
-  background-color: var(--color-primary);
-  color: #ffffff;
-  border-color: var(--color-primary);
-}
-
-.scene-pill-icon {
-  font-size: 0.85rem;
 }
 
 .btn-sm {

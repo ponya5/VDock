@@ -6,7 +6,7 @@ test('Feature: vdock-ui-redesign, Property 22: Interactive touch targets have a 
   const components = [
     { file: 'QuickAddPicker.vue', classes: ['.category-tab', '.preset-card', '.dot-indicator'] },
     { file: 'OnScreenKeypad.vue', classes: ['.keypad-key'] },
-    { file: 'DeckFooter.vue', classes: ['.page-dot', '.scene-pill'] },
+    { file: 'DeckFooter.vue', classes: ['.page-dot'] },
     { file: 'EditSidebar.vue', classes: ['.btn-control', '.action-item'] },
     { file: 'DeckHeader.vue', classes: ['.animate-tap'] }
   ]
