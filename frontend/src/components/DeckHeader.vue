@@ -12,7 +12,7 @@
     </div>
 
     <!-- Main Header -->
-    <header v-else class="deck-header dashboard-header">
+    <header v-else ref="headerRef" class="deck-header dashboard-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
@@ -53,7 +53,7 @@
           />
         </div>
 
-        <div class="header-right">
+        <div class="header-right" @pointerdown="resetAutohide">
           <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
             <FontAwesomeIcon :icon="['fas', 'users']" />
           </button>
@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
@@ -107,11 +107,50 @@ const emit = defineEmits<{
 
 const settingsStore = useSettingsStore()
 const triggerRef = ref<HTMLElement | null>(null)
+const headerRef = ref<HTMLElement | null>(null)
 const progressWidth = ref(100)
+let autohideTimer: ReturnType<typeof setInterval> | null = null
+let autohideRemainingMs = 5000
+const AUTOHIDE_MS = 5000
+const TICK_MS = 50
 
 function revealHeader() {
   settingsStore.showHeader = true
 }
+
+function startAutohide() {
+  stopAutohide()
+  autohideRemainingMs = AUTOHIDE_MS
+  progressWidth.value = 100
+  autohideTimer = setInterval(() => {
+    autohideRemainingMs -= TICK_MS
+    progressWidth.value = Math.max(0, (autohideRemainingMs / AUTOHIDE_MS) * 100)
+    if (autohideRemainingMs <= 0) {
+      stopAutohide()
+      settingsStore.showHeader = false
+    }
+  }, TICK_MS)
+}
+
+function stopAutohide() {
+  if (autohideTimer) {
+    clearInterval(autohideTimer)
+    autohideTimer = null
+  }
+}
+
+function resetAutohide() {
+  autohideRemainingMs = AUTOHIDE_MS
+  progressWidth.value = 100
+}
+
+watch(() => settingsStore.showHeader, (visible) => {
+  if (visible) {
+    startAutohide()
+  } else {
+    stopAutohide()
+  }
+})
 
 // Support swipe down gesture on the trigger area to reveal header
 useSwipe(triggerRef, {
@@ -120,6 +159,21 @@ useSwipe(triggerRef, {
       revealHeader()
     }
   }
+})
+
+// Support swipe up gesture on the header to dismiss
+useSwipe(headerRef, {
+  threshold: 40,
+  onSwipeEnd: (direction) => {
+    if (direction === 'UP') {
+      stopAutohide()
+      settingsStore.showHeader = false
+    }
+  }
+})
+
+onUnmounted(() => {
+  stopAutohide()
 })
 </script>
 
