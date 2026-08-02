@@ -49,11 +49,15 @@ import { ref, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { BUTTON_TEMPLATES, TEMPLATE_CATEGORIES, type ButtonTemplate } from '@/data/buttonTemplates'
 
+const props = withDefaults(defineProps<{ startCollapsed?: boolean }>(), {
+  startCollapsed: false
+})
+
 const emit = defineEmits<{
   (e: 'apply-template', template: ButtonTemplate): void
 }>()
 
-const collapsed = ref(false)
+const collapsed = ref(props.startCollapsed)
 const activeCategory = ref('media')
 const categories = TEMPLATE_CATEGORIES
 

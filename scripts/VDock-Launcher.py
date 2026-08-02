@@ -24,7 +24,11 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 IS_WINDOWS = os.name == "nt"
-DETACHED_PROCESS = 0x00000008 if IS_WINDOWS else 0
+# DETACHED_PROCESS only stops the child inheriting our console — it does not stop
+# cmd.exe (or a .cmd wrapper like npm/npx) from allocating its own new, visible
+# console when it starts without one. CREATE_NO_WINDOW is the flag that actually
+# suppresses a console window for the whole child process tree.
+CREATE_NO_WINDOW = 0x08000000 if IS_WINDOWS else 0
 CREATE_NEW_PROCESS_GROUP = 0x00000200 if IS_WINDOWS else 0
 
 # Check if running as frozen executable (compiled with PyInstaller)
@@ -125,7 +129,7 @@ def detached_popen_args():
         return {}
 
     return {
-        "creationflags": DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+        "creationflags": CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
         "close_fds": True,
     }
 
@@ -258,6 +262,10 @@ def launch_electron():
         electron_env = os.environ.copy()
         electron_env["VDOCK_FULLSCREEN"] = "1"
         electron_env["VDOCK_USE_SMALLEST_DISPLAY"] = "1"
+        # We already started (and waited for) the backend above — tell Electron's
+        # main process not to spawn its own second copy, which would just fail to
+        # bind the port and loop retrying forever in the background.
+        electron_env["VDOCK_SKIP_BACKEND_SPAWN"] = "1"
 
         subprocess.Popen(
             [npx, "electron", "."],

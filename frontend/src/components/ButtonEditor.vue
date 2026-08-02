@@ -14,8 +14,10 @@
       </div>
 
       <div class="modal-body">
-        <!-- Quick Templates Section -->
-        <QuickTemplates @apply-template="applyTemplate" />
+        <!-- Quick Templates Section: collapsed by default when editing a button that
+             already has an action, so its own settings (below) are what you see first
+             instead of the full "browse everything" template list. -->
+        <QuickTemplates :start-collapsed="!!props.button.action" @apply-template="applyTemplate" />
 
         <!-- Browse Actions Button -->
         <div class="form-group">

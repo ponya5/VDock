@@ -49,22 +49,39 @@
         <!-- ── Appearance ── -->
         <div v-if="activeTab === 'appearance'" class="tab-content">
           <div class="sub-tab-bar">
-            <button :class="['sub-tab-btn', { active: appearanceSubTab === 'display' }]" @click="appearanceSubTab = 'display'">
-              <FontAwesomeIcon :icon="['fas', 'sliders-h']" /> Display
+            <button :class="['sub-tab-btn', { active: appearanceSubTab === 'buttons' }]" @click="appearanceSubTab = 'buttons'">
+              <FontAwesomeIcon :icon="['fas', 'th-large']" /> Buttons
+            </button>
+            <button :class="['sub-tab-btn', { active: appearanceSubTab === 'layout' }]" @click="appearanceSubTab = 'layout'">
+              <FontAwesomeIcon :icon="['fas', 'table-columns']" /> Layout &amp; Behavior
             </button>
             <button :class="['sub-tab-btn', { active: appearanceSubTab === 'background' }]" @click="appearanceSubTab = 'background'">
               <FontAwesomeIcon :icon="['fas', 'image']" /> Background
             </button>
           </div>
 
-          <div v-if="appearanceSubTab === 'display'" class="settings-grid">
+          <div v-if="appearanceSubTab === 'buttons'" class="settings-grid">
+            <section class="settings-section card preview-card">
+              <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
+              <div class="button-preview-stage">
+                <DeckButton
+                  :button="previewButton"
+                  :show-labels="settings.showLabels"
+                  :show-tooltips="settings.showTooltips"
+                  :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
+                  style="width: 110px; height: 110px;"
+                />
+              </div>
+              <p class="form-help">Updates live as you change button size, labels, tooltips, or touch mode below.</p>
+            </section>
+
             <section class="settings-section card">
-              <h2>Touch Mode</h2>
+              <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
               <TouchModeSelector />
             </section>
 
             <section class="settings-section card">
-              <h2>Button Display</h2>
+              <h2><FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display</h2>
               <div class="form-group">
                 <div class="form-group-header">
                   <label>Button Size</label>
@@ -74,6 +91,7 @@
                 </div>
                 <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
                 <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
+                <p class="form-help">Scales button icons and labels. Combines with Touch Mode above.</p>
               </div>
               <div class="toggle-row">
                 <label class="toggle-row-label">Show button labels</label>
@@ -88,9 +106,47 @@
                 <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
               </div>
             </section>
+          </div>
+
+          <div v-if="appearanceSubTab === 'layout'" class="settings-grid">
+            <section class="settings-section card">
+              <h2><FontAwesomeIcon :icon="['fas', 'table-columns']" /> Sidebar</h2>
+              <div class="toggle-row">
+                <label class="toggle-row-label">Show docked sidebar</label>
+                <label class="toggle-switch"><input v-model="settings.dockedSidebarEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+              </div>
+              <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
+                <div class="form-group-header">
+                  <label>Sidebar Width</label>
+                  <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
+                </div>
+                <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="360" step="10" class="slider" />
+                <p class="form-help">How much horizontal space the docked buttons column takes up.</p>
+              </div>
+            </section>
+
+            <section class="settings-section card" id="setting-screensaver">
+              <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver</h2>
+              <div class="form-group">
+                <div class="form-group-header">
+                  <label>Screensaver Delay</label>
+                  <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="600"
+                  step="30"
+                  :value="settingsStore.screensaverTimeout"
+                  @input="settingsStore.screensaverTimeout = Number(($event.target as HTMLInputElement).value)"
+                  class="slider"
+                />
+                <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
+              </div>
+            </section>
 
             <section class="settings-section card">
-              <h2>Notifications</h2>
+              <h2><FontAwesomeIcon :icon="['fas', 'bell']" /> Notifications</h2>
               <div class="toggle-row">
                 <div>
                   <label class="toggle-row-label">Toast notifications</label>
@@ -110,41 +166,6 @@
                     {{ opt.label }}
                   </label>
                 </div>
-              </div>
-            </section>
-
-            <section class="settings-section card">
-              <h2>Sidebar</h2>
-              <div class="toggle-row">
-                <label class="toggle-row-label">Show docked sidebar</label>
-                <label class="toggle-switch"><input v-model="settings.dockedSidebarEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
-              </div>
-              <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
-                <div class="form-group-header">
-                  <label>Sidebar Width</label>
-                  <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
-                </div>
-                <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="300" step="10" class="slider" />
-              </div>
-            </section>
-
-            <section class="settings-section card" id="setting-screensaver">
-              <h2>Screensaver</h2>
-              <div class="form-group">
-                <div class="form-group-header">
-                  <label><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver Delay</label>
-                  <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="600"
-                  step="30"
-                  :value="settingsStore.screensaverTimeout"
-                  @input="settingsStore.screensaverTimeout = Number(($event.target as HTMLInputElement).value)"
-                  class="slider"
-                />
-                <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
               </div>
             </section>
           </div>
@@ -501,6 +522,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import TouchModeSelector from '@/components/TouchModeSelector.vue'
+import DeckButton from '@/components/DeckButton.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
@@ -526,7 +548,23 @@ const toastLevelOptions = [
 ] as const
 
 const activeTab = ref('appearance')
-const appearanceSubTab = ref<'display' | 'background'>('display')
+const appearanceSubTab = ref<'buttons' | 'layout' | 'background'>('buttons')
+
+// Static sample button for the live preview card — never persisted, just
+// rendered through the real DeckButton component so the preview matches
+// actual dashboard rendering exactly.
+const previewButton: Button = {
+  id: 'preview-button',
+  label: 'Preview',
+  tooltip: 'Sample tooltip',
+  icon_type: 'fontawesome',
+  icon: ['fas', 'star'],
+  shape: 'rounded',
+  position: { row: 0, col: 0 },
+  size: { rows: 1, cols: 1 },
+  style: { backgroundColor: '#3498db', textColor: '#ffffff' },
+  enabled: true
+}
 const expandedCategory = ref<string | null>(null)
 const addingTemplate = ref<string | null>(null)
 
@@ -649,16 +687,16 @@ interface SettingsSearchEntry {
   label: string
   keywords: string
   tabId: string
-  subTab?: 'display' | 'background'
+  subTab?: 'buttons' | 'layout' | 'background'
   icon: [string, string]
 }
 
 const settingsSearchIndex: SettingsSearchEntry[] = [
-  { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'display', icon: ['fas', 'hand-pointer'] },
-  { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'display', icon: ['fas', 'th-large'] },
-  { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'display', icon: ['fas', 'bell'] },
-  { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'display', icon: ['fas', 'columns'] },
-  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'display', icon: ['fas', 'moon'] },
+  { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'hand-pointer'] },
+  { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'th-large'] },
+  { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'bell'] },
+  { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
+  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'moon'] },
   { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
@@ -1017,6 +1055,20 @@ onMounted(async () => {
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: var(--spacing-lg);
   align-items: start;
+}
+
+.preview-card {
+  grid-column: 1 / -1;
+}
+
+.button-preview-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+  border-radius: var(--radius-md);
+  min-height: 160px;
 }
 
 /* ── Section Cards ── */

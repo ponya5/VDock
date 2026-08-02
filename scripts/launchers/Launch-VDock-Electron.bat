@@ -71,6 +71,9 @@ echo Waiting for servers to start...
 timeout /t 5 /nobreak >nul
 
 REM ── Launch Electron ───────────────────────────────────────────
+REM Backend is already running in its own window above — tell Electron's main
+REM process not to spawn a second copy (it would just fail to bind the port).
+set "VDOCK_SKIP_BACKEND_SPAWN=1"
 echo [3/3] Launching Electron...
 pushd "%ROOT%\frontend\electron"
 call npx electron .

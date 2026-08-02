@@ -616,8 +616,12 @@ app.whenReady().then(async () => {
   initializeAutoLaunch()
   console.log('[OK] Auto-launch initialized')
 
-  startBackend()
-  console.log('[OK] Backend starting...')
+  if (process.env.VDOCK_SKIP_BACKEND_SPAWN === '1') {
+    console.log('[OK] Backend already started by launcher — skipping spawn')
+  } else {
+    startBackend()
+    console.log('[OK] Backend starting...')
+  }
 
   createWindow()
   console.log('[OK] Window created')

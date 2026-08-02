@@ -40,8 +40,8 @@
         @button-copy="handleButtonCopy"
         @button-delete="handleDockedButtonDelete"
         @button-drop="handleDockedButtonDrop"
-        @add-button="handleAddDockedButton"
-        @placeholder-click="handleDockedPlaceholderClick"
+        @add-button="onDockedAddButton"
+        @placeholder-click="onDockedPlaceholderClick"
         @toggle-header="settingsStore.showHeader = !settingsStore.showHeader"
       />
       
@@ -207,7 +207,6 @@ const {
   handlePlaceholderClick,
   handlePlaceholderLongPress,
   handleDeckButtonLongPress,
-  handleAddDockedButton,
   handleDockedButtonDelete,
   handleDockedButtonDrop,
   handleDockedPlaceholderClick,
@@ -218,6 +217,12 @@ const {
 // Quick Add states
 const quickAddVisible = ref(false)
 const quickAddPosition = ref({ row: 0, col: 0 })
+// Which button collection a QuickAddPicker selection should be added to —
+// the docked sidebar has its own placeholder/add-button flow that used to
+// create a blank, action-less "New Button" straight into dockedButtons with
+// no way to pick an action. Routing it through the same picker as the main
+// grid lets the user choose an action up front, same as page buttons.
+const quickAddTarget = ref<'page' | 'docked'>('page')
 
 // Screensaver / idle-timer state
 const screensaverVisible = ref(false)
@@ -243,14 +248,42 @@ function onPlaceholderClick(position: { row: number; col: number }) {
   if (clipboardButton.value) {
     handlePlaceholderClick(position)
   } else {
+    quickAddTarget.value = 'page'
     quickAddPosition.value = position
     quickAddVisible.value = true
   }
 }
 
+function onDockedPlaceholderClick(position: { row: number; col: number }) {
+  if (clipboardButton.value) {
+    handleDockedPlaceholderClick(position)
+  } else {
+    quickAddTarget.value = 'docked'
+    quickAddPosition.value = position
+    quickAddVisible.value = true
+  }
+}
+
+// The sidebar's "+" header button picks the first empty slot itself and
+// reports it here — same flow as clicking that slot directly.
+const onDockedAddButton = onDockedPlaceholderClick
+
 function onQuickAddSelect(button: Button) {
-  dashboardStore.addButton(button)
+  if (quickAddTarget.value === 'docked') {
+    if (currentProfile.value) {
+      const dockedButton: Button = { ...button, id: `docked_${Date.now()}` }
+      const updatedProfile = {
+        ...currentProfile.value,
+        dockedButtons: [...(currentProfile.value.dockedButtons || []), dockedButton]
+      }
+      dashboardStore.setProfile(updatedProfile)
+      dashboardStore.saveProfile()
+    }
+  } else {
+    dashboardStore.addButton(button)
+  }
   quickAddVisible.value = false
+  quickAddTarget.value = 'page'
   showActionResult({
     success: true,
     message: `Button added`
@@ -896,14 +929,6 @@ watch(currentProfile, (profile) => {
 .page-slide-right-leave-to {
   transform: translateX(34%);
   opacity: 0;
-}
-
-/* Frosted glass header */
-:deep(.dashboard-header) {
-  background: rgba(0, 0, 0, 0.3) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
 }
 
 /* Responsive .deck-main at <768px — sidebar becomes bottom drawer */

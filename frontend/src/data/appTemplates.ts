@@ -23,7 +23,12 @@ export interface TemplateCategory {
 const hk = (keys: string[]) => ({ type: "hotkey", config: { keys } })
 const cmd = (command: string) => ({ type: "command", config: { command } })
 const url = (u: string) => ({ type: "url", config: { url: u } })
-const prog = (program: string) => ({ type: "program", config: { program } })
+// Launches an installed app by common name (e.g. "photoshop") via the OS's
+// own app-name resolution (Windows `start "" "name"`, macOS `open -a name`).
+// Not the "program" action type — that one requires a full, existing
+// filesystem path (validated with Path.exists()), which a template can never
+// supply since install locations vary per machine.
+const prog = (program: string) => ({ type: "cross_platform", config: { action: "open_app", path: program } })
 const aiAssistants: AppTemplate[] = [
   { id: "chatgpt", name: "ChatGPT", description: "OpenAI ChatGPT shortcuts", icon: ["fas","robot"], logo: "/logos/openai.png", color: "#10a37f", buttons: [
     { label: "New Chat", icon: ["fas","plus"], action: hk(["ctrl","shift","o"]), tooltip: "Start a new conversation" },

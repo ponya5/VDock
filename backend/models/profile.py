@@ -62,6 +62,11 @@ class Scene:
     buttonSize: Optional[float] = None
     triggeredByApp: Optional[str] = None
     autoCreated: Optional[bool] = None
+    isDefault: Optional[bool] = None
+    transition_style: Optional[str] = None
+    stagger_order: Optional[str] = None
+    overlay_style: Optional[str] = None
+    overlay_mode: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -87,6 +92,16 @@ class Scene:
             result['triggeredByApp'] = self.triggeredByApp
         if self.autoCreated is not None:
             result['autoCreated'] = self.autoCreated
+        if self.isDefault is not None:
+            result['isDefault'] = self.isDefault
+        if self.transition_style is not None:
+            result['transition_style'] = self.transition_style
+        if self.stagger_order is not None:
+            result['stagger_order'] = self.stagger_order
+        if self.overlay_style is not None:
+            result['overlay_style'] = self.overlay_style
+        if self.overlay_mode is not None:
+            result['overlay_mode'] = self.overlay_mode
         if self.created_at is not None:
             result['created_at'] = self.created_at
         if self.updated_at is not None:
@@ -110,6 +125,11 @@ class Scene:
             buttonSize=data.get('buttonSize'),
             triggeredByApp=data.get('triggeredByApp'),
             autoCreated=data.get('autoCreated'),
+            isDefault=data.get('isDefault'),
+            transition_style=data.get('transition_style'),
+            stagger_order=data.get('stagger_order'),
+            overlay_style=data.get('overlay_style'),
+            overlay_mode=data.get('overlay_mode'),
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at')
         )

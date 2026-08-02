@@ -17,6 +17,7 @@
       :show-labels="showLabels"
       :show-tooltips="showTooltips"
       :compact="compact"
+      :button-size="buttonSize"
       :grid-index="button.position.row * renderedPage.grid_config.cols + button.position.col"
       :class="cellClasses[`${button.position.row}-${button.position.col}`]"
       :data-button-id="button.id"
@@ -157,7 +158,6 @@ useSwipe(gridRef, {
 
 const gridStyle = computed(() => {
   const { rows, cols } = renderedPage.value.grid_config
-  const transformScale = props.buttonSize
 
   return {
     display: 'grid',
@@ -167,7 +167,11 @@ const gridStyle = computed(() => {
     width: '100%',
     height: '100%',
     padding: 'var(--spacing-md)',
-    transform: `scale(${transformScale}) rotateX(${tiltX.value}deg) rotateY(${tiltY.value}deg)`,
+    // buttonSize scales each button's icon/label internally (see DeckButton) rather
+    // than transforming the whole grid — a whole-grid transform doesn't reflow, so
+    // at buttonSize > 1 it overflowed the container and got clipped by its
+    // `overflow: hidden` ancestor instead of actually growing the buttons.
+    transform: `rotateX(${tiltX.value}deg) rotateY(${tiltY.value}deg)`,
     transformOrigin: 'center'
   }
 })

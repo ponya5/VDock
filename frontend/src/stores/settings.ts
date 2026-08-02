@@ -20,7 +20,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
   const dockedSidebarEnabled = ref(true)
-  const dockedSidebarWidth = ref(150) // Width in pixels (80-300)
+  const dockedSidebarWidth = ref(190) // Width in pixels (80-360)
   const dashboardBackground = ref('default')
   const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
   const startWithWindows = ref(false)
@@ -75,7 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
         showTooltips.value = settings.showTooltips !== false
         animationsEnabled.value = settings.animationsEnabled !== false
         dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
-        dockedSidebarWidth.value = settings.dockedSidebarWidth || 150
+        dockedSidebarWidth.value = settings.dockedSidebarWidth || 190
         dashboardBackground.value = settings.dashboardBackground || 'default'
         backgroundPreference.value = settings.backgroundPreference || 'none'
         startWithWindows.value = settings.startWithWindows || false

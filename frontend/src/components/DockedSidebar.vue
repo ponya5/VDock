@@ -42,6 +42,7 @@
             :is-edit-mode="isEditMode"
             :show-labels="showLabels"
             :show-tooltips="showTooltips"
+            :button-size="buttonSize"
             @click="handleButtonClick"
             @edit="handleButtonEdit"
             @copy="handleButtonCopy"
@@ -267,7 +268,7 @@ function handleResize(event: MouseEvent) {
   if (!isResizing.value) return
 
   const delta = event.clientX - startX.value
-  const newWidth = Math.max(80, Math.min(300, startWidth.value + delta))
+  const newWidth = Math.max(80, Math.min(360, startWidth.value + delta))
   settingsStore.dockedSidebarWidth = newWidth
 }
 

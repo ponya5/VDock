@@ -65,18 +65,36 @@
           >
             <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
           </button>
+          <button
+            class="btn-icon-circle animate-tap"
+            @click="toggleFullscreen"
+            :title="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+            :aria-label="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+          >
+            <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
+          </button>
           <button class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
             <FontAwesomeIcon :icon="['fas', 'cog']" />
           </button>
         </div>
       </div>
       <div class="autohide-progress" :style="{ width: progressWidth + '%' }"></div>
+      <!-- Visible collapse affordance — mirrors the reveal handle so hiding the
+           header (swipe up) isn't only discoverable via an invisible gesture -->
+      <button
+        class="header-collapse-handle"
+        @click="collapseHeader"
+        title="Swipe up or tap to hide header"
+        aria-label="Hide header"
+      >
+        <div class="reveal-handle"></div>
+      </button>
     </header>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
@@ -109,6 +127,23 @@ const settingsStore = useSettingsStore()
 const triggerRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 const progressWidth = ref(100)
+const isFullscreen = ref(typeof document !== 'undefined' && !!document.fullscreenElement)
+
+function handleFullscreenChange() {
+  isFullscreen.value = !!document.fullscreenElement
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+    } else {
+      await document.documentElement.requestFullscreen()
+    }
+  } catch (err) {
+    console.error('Failed to toggle fullscreen:', err)
+  }
+}
 let autohideTimer: ReturnType<typeof setInterval> | null = null
 let autohideRemainingMs = 5000
 const AUTOHIDE_MS = 5000
@@ -116,6 +151,11 @@ const TICK_MS = 50
 
 function revealHeader() {
   settingsStore.showHeader = true
+}
+
+function collapseHeader() {
+  stopAutohide()
+  settingsStore.showHeader = false
 }
 
 function startAutohide() {
@@ -172,8 +212,13 @@ useSwipe(headerRef, {
   }
 })
 
+onMounted(() => {
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
+})
+
 onUnmounted(() => {
   stopAutohide()
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
 })
 </script>
 
@@ -193,7 +238,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   width: 100%;
-  height: 16px;
+  height: 32px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -202,17 +247,45 @@ onUnmounted(() => {
 }
 
 .reveal-handle {
-  width: 60px;
-  height: 6px;
-  background-color: rgba(255, 255, 255, 0.25);
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
-  transition: background-color 0.2s ease;
+  width: 96px;
+  height: 10px;
+  margin-top: 4px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .header-reveal-trigger:hover .reveal-handle,
 .header-reveal-trigger:active .reveal-handle {
   background-color: var(--color-primary, #007aff);
+  transform: scaleX(1.08);
+}
+
+.header-collapse-handle {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 120px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.header-collapse-handle .reveal-handle {
+  margin-top: 0;
+}
+
+.header-collapse-handle:hover .reveal-handle,
+.header-collapse-handle:active .reveal-handle {
+  background-color: var(--color-primary, #007aff);
+  transform: scaleX(1.08);
 }
 
 .deck-header {
