@@ -13,7 +13,7 @@
       :current-page-index="currentPageIndex"
       :is-edit-mode="isEditMode"
       @toggle-edit="dashboardStore.toggleEditMode"
-      @navigate-settings="router.push('/settings')"
+      @navigate-settings="handleNavigateSettings"
       @navigate-profiles="router.push('/profiles')"
       @set-scene="setScene"
       @add-scene="addScene"
@@ -558,6 +558,10 @@ const isEditingExistingScene = computed(() => {
 })
 
 // Navigation & Scene handlers
+function handleNavigateSettings() {
+  router.push('/settings')
+}
+
 function setScene(sceneId: string) {
   const idx = currentProfile.value?.scenes.findIndex(s => s.id === sceneId)
   if (idx !== undefined && idx >= 0) {
