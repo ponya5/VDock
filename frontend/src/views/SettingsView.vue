@@ -60,55 +60,53 @@
             </button>
           </div>
 
-          <div v-if="appearanceSubTab === 'buttons'" class="settings-grid">
-            <section class="settings-section card preview-card">
-              <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
-              <div class="button-preview-stage">
-                <DeckButton
-                  :button="previewButton"
-                  :show-labels="settings.showLabels"
-                  :show-tooltips="settings.showTooltips"
-                  :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
-                  style="width: 110px; height: 110px;"
-                />
-              </div>
-              <p class="form-help">Updates live as you change button size, labels, tooltips, or touch mode below.</p>
-            </section>
+          <!-- Split layout: settings on the left, a live preview pinned on the right
+               that stays visible across all three sub-tabs above, so switching tabs
+               to tweak something never loses sight of how it looks. -->
+          <div class="appearance-split">
+            <div class="appearance-main">
+              <div v-if="appearanceSubTab === 'buttons'" class="settings-grid">
+                <section class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
+                  <TouchModeSelector />
+                </section>
 
-            <section class="settings-section card">
-              <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
-              <TouchModeSelector />
-            </section>
+                <section class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display</h2>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Button Size</label>
+                      <button class="btn-reset" @click="settings.buttonSize = 1.0" title="Reset">
+                        <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
+                      </button>
+                    </div>
+                    <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
+                    <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
+                    <p class="form-help">Scales button icons and labels. Combines with Touch Mode above.</p>
+                  </div>
+                  <div class="toggle-row">
+                    <label class="toggle-row-label">Show button labels</label>
+                    <label class="toggle-switch"><input v-model="settings.showLabels" type="checkbox" /><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="toggle-row">
+                    <label class="toggle-row-label">Show tooltips</label>
+                    <label class="toggle-switch"><input v-model="settings.showTooltips" type="checkbox" /><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="toggle-row">
+                    <label class="toggle-row-label">Enable animations</label>
+                    <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="toggle-row">
+                    <div>
+                      <label class="toggle-row-label">3D tilt effect</label>
+                      <p class="form-help">Tilts the button grid as your mouse moves over it</p>
+                    </div>
+                    <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                  </div>
+                </section>
+              </div>
 
-            <section class="settings-section card">
-              <h2><FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display</h2>
-              <div class="form-group">
-                <div class="form-group-header">
-                  <label>Button Size</label>
-                  <button class="btn-reset" @click="settings.buttonSize = 1.0" title="Reset">
-                    <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
-                  </button>
-                </div>
-                <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
-                <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
-                <p class="form-help">Scales button icons and labels. Combines with Touch Mode above.</p>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-row-label">Show button labels</label>
-                <label class="toggle-switch"><input v-model="settings.showLabels" type="checkbox" /><span class="toggle-slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-row-label">Show tooltips</label>
-                <label class="toggle-switch"><input v-model="settings.showTooltips" type="checkbox" /><span class="toggle-slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-row-label">Enable animations</label>
-                <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
-              </div>
-            </section>
-          </div>
-
-          <div v-if="appearanceSubTab === 'layout'" class="settings-grid">
+              <div v-if="appearanceSubTab === 'layout'" class="settings-grid">
             <section class="settings-section card">
               <h2><FontAwesomeIcon :icon="['fas', 'table-columns']" /> Sidebar</h2>
               <div class="toggle-row">
@@ -257,6 +255,82 @@
                 <img :src="currentScene!.background!.image" alt="Scene Background" />
               </div>
             </section>
+              </div>
+            </div>
+
+            <!-- Persistent preview pane: same DeckButton component the dashboard
+                 uses, over the actual selected background, visible regardless of
+                 which sub-tab above is active. -->
+            <aside class="appearance-preview-pane">
+              <section class="settings-section card preview-card">
+                <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
+                <div class="button-preview-stage" :class="previewBackgroundClass" :style="previewBackgroundStyle">
+                  <DeckButton
+                    :button="previewButton"
+                    :show-labels="settings.showLabels"
+                    :show-tooltips="settings.showTooltips"
+                    :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
+                    style="width: 110px; height: 110px;"
+                  />
+                </div>
+                <p class="form-help">Reflects your button size, labels, tooltips, touch mode, and background — no matter which tab above you're on.</p>
+
+                <div class="preview-demo-controls">
+                  <p class="preview-demo-label">Browse animation &amp; effect styles (preview only — set these per-button in the Button Editor):</p>
+                  <div class="form-group">
+                    <label class="small-label">Button animation</label>
+                    <select v-model="previewAnimation" class="select">
+                      <option value="none">None</option>
+                      <option value="pulse">Pulse</option>
+                      <option value="shimmer">Shimmer</option>
+                      <option value="bounce">Bounce</option>
+                      <option value="rotate">Rotate</option>
+                      <option value="wiggle">Wiggle</option>
+                      <option value="float">Float</option>
+                      <option value="scale">Scale</option>
+                      <option value="slide">Slide</option>
+                      <option value="fade">Fade</option>
+                      <option value="spin">Spin</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="small-label">Icon animation</label>
+                    <select v-model="previewIconLoop" class="select">
+                      <option value="none">None</option>
+                      <option value="squash">Squash</option>
+                      <option value="bob">Bob</option>
+                      <option value="spin">Spin</option>
+                      <option value="pulse">Pulse</option>
+                      <option value="swing">Swing</option>
+                      <option value="flip">Flip</option>
+                      <option value="jump">Jump</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="small-label">Visual effect</label>
+                    <select v-model="previewEffect" class="select">
+                      <option value="none">None</option>
+                      <option value="glass">Glass</option>
+                      <option value="neumorphism">Neumorphism</option>
+                      <option value="gradient">Gradient</option>
+                      <option value="glow">Glow</option>
+                      <option value="neon">Neon</option>
+                      <option value="metallic">Metallic</option>
+                      <option value="liquid">Liquid</option>
+                      <option value="holographic">Holographic</option>
+                      <option value="shadow">Shadow</option>
+                      <option value="emissive">Emissive</option>
+                      <option value="fire">Fire</option>
+                      <option value="plasma">Plasma</option>
+                      <option value="particles">Particles</option>
+                      <option value="aurora">Aurora</option>
+                      <option value="scanline">Scanline</option>
+                      <option value="rain">Rain</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+            </aside>
           </div>
         </div>
 
@@ -318,20 +392,12 @@
               <h2>Startup</h2>
               <div class="toggle-row">
                 <div>
-                  <label class="toggle-row-label">Start on System Boot</label>
-                  <p class="form-help">Auto-launch VDock when your computer starts</p>
+                  <label class="toggle-row-label">Launch automatically at startup</label>
+                  <p class="form-help">Starts VDock when you log in — works on Windows, macOS, and Linux</p>
                 </div>
                 <label class="toggle-switch"><input v-model="settings.startOnBoot" type="checkbox" @change="handleStartOnBootToggle" /><span class="toggle-slider"></span></label>
               </div>
               <p v-if="startOnBootStatus" class="status-msg" :class="startOnBootStatus.success ? 'status-success' : 'status-error'">{{ startOnBootStatus.message }}</p>
-              <div class="toggle-row" style="margin-top:var(--spacing-sm)">
-                <div>
-                  <label class="toggle-row-label">Start with Windows</label>
-                  <p class="form-help">Launch desktop app when Windows starts</p>
-                </div>
-                <label class="toggle-switch"><input v-model="settings.startWithWindows" type="checkbox" @change="handleStartWithWindowsToggle" /><span class="toggle-slider"></span></label>
-              </div>
-              <p v-if="startWithWindowsStatus" class="status-msg" :class="startWithWindowsStatus.success ? 'status-success' : 'status-error'">{{ startWithWindowsStatus.message }}</p>
             </section>
 
             <section class="settings-section card">
@@ -461,51 +527,61 @@
 
         <!-- ── About ── -->
         <div v-if="activeTab === 'about'" class="tab-content">
-          <div class="settings-grid">
-            <section class="settings-section card">
-              <h2>Help</h2>
-              <p class="form-help mb-md">New to VDock? Walk through the quick start guide.</p>
+          <section class="settings-section card about-card">
+            <div class="about-brand">
+              <h2 class="about-title">VDock</h2>
+              <p class="about-version">Virtual Stream Interface v2.0.0</p>
+              <p class="about-desc">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
+            </div>
+
+            <div class="feature-highlights">
+              <h4>Key Features</h4>
+              <ul>
+                <li>✨ Real-time System Metrics Monitoring</li>
+                <li>🎬 Advanced Macro Automation</li>
+                <li>🔗 Smart App Integration</li>
+                <li>🎨 Customizable Buttons &amp; Backgrounds</li>
+                <li>🤖 Automatic Scene Switching</li>
+                <li>📊 Professional Dashboard Interface</li>
+              </ul>
+            </div>
+
+            <div class="about-divider"></div>
+
+            <div class="about-row">
+              <div>
+                <h3>Need help?</h3>
+                <p class="form-help">New to VDock? Walk through the quick start guide.</p>
+              </div>
               <button class="btn btn-primary" @click="settingsStore.showHelpGuide = true">
                 <FontAwesomeIcon :icon="['fas', 'question-circle']" /> Open Help &amp; Guide
               </button>
-            </section>
+            </div>
 
-            <section class="settings-section card">
-              <h2>About VDock</h2>
-              <div class="about-info">
-                <h3>VDock</h3>
-                <p>Virtual Stream Interface v1.0.0</p>
-                <p class="mt-md">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
-                <div class="feature-highlights mt-md">
-                  <h4>Key Features</h4>
-                  <ul>
-                    <li>✨ Real-time System Metrics Monitoring</li>
-                    <li>🎬 Advanced Macro Automation</li>
-                    <li>🔗 Smart App Integration</li>
-                    <li>🎨 Customizable Buttons &amp; Backgrounds</li>
-                    <li>🤖 Automatic Scene Switching</li>
-                    <li>📊 Professional Dashboard Interface</li>
-                  </ul>
-                </div>
-                <div class="mt-lg about-links">
-                  <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fas', 'globe']" /> Website</a>
-                  <a href="https://github.com/ponya5" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
-                  <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'linkedin']" /> LinkedIn</a>
-                  <button class="about-link-btn" @click="contactEmail"><FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact</button>
-                  <span class="about-copyright">Daniel Shalom. All rights reserved 2026 ©</span>
-                </div>
+            <div class="about-divider"></div>
+
+            <div class="about-links">
+              <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fas', 'globe']" /> Website</a>
+              <a href="https://github.com/ponya5" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
+              <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'linkedin']" /> LinkedIn</a>
+              <button class="about-link-btn" @click="contactEmail"><FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact</button>
+            </div>
+
+            <div class="about-divider"></div>
+
+            <div class="about-row">
+              <div>
+                <h3>Support the project</h3>
+                <p class="form-help">If you enjoy using VDock, consider buying me a coffee. It helps keep the project alive and growing.</p>
               </div>
-            </section>
-
-            <section class="settings-section card kofi-section">
-              <h2>Support the Project</h2>
-              <p class="form-help">If you enjoy using VDock, consider buying me a coffee. It helps keep the project alive and growing.</p>
               <a href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener" class="kofi-btn">
                 <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
                 Support me on Ko-fi
               </a>
-            </section>
-          </div>
+            </div>
+
+            <p class="about-copyright">Daniel Shalom. All rights reserved 2026 ©</p>
+          </section>
         </div>
 
       </div>
@@ -550,10 +626,16 @@ const toastLevelOptions = [
 const activeTab = ref('appearance')
 const appearanceSubTab = ref<'buttons' | 'layout' | 'background'>('buttons')
 
-// Static sample button for the live preview card — never persisted, just
-// rendered through the real DeckButton component so the preview matches
-// actual dashboard rendering exactly.
-const previewButton: Button = {
+// Sample button for the live preview card — never persisted, just rendered
+// through the real DeckButton component so the preview matches actual
+// dashboard rendering exactly. The animation/loop/effect pickers below let
+// users browse what each style looks like without touching a real button;
+// actual buttons still set these individually in the Button Editor.
+const previewAnimation = ref('none')
+const previewIconLoop = ref('none')
+const previewEffect = ref('none')
+
+const previewButton = computed<Button>(() => ({
   id: 'preview-button',
   label: 'Preview',
   tooltip: 'Sample tooltip',
@@ -562,9 +644,54 @@ const previewButton: Button = {
   shape: 'rounded',
   position: { row: 0, col: 0 },
   size: { rows: 1, cols: 1 },
-  style: { backgroundColor: '#3498db', textColor: '#ffffff' },
+  style: {
+    backgroundColor: '#3498db',
+    textColor: '#ffffff',
+    animation: previewAnimation.value === 'none' ? undefined : (previewAnimation.value as any)
+  },
+  layers: {
+    icon: previewIconLoop.value === 'none' ? undefined : { loop: previewIconLoop.value as any },
+    effect: previewEffect.value === 'none' ? undefined : { type: previewEffect.value as any, tint: 'brand' }
+  },
   enabled: true
-}
+}))
+
+// Mirrors DashboardView's own background class/style resolution (minus the
+// scene/page-background overrides, which aren't relevant to a settings
+// preview) so the preview pane shows exactly what the dashboard would.
+const previewBackgroundClass = computed(() => {
+  if (settingsStore.backgroundPreference !== 'none') return ''
+  const bg = settingsStore.dashboardBackground
+  if (bg === 'default') return ''
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) return ''
+  return `dashboard-bg-${bg}`
+})
+
+// Inline styles always win over the (global, unscoped) dashboard-bg-* classes
+// regardless of CSS specificity, so every branch here sets an explicit
+// background — including a neutral checkerboard placeholder for the one case
+// a settings preview can't render (a full animated background component).
+const PREVIEW_CHECKERBOARD = 'repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%) 50% / 20px 20px'
+
+const previewBackgroundStyle = computed(() => {
+  if (settingsStore.backgroundPreference !== 'none') {
+    return { background: PREVIEW_CHECKERBOARD }
+  }
+  const bg = settingsStore.dashboardBackground
+  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
+    return {
+      backgroundImage: `url(${bg})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }
+  }
+  if (bg === 'default') {
+    return { background: 'var(--color-background)' }
+  }
+  return {}
+})
+
 const expandedCategory = ref<string | null>(null)
 const addingTemplate = ref<string | null>(null)
 
@@ -667,7 +794,6 @@ const autoSwitchingEnabled = ref(false)
 const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
 const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
-const startWithWindowsStatus = ref<{success: boolean, message: string} | null>(null)
 
 const availableScenes = computed(() => {
   const profile = profilesStore.currentProfile
@@ -725,36 +851,32 @@ function jumpToSearchResult(match: SettingsSearchEntry) {
 
 function clearRecentActions() { if (confirm('Clear all recent actions?')) settingsStore.clearRecentActions() }
 
+// Single cross-platform "launch automatically" toggle. Always registers the
+// backend's own OS-level autostart (works whether you're running via browser
+// or Electron), and additionally syncs Electron's own auto-launch mechanism
+// when running inside the desktop app, so both stay consistent instead of
+// needing two separate toggles for what is, to the user, one setting.
 async function handleStartOnBootToggle() {
+  const desired = settings.value.startOnBoot
   try {
-    const response = await apiClient.post('/system/autostart', { enabled: settings.value.startOnBoot })
-    if (response.data.success) {
-      startOnBootStatus.value = { success: true, message: settings.value.startOnBoot ? 'VDock will now start automatically on system boot' : 'Auto-start disabled' }
-    } else {
+    const response = await apiClient.post('/system/autostart', { enabled: desired })
+    if (!response.data.success) {
       startOnBootStatus.value = { success: false, message: response.data.message || 'Failed to update auto-start setting' }
-      settings.value.startOnBoot = !settings.value.startOnBoot
+      settings.value.startOnBoot = !desired
+      setTimeout(() => { startOnBootStatus.value = null }, 5000)
+      return
     }
+
+    if (window.electronAPI) {
+      await window.electronAPI.toggleAutoLaunch(desired)
+    }
+
+    startOnBootStatus.value = { success: true, message: desired ? 'VDock will now start automatically when your computer starts' : 'Auto-start disabled' }
   } catch {
     startOnBootStatus.value = { success: false, message: 'Failed to update auto-start setting. This feature may require administrator privileges.' }
-    settings.value.startOnBoot = !settings.value.startOnBoot
+    settings.value.startOnBoot = !desired
   }
   setTimeout(() => { startOnBootStatus.value = null }, 5000)
-}
-
-async function handleStartWithWindowsToggle() {
-  try {
-    if (window.electronAPI) {
-      const result = await window.electronAPI.toggleAutoLaunch(settings.value.startWithWindows)
-      startWithWindowsStatus.value = { success: result, message: result ? 'VDock will now start with Windows' : 'Auto-start with Windows disabled' }
-    } else {
-      startWithWindowsStatus.value = { success: false, message: 'This feature is only available in the desktop application' }
-      settings.value.startWithWindows = !settings.value.startWithWindows
-    }
-  } catch {
-    startWithWindowsStatus.value = { success: false, message: 'Failed to update Windows auto-start setting' }
-    settings.value.startWithWindows = !settings.value.startWithWindows
-  }
-  setTimeout(() => { startWithWindowsStatus.value = null }, 5000)
 }
 
 function formatScreensaverTimeout(seconds: number): string {
@@ -1057,8 +1179,23 @@ onMounted(async () => {
   align-items: start;
 }
 
-.preview-card {
-  grid-column: 1 / -1;
+/* ── Appearance split layout: settings + persistent live preview ── */
+.appearance-split {
+  display: flex;
+  gap: var(--spacing-lg);
+  align-items: flex-start;
+}
+
+.appearance-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.appearance-preview-pane {
+  width: 320px;
+  flex-shrink: 0;
+  position: sticky;
+  top: var(--spacing-lg);
 }
 
 .button-preview-stage {
@@ -1066,9 +1203,42 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  background: repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 50% / 20px 20px;
   border-radius: var(--radius-md);
   min-height: 160px;
+  overflow: hidden;
+}
+
+.preview-demo-controls {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--glass-border, var(--color-border));
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.preview-demo-label {
+  font-size: clamp(10px, 0.6vw + 8px, 12px);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.preview-demo-controls .small-label {
+  display: block;
+  font-size: clamp(10px, 0.6vw + 8px, 12px);
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+@media (max-width: 1000px) {
+  .appearance-split {
+    flex-direction: column;
+  }
+
+  .appearance-preview-pane {
+    width: 100%;
+    position: static;
+  }
 }
 
 /* ── Section Cards ── */
@@ -1640,13 +1810,58 @@ onMounted(async () => {
 }
 
 /* ── About ── */
-.about-info h3 {
-  font-size: clamp(16px, 1.2vw + 12px, 22px);
-  font-weight: 700;
-  margin: 0 0 var(--spacing-xs) 0;
+.about-card {
+  max-width: 720px;
 }
 
-.about-info p { font-size: clamp(12px, 0.7vw + 9px, 14px); margin: 0 0 var(--spacing-xs) 0; }
+.about-brand {
+  margin-bottom: var(--spacing-md);
+}
+
+.about-title {
+  font-size: clamp(20px, 1.6vw + 14px, 28px);
+  font-weight: 700;
+  margin: 0 0 var(--spacing-xs) 0;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: none;
+  padding-bottom: 0;
+  color: var(--color-text);
+}
+
+.about-version {
+  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  color: var(--color-primary);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.about-desc {
+  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.about-divider {
+  height: 1px;
+  background: var(--glass-border, var(--color-border));
+  margin: var(--spacing-md) 0;
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.about-row h3 {
+  font-size: clamp(13px, 0.8vw + 10px, 16px);
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--color-text);
+}
 
 .feature-highlights h4 {
   font-size: clamp(12px, 0.7vw + 9px, 14px);
@@ -1695,8 +1910,6 @@ onMounted(async () => {
 }
 
 /* ── Ko-fi ── */
-.kofi-section { display: flex; flex-direction: column; }
-
 .kofi-btn {
   display: inline-flex;
   align-items: center;

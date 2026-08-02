@@ -19,11 +19,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const showLabels = ref(true)
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
+  const tiltEffectEnabled = ref(true) // 3D mouse-tilt parallax on the button grid
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(190) // Width in pixels (80-360)
   const dashboardBackground = ref('default')
   const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
-  const startWithWindows = ref(false)
   const uiBrightness = ref(100) // UI brightness percentage (0-200)
   const showHeader = ref(false) // Show/hide dashboard header
   const toastLevel = ref<'all' | 'errors-only' | 'off'>('all') // Toast display level
@@ -74,11 +74,11 @@ export const useSettingsStore = defineStore('settings', () => {
         showLabels.value = settings.showLabels !== false
         showTooltips.value = settings.showTooltips !== false
         animationsEnabled.value = settings.animationsEnabled !== false
+        tiltEffectEnabled.value = settings.tiltEffectEnabled !== false
         dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
         dockedSidebarWidth.value = settings.dockedSidebarWidth || 190
         dashboardBackground.value = settings.dashboardBackground || 'default'
         backgroundPreference.value = settings.backgroundPreference || 'none'
-        startWithWindows.value = settings.startWithWindows || false
         uiBrightness.value = settings.uiBrightness !== undefined ? settings.uiBrightness : 100
         showHeader.value = settings.showHeader === true
         // migrate legacy boolean → new enum
@@ -112,11 +112,11 @@ export const useSettingsStore = defineStore('settings', () => {
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
       animationsEnabled: animationsEnabled.value,
+      tiltEffectEnabled: tiltEffectEnabled.value,
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
       dashboardBackground: dashboardBackground.value,
       backgroundPreference: backgroundPreference.value,
-      startWithWindows: startWithWindows.value,
       uiBrightness: uiBrightness.value,
       showHeader: showHeader.value,
       toastLevel: toastLevel.value,
@@ -135,7 +135,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, recentActions, weatherLocationMode, weatherManualCity, screensaverTimeout],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, tiltEffectEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, recentActions, weatherLocationMode, weatherManualCity, screensaverTimeout],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -261,11 +261,11 @@ export const useSettingsStore = defineStore('settings', () => {
     showLabels,
     showTooltips,
     animationsEnabled,
+    tiltEffectEnabled,
     dockedSidebarEnabled,
     dockedSidebarWidth,
     dashboardBackground,
     backgroundPreference,
-    startWithWindows,
     uiBrightness,
     showHeader,
     toastLevel,

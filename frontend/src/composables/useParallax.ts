@@ -3,18 +3,28 @@ import { ref, unref, watch, type MaybeRef } from 'vue';
 export interface ParallaxOptions {
   maxTilt?: number;
   perspective?: number;
+  enabled?: MaybeRef<boolean>;
 }
 
 export function useParallax(target: MaybeRef<HTMLElement | null | undefined>, options: ParallaxOptions = {}) {
   const maxTilt = options.maxTilt ?? 15;
   const perspective = options.perspective ?? 1000;
-  
+  const enabled = options.enabled ?? true;
+
   const tiltX = ref(0);
   const tiltY = ref(0);
-  
+
   const onMouseMove = (e: MouseEvent) => {
     const el = unref(target);
     if (!el) return;
+    if (!unref(enabled)) {
+      if (tiltX.value !== 0 || tiltY.value !== 0) {
+        tiltX.value = 0;
+        tiltY.value = 0;
+        el.style.transform = `perspective(${perspective}px) rotateX(0deg) rotateY(0deg)`;
+      }
+      return;
+    }
     const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -37,10 +47,11 @@ export function useParallax(target: MaybeRef<HTMLElement | null | undefined>, op
   
   const onDeviceOrientation = (e: DeviceOrientationEvent) => {
     if (e.beta === null || e.gamma === null) return;
-    
+
     const el = unref(target);
     if (!el) return;
-    
+    if (!unref(enabled)) return;
+
     const beta = Math.max(-45, Math.min(45, e.beta));
     const gamma = Math.max(-45, Math.min(45, e.gamma));
     

@@ -1056,6 +1056,28 @@ body {
   transform: translateY(-20px);
 }
 
+/* Static Gradient Backgrounds — these had no CSS at all (Settings let you
+   pick them, but nothing changed on the dashboard). */
+.dashboard-bg-ocean-breeze {
+  background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+}
+
+.dashboard-bg-sunset-glow {
+  background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+}
+
+.dashboard-bg-forest-mist {
+  background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+}
+
+.dashboard-bg-royal-purple {
+  background: linear-gradient(135deg, #4b0082 0%, #8a2be2 100%);
+}
+
+.dashboard-bg-golden-hour {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+}
+
 /* Animated Dashboard Backgrounds */
 .dashboard-bg-floating-particles {
   position: relative;

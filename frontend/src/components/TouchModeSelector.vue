@@ -3,8 +3,39 @@
     <div class="selector-header">
       <h3>Touch Mode</h3>
       <p class="description">Optimize interface size for different input methods</p>
+      <button class="info-btn" type="button" @click="showTips = !showTips" title="Tips" aria-label="Show tips">
+        <FontAwesomeIcon :icon="['fas', 'question']" />
+      </button>
     </div>
-    
+
+    <!-- Teleported to .theme-dark (App.vue's root) rather than <body> — a
+         settings card ancestor uses backdrop-filter, which creates a new
+         containing block for fixed-position elements and would otherwise
+         trap this overlay inside the card instead of covering the viewport.
+         Note: index.html's mount div and App.vue's own root both carry
+         id="app" (a pre-existing duplicate-id quirk), so `#app` resolves to
+         the wrong, unstyled outer one — `.theme-dark` is the actual themed
+         element and is unambiguous. -->
+    <Teleport to=".theme-dark">
+      <div v-if="showTips" class="tips-popover-backdrop" @click="showTips = false">
+        <div class="tips-popover" @click.stop>
+          <div class="tip-header">
+            <FontAwesomeIcon :icon="['fas', 'lightbulb']" />
+            <span>Tips</span>
+            <button class="tips-close" @click="showTips = false" aria-label="Close tips">
+              <FontAwesomeIcon :icon="['fas', 'times']" />
+            </button>
+          </div>
+          <ul>
+            <li><strong>Normal:</strong> Best for mouse and trackpad users on desktop screens</li>
+            <li><strong>Touch-Friendly:</strong> Ideal for touchscreen laptops and 2-in-1 devices</li>
+            <li><strong>Tablet:</strong> Optimized for tablets and large-format touchscreens</li>
+            <li>Changes apply immediately across the entire interface</li>
+          </ul>
+        </div>
+      </div>
+    </Teleport>
+
     <div class="mode-options">
       <div
         v-for="mode in modes"
@@ -30,41 +61,25 @@
       </div>
     </div>
     
+    <!-- The Live Preview card above already shows this scale applied to a real
+         button — no need for a second, separate preview here. Just the numbers. -->
     <div class="preview-section">
-      <h4>Preview</h4>
-      <div class="preview-container">
-        <button 
-          class="preview-button"
-          :style="{
-            padding: `${0.75 * settingsStore.touchModeMultiplier}rem ${1 * settingsStore.touchModeMultiplier}rem`,
-            minHeight: `${Math.max(36 * settingsStore.touchModeMultiplier, settingsStore.minimumTouchTargetSize)}px`,
-            fontSize: `${0.875 * settingsStore.touchModeMultiplier}rem`
-          }"
-        >
-          <FontAwesomeIcon 
-            :icon="['fas', 'play']" 
-            :style="{ fontSize: `${1 * settingsStore.touchModeMultiplier}rem` }"
-          />
-          Sample Button
-        </button>
-        
-        <div class="preview-info">
-          <div class="info-item">
-            <span class="label">Multiplier:</span>
-            <span class="value">{{ settingsStore.touchModeMultiplier }}x</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Min Target Size:</span>
-            <span class="value">{{ settingsStore.minimumTouchTargetSize }}px</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Button Height:</span>
-            <span class="value">{{ Math.max(36 * settingsStore.touchModeMultiplier, settingsStore.minimumTouchTargetSize) }}px</span>
-          </div>
+      <div class="preview-info">
+        <div class="info-item">
+          <span class="label">Multiplier:</span>
+          <span class="value">{{ settingsStore.touchModeMultiplier }}x</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Min Target Size:</span>
+          <span class="value">{{ settingsStore.minimumTouchTargetSize }}px</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Button Height:</span>
+          <span class="value">{{ Math.max(36 * settingsStore.touchModeMultiplier, settingsStore.minimumTouchTargetSize) }}px</span>
         </div>
       </div>
     </div>
-    
+
     <div class="advanced-settings">
       <button 
         class="toggle-advanced"
@@ -93,18 +108,6 @@
       </div>
     </div>
     
-    <div class="touch-mode-tips">
-      <div class="tip-header">
-        <FontAwesomeIcon :icon="['fas', 'lightbulb']" />
-        <span>Tips</span>
-      </div>
-      <ul>
-        <li><strong>Normal:</strong> Best for mouse and trackpad users on desktop screens</li>
-        <li><strong>Touch-Friendly:</strong> Ideal for touchscreen laptops and 2-in-1 devices</li>
-        <li><strong>Tablet:</strong> Optimized for tablets and large-format touchscreens</li>
-        <li>Changes apply immediately across the entire interface</li>
-      </ul>
-    </div>
   </div>
 </template>
 
@@ -117,6 +120,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 const showAdvanced = ref(false)
+const showTips = ref(false)
 
 const modes = [
   {
@@ -158,16 +162,80 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   padding: var(--spacing-lg);
 }
 
+.selector-header {
+  position: relative;
+}
+
 .selector-header h3 {
   margin: 0 0 var(--spacing-xs);
   color: var(--color-text);
   font-size: clamp(0.96rem, 2vw + 0.60rem, 1.44rem);
+  padding-right: 2.5rem;
 }
 
 .description {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
+}
+
+.info-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: all var(--transition-fast);
+}
+
+.info-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.tips-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.tips-popover {
+  width: min(420px, 90vw);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  background: var(--color-surface-solid, var(--color-background));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-primary);
+  box-shadow: var(--shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.5));
+}
+
+.tips-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.2rem;
+}
+
+.tips-close:hover {
+  color: var(--color-text);
 }
 
 .mode-options {
@@ -253,39 +321,6 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   padding: var(--spacing-md);
   background: var(--color-background);
   border-radius: var(--radius-md);
-}
-
-.preview-section h4 {
-  margin: 0 0 var(--spacing-md);
-  font-size: clamp(0.76rem, 2vw + 0.47rem, 1.14rem);
-  color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.preview-container {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  align-items: center;
-}
-
-.preview-button {
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.preview-button:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
 }
 
 .preview-info {
@@ -409,14 +444,6 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   border-radius: var(--radius-sm);
 }
 
-.touch-mode-tips {
-  margin-top: var(--spacing-lg);
-  padding: var(--spacing-md);
-  background: rgba(var(--color-primary-rgb), 0.1);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--color-primary);
-}
-
 .tip-header {
   display: flex;
   align-items: center;
@@ -427,7 +454,7 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   font-size: clamp(0.72rem, 2vw + 0.45rem, 1.08rem);
 }
 
-.touch-mode-tips ul {
+.tips-popover ul {
   margin: 0;
   padding-left: var(--spacing-lg);
   color: var(--color-text-secondary);
@@ -435,11 +462,11 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   line-height: 1.6;
 }
 
-.touch-mode-tips li {
+.tips-popover li {
   margin-bottom: var(--spacing-xs);
 }
 
-.touch-mode-tips strong {
+.tips-popover strong {
   color: var(--color-text);
 }
 
@@ -447,14 +474,10 @@ function selectMode(mode: 'normal' | 'touch-friendly' | 'tablet') {
   .touch-mode-selector {
     padding: var(--spacing-md);
   }
-  
+
   .mode-option {
     flex-direction: column;
     text-align: center;
-  }
-  
-  .preview-container {
-    padding: var(--spacing-sm);
   }
 }
 </style>

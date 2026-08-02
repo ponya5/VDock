@@ -79,6 +79,7 @@ import { useSwipe, useLongPress } from '@/composables/useGestures'
 import { useParallax } from '@/composables/useParallax'
 import { useGridTransition } from '@/composables/useGridTransition'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useSettingsStore } from '@/stores/settings'
 import { vibrate } from '@/utils/haptics'
 
 interface Props {
@@ -118,6 +119,7 @@ const emit = defineEmits<{
 
 const gridRef = ref<HTMLElement | null>(null)
 const dashboardStore = useDashboardStore()
+const settingsStore = useSettingsStore()
 
 const renderedPage = ref<Page>({ ...props.page })
 const { cellClasses, triggerTransition } = useGridTransition()
@@ -144,7 +146,9 @@ watch(() => props.page, (newPage) => {
   }
 }, { deep: true })
 
-const { tiltX, tiltY } = useParallax(gridRef)
+const { tiltX, tiltY } = useParallax(gridRef, {
+  enabled: computed(() => settingsStore.tiltEffectEnabled)
+})
 
 useSwipe(gridRef, {
   threshold: 50,
