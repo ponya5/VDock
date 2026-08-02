@@ -300,4 +300,22 @@ useSwipe(triggerRef, {
 .enhanced-scene-nav {
   --pill-height: 56px;
 }
+
+.profile-title-inline {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+}
 </style>
