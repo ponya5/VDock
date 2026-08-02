@@ -74,7 +74,7 @@ import type { Button, Page } from '@/types'
 import DeckButton from './DeckButton.vue'
 import DeckOverlay from './DeckOverlay.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useSwipe, usePinch, useLongPress } from '@/composables/useGestures'
+import { useSwipe, useLongPress } from '@/composables/useGestures'
 import { useParallax } from '@/composables/useParallax'
 import { useGridTransition } from '@/composables/useGridTransition'
 import { useDashboardStore } from '@/stores/dashboard'
@@ -145,13 +145,6 @@ watch(() => props.page, (newPage) => {
 
 const { tiltX, tiltY } = useParallax(gridRef)
 
-const pinchScale = ref(1)
-usePinch(gridRef, {
-  onPinch: (scale) => {
-    pinchScale.value = Math.max(0.6, Math.min(2.0, scale))
-  }
-})
-
 useSwipe(gridRef, {
   threshold: 50,
   onSwipeEnd: (direction) => {
@@ -164,7 +157,7 @@ useSwipe(gridRef, {
 
 const gridStyle = computed(() => {
   const { rows, cols } = renderedPage.value.grid_config
-  const transformScale = props.buttonSize * pinchScale.value
+  const transformScale = props.buttonSize
 
   return {
     display: 'grid',
