@@ -55,6 +55,18 @@
 
         <div class="header-right">
           <button
+            class="btn-fullscreen btn-12 animate-tap"
+            @click="handleToggleFullscreen"
+            :title="isFullscreenActive ? 'Exit full screen' : 'Enter full screen'"
+            :aria-label="isFullscreenActive ? 'Exit full screen' : 'Enter full screen'"
+          >
+            <span>
+              <FontAwesomeIcon :icon="['fas', isFullscreenActive ? 'compress' : 'expand']" />
+              {{ isFullscreenActive ? 'Exit' : 'Full Screen' }}
+            </span>
+          </button>
+          <div class="header-right-separator"></div>
+          <button
             class="btn-hide-header btn-12 animate-tap"
             @click="settingsStore.showHeader = false"
             title="Hide header"
@@ -85,12 +97,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useSwipe } from '@/composables/useGestures'
+import { useElectron } from '@/composables/useElectron'
 import type { Profile, Scene } from '@/types'
 
 interface Props {
@@ -115,7 +128,30 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
+const { toggleFullscreen, isFullscreen } = useElectron()
 const triggerRef = ref<HTMLElement | null>(null)
+const isFullscreenActive = ref(false)
+
+async function refreshFullscreenState() {
+  isFullscreenActive.value = await isFullscreen()
+}
+
+async function handleToggleFullscreen() {
+  isFullscreenActive.value = await toggleFullscreen()
+}
+
+function handleFullscreenChange() {
+  refreshFullscreenState()
+}
+
+onMounted(() => {
+  refreshFullscreenState()
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
+})
 
 function revealHeader() {
   settingsStore.showHeader = true
@@ -332,6 +368,33 @@ useSwipe(triggerRef, {
   }
   .header-center {
     display: none;
+  }
+}
+
+@media (max-width: 1100px), (max-height: 650px) {
+  .deck-header {
+    min-height: calc(56px * var(--touch-multiplier, 1));
+    padding: calc(0.4rem * var(--touch-multiplier, 1)) calc(0.75rem * var(--touch-multiplier, 1));
+  }
+
+  .header-right .btn-12 {
+    min-height: max(44px, calc(36px * var(--touch-multiplier, 1)));
+    padding: calc(0.55rem * var(--touch-multiplier, 1)) calc(0.85rem * var(--touch-multiplier, 1));
+    font-size: calc(0.85rem * var(--touch-multiplier, 1));
+  }
+
+  .header-right-separator {
+    height: calc(24px * var(--touch-multiplier, 1));
+  }
+
+  .profile-avatar-container {
+    width: max(44px, calc(36px * var(--touch-multiplier, 1)));
+    height: max(44px, calc(36px * var(--touch-multiplier, 1)));
+  }
+
+  .profile-title-inline {
+    font-size: calc(1rem * var(--touch-multiplier, 1));
+    max-width: 140px;
   }
 }
 </style>

@@ -226,8 +226,26 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Initialize
   loadSettings()
+  detectSmallScreenDefaults()
   applyTouchModeStyles()
   applyUIBrightnessFilter()
+
+  function detectSmallScreenDefaults() {
+    if (typeof window === 'undefined') return
+
+    const isCompactScreen = window.innerWidth <= 1100 || window.innerHeight <= 650
+    const isTouchDevice =
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia('(pointer: coarse)').matches
+
+    if ((isCompactScreen || isTouchDevice) && touchMode.value === 'normal') {
+      touchMode.value = 'tablet'
+      minimumTouchTargetSize.value = 48
+      saveSettings()
+      applyTouchModeStyles()
+    }
+  }
 
   return {
     currentTheme,

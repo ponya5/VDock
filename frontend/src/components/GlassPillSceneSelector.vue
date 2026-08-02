@@ -45,6 +45,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
+import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import { useDashboardStore } from '@/stores/dashboard'
 
@@ -99,10 +100,8 @@ function onKeyDown(event: KeyboardEvent, index: number) {
   }
 }
 
-function parseIcon(iconString: string) {
-  const parts = iconString.split(' ')
-  if (parts.length === 2) return [parts[0], parts[1].replace('fa-', '')]
-  return ['fas', 'star']
+function parseIcon(iconValue: unknown) {
+  return normalizeFaIcon(iconValue)
 }
 
 watch(focusedIndex, async (newIdx) => {

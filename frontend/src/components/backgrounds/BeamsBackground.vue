@@ -105,6 +105,8 @@ function animate(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, inten
   animationFrameRef.value = requestAnimationFrame(() => animate(canvas, ctx, intensity))
 }
 
+let resizeHandler: (() => void) | null = null
+
 onMounted(() => {
   const canvas = canvasRef.value
   if (!canvas) return
@@ -118,23 +120,27 @@ onMounted(() => {
     canvas.height = window.innerHeight * dpr
     canvas.style.width = `${window.innerWidth}px`
     canvas.style.height = `${window.innerHeight}px`
-    ctx.scale(dpr, dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     const totalBeams = MINIMUM_BEAMS * 1.5
     beamsRef.value = Array.from({ length: totalBeams }, () => createBeam(canvas.width, canvas.height))
   }
 
+  resizeHandler = updateCanvasSize
   updateCanvasSize()
   window.addEventListener("resize", updateCanvasSize)
 
   animate(canvas, ctx, 'strong')
+})
 
-  onUnmounted(() => {
-    window.removeEventListener("resize", updateCanvasSize)
-    if (animationFrameRef.value) {
-      cancelAnimationFrame(animationFrameRef.value)
-    }
-  })
+onUnmounted(() => {
+  if (resizeHandler) {
+    window.removeEventListener("resize", resizeHandler)
+    resizeHandler = null
+  }
+  if (animationFrameRef.value) {
+    cancelAnimationFrame(animationFrameRef.value)
+  }
 })
 </script>
 

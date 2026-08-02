@@ -301,26 +301,66 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
 }
 
-/* 7" 1024x600 touch screen (spec 2): vertical space is scarce, horizontal
-   is at a premium once the grid + docked sidebar are on screen too. */
+/* 7" 1024x600 touch screen: prioritize readable widget text over saving width. */
 @media (max-width: 1100px), (max-height: 650px) {
   .widget-column {
-    width: 140px;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-xs);
+    width: min(32vw, 210px);
+    min-width: 160px;
+    gap: calc(var(--spacing-sm) * var(--touch-multiplier, 1));
+    padding: calc(var(--spacing-sm) * var(--touch-multiplier, 1));
   }
 
   .widget-card {
-    padding: var(--spacing-xs);
+    padding: calc(var(--spacing-sm) * var(--touch-multiplier, 1));
   }
 
   .clock-time {
-    font-size: 1.3rem;
+    font-size: calc(1.75rem * var(--touch-multiplier, 1));
+  }
+
+  .clock-seconds {
+    font-size: calc(0.95rem * var(--touch-multiplier, 1));
+  }
+
+  .clock-date {
+    font-size: calc(0.9rem * var(--touch-multiplier, 1));
+  }
+
+  .weather-title,
+  .weather-location,
+  .weather-desc,
+  .schedule-title,
+  .schedule-day {
+    font-size: calc(0.85rem * var(--touch-multiplier, 1));
+  }
+
+  .weather-temp {
+    font-size: calc(1.35rem * var(--touch-multiplier, 1));
+  }
+
+  .weather-large-icon {
+    font-size: calc(2rem * var(--touch-multiplier, 1));
+  }
+
+  .weather-details {
+    font-size: calc(0.8rem * var(--touch-multiplier, 1));
+  }
+
+  .event-item {
+    height: max(44px, calc(38px * var(--touch-multiplier, 1)));
+  }
+
+  .event-name {
+    font-size: calc(0.85rem * var(--touch-multiplier, 1));
+  }
+
+  .event-time {
+    font-size: calc(0.75rem * var(--touch-multiplier, 1));
   }
 
   .schedule-events {
-    max-height: 90px;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 </style>

@@ -10,8 +10,33 @@ let tray = null
 let isQuitting = false
 let windowPinned = false
 let alwaysOnTop = false
+let kioskMode = false
 let backendProcess = null
 let autoLaunch = null
+
+function findSmallestDisplay() {
+  const displays = screen.getAllDisplays()
+  return displays.reduce((smallest, display) => {
+    const displayArea = display.workAreaSize.width * display.workAreaSize.height
+    const smallestArea = smallest.workAreaSize.width * smallest.workAreaSize.height
+    return displayArea < smallestArea ? display : smallest
+  }, displays[0])
+}
+
+function resolveTargetDisplay() {
+  const displays = screen.getAllDisplays()
+  const preferredDisplayIndex = Number.parseInt(process.env.VDOCK_DISPLAY_INDEX || '', 10)
+
+  if (!Number.isNaN(preferredDisplayIndex) && displays[preferredDisplayIndex]) {
+    return displays[preferredDisplayIndex]
+  }
+
+  if (process.env.VDOCK_USE_SMALLEST_DISPLAY === '1') {
+    return findSmallestDisplay()
+  }
+
+  return screen.getPrimaryDisplay()
+}
 
 // Initialize auto-launch
 function initializeAutoLaunch() {
@@ -37,25 +62,17 @@ function startBackend() {
   console.log('App path:', appPath)
   console.log('========================================')
 
-  // In development, activate virtual environment first
+  // In development, run the venv Python directly (no shell activation chain)
   if (isDev) {
-    const activateScript = path.join(backendPath, 'venv', 'Scripts', 'activate.bat')
-    const pythonCmd = 'python'
-    const args = [appPath]
+    const venvPython = path.join(backendPath, 'venv', 'Scripts', 'python.exe')
 
-    console.log('Using virtual environment activation script:', activateScript)
-    console.log('Python command:', pythonCmd)
-    console.log('App args:', args)
+    console.log('Using venv Python:', venvPython)
 
-    // Use cmd to run the activation and python command
-    const cmd = `${activateScript} && ${pythonCmd} ${args.join(' ')}`
-    console.log('Full command:', cmd)
-
-    backendProcess = spawn('cmd', ['/c', cmd], {
+    backendProcess = spawn(venvPython, [appPath], {
       cwd: backendPath,
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       detached: false,
-      shell: true
+      windowsHide: true
     })
   } else {
     // In production, use bundled python
@@ -100,16 +117,36 @@ function stopBackend() {
 }
 
 function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  const targetDisplay = resolveTargetDisplay()
+  const workArea = targetDisplay.workArea
+  const isCompactDisplay = workArea.width <= 1100 || workArea.height <= 650
+  const shouldStartFullscreen =
+    process.env.VDOCK_FULLSCREEN === '1' ||
+    process.env.VDOCK_KIOSK === '1' ||
+    isCompactDisplay
+
+  kioskMode = process.env.VDOCK_KIOSK === '1' || (shouldStartFullscreen && isCompactDisplay)
+
+  console.log('[OK] Target display:', {
+    id: targetDisplay.id,
+    bounds: targetDisplay.bounds,
+    workArea,
+    scaleFactor: targetDisplay.scaleFactor
+  })
 
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 800,
-    minHeight: 600,
-    frame: true,
+    x: workArea.x,
+    y: workArea.y,
+    width: workArea.width,
+    height: workArea.height,
+    minWidth: isCompactDisplay ? workArea.width : 800,
+    minHeight: isCompactDisplay ? workArea.height : 600,
+    frame: !kioskMode,
+    fullscreen: false,
+    fullscreenable: true,
+    autoHideMenuBar: true,
     transparent: false,
-    show: true,  // Explicitly show the window
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -118,13 +155,28 @@ function createWindow() {
     icon: path.join(__dirname, '../public/vdock-icon.ico')
   })
 
-  // Show window immediately
-  mainWindow.show()
-  mainWindow.focus()
-  console.log('Window created and shown')
-  console.log('Window visible:', mainWindow.isVisible())
-  console.log('Window minimized:', mainWindow.isMinimized())
-  console.log('Window bounds:', mainWindow.getBounds())
+  mainWindow.setBounds({
+    x: workArea.x,
+    y: workArea.y,
+    width: workArea.width,
+    height: workArea.height
+  })
+
+  mainWindow.once('ready-to-show', () => {
+    if (shouldStartFullscreen) {
+      mainWindow.setFullScreen(true)
+      mainWindow.setMenuBarVisibility(false)
+    }
+
+    mainWindow.show()
+    mainWindow.focus()
+
+    console.log('[OK] Window created and shown')
+    console.log('Window visible:', mainWindow.isVisible())
+    console.log('Window minimized:', mainWindow.isMinimized())
+    console.log('Window bounds:', mainWindow.getBounds())
+    console.log('Window full screen:', mainWindow.isFullScreen())
+  })
 
   // Load app
   // Dev: load from Vite dev server (hot-reload). Prod: load from Flask which serves built dist.
@@ -159,8 +211,11 @@ function createWindow() {
       console.error('Page failed to load:', errorCode, errorDescription)
     })
 
-    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-      console.log(`[Renderer] ${message}`)
+    mainWindow.webContents.on('console-message', (event) => {
+      const message = event?.message ?? event
+      if (message) {
+        console.log(`[Renderer] ${message}`)
+      }
     })
   }, 3000)
 
@@ -498,6 +553,36 @@ ipcMain.handle('window-summon-to-cursor', () => {
   mainWindow.focus()
 })
 
+ipcMain.handle('window-toggle-fullscreen', () => {
+  if (!mainWindow) return false
+
+  const enteringFullscreen = !mainWindow.isFullScreen()
+  mainWindow.setFullScreen(enteringFullscreen)
+  mainWindow.setMenuBarVisibility(!enteringFullscreen)
+
+  if (enteringFullscreen) {
+    mainWindow.setAlwaysOnTop(false)
+  }
+
+  return enteringFullscreen
+})
+
+ipcMain.handle('window-is-fullscreen', () => {
+  if (!mainWindow) return false
+  return mainWindow.isFullScreen()
+})
+
+ipcMain.handle('window-set-kiosk', (event, enabled) => {
+  if (!mainWindow) return false
+
+  kioskMode = Boolean(enabled)
+  mainWindow.setFullScreen(kioskMode)
+  mainWindow.setKiosk(kioskMode)
+  mainWindow.setMenuBarVisibility(!kioskMode)
+
+  return kioskMode
+})
+
 // Auto-launch IPC handlers
 ipcMain.handle('toggle-auto-launch', async (event, enabled) => {
   try {
@@ -529,19 +614,19 @@ app.whenReady().then(async () => {
   console.log('========================================')
 
   initializeAutoLaunch()
-  console.log('✓ Auto-launch initialized')
+  console.log('[OK] Auto-launch initialized')
 
   startBackend()
-  console.log('✓ Backend starting...')
+  console.log('[OK] Backend starting...')
 
   createWindow()
-  console.log('✓ Window created')
+  console.log('[OK] Window created')
 
   createTray()
-  console.log('✓ Tray icon created')
+  console.log('[OK] Tray icon created')
 
   registerGlobalShortcuts()
-  console.log('✓ Global shortcuts registered')
+  console.log('[OK] Global shortcuts registered')
 
   // Check if auto-launch is enabled
   try {

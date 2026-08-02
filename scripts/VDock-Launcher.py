@@ -12,6 +12,8 @@ import webbrowser
 from pathlib import Path
 import threading
 import shutil
+import urllib.error
+import urllib.request
 
 # Keep console output readable on Windows code pages (cp1252, etc.)
 if hasattr(sys.stdout, "reconfigure"):
@@ -22,6 +24,8 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 IS_WINDOWS = os.name == "nt"
+DETACHED_PROCESS = 0x00000008 if IS_WINDOWS else 0
+CREATE_NEW_PROCESS_GROUP = 0x00000200 if IS_WINDOWS else 0
 
 # Check if running as frozen executable (compiled with PyInstaller)
 if getattr(sys, "frozen", False):
@@ -37,6 +41,10 @@ else:
 
 BACKEND_PATH = APPLICATION_PATH / "backend"
 FRONTEND_PATH = APPLICATION_PATH / "frontend"
+LOG_DIR = APPLICATION_PATH / "backend" / "data"
+BACKEND_LOG = LOG_DIR / "vdock-backend-launcher.log"
+FRONTEND_LOG = LOG_DIR / "vdock-frontend-launcher.log"
+ELECTRON_LOG = LOG_DIR / "vdock-electron-launcher.log"
 
 
 def find_python():
@@ -103,6 +111,40 @@ def find_npx():
     return shutil.which("npx") or "npx"
 
 
+def ensure_log_dir():
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def open_log_file(log_path: Path):
+    ensure_log_dir()
+    return open(log_path, "a", encoding="utf-8", errors="replace")
+
+
+def detached_popen_args():
+    if not IS_WINDOWS:
+        return {}
+
+    return {
+        "creationflags": DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+        "close_fds": True,
+    }
+
+
+def wait_for_url(url: str, timeout_seconds: int = 45, interval_seconds: float = 1.0) -> bool:
+    """Poll until an HTTP service responds or timeout is reached."""
+    deadline = time.time() + timeout_seconds
+
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:
+                if response.status < 500:
+                    return True
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            time.sleep(interval_seconds)
+
+    return False
+
+
 def check_requirements():
     """Check if Python and Node.js are installed."""
     python_bin = find_python()
@@ -148,13 +190,16 @@ def launch_backend(venv_path: Path):
         if not venv_python.exists():
             raise FileNotFoundError(f"venv python not found: {venv_python}")
 
+        backend_log = open_log_file(BACKEND_LOG)
         subprocess.Popen(
             [str(venv_python), "app.py"],
             cwd=str(BACKEND_PATH),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=backend_log,
+            stderr=backend_log,
+            **detached_popen_args(),
         )
         print("[OK] Backend server started")
+        print(f"      Log: {BACKEND_LOG}")
         return True
     except Exception as error:
         print(f"[ERROR] Failed to start backend: {error}")
@@ -168,22 +213,27 @@ def launch_frontend():
         if not npm:
             raise FileNotFoundError("npm not found")
 
+        frontend_log = open_log_file(FRONTEND_LOG)
+
         if IS_WINDOWS:
             cmd = f'cd /d "{FRONTEND_PATH}" && "{npm}" run dev'
             subprocess.Popen(
                 cmd,
                 shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=frontend_log,
+                stderr=frontend_log,
+                **detached_popen_args(),
             )
         else:
             subprocess.Popen(
                 [npm, "run", "dev"],
                 cwd=str(FRONTEND_PATH),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=frontend_log,
+                stderr=frontend_log,
+                **detached_popen_args(),
             )
         print("[OK] Vite dev server started")
+        print(f"      Log: {FRONTEND_LOG}")
         return True
     except Exception as error:
         print(f"[ERROR] Failed to start frontend: {error}")
@@ -204,13 +254,21 @@ def launch_electron():
 
     try:
         npx = find_npx()
+        electron_log = open_log_file(ELECTRON_LOG)
+        electron_env = os.environ.copy()
+        electron_env["VDOCK_FULLSCREEN"] = "1"
+        electron_env["VDOCK_USE_SMALLEST_DISPLAY"] = "1"
+
         subprocess.Popen(
             [npx, "electron", "."],
             cwd=str(electron_dir),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=electron_log,
+            stderr=electron_log,
+            env=electron_env,
+            **detached_popen_args(),
         )
-        print("[OK] Electron launched")
+        print("[OK] Electron launched in full-screen mode on smallest display")
+        print(f"      Log: {ELECTRON_LOG}")
         return True
     except Exception as error:
         print(f"[WARN] Electron launch failed ({error}), falling back to browser")
@@ -219,7 +277,7 @@ def launch_electron():
 
 def open_browser():
     """Open VDock in default browser (fallback when Electron is unavailable)."""
-    time.sleep(4)
+    time.sleep(2)
     try:
         webbrowser.open("http://localhost:3000")
         print("[OK] Opening VDock in browser at http://localhost:3000")
@@ -268,13 +326,19 @@ def main():
     if not launch_backend(venv):
         return False
 
-    time.sleep(2)
+    print("  Waiting for backend at http://localhost:5000 ...")
+    if not wait_for_url("http://localhost:5000/api/config", timeout_seconds=45):
+        print("[WARN] Backend did not respond in time. Check log:")
+        print(f"       {BACKEND_LOG}")
 
     if not launch_frontend():
         return False
 
-    # Try Electron first, fall back to browser
-    time.sleep(3)
+    print("  Waiting for frontend at http://localhost:3000 ...")
+    if not wait_for_url("http://localhost:3000", timeout_seconds=60):
+        print("[WARN] Frontend did not respond in time. Check log:")
+        print(f"       {FRONTEND_LOG}")
+
     electron_ok = launch_electron()
     if not electron_ok:
         browser_thread = threading.Thread(target=open_browser, daemon=True)
@@ -286,12 +350,16 @@ def main():
     print("=" * 50)
     print("\nBackend:  http://localhost:5000")
     print("Frontend: http://localhost:3000")
-    if not electron_ok:
+    if electron_ok:
+        print("\nElectron is running full-screen on your smallest display.")
+        print("Use the 'Full Screen' button in the header to toggle window chrome.")
+    else:
         print("\nOpening in browser (Electron not available)")
-    print("\nBoth servers are running in the background.")
-    print("Close this window to stop all services.\n")
+    print("\nServices keep running after you close this launcher window.")
+    print("Logs are saved under backend\\data\\")
+    print("\nTo stop VDock, close the Electron window and end python/node tasks in Task Manager.")
 
-    input("Press Enter to exit launcher...")
+    input("\nPress Enter to close this launcher window...")
     return True
 
 

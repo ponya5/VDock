@@ -7,6 +7,11 @@ interface ElectronAPI {
   windowDock: (side: 'left' | 'right' | 'top' | 'bottom' | 'none') => Promise<void>
   windowAlwaysOnTop: (enabled: boolean) => Promise<boolean>
   windowSummonToCursor: () => Promise<void>
+  toggleFullscreen: () => Promise<boolean>
+  isFullscreen: () => Promise<boolean>
+  setKioskMode: (enabled: boolean) => Promise<boolean>
+  toggleAutoLaunch: (enabled: boolean) => Promise<boolean>
+  isAutoLaunchEnabled: () => Promise<boolean>
   platform: string
   isElectron: boolean
 }
@@ -14,36 +19,80 @@ interface ElectronAPI {
 declare global {
   interface Window {
     electron?: ElectronAPI
+    electronAPI?: ElectronAPI
   }
+}
+
+function getElectronApi(): ElectronAPI | undefined {
+  return window.electron || window.electronAPI
 }
 
 export function useElectron() {
   const isElectron = () => {
-    return window.electron?.isElectron || false
+    return getElectronApi()?.isElectron || false
   }
 
   const pinWindow = async (pinned: boolean): Promise<boolean> => {
-    if (!window.electron) return false
-    return await window.electron.windowPin(pinned)
+    const electronApi = getElectronApi()
+    if (!electronApi) return false
+    return await electronApi.windowPin(pinned)
   }
 
   const dockWindow = async (side: 'left' | 'right' | 'top' | 'bottom' | 'none'): Promise<void> => {
-    if (!window.electron) return
-    await window.electron.windowDock(side)
+    const electronApi = getElectronApi()
+    if (!electronApi) return
+    await electronApi.windowDock(side)
   }
 
   const setAlwaysOnTop = async (enabled: boolean): Promise<boolean> => {
-    if (!window.electron) return false
-    return await window.electron.windowAlwaysOnTop(enabled)
+    const electronApi = getElectronApi()
+    if (!electronApi) return false
+    return await electronApi.windowAlwaysOnTop(enabled)
   }
 
   const summonToCursor = async (): Promise<void> => {
-    if (!window.electron) return
-    await window.electron.windowSummonToCursor()
+    const electronApi = getElectronApi()
+    if (!electronApi) return
+    await electronApi.windowSummonToCursor()
+  }
+
+  const toggleFullscreen = async (): Promise<boolean> => {
+    const electronApi = getElectronApi()
+    if (electronApi?.toggleFullscreen) {
+      return await electronApi.toggleFullscreen()
+    }
+
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+        return true
+      }
+
+      await document.exitFullscreen()
+      return false
+    } catch (error) {
+      console.error('Failed to toggle fullscreen:', error)
+      return false
+    }
+  }
+
+  const isFullscreen = async (): Promise<boolean> => {
+    const electronApi = getElectronApi()
+    if (electronApi?.isFullscreen) {
+      return await electronApi.isFullscreen()
+    }
+
+    return Boolean(document.fullscreenElement)
+  }
+
+  const setKioskMode = async (enabled: boolean): Promise<boolean> => {
+    const electronApi = getElectronApi()
+    if (!electronApi?.setKioskMode) return false
+    return await electronApi.setKioskMode(enabled)
   }
 
   const getPlatform = (): string => {
-    return window.electron?.platform || 'web'
+    return getElectronApi()?.platform || 'web'
   }
 
   return {
@@ -52,7 +101,9 @@ export function useElectron() {
     dockWindow,
     setAlwaysOnTop,
     summonToCursor,
+    toggleFullscreen,
+    isFullscreen,
+    setKioskMode,
     getPlatform
   }
 }
-

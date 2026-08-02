@@ -381,12 +381,69 @@ function handleEscapeKey(e: KeyboardEvent) {
   }
 }
 
+function parsePlaceholderPosition(placeholderElement: HTMLElement): { row: number; col: number } | null {
+  const placeholderId = placeholderElement.dataset.buttonId
+  if (!placeholderId?.startsWith('placeholder-')) return null
+
+  const positionParts = placeholderId.replace('placeholder-', '').split('-')
+  if (positionParts.length !== 2) return null
+
+  const row = Number.parseInt(positionParts[0], 10)
+  const col = Number.parseInt(positionParts[1], 10)
+  if (Number.isNaN(row) || Number.isNaN(col)) return null
+
+  return { row, col }
+}
+
+function resolveDropPosition(clientX: number, clientY: number): { row: number; col: number } | null {
+  const dropElement = document.elementFromPoint(clientX, clientY) as HTMLElement | null
+  if (!dropElement || !gridRef.value) return null
+
+  const placeholderElement = dropElement.closest('.button-placeholder') as HTMLElement | null
+  if (placeholderElement) {
+    return parsePlaceholderPosition(placeholderElement)
+  }
+
+  if (!gridRef.value.contains(dropElement)) return null
+
+  const gridRect = gridRef.value.getBoundingClientRect()
+  const { rows, cols } = props.page.grid_config
+  const cellWidth = gridRect.width / cols
+  const cellHeight = gridRect.height / rows
+  const col = Math.floor((clientX - gridRect.left) / cellWidth)
+  const row = Math.floor((clientY - gridRect.top) / cellHeight)
+
+  if (row < 0 || row >= rows || col < 0 || col >= cols) return null
+  return { row, col }
+}
+
+function handleGlobalTouchDrop(event: Event) {
+  if (!props.isEditMode) return
+
+  const customEvent = event as CustomEvent<{
+    payload: { type: string; data: unknown }
+    clientX: number
+    clientY: number
+  }>
+
+  const { payload, clientX, clientY } = customEvent.detail
+  if (payload.type !== 'action') return
+
+  const dropPosition = resolveDropPosition(clientX, clientY)
+  if (!dropPosition) return
+
+  emit('actionDrop', payload.data, dropPosition)
+  document.dispatchEvent(new CustomEvent('vdock-touch-drop-complete'))
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleEscapeKey)
+  document.addEventListener('vdock-touch-drop', handleGlobalTouchDrop as EventListener)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleEscapeKey)
+  document.removeEventListener('vdock-touch-drop', handleGlobalTouchDrop as EventListener)
   // Clean up any lingering touch drag listeners
   document.removeEventListener('touchmove', onTouchMoveDrag)
   document.removeEventListener('touchend', onTouchEndDrag)

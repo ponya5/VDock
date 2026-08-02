@@ -147,6 +147,7 @@ function handleTap(e: MouseEvent | TouchEvent) {
 }
 
 let resizeObserver: ResizeObserver | null = null
+let reducedMotionCleanup: (() => void) | null = null
 
 onMounted(() => {
   if (containerRef.value) {
@@ -174,7 +175,7 @@ onMounted(() => {
     }
     
     mediaQuery.addEventListener('change', handler)
-    onUnmounted(() => mediaQuery.removeEventListener('change', handler))
+    reducedMotionCleanup = () => mediaQuery.removeEventListener('change', handler)
   }
 })
 
@@ -182,6 +183,7 @@ onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect()
   }
+  reducedMotionCleanup?.()
 })
 </script>
 

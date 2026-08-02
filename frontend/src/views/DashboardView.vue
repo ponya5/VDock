@@ -696,6 +696,20 @@ function previousScene() {
   setScene(currentProfile.value.scenes[prevIdx].id)
 }
 
+function handleKeyDown(event: KeyboardEvent) {
+  if (event.ctrlKey || event.metaKey) {
+    if (event.key === 'v' && clipboardButton.value) {
+      if (isEditMode.value) {
+        event.preventDefault()
+        showActionResult({
+          success: true,
+          message: 'Click on a placeholder to paste the button'
+        })
+      }
+    }
+  }
+}
+
 onMounted(async () => {
   // Load last used profile or first available profile
   const lastProfileId = localStorage.getItem('vdock_last_profile')
@@ -726,27 +740,13 @@ onMounted(async () => {
   // Dashboard mount (see App.vue for the single owner).
 
   // Keyboard shortcut listener
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.ctrlKey || event.metaKey) {
-      if (event.key === 'v' && clipboardButton.value) {
-        if (isEditMode.value) {
-          event.preventDefault()
-          showActionResult({
-            success: true,
-            message: 'Click on a placeholder to paste the button'
-          })
-        }
-      }
-    }
-  }
   document.addEventListener('keydown', handleKeyDown)
-  
   document.addEventListener('focusin', handleGlobalFocus)
+})
 
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown)
-    document.removeEventListener('focusin', handleGlobalFocus)
-  })
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
+  document.removeEventListener('focusin', handleGlobalFocus)
 })
 
 watch(currentProfile, (profile) => {

@@ -61,13 +61,14 @@
             <div 
               v-for="action in category.actions" 
               :key="action.id"
+              :ref="(element) => setActionItemRef(action.id, element as Element | null)"
               class="action-item touch-target"
               draggable="true"
               @dragstart="handleDragStart($event, action)"
               @dragend="emit('dragend')"
-              @click="emit('selectAction', action)"
+              @click="handleActionClick(action)"
             >
-              <FontAwesomeIcon :icon="action.icon" class="action-icon" />
+              <FontAwesomeIcon :icon="normalizeFaIcon(action.icon)" class="action-icon" />
               <span class="action-name">{{ action.name }}</span>
             </div>
           </div>
@@ -78,7 +79,10 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useTouchActionDrag } from '@/composables/useTouchActionDrag'
+import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 
 interface Props {
   actionSearch: string
@@ -86,7 +90,7 @@ interface Props {
   filteredCategories: any[]
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:actionSearch': [value: string]
   toggleCategory: [id: string]
@@ -97,12 +101,78 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { bindTouchDragSource, isTouchDragActive } = useTouchActionDrag()
+const actionItemRefs = ref<Map<string, HTMLElement>>(new Map())
+const suppressNextClick = ref(false)
+const touchCleanupHandlers: Array<() => void> = []
+
+function handleTouchDropComplete() {
+  suppressNextClick.value = true
+  emit('dragend')
+}
+
+function setActionItemRef(actionId: string, element: Element | null) {
+  if (element instanceof HTMLElement) {
+    actionItemRefs.value.set(actionId, element)
+  } else {
+    actionItemRefs.value.delete(actionId)
+  }
+}
+
 function handleDragStart(event: DragEvent, action: any) {
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/vdock-action', JSON.stringify(action))
     event.dataTransfer.effectAllowed = 'copy'
   }
 }
+
+function handleActionClick(action: any) {
+  if (suppressNextClick.value || isTouchDragActive()) {
+    suppressNextClick.value = false
+    return
+  }
+
+  emit('selectAction', action)
+}
+
+function registerTouchDragSources() {
+  touchCleanupHandlers.forEach((cleanup) => cleanup())
+  touchCleanupHandlers.length = 0
+
+  props.filteredCategories.forEach((category) => {
+    category.actions.forEach((action: any) => {
+      const actionElement = actionItemRefs.value.get(action.id)
+      if (!actionElement) return
+
+      const cleanup = bindTouchDragSource(
+        actionElement,
+        { type: 'action', data: action },
+        350
+      )
+      touchCleanupHandlers.push(cleanup)
+    })
+  })
+}
+
+onMounted(async () => {
+  await nextTick()
+  registerTouchDragSources()
+  document.addEventListener('vdock-touch-drop-complete', handleTouchDropComplete)
+})
+
+onUnmounted(() => {
+  touchCleanupHandlers.forEach((cleanup) => cleanup())
+  document.removeEventListener('vdock-touch-drop-complete', handleTouchDropComplete)
+})
+
+watch(
+  () => props.filteredCategories,
+  async () => {
+    await nextTick()
+    registerTouchDragSources()
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
@@ -115,6 +185,10 @@ function handleDragStart(event: DragEvent, action: any) {
   height: 100%;
   box-sizing: border-box;
   z-index: 80;
+}
+
+.action-item {
+  touch-action: none;
 }
 
 .sidebar-header {
