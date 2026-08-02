@@ -187,10 +187,6 @@ watch(
   z-index: 80;
 }
 
-.action-item {
-  touch-action: none;
-}
-
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -307,6 +303,7 @@ watch(
   border-radius: var(--radius-sm);
   cursor: grab;
   user-select: none;
+  touch-action: none;
   font-size: 0.8rem;
   transition: all 0.2s var(--ease-out);
   min-height: 44px;
