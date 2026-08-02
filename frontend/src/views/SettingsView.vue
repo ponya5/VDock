@@ -127,6 +127,26 @@
                 <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="300" step="10" class="slider" />
               </div>
             </section>
+
+            <section class="settings-section card" id="setting-screensaver">
+              <h2>Screensaver</h2>
+              <div class="form-group">
+                <div class="form-group-header">
+                  <label><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver Delay</label>
+                  <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="600"
+                  step="30"
+                  :value="settingsStore.screensaverTimeout"
+                  @input="settingsStore.screensaverTimeout = Number(($event.target as HTMLInputElement).value)"
+                  class="slider"
+                />
+                <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
+              </div>
+            </section>
           </div>
 
           <div v-if="appearanceSubTab === 'background'" class="settings-grid">
@@ -638,6 +658,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'display', icon: ['fas', 'th-large'] },
   { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'display', icon: ['fas', 'bell'] },
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'display', icon: ['fas', 'columns'] },
+  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'display', icon: ['fas', 'moon'] },
   { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
@@ -696,6 +717,13 @@ async function handleStartWithWindowsToggle() {
     settings.value.startWithWindows = !settings.value.startWithWindows
   }
   setTimeout(() => { startWithWindowsStatus.value = null }, 5000)
+}
+
+function formatScreensaverTimeout(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return s === 0 ? `${m}m` : `${m}m ${s}s`
 }
 
 function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support' }
