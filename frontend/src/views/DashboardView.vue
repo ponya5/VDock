@@ -81,8 +81,7 @@
         </div>
       </div>
 
-      <!-- Widget Column (displayed in non-edit mode) -->
-      <WidgetColumn v-if="!isEditMode && showWidgets" />
+      <ScreenSaver :visible="screensaverVisible" @dismiss="dismissScreensaver" />
 
       <!-- Decomposed Edit Sidebar component -->
       <EditSidebar
@@ -172,7 +171,7 @@ import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
 import DeckHeader from '@/components/DeckHeader.vue'
 import DeckFooter from '@/components/DeckFooter.vue'
-import WidgetColumn from '@/components/WidgetColumn.vue'
+import ScreenSaver from '@/components/ScreenSaver.vue'
 import EditSidebar from '@/components/EditSidebar.vue'
 import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
@@ -215,10 +214,29 @@ const {
   selectAction
 } = useButtonActions()
 
-// Quick Add and Widget states
+// Quick Add states
 const quickAddVisible = ref(false)
 const quickAddPosition = ref({ row: 0, col: 0 })
-const showWidgets = ref(true)
+
+// Screensaver / idle-timer state
+const screensaverVisible = ref(false)
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+const IDLE_EVENTS = ['pointermove', 'pointerdown', 'keydown'] as const
+
+function resetIdleTimer() {
+  if (idleTimer) clearTimeout(idleTimer)
+  const timeoutMs = settingsStore.screensaverTimeout * 1000
+  if (timeoutMs <= 0) return
+  idleTimer = setTimeout(() => {
+    screensaverVisible.value = true
+  }, timeoutMs)
+}
+
+function dismissScreensaver() {
+  screensaverVisible.value = false
+  resetIdleTimer()
+}
 
 function onPlaceholderClick(position: { row: number; col: number }) {
   if (clipboardButton.value) {
@@ -743,11 +761,19 @@ onMounted(async () => {
   // Keyboard shortcut listener
   document.addEventListener('keydown', handleKeyDown)
   document.addEventListener('focusin', handleGlobalFocus)
+
+  // Idle timer for screensaver
+  IDLE_EVENTS.forEach(ev => document.addEventListener(ev, resetIdleTimer, { passive: true }))
+  resetIdleTimer()
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
   document.removeEventListener('focusin', handleGlobalFocus)
+
+  // Idle timer cleanup
+  IDLE_EVENTS.forEach(ev => document.removeEventListener(ev, resetIdleTimer))
+  if (idleTimer) clearTimeout(idleTimer)
 })
 
 watch(currentProfile, (profile) => {
