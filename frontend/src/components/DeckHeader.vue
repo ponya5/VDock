@@ -17,9 +17,9 @@
       <div class="header-content">
         <div class="header-left">
           <div class="profile-avatar-container">
-            <img 
-              v-if="currentProfile?.avatar" 
-              :src="currentProfile.avatar" 
+            <img
+              v-if="currentProfile?.avatar"
+              :src="currentProfile.avatar"
               :alt="currentProfile.name"
               class="profile-avatar enhanced-avatar"
             />
@@ -54,56 +54,34 @@
         </div>
 
         <div class="header-right">
-          <button
-            class="btn-fullscreen btn-12 animate-tap"
-            @click="handleToggleFullscreen"
-            :title="isFullscreenActive ? 'Exit full screen' : 'Enter full screen'"
-            :aria-label="isFullscreenActive ? 'Exit full screen' : 'Enter full screen'"
-          >
-            <span>
-              <FontAwesomeIcon :icon="['fas', isFullscreenActive ? 'compress' : 'expand']" />
-              {{ isFullscreenActive ? 'Exit' : 'Full Screen' }}
-            </span>
-          </button>
-          <div class="header-right-separator"></div>
-          <button
-            class="btn-hide-header btn-12 animate-tap"
-            @click="settingsStore.showHeader = false"
-            title="Hide header"
-            aria-label="Hide header"
-          >
-            <div>
-              <span><FontAwesomeIcon :icon="['fas', 'eye-slash']" /> Hide</span>
-            </div>
-          </button>
-          <div class="header-right-separator"></div>
-          <button class="btn-12 animate-tap" @click="emit('navigateProfiles')" title="Profiles">
-            <span><FontAwesomeIcon :icon="['fas', 'users']" /> Profiles</span>
+          <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
+            <FontAwesomeIcon :icon="['fas', 'users']" />
           </button>
           <button
-            :class="['btn-12 animate-tap', { 'edit-active': isEditMode }]"
+            :class="['btn-icon-circle animate-tap', { 'edit-active': isEditMode }]"
             @click="emit('toggleEdit')"
             title="Toggle Edit Mode"
+            aria-label="Toggle Edit Mode"
           >
-            <span><FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" /> {{ isEditMode ? 'View' : 'Edit' }}</span>
+            <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
           </button>
-          <button class="btn-12 animate-tap" @click="emit('navigateSettings')" title="Settings">
-            <span><FontAwesomeIcon :icon="['fas', 'cog']" /> Settings</span>
+          <button class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
+            <FontAwesomeIcon :icon="['fas', 'cog']" />
           </button>
         </div>
       </div>
+      <div class="autohide-progress" :style="{ width: progressWidth + '%' }"></div>
     </header>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useSwipe } from '@/composables/useGestures'
-import { useElectron } from '@/composables/useElectron'
 import type { Profile, Scene } from '@/types'
 
 interface Props {
@@ -128,30 +106,8 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
-const { toggleFullscreen, isFullscreen } = useElectron()
 const triggerRef = ref<HTMLElement | null>(null)
-const isFullscreenActive = ref(false)
-
-async function refreshFullscreenState() {
-  isFullscreenActive.value = await isFullscreen()
-}
-
-async function handleToggleFullscreen() {
-  isFullscreenActive.value = await toggleFullscreen()
-}
-
-function handleFullscreenChange() {
-  refreshFullscreenState()
-}
-
-onMounted(() => {
-  refreshFullscreenState()
-  document.addEventListener('fullscreenchange', handleFullscreenChange)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('fullscreenchange', handleFullscreenChange)
-})
+const progressWidth = ref(100)
 
 function revealHeader() {
   settingsStore.showHeader = true
@@ -171,7 +127,6 @@ useSwipe(triggerRef, {
 .deck-header-wrapper {
   width: 100%;
   z-index: 100;
-  transition: transform 0.3s var(--ease-io);
 }
 
 .header-hidden {
@@ -198,75 +153,29 @@ useSwipe(triggerRef, {
   background-color: rgba(255, 255, 255, 0.25);
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.2s var(--ease-out);
+  transition: background-color 0.2s ease;
 }
 
-.header-reveal-trigger:hover .reveal-handle {
+.header-reveal-trigger:hover .reveal-handle,
+.header-reveal-trigger:active .reveal-handle {
   background-color: var(--color-primary, #007aff);
 }
 
-.animate-tap {
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Thin header shell (spec 4.7) */
 .deck-header {
   position: relative;
   width: 100%;
-  min-height: 56px;
-  padding: 0.4rem 1rem;
+  min-height: 90px;
+  padding: 0.6rem 1rem;
   box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Replace the dated glossy .btn-12 look with the app's dark-glass language
-   (matches .pill-container in GlassPillSceneSelector.vue) — scoped to this
-   header only, .btn-12 isn't used anywhere else. */
-.header-right .btn-12 {
-  padding: 0.5rem 0.9rem;
-  min-height: 36px;
-  background: var(--glass-bg, rgba(0, 0, 0, 0.25));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
-  text-shadow: none;
-  box-shadow: none;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.header-right .btn-12:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: none;
-}
-
-.header-right .btn-12:active:not(:disabled),
-.header-right .btn-12:focus:not(:disabled) {
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.4);
-}
-
-.header-right .btn-12.edit-active {
-  background: linear-gradient(135deg, rgba(52, 152, 219, 0.35), rgba(52, 152, 219, 0.7));
-  border-color: rgba(52, 152, 219, 0.6);
-  color: #fff;
-  box-shadow: 0 0 18px rgba(52, 152, 219, 0.45);
+  overflow: visible;
 }
 
 .header-background {
   position: absolute;
   inset: 0;
-  background: var(--glass-bg, rgba(0, 0, 0, 0.25));
+  background: rgba(8, 8, 28, 0.92);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 0;
 }
@@ -278,7 +187,7 @@ useSwipe(triggerRef, {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
+  min-height: 68px;
 }
 
 .header-left {
@@ -286,27 +195,20 @@ useSwipe(triggerRef, {
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
-}
-
-.header-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-shrink: 0;
 }
 
 .profile-avatar-container {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
 }
 
@@ -327,74 +229,75 @@ useSwipe(triggerRef, {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.15);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.13);
+  border: 2px solid rgba(255, 255, 255, 0.28);
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
 }
 
 .avatar-status-indicator {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #2ecc71;
-  border: 2px solid rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(0, 0, 0, 0.5);
 }
 
-.profile-title-inline {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
+.animate-tap {
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
 }
 
-.header-right-separator {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 0.25rem;
+/* Large circular icon buttons */
+.btn-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  touch-action: manipulation;
+  flex-shrink: 0;
 }
 
-@media (max-width: 640px) {
-  .profile-title-inline {
-    display: none;
-  }
-  .header-center {
-    display: none;
-  }
+.btn-icon-circle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-@media (max-width: 1100px), (max-height: 650px) {
-  .deck-header {
-    min-height: calc(56px * var(--touch-multiplier, 1));
-    padding: calc(0.4rem * var(--touch-multiplier, 1)) calc(0.75rem * var(--touch-multiplier, 1));
-  }
+.btn-icon-circle:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+}
 
-  .header-right .btn-12 {
-    min-height: max(44px, calc(36px * var(--touch-multiplier, 1)));
-    padding: calc(0.55rem * var(--touch-multiplier, 1)) calc(0.85rem * var(--touch-multiplier, 1));
-    font-size: calc(0.85rem * var(--touch-multiplier, 1));
-  }
+.btn-icon-circle.edit-active {
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.35), rgba(52, 152, 219, 0.7));
+  border-color: rgba(52, 152, 219, 0.65);
+  box-shadow: 0 0 18px rgba(52, 152, 219, 0.4);
+}
 
-  .header-right-separator {
-    height: calc(24px * var(--touch-multiplier, 1));
-  }
+/* Auto-hide countdown bar */
+.autohide-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary, #007aff), rgba(0, 122, 255, 0.25));
+  border-radius: 0 2px 2px 0;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
 
-  .profile-avatar-container {
-    width: max(44px, calc(36px * var(--touch-multiplier, 1)));
-    height: max(44px, calc(36px * var(--touch-multiplier, 1)));
-  }
-
-  .profile-title-inline {
-    font-size: calc(1rem * var(--touch-multiplier, 1));
-    max-width: 140px;
-  }
+/* Enhanced scene nav sizing */
+.enhanced-scene-nav {
+  --pill-height: 56px;
 }
 </style>
