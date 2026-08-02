@@ -31,11 +31,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useWeather } from '@/composables/useWeather'
 
-defineProps<{ visible: boolean }>()
+const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{ dismiss: [] }>()
 
 const time = ref(new Date())
@@ -84,6 +84,12 @@ const driftX = ref(0)
 const driftY = ref(0)
 let driftTimer: ReturnType<typeof setInterval> | null = null
 let driftTick = 0
+
+// Reset drift position each time the screensaver becomes visible so the
+// clock never appears shifted on re-show.
+watch(() => props.visible, (v) => {
+  if (v) driftTick = 0
+})
 
 function updateDrift() {
   driftTick += 1

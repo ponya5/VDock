@@ -81,8 +81,6 @@
         </div>
       </div>
 
-      <ScreenSaver :visible="screensaverVisible" @dismiss="dismissScreensaver" />
-
       <!-- Decomposed Edit Sidebar component -->
       <EditSidebar
         v-if="isEditMode"
@@ -111,6 +109,9 @@
       @update-rows="updateGridRows"
       @update-cols="updateGridCols"
     />
+
+    <!-- Screen Saver overlay -->
+    <ScreenSaver v-if="screensaverVisible" :visible="screensaverVisible" @dismiss="dismissScreensaver" />
 
     <!-- Quick Add Picker Modal -->
     <QuickAddPicker
