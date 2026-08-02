@@ -25,7 +25,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
   const startWithWindows = ref(false)
   const uiBrightness = ref(100) // UI brightness percentage (0-200)
-  const showHeader = ref(true) // Show/hide dashboard header
+  const showHeader = ref(false) // Show/hide dashboard header
   const toastLevel = ref<'all' | 'errors-only' | 'off'>('all') // Toast display level
   
   // Touch mode settings
@@ -58,6 +58,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Weather widget settings
   const weatherLocationMode = ref<'auto' | 'manual'>('auto')
   const weatherManualCity = ref('')
+  const screensaverTimeout = ref(120) // seconds; 0 = disabled
 
   // Help guide modal (transient UI state, not persisted, shared across routes)
   const showHelpGuide = ref(false)
@@ -79,7 +80,7 @@ export const useSettingsStore = defineStore('settings', () => {
         backgroundPreference.value = settings.backgroundPreference || 'none'
         startWithWindows.value = settings.startWithWindows || false
         uiBrightness.value = settings.uiBrightness !== undefined ? settings.uiBrightness : 100
-        showHeader.value = settings.showHeader !== false
+        showHeader.value = settings.showHeader === true
         // migrate legacy boolean → new enum
         if (settings.toastLevel) {
           toastLevel.value = settings.toastLevel
@@ -96,6 +97,7 @@ export const useSettingsStore = defineStore('settings', () => {
         recentActions.value = settings.recentActions || []
         weatherLocationMode.value = settings.weatherLocationMode || 'auto'
         weatherManualCity.value = settings.weatherManualCity || ''
+        screensaverTimeout.value = settings.screensaverTimeout !== undefined ? settings.screensaverTimeout : 120
       } catch (err) {
         console.error('Failed to load settings:', err)
       }
@@ -125,14 +127,15 @@ export const useSettingsStore = defineStore('settings', () => {
       startOnBoot: startOnBoot.value,
       recentActions: recentActions.value,
       weatherLocationMode: weatherLocationMode.value,
-      weatherManualCity: weatherManualCity.value
+      weatherManualCity: weatherManualCity.value,
+      screensaverTimeout: screensaverTimeout.value,
     }
     localStorage.setItem('vdock_settings', JSON.stringify(settings))
   }
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, recentActions, weatherLocationMode, weatherManualCity],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, recentActions, weatherLocationMode, weatherManualCity, screensaverTimeout],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -275,6 +278,7 @@ export const useSettingsStore = defineStore('settings', () => {
     recentActions,
     weatherLocationMode,
     weatherManualCity,
+    screensaverTimeout,
     showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,
