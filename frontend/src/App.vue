@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -31,10 +31,11 @@ const dashboardStore = useDashboardStore()
 const showNotifications = ref(true)
 
 onMounted(async () => {
-  // Initialize API client with notifications store
+  window.addEventListener('beforeunload', handleBeforeUnload)
+
   apiClient.setNotificationsStore(notificationsStore)
 
-  // Load server configuration
+  await settingsStore.loadSettingsFromServer()
   await settingsStore.loadServerConfig()
 
   socketClient.connect()
@@ -72,6 +73,14 @@ onMounted(async () => {
       // ignore malformed localStorage state
     }
   }
+})
+
+function handleBeforeUnload() {
+  void settingsStore.flushSettingsToServer()
+}
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 

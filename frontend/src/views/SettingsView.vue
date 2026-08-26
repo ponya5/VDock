@@ -790,6 +790,7 @@ function onAnimatedEffectChange() {
   if (settingsStore.backgroundPreference !== 'none') {
     settingsStore.dashboardBackground = 'default'
   }
+  settingsStore.saveSettings()
 }
 
 const removeSceneBackground = () => {

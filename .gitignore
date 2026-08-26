@@ -78,6 +78,7 @@ backend/data/vdock.log
 
 # Data directories (keep structure, ignore content)
 backend/data/config.json
+backend/data/user_settings.json
 backend/data/profiles/*.json
 backend/data/uploads/*
 backend/data/plugins/*

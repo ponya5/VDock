@@ -3,34 +3,58 @@ import { ref, computed, watch } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 
+const SETTINGS_STORAGE_KEY = 'vdock_settings'
+const SERVER_SYNC_DELAY_MS = 400
+
+export interface PersistedUserSettings {
+  buttonSize: number
+  showLabels: boolean
+  showTooltips: boolean
+  animationsEnabled: boolean
+  tiltEffectEnabled: boolean
+  dockedSidebarEnabled: boolean
+  dockedSidebarWidth: number
+  dashboardBackground: string
+  backgroundPreference: string
+  uiBrightness: number
+  showHeader: boolean
+  toastLevel: 'all' | 'errors-only' | 'off'
+  touchMode: 'normal' | 'touch-friendly' | 'tablet'
+  minimumTouchTargetSize: number
+  defaultGridRows: number
+  defaultGridCols: number
+  startOnBoot: boolean
+  openSettingsInNewTab: boolean
+  recentActions: string[]
+  weatherLocationMode: 'auto' | 'manual'
+  weatherManualCity: string
+  screensaverTimeout: number
+}
+
 export const useSettingsStore = defineStore('settings', () => {
-  // Fixed to dark mode only
   const currentTheme = ref('dark')
   const serverConfig = ref<ServerConfig | null>(null)
   
-  // Window settings
   const windowPinned = ref(false)
   const windowPosition = ref<{ x: number; y: number } | null>(null)
   const windowDocked = ref<'none' | 'left' | 'right' | 'top' | 'bottom'>('none')
   const alwaysOnTop = ref(false)
   
-  // Display settings
-  const buttonSize = ref(1.0) // Scale factor
+  const buttonSize = ref(1.0)
   const showLabels = ref(true)
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
-  const tiltEffectEnabled = ref(true) // 3D mouse-tilt parallax on the button grid
+  const tiltEffectEnabled = ref(true)
   const dockedSidebarEnabled = ref(true)
-  const dockedSidebarWidth = ref(190) // Width in pixels (80-360)
+  const dockedSidebarWidth = ref(190)
   const dashboardBackground = ref('default')
   const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
-  const uiBrightness = ref(100) // UI brightness percentage (0-200)
-  const showHeader = ref(false) // Show/hide dashboard header
-  const toastLevel = ref<'all' | 'errors-only' | 'off'>('all') // Toast display level
+  const uiBrightness = ref(100)
+  const showHeader = ref(false)
+  const toastLevel = ref<'all' | 'errors-only' | 'off'>('all')
   
-  // Touch mode settings
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
-  const minimumTouchTargetSize = ref(44) // px (WCAG 2.1 AA standard)
+  const minimumTouchTargetSize = ref(44)
   const touchModeMultiplier = computed(() => {
     switch (touchMode.value) {
       case 'normal':
@@ -44,72 +68,26 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   })
   
-  // Grid settings
   const defaultGridRows = ref(3)
   const defaultGridCols = ref(3)
 
-  // System settings
   const startOnBoot = ref(false)
   const openSettingsInNewTab = ref(false)
 
-  // Search settings
   const recentActions = ref<string[]>([])
   const maxRecentActions = 10
 
-  // Weather widget settings
   const weatherLocationMode = ref<'auto' | 'manual'>('auto')
   const weatherManualCity = ref('')
-  const screensaverTimeout = ref(120) // seconds; 0 = disabled
+  const screensaverTimeout = ref(120)
 
-  // Help guide modal (transient UI state, not persisted, shared across routes)
   const showHelpGuide = ref(false)
 
-  // Load settings from localStorage
-  function loadSettings() {
-    const stored = localStorage.getItem('vdock_settings')
-    if (stored) {
-      try {
-        const settings = JSON.parse(stored)
-        // Theme is fixed to dark mode
-        buttonSize.value = settings.buttonSize || 1.0
-        showLabels.value = settings.showLabels !== false
-        showTooltips.value = settings.showTooltips !== false
-        animationsEnabled.value = settings.animationsEnabled !== false
-        tiltEffectEnabled.value = settings.tiltEffectEnabled !== false
-        dockedSidebarEnabled.value = settings.dockedSidebarEnabled !== false
-        dockedSidebarWidth.value = settings.dockedSidebarWidth || 190
-        dashboardBackground.value = settings.dashboardBackground || 'default'
-        backgroundPreference.value = settings.backgroundPreference || 'none'
-        uiBrightness.value = settings.uiBrightness !== undefined ? settings.uiBrightness : 100
-        showHeader.value = settings.showHeader === true
-        // migrate legacy boolean → new enum
-        if (settings.toastLevel) {
-          toastLevel.value = settings.toastLevel
-        } else if (settings.showRegularToasts === false) {
-          toastLevel.value = 'errors-only'
-        } else {
-          toastLevel.value = 'all'
-        }
-        touchMode.value = settings.touchMode || 'normal'
-        minimumTouchTargetSize.value = settings.minimumTouchTargetSize || 44
-        defaultGridRows.value = settings.defaultGridRows || 3
-        defaultGridCols.value = settings.defaultGridCols || 3
-        startOnBoot.value = settings.startOnBoot || false
-        openSettingsInNewTab.value = settings.openSettingsInNewTab === true
-        recentActions.value = settings.recentActions || []
-        weatherLocationMode.value = settings.weatherLocationMode || 'auto'
-        weatherManualCity.value = settings.weatherManualCity || ''
-        screensaverTimeout.value = settings.screensaverTimeout !== undefined ? settings.screensaverTimeout : 120
-      } catch (err) {
-        console.error('Failed to load settings:', err)
-      }
-    }
-  }
+  let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
+  let serverSyncInFlight = false
 
-  // Save settings to localStorage
-  function saveSettings() {
-    const settings = {
-      // Theme is fixed to dark mode
+  function buildSettingsPayload(): PersistedUserSettings {
+    return {
       buttonSize: buttonSize.value,
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
@@ -133,12 +111,158 @@ export const useSettingsStore = defineStore('settings', () => {
       weatherManualCity: weatherManualCity.value,
       screensaverTimeout: screensaverTimeout.value,
     }
-    localStorage.setItem('vdock_settings', JSON.stringify(settings))
   }
 
-  // Watch for changes and save
+  function applySettingsObject(settings: Partial<PersistedUserSettings>) {
+    if (settings.buttonSize !== undefined) buttonSize.value = settings.buttonSize
+    if (settings.showLabels !== undefined) showLabels.value = settings.showLabels
+    if (settings.showTooltips !== undefined) showTooltips.value = settings.showTooltips
+    if (settings.animationsEnabled !== undefined) animationsEnabled.value = settings.animationsEnabled
+    if (settings.tiltEffectEnabled !== undefined) tiltEffectEnabled.value = settings.tiltEffectEnabled
+    if (settings.dockedSidebarEnabled !== undefined) dockedSidebarEnabled.value = settings.dockedSidebarEnabled
+    if (settings.dockedSidebarWidth !== undefined) dockedSidebarWidth.value = settings.dockedSidebarWidth
+    if (settings.dashboardBackground !== undefined) dashboardBackground.value = settings.dashboardBackground
+    if (settings.backgroundPreference !== undefined) {
+      backgroundPreference.value = settings.backgroundPreference as typeof backgroundPreference.value
+    }
+    if (settings.uiBrightness !== undefined) uiBrightness.value = settings.uiBrightness
+    if (settings.showHeader !== undefined) showHeader.value = settings.showHeader
+    if (settings.toastLevel !== undefined) toastLevel.value = settings.toastLevel
+    if (settings.touchMode !== undefined) touchMode.value = settings.touchMode
+    if (settings.minimumTouchTargetSize !== undefined) minimumTouchTargetSize.value = settings.minimumTouchTargetSize
+    if (settings.defaultGridRows !== undefined) defaultGridRows.value = settings.defaultGridRows
+    if (settings.defaultGridCols !== undefined) defaultGridCols.value = settings.defaultGridCols
+    if (settings.startOnBoot !== undefined) startOnBoot.value = settings.startOnBoot
+    if (settings.openSettingsInNewTab !== undefined) openSettingsInNewTab.value = settings.openSettingsInNewTab
+    if (settings.recentActions !== undefined) recentActions.value = settings.recentActions
+    if (settings.weatherLocationMode !== undefined) weatherLocationMode.value = settings.weatherLocationMode
+    if (settings.weatherManualCity !== undefined) weatherManualCity.value = settings.weatherManualCity
+    if (settings.screensaverTimeout !== undefined) screensaverTimeout.value = settings.screensaverTimeout
+  }
+
+  function saveSettingsLocalOnly() {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(buildSettingsPayload()))
+  }
+
+  function loadSettings() {
+    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (!stored) return
+
+    try {
+      const settings = JSON.parse(stored) as Partial<PersistedUserSettings> & { showRegularToasts?: boolean }
+      applySettingsObject({
+        ...settings,
+        buttonSize: settings.buttonSize ?? 1.0,
+        showLabels: settings.showLabels !== false,
+        showTooltips: settings.showTooltips !== false,
+        animationsEnabled: settings.animationsEnabled !== false,
+        tiltEffectEnabled: settings.tiltEffectEnabled !== false,
+        dockedSidebarEnabled: settings.dockedSidebarEnabled !== false,
+        dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
+        dashboardBackground: settings.dashboardBackground ?? 'default',
+        backgroundPreference: settings.backgroundPreference ?? 'none',
+        uiBrightness: settings.uiBrightness ?? 100,
+        showHeader: settings.showHeader === true,
+        toastLevel: settings.toastLevel
+          ?? (settings.showRegularToasts === false ? 'errors-only' : 'all'),
+        touchMode: settings.touchMode ?? 'normal',
+        minimumTouchTargetSize: settings.minimumTouchTargetSize ?? 44,
+        defaultGridRows: settings.defaultGridRows ?? 3,
+        defaultGridCols: settings.defaultGridCols ?? 3,
+        startOnBoot: settings.startOnBoot ?? false,
+        openSettingsInNewTab: settings.openSettingsInNewTab === true,
+        recentActions: settings.recentActions ?? [],
+        weatherLocationMode: settings.weatherLocationMode ?? 'auto',
+        weatherManualCity: settings.weatherManualCity ?? '',
+        screensaverTimeout: settings.screensaverTimeout ?? 120,
+      })
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+    }
+  }
+
+  function scheduleServerSync() {
+    if (serverSyncTimer) {
+      clearTimeout(serverSyncTimer)
+    }
+
+    serverSyncTimer = setTimeout(() => {
+      void persistSettingsToServer()
+    }, SERVER_SYNC_DELAY_MS)
+  }
+
+  async function persistSettingsToServer() {
+    if (serverSyncInFlight) return
+
+    serverSyncInFlight = true
+    try {
+      await apiClient.put('/user-settings', { settings: buildSettingsPayload() })
+    } catch (error) {
+      console.warn('Failed to persist settings to server:', error)
+    } finally {
+      serverSyncInFlight = false
+    }
+  }
+
+  function saveSettings() {
+    saveSettingsLocalOnly()
+    scheduleServerSync()
+  }
+
+  async function flushSettingsToServer() {
+    if (serverSyncTimer) {
+      clearTimeout(serverSyncTimer)
+      serverSyncTimer = null
+    }
+
+    saveSettingsLocalOnly()
+    await persistSettingsToServer()
+  }
+
+  async function loadSettingsFromServer() {
+    try {
+      const response = await apiClient.get('/user-settings')
+      const serverSettings = response.data?.settings as Partial<PersistedUserSettings> | undefined
+
+      if (serverSettings && Object.keys(serverSettings).length > 0) {
+        applySettingsObject(serverSettings)
+        saveSettingsLocalOnly()
+      } else if (localStorage.getItem(SETTINGS_STORAGE_KEY)) {
+        await persistSettingsToServer()
+      }
+
+      applyTouchModeStyles()
+      applyUIBrightnessFilter()
+    } catch (error) {
+      console.warn('Failed to load settings from server, using local cache:', error)
+    }
+  }
+
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, tiltEffectEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, openSettingsInNewTab, recentActions, weatherLocationMode, weatherManualCity, screensaverTimeout],
+    [
+      buttonSize,
+      showLabels,
+      showTooltips,
+      animationsEnabled,
+      tiltEffectEnabled,
+      dockedSidebarEnabled,
+      dockedSidebarWidth,
+      dashboardBackground,
+      backgroundPreference,
+      uiBrightness,
+      showHeader,
+      toastLevel,
+      touchMode,
+      minimumTouchTargetSize,
+      defaultGridRows,
+      defaultGridCols,
+      startOnBoot,
+      openSettingsInNewTab,
+      recentActions,
+      weatherLocationMode,
+      weatherManualCity,
+      screensaverTimeout,
+    ],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -147,45 +271,33 @@ export const useSettingsStore = defineStore('settings', () => {
     { deep: true }
   )
   
-  // Apply touch mode styles to document
   function applyTouchModeStyles() {
     const root = document.documentElement
     const multiplier = touchModeMultiplier.value
     
-    // Update CSS variables based on touch mode
     root.style.setProperty('--touch-multiplier', multiplier.toString())
     root.style.setProperty('--min-touch-target', `${minimumTouchTargetSize.value}px`)
-    
-    // Scale spacing
     root.style.setProperty('--spacing-touch-xs', `${0.25 * multiplier}rem`)
     root.style.setProperty('--spacing-touch-sm', `${0.5 * multiplier}rem`)
     root.style.setProperty('--spacing-touch-md', `${1 * multiplier}rem`)
     root.style.setProperty('--spacing-touch-lg', `${1.5 * multiplier}rem`)
-    
-    // Scale interactive elements
     root.style.setProperty('--button-padding-v', `${0.75 * multiplier}rem`)
     root.style.setProperty('--button-padding-h', `${1 * multiplier}rem`)
     root.style.setProperty('--button-min-height', `${Math.max(36 * multiplier, minimumTouchTargetSize.value)}px`)
-    
-    // Scale icons and text
     root.style.setProperty('--icon-size', `${1 * multiplier}rem`)
     root.style.setProperty('--text-scale', multiplier.toString())
   }
 
-  // Apply UI brightness filter to document
   function applyUIBrightnessFilter() {
     const root = document.documentElement
     const brightnessValue = uiBrightness.value / 100
     root.style.setProperty('--ui-brightness', brightnessValue.toString())
     
-    // Apply filter to the body element for overall brightness control
     const appElement = document.querySelector('#app')
     if (appElement) {
       (appElement as HTMLElement).style.filter = `brightness(${brightnessValue})`
     }
   }
-
-  // Theme is fixed to dark mode - no setTheme function needed
 
   async function loadServerConfig() {
     try {
@@ -211,16 +323,13 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function addRecentAction(actionId: string) {
-    // Remove if already exists
     const index = recentActions.value.indexOf(actionId)
     if (index !== -1) {
       recentActions.value.splice(index, 1)
     }
     
-    // Add to beginning
     recentActions.value.unshift(actionId)
     
-    // Limit size
     if (recentActions.value.length > maxRecentActions) {
       recentActions.value = recentActions.value.slice(0, maxRecentActions)
     }
@@ -230,7 +339,6 @@ export const useSettingsStore = defineStore('settings', () => {
     recentActions.value = []
   }
 
-  // Initialize
   loadSettings()
   detectSmallScreenDefaults()
   applyTouchModeStyles()
@@ -291,7 +399,8 @@ export const useSettingsStore = defineStore('settings', () => {
     addRecentAction,
     clearRecentActions,
     saveSettings,
-    loadSettings
+    loadSettings,
+    loadSettingsFromServer,
+    flushSettingsToServer,
   }
 })
-
