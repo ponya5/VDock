@@ -13,6 +13,10 @@ const electronBridge = {
   // Auto-launch controls
   toggleAutoLaunch: (enabled) => ipcRenderer.invoke('toggle-auto-launch', enabled),
   isAutoLaunchEnabled: () => ipcRenderer.invoke('is-auto-launch-enabled'),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
+
+  // Open URLs in the system browser (not another Electron window)
+  openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 
   // Platform info
   platform: process.platform,

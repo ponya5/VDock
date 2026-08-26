@@ -26,9 +26,20 @@
           <div class="settings-search-empty">No matching settings</div>
         </div>
       </div>
-      <button class="btn btn-secondary" @click="router.push('/')">
-        <FontAwesomeIcon :icon="['fas', 'arrow-left']" /> Back
-      </button>
+      <div class="settings-header-actions">
+        <button
+          v-if="!isStandaloneSettings"
+          class="btn btn-secondary"
+          title="Open only the settings panel in your browser so VDock stays on the dashboard"
+          @click="openSettingsInBrowserTab"
+        >
+          <FontAwesomeIcon :icon="['fas', 'up-right-from-square']" /> Open in browser
+        </button>
+        <button class="btn btn-secondary" @click="handleSettingsBack">
+          <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
+          {{ isStandaloneSettings ? 'Close' : 'Back' }}
+        </button>
+      </div>
     </header>
 
     <div class="settings-layout-content">
@@ -392,12 +403,19 @@
               <h2>Startup</h2>
               <div class="toggle-row">
                 <div>
-                  <label class="toggle-row-label">Launch automatically at startup</label>
-                  <p class="form-help">Starts VDock when you log in — works on Windows, macOS, and Linux</p>
+                  <label class="toggle-row-label">Launch VDock on startup</label>
+                  <p class="form-help">Automatically start VDock when you log in to Windows or macOS. Also works on Linux.</p>
                 </div>
                 <label class="toggle-switch"><input v-model="settings.startOnBoot" type="checkbox" @change="handleStartOnBootToggle" /><span class="toggle-slider"></span></label>
               </div>
               <p v-if="startOnBootStatus" class="status-msg" :class="startOnBootStatus.success ? 'status-success' : 'status-error'">{{ startOnBootStatus.message }}</p>
+              <div class="toggle-row">
+                <div>
+                  <label class="toggle-row-label">Close launcher terminal after startup</label>
+                  <p class="form-help">When enabled, the black launcher window closes automatically once VDock starts. Disable to keep it open for logs and debugging. Takes effect on the next launch.</p>
+                </div>
+                <label class="toggle-switch"><input v-model="settings.autoCloseLauncher" type="checkbox" /><span class="toggle-slider"></span></label>
+              </div>
             </section>
 
             <section class="settings-section card">
@@ -602,7 +620,7 @@
 
 <script setup lang="ts">
 import { onMounted, computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { useDashboardStore } from '@/stores/dashboard'
@@ -617,13 +635,45 @@ import { hasShortcuts, getTopShortcutsForApp, type AppShortcut } from '@/data/ap
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
+import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 
 const router = useRouter()
+const route = useRoute()
 const settingsStore = useSettingsStore()
 const profilesStore = useProfilesStore()
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
 const { refresh: refreshWeatherWidget } = useWeather()
+
+const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
+
+function openSettingsInBrowserTab() {
+  const opened = openStandaloneSettings({
+    router,
+    query: {
+      tab: activeTab.value,
+      ...(activeTab.value === 'appearance' ? { sub: appearanceSubTab.value } : {}),
+    },
+    returnMainWindowToDashboard: true,
+  })
+
+  if (!opened) {
+    notificationsStore.warning(
+      'Popup blocked',
+      'Allow popups for VDock to open settings in your browser.',
+      { duration: 6000 }
+    )
+  }
+}
+
+function handleSettingsBack() {
+  if (isStandaloneSettings.value) {
+    window.close()
+    return
+  }
+
+  router.push('/')
+}
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
@@ -839,7 +889,8 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
-  { label: 'Startup', keywords: 'startup boot autostart', tabId: 'server', icon: ['fas', 'power-off'] },
+  { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
+  { label: 'Startup', keywords: 'startup boot autostart launcher terminal close debug', tabId: 'server', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'integration', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
@@ -863,6 +914,22 @@ function jumpToSearchResult(match: SettingsSearchEntry) {
 }
 
 function clearRecentActions() { if (confirm('Clear all recent actions?')) settingsStore.clearRecentActions() }
+
+async function syncStartOnBootFromSystem() {
+  try {
+    const response = await apiClient.get('/system/autostart')
+    if (response.data?.success && typeof response.data.enabled === 'boolean') {
+      settingsStore.startOnBoot = response.data.enabled
+    }
+
+    if (window.electronAPI?.isAutoLaunchEnabled) {
+      const electronAutoLaunchEnabled = await window.electronAPI.isAutoLaunchEnabled()
+      settingsStore.startOnBoot = electronAutoLaunchEnabled || settingsStore.startOnBoot
+    }
+  } catch (error) {
+    console.warn('Failed to read launch-on-startup status:', error)
+  }
+}
 
 // Single cross-platform "launch automatically" toggle. Always registers the
 // backend's own OS-level autostart (works whether you're running via browser
@@ -1010,7 +1077,24 @@ async function toggleAutoSwitching() {
   } catch { alert('Error toggling auto scene switching') }
 }
 
+function applySettingsRouteQuery() {
+  const tabQuery = route.query.tab
+  if (typeof tabQuery === 'string' && tabs.some((tab) => tab.id === tabQuery)) {
+    activeTab.value = tabQuery
+  }
+
+  const subQuery = route.query.sub
+  if (
+    typeof subQuery === 'string' &&
+    (subQuery === 'buttons' || subQuery === 'layout' || subQuery === 'background')
+  ) {
+    appearanceSubTab.value = subQuery
+  }
+}
+
 onMounted(async () => {
+  applySettingsRouteQuery()
+  await syncStartOnBootFromSystem()
   settingsStore.loadServerConfig()
   loadAppIntegrations()
   if (activeTab.value === 'integration') await refreshRunningApps()
@@ -1043,6 +1127,13 @@ onMounted(async () => {
   font-size: clamp(16px, 1.2vw + 12px, 24px);
   font-weight: 600;
   margin: 0;
+}
+
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
 .settings-search {

@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
+import socketClient from '@/api/socket'
 
 const SETTINGS_STORAGE_KEY = 'vdock_settings'
+const SETTINGS_BROADCAST_CHANNEL = 'vdock-settings-sync'
 const SERVER_SYNC_DELAY_MS = 400
 
 export interface PersistedUserSettings {
@@ -29,6 +31,7 @@ export interface PersistedUserSettings {
   weatherLocationMode: 'auto' | 'manual'
   weatherManualCity: string
   screensaverTimeout: number
+  autoCloseLauncher: boolean
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -73,6 +76,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const startOnBoot = ref(false)
   const openSettingsInNewTab = ref(false)
+  const autoCloseLauncher = ref(true)
 
   const recentActions = ref<string[]>([])
   const maxRecentActions = 10
@@ -85,6 +89,39 @@ export const useSettingsStore = defineStore('settings', () => {
 
   let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
   let serverSyncInFlight = false
+  let isApplyingRemoteSettings = false
+  let liveSyncInitialized = false
+  let settingsBroadcastChannel: BroadcastChannel | null = null
+
+  function settingsPayloadEquals(
+    left: Partial<PersistedUserSettings>,
+    right: Partial<PersistedUserSettings>
+  ): boolean {
+    return JSON.stringify(left) === JSON.stringify(right)
+  }
+
+  function applySettingsFromRemote(remoteSettings: Partial<PersistedUserSettings>) {
+    const currentSettings = buildSettingsPayload()
+    if (settingsPayloadEquals(currentSettings, remoteSettings)) {
+      return
+    }
+
+    isApplyingRemoteSettings = true
+    try {
+      applySettingsObject(remoteSettings)
+      saveSettingsLocalOnly()
+      applyTouchModeStyles()
+      applyUIBrightnessFilter()
+    } finally {
+      isApplyingRemoteSettings = false
+    }
+  }
+
+  function broadcastSettingsToOtherWindows() {
+    const payload = buildSettingsPayload()
+    settingsBroadcastChannel?.postMessage(payload)
+    socketClient.broadcastSettingsChange(payload)
+  }
 
   function buildSettingsPayload(): PersistedUserSettings {
     return {
@@ -106,6 +143,7 @@ export const useSettingsStore = defineStore('settings', () => {
       defaultGridCols: defaultGridCols.value,
       startOnBoot: startOnBoot.value,
       openSettingsInNewTab: openSettingsInNewTab.value,
+      autoCloseLauncher: autoCloseLauncher.value,
       recentActions: recentActions.value,
       weatherLocationMode: weatherLocationMode.value,
       weatherManualCity: weatherManualCity.value,
@@ -134,6 +172,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.defaultGridCols !== undefined) defaultGridCols.value = settings.defaultGridCols
     if (settings.startOnBoot !== undefined) startOnBoot.value = settings.startOnBoot
     if (settings.openSettingsInNewTab !== undefined) openSettingsInNewTab.value = settings.openSettingsInNewTab
+    if (settings.autoCloseLauncher !== undefined) autoCloseLauncher.value = settings.autoCloseLauncher
     if (settings.recentActions !== undefined) recentActions.value = settings.recentActions
     if (settings.weatherLocationMode !== undefined) weatherLocationMode.value = settings.weatherLocationMode
     if (settings.weatherManualCity !== undefined) weatherManualCity.value = settings.weatherManualCity
@@ -171,6 +210,7 @@ export const useSettingsStore = defineStore('settings', () => {
         defaultGridCols: settings.defaultGridCols ?? 3,
         startOnBoot: settings.startOnBoot ?? false,
         openSettingsInNewTab: settings.openSettingsInNewTab === true,
+        autoCloseLauncher: settings.autoCloseLauncher !== false,
         recentActions: settings.recentActions ?? [],
         weatherLocationMode: settings.weatherLocationMode ?? 'auto',
         weatherManualCity: settings.weatherManualCity ?? '',
@@ -207,6 +247,10 @@ export const useSettingsStore = defineStore('settings', () => {
   function saveSettings() {
     saveSettingsLocalOnly()
     scheduleServerSync()
+
+    if (!isApplyingRemoteSettings) {
+      broadcastSettingsToOtherWindows()
+    }
   }
 
   async function flushSettingsToServer() {
@@ -258,6 +302,7 @@ export const useSettingsStore = defineStore('settings', () => {
       defaultGridCols,
       startOnBoot,
       openSettingsInNewTab,
+      autoCloseLauncher,
       recentActions,
       weatherLocationMode,
       weatherManualCity,
@@ -361,6 +406,52 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  function initLiveSync() {
+    if (liveSyncInitialized || typeof window === 'undefined') {
+      return () => {}
+    }
+
+    liveSyncInitialized = true
+
+    if ('BroadcastChannel' in window) {
+      settingsBroadcastChannel = new BroadcastChannel(SETTINGS_BROADCAST_CHANNEL)
+      settingsBroadcastChannel.onmessage = (event) => {
+        if (event.data && typeof event.data === 'object') {
+          applySettingsFromRemote(event.data as Partial<PersistedUserSettings>)
+        }
+      }
+    }
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== SETTINGS_STORAGE_KEY || !event.newValue) {
+        return
+      }
+
+      try {
+        applySettingsFromRemote(JSON.parse(event.newValue) as Partial<PersistedUserSettings>)
+      } catch {
+        // Ignore malformed cross-tab payloads
+      }
+    }
+
+    const handleSocketSettingsUpdate = (data: { settings?: Partial<PersistedUserSettings> }) => {
+      if (data?.settings) {
+        applySettingsFromRemote(data.settings)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageEvent)
+    socketClient.on('user_settings_updated', handleSocketSettingsUpdate)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageEvent)
+      socketClient.off('user_settings_updated', handleSocketSettingsUpdate)
+      settingsBroadcastChannel?.close()
+      settingsBroadcastChannel = null
+      liveSyncInitialized = false
+    }
+  }
+
   return {
     currentTheme,
     serverConfig,
@@ -387,6 +478,7 @@ export const useSettingsStore = defineStore('settings', () => {
     defaultGridCols,
     startOnBoot,
     openSettingsInNewTab,
+    autoCloseLauncher,
     recentActions,
     weatherLocationMode,
     weatherManualCity,
@@ -402,5 +494,6 @@ export const useSettingsStore = defineStore('settings', () => {
     loadSettings,
     loadSettingsFromServer,
     flushSettingsToServer,
+    initLiveSync,
   }
 })

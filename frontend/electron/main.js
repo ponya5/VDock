@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen } = require('electron')
+const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen, shell } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
 const AutoLaunch = require('auto-launch')
@@ -207,6 +207,15 @@ function createWindow() {
       console.log('Page finished loading')
     })
 
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (url.includes('/settings')) {
+        void shell.openExternal(url)
+        return { action: 'deny' }
+      }
+
+      return { action: 'allow' }
+    })
+
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error('Page failed to load:', errorCode, errorDescription)
     })
@@ -234,6 +243,14 @@ function createWindow() {
 
   // Set always on top if enabled
   mainWindow.setAlwaysOnTop(alwaysOnTop)
+}
+
+function quitApplication() {
+  isQuitting = true
+  if (mainWindow) {
+    mainWindow.destroy()
+  }
+  app.quit()
 }
 
 function fixFirewall() {
@@ -401,8 +418,7 @@ async function createTrayMenu() {
     {
       label: 'Exit',
       click: () => {
-        isQuitting = true
-        app.quit()
+        quitApplication()
       }
     }
   ])
@@ -605,6 +621,18 @@ ipcMain.handle('is-auto-launch-enabled', async () => {
     console.error('Failed to check auto-launch status:', err)
     return false
   }
+})
+
+ipcMain.handle('open-external-url', async (_event, url) => {
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+    throw new Error('Invalid external URL')
+  }
+
+  await shell.openExternal(url)
+})
+
+ipcMain.handle('quit-app', async () => {
+  quitApplication()
 })
 
 // App event handlers

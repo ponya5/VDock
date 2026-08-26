@@ -1,14 +1,21 @@
 <template>
-  <div id="app" class="theme-dark" :class="{ 'bg-animated': settingsStore.backgroundPreference !== 'none' }">
-    <BackgroundRenderer />
+  <div
+    id="app"
+    class="theme-dark"
+    :class="{
+      'bg-animated': !isStandaloneSettings && settingsStore.backgroundPreference !== 'none',
+      'settings-standalone-mode': isStandaloneSettings,
+    }"
+  >
+    <BackgroundRenderer v-if="!isStandaloneSettings" />
     <router-view />
-    <NotificationCenter v-if="showNotifications" />
+    <NotificationCenter v-if="showNotifications && !isStandaloneSettings" />
     <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -19,6 +26,7 @@ import NotificationCenter from '@/components/NotificationCenter.vue'
 import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import UserGuideModal from '@/components/UserGuideModal.vue'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
+import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import type { AppIntegration } from '@/types'
 
 const route = useRoute()
@@ -26,9 +34,16 @@ const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 const dashboardStore = useDashboardStore()
 
+const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
+
+watch(isStandaloneSettings, (standalone) => {
+  document.title = standalone ? 'VDock Settings' : 'VDock - Virtual Stream Deck'
+}, { immediate: true })
+
 // Theme is fixed to dark mode
 
 const showNotifications = ref(true)
+let stopLiveSettingsSync: (() => void) | undefined
 
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
@@ -39,10 +54,11 @@ onMounted(async () => {
   await settingsStore.loadServerConfig()
 
   socketClient.connect()
+  stopLiveSettingsSync = settingsStore.initLiveSync()
 
   // Show welcome notification for first time users
   const hasSeenWelcome = localStorage.getItem('vdock_welcome_shown')
-  if (!hasSeenWelcome && route.path === '/') {
+  if (!hasSeenWelcome && route.path === '/' && !isStandaloneSettings.value) {
     setTimeout(() => {
       notificationsStore.info(
         'Welcome to VDock!',
@@ -81,6 +97,7 @@ function handleBeforeUnload() {
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  stopLiveSettingsSync?.()
 })
 </script>
 
@@ -108,6 +125,10 @@ body {
 
 #app.bg-animated {
   background: transparent;
+}
+
+#app.settings-standalone-mode {
+  background: var(--color-background, #0f1419);
 }
 </style>
 

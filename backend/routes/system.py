@@ -7,6 +7,22 @@ from pathlib import Path
 
 system_bp = Blueprint('system', __name__)
 
+AUTOSTART_REGISTRY_NAME = 'VDock'
+
+
+@system_bp.route('/api/system/autostart', methods=['GET'])
+def get_autostart_status():
+    """Return whether VDock is configured to launch at OS login."""
+    try:
+        enabled = _is_autostart_enabled()
+        return jsonify({'success': True, 'enabled': enabled})
+    except Exception as error:
+        return jsonify({
+            'success': False,
+            'enabled': False,
+            'message': f'Failed to read auto-start status: {error}',
+        }), 500
+
 
 @system_bp.route('/api/system/autostart', methods=['POST'])
 def toggle_autostart():
@@ -36,12 +52,68 @@ def toggle_autostart():
         }), 500
 
 
+def _project_root() -> Path:
+    return Path(__file__).parent.parent.parent.absolute()
+
+
+def _resolve_launch_command() -> str:
+    """Build the OS launch command for VDock."""
+    app_path = _project_root()
+
+    if platform.system() == 'Windows':
+        launch_bat = app_path / 'launch.bat'
+        if launch_bat.exists():
+            return f'"{launch_bat}"'
+        launcher_script = app_path / 'scripts' / 'VDock-Launcher.py'
+        if launcher_script.exists():
+            return f'pythonw "{launcher_script}"'
+    else:
+        launch_sh = app_path / 'launch.sh'
+        if launch_sh.exists():
+            return f'"{launch_sh}"'
+
+    raise FileNotFoundError('Could not find launch.bat or launch.sh for auto-start')
+
+
+def _is_autostart_enabled() -> bool:
+    if platform.system() == 'Windows':
+        import winreg
+
+        try:
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r'Software\Microsoft\Windows\CurrentVersion\Run',
+                0,
+                winreg.KEY_QUERY_VALUE,
+            )
+            winreg.QueryValueEx(key, AUTOSTART_REGISTRY_NAME)
+            winreg.CloseKey(key)
+            return True
+        except FileNotFoundError:
+            return False
+
+    if platform.system() == 'Darwin':
+        plist_file = Path.home() / 'Library' / 'LaunchAgents' / 'com.vdock.launcher.plist'
+        return plist_file.exists()
+
+    if platform.system() == 'Linux':
+        desktop_file = Path.home() / '.config' / 'autostart' / 'vdock.desktop'
+        return desktop_file.exists()
+
+    return False
+
+
 def _windows_autostart(enabled: bool) -> dict:
     """Configure Windows auto-start using registry."""
     import winreg
 
-    app_path = Path(__file__).parent.parent.parent.absolute()
-    launcher_path = app_path / "VDock-Launcher.vbs"
+    try:
+        launch_command = _resolve_launch_command()
+    except FileNotFoundError as error:
+        return {
+            'success': False,
+            'message': str(error),
+        }
 
     try:
         key = winreg.OpenKey(
@@ -52,19 +124,17 @@ def _windows_autostart(enabled: bool) -> dict:
         )
 
         if enabled:
-            # Add to startup
             winreg.SetValueEx(
                 key,
-                'VDock',
+                AUTOSTART_REGISTRY_NAME,
                 0,
                 winreg.REG_SZ,
-                str(launcher_path)
+                launch_command
             )
             message = 'VDock added to Windows startup'
         else:
-            # Remove from startup
             try:
-                winreg.DeleteValue(key, 'VDock')
+                winreg.DeleteValue(key, AUTOSTART_REGISTRY_NAME)
                 message = 'VDock removed from Windows startup'
             except FileNotFoundError:
                 message = 'VDock was not in startup'
@@ -81,10 +151,10 @@ def _windows_autostart(enabled: bool) -> dict:
             'success': False,
             'message': 'Permission denied. Please run VDock as administrator.'
         }
-    except Exception as e:
+    except Exception as error:
         return {
             'success': False,
-            'message': f'Failed to configure Windows autostart: {str(e)}'
+            'message': f'Failed to configure Windows autostart: {error}'
         }
 
 
@@ -94,8 +164,14 @@ def _macos_autostart(enabled: bool) -> dict:
     plist_dir = home / 'Library' / 'LaunchAgents'
     plist_file = plist_dir / 'com.vdock.launcher.plist'
 
-    app_path = Path(__file__).parent.parent.parent.absolute()
+    app_path = _project_root()
     launch_script = app_path / 'launch.sh'
+
+    if enabled and not launch_script.exists():
+        return {
+            'success': False,
+            'message': f'Launch script not found: {launch_script}',
+        }
 
     try:
         plist_dir.mkdir(parents=True, exist_ok=True)
@@ -154,8 +230,14 @@ def _linux_autostart(enabled: bool) -> dict:
     autostart_dir = home / '.config' / 'autostart'
     desktop_file = autostart_dir / 'vdock.desktop'
 
-    app_path = Path(__file__).parent.parent.parent.absolute()
+    app_path = _project_root()
     launch_script = app_path / 'launch.sh'
+
+    if enabled and not launch_script.exists():
+        return {
+            'success': False,
+            'message': f'Launch script not found: {launch_script}',
+        }
 
     try:
         autostart_dir.mkdir(parents=True, exist_ok=True)

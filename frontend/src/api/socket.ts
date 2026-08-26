@@ -1,10 +1,13 @@
 import { io, type Socket } from 'socket.io-client'
 import type { ActionResult } from '@/types'
 
+type SocketListener = (...args: any[]) => void
+
 class SocketClient {
   private socket: Socket | null = null
   private actionCallbacks: Map<number, (result: ActionResult) => void> = new Map()
   private actionIdCounter = 0
+  private pendingListeners: Array<{ event: string; callback: SocketListener }> = []
 
   connect() {
     const url = import.meta.env.VITE_WS_URL || 'http://127.0.0.1:5000'
@@ -12,6 +15,11 @@ class SocketClient {
     this.socket = io(url, {
       transports: ['websocket', 'polling']
     })
+
+    for (const { event, callback } of this.pendingListeners) {
+      this.socket.on(event, callback)
+    }
+    this.pendingListeners = []
 
     this.socket.on('connected', (data) => {
       console.log('Connected to VDock server:', data.message)
@@ -74,16 +82,35 @@ class SocketClient {
     })
   }
 
-  on(event: string, callback: (...args: any[]) => void) {
-    if (this.socket) {
-      this.socket.on(event, callback)
+  broadcastSettingsChange(settings: Record<string, unknown>) {
+    if (this.socket?.connected) {
+      this.socket.emit('user_settings_changed', { settings })
     }
   }
 
-  off(event: string, callback?: (...args: any[]) => void) {
+  on(event: string, callback: SocketListener) {
+    if (this.socket) {
+      this.socket.on(event, callback)
+      return
+    }
+
+    this.pendingListeners.push({ event, callback })
+  }
+
+  off(event: string, callback?: SocketListener) {
     if (this.socket) {
       this.socket.off(event, callback)
+      return
     }
+
+    if (!callback) {
+      this.pendingListeners = this.pendingListeners.filter((listener) => listener.event !== event)
+      return
+    }
+
+    this.pendingListeners = this.pendingListeners.filter(
+      (listener) => !(listener.event === event && listener.callback === callback)
+    )
   }
 
   toggleFullscreen() {

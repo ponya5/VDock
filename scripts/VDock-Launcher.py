@@ -49,12 +49,36 @@ LOG_DIR = APPLICATION_PATH / "backend" / "data"
 BACKEND_LOG = LOG_DIR / "vdock-backend-launcher.log"
 FRONTEND_LOG = LOG_DIR / "vdock-frontend-launcher.log"
 ELECTRON_LOG = LOG_DIR / "vdock-electron-launcher.log"
+USER_SETTINGS_FILE = LOG_DIR / "user_settings.json"
+DEFAULT_BACKEND_PORT = 5000
+
+
+def load_user_settings_file() -> dict:
+    """Load persisted UI settings written by the VDock backend."""
+    if not USER_SETTINGS_FILE.exists():
+        return {}
+
+    try:
+        import json
+
+        with open(USER_SETTINGS_FILE, "r", encoding="utf-8") as settings_file:
+            stored_settings = json.load(settings_file)
+            if isinstance(stored_settings, dict):
+                return stored_settings
+    except (OSError, ValueError):
+        pass
+
+    return {}
 
 
 def should_auto_close_launcher() -> bool:
     """Return True when the launcher window should close without waiting for Enter."""
     auto_close_value = os.environ.get("VDOCK_AUTO_CLOSE_LAUNCHER", "").strip().lower()
-    return auto_close_value in ("1", "true", "yes", "on")
+    if auto_close_value:
+        return auto_close_value in ("1", "true", "yes", "on")
+
+    user_settings = load_user_settings_file()
+    return user_settings.get("autoCloseLauncher", True) is not False
 
 
 def wait_for_launcher_close(prompt: str = "Press Enter to exit...") -> None:
@@ -160,6 +184,162 @@ def wait_for_url(url: str, timeout_seconds: int = 45, interval_seconds: float = 
             time.sleep(interval_seconds)
 
     return False
+
+
+def backend_supports_user_settings(port: int = DEFAULT_BACKEND_PORT) -> bool:
+    """Return True when the running backend exposes the user-settings API."""
+    user_settings_url = f"http://127.0.0.1:{port}/api/user-settings"
+    try:
+        with urllib.request.urlopen(user_settings_url, timeout=2) as response:
+            return response.status == 200
+    except urllib.error.HTTPError as http_error:
+        return http_error.code == 200
+    except (urllib.error.URLError, TimeoutError, ConnectionError):
+        return False
+
+
+def backend_is_running(port: int = DEFAULT_BACKEND_PORT) -> bool:
+    """Return True when something is listening on the backend port."""
+    config_url = f"http://127.0.0.1:{port}/api/config"
+    return wait_for_url(config_url, timeout_seconds=2, interval_seconds=0.25)
+
+
+def kill_process_on_port(port: int) -> bool:
+    """Stop every process listening on the given TCP port."""
+    process_ids: set[int] = set()
+
+    if IS_WINDOWS:
+        try:
+            result = subprocess.run(
+                ["netstat", "-ano"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+
+        port_suffix = f":{port}"
+        for line in result.stdout.splitlines():
+            if "LISTENING" not in line:
+                continue
+
+            local_address = line.split()[1] if len(line.split()) > 1 else ""
+            if not local_address.endswith(port_suffix):
+                continue
+
+            process_id = line.split()[-1]
+            if process_id.isdigit():
+                process_ids.add(int(process_id))
+    else:
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+
+        for process_id in result.stdout.splitlines():
+            if process_id.strip().isdigit():
+                process_ids.add(int(process_id.strip()))
+
+    if not process_ids:
+        return False
+
+    for process_id in process_ids:
+        if IS_WINDOWS:
+            subprocess.run(
+                ["taskkill", "/F", "/PID", str(process_id)],
+                capture_output=True,
+                check=False,
+            )
+        else:
+            subprocess.run(["kill", "-9", str(process_id)], capture_output=True, check=False)
+
+    return True
+
+
+def count_listeners_on_port(port: int) -> int:
+    """Return how many processes are listening on a TCP port."""
+    if not IS_WINDOWS:
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            return len([line for line in result.stdout.splitlines() if line.strip()])
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return 0
+
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return 0
+
+    port_suffix = f":{port}"
+    listener_count = 0
+    for line in result.stdout.splitlines():
+        if "LISTENING" not in line:
+            continue
+        local_address = line.split()[1] if len(line.split()) > 1 else ""
+        if local_address.endswith(port_suffix):
+            listener_count += 1
+
+    return listener_count
+
+
+def ensure_fresh_backend(venv_path: Path, port: int = DEFAULT_BACKEND_PORT) -> bool:
+    """Start backend, restarting stale or duplicate instances when needed."""
+    config_url = f"http://127.0.0.1:{port}/api/config"
+    listener_count = count_listeners_on_port(port)
+    needs_restart = listener_count == 0
+
+    if listener_count > 0:
+        if listener_count > 1:
+            print(f"[WARN] Found {listener_count} backend processes on port {port}. Restarting...")
+            needs_restart = True
+        elif not backend_supports_user_settings(port):
+            print("[WARN] Stale backend detected (missing user-settings API). Restarting...")
+            needs_restart = True
+        else:
+            print("[OK] Backend already running with current API")
+            return True
+
+    if needs_restart and listener_count > 0:
+        if kill_process_on_port(port):
+            time.sleep(2)
+        else:
+            print("[WARN] Could not stop existing backend processes.")
+            print("       Close VDock and end python.exe tasks in Task Manager, then relaunch.")
+
+    if not launch_backend(venv_path):
+        return False
+
+    print(f"  Waiting for backend at http://localhost:{port} ...")
+    if not wait_for_url(config_url, timeout_seconds=45):
+        print("[WARN] Backend did not respond in time. Check log:")
+        print(f"       {BACKEND_LOG}")
+        return False
+
+    if not backend_supports_user_settings(port):
+        print("[WARN] Backend started but user-settings API is unavailable.")
+        print("       Settings may not persist until the backend is updated and restarted.")
+
+    return True
 
 
 def check_requirements():
@@ -344,13 +524,8 @@ def main():
     # Launch services
     print("Starting services...\n")
 
-    if not launch_backend(venv):
+    if not ensure_fresh_backend(venv):
         return False
-
-    print("  Waiting for backend at http://localhost:5000 ...")
-    if not wait_for_url("http://localhost:5000/api/config", timeout_seconds=45):
-        print("[WARN] Backend did not respond in time. Check log:")
-        print(f"       {BACKEND_LOG}")
 
     if not launch_frontend():
         return False

@@ -89,8 +89,12 @@ class ApiClient {
         break
 
       case 404:
-        // Don't show 404 errors for config/profiles on initial load (expected behavior)
-        if (config?.url?.includes('/config') || config?.url?.includes('/profiles')) {
+        // Don't show 404 errors for expected startup endpoints (stale backend, first run)
+        if (
+          config?.url?.includes('/config') ||
+          config?.url?.includes('/profiles') ||
+          config?.url?.includes('/user-settings')
+        ) {
           console.warn('Resource not found (expected):', config?.url)
           return
         }
@@ -157,6 +161,19 @@ class ApiClient {
           'Service Unavailable',
           'The server is temporarily unavailable.',
           'Please try again in a few moments.',
+          { duration: 6000 }
+        )
+        break
+
+      case 405:
+        if (config?.url?.includes('/user-settings')) {
+          console.warn('User settings sync unavailable (backend may need restart):', config?.url)
+          return
+        }
+        this.notificationsStore.error(
+          'Request Failed',
+          'This action is not allowed.',
+          `Status: ${response.status}`,
           { duration: 6000 }
         )
         break

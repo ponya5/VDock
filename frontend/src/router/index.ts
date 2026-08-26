@@ -25,9 +25,19 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
-      component: SettingsView
+      component: SettingsView,
+      meta: { canBeStandalone: true }
     }
   ]
+})
+
+router.beforeEach((to) => {
+  if (to.query.standalone === '1' && to.path !== '/settings') {
+    return {
+      path: '/settings',
+      query: { ...to.query, standalone: '1' },
+    }
+  }
 })
 
 export default router

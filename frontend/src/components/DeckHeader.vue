@@ -54,28 +54,49 @@
         </div>
 
         <div class="header-right" @pointerdown="resetAutohide">
-          <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
-            <FontAwesomeIcon :icon="['fas', 'users']" />
-          </button>
-          <button
-            :class="['btn-icon-circle animate-tap', { 'edit-active': isEditMode }]"
-            @click="emit('toggleEdit')"
-            title="Toggle Edit Mode"
-            aria-label="Toggle Edit Mode"
-          >
-            <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
-          </button>
-          <button
-            class="btn-icon-circle animate-tap"
-            @click="toggleFullscreen"
-            :title="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
-            :aria-label="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
-          >
-            <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
-          </button>
-          <button class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
-            <FontAwesomeIcon :icon="['fas', 'cog']" />
-          </button>
+          <div class="header-actions-group">
+            <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
+              <FontAwesomeIcon :icon="['fas', 'users']" />
+            </button>
+            <button
+              :class="['btn-icon-circle animate-tap', { 'edit-active': isEditMode }]"
+              @click="emit('toggleEdit')"
+              title="Toggle Edit Mode"
+              aria-label="Toggle Edit Mode"
+            >
+              <FontAwesomeIcon :icon="['fas', isEditMode ? 'eye' : 'edit']" />
+            </button>
+            <button
+              class="btn-icon-circle animate-tap"
+              @click="toggleFullscreen"
+              :title="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+              :aria-label="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+            >
+              <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
+            </button>
+            <button class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
+              <FontAwesomeIcon :icon="['fas', 'cog']" />
+            </button>
+            <button
+              class="btn-icon-circle animate-tap btn-refresh"
+              title="Refresh VDock"
+              aria-label="Refresh VDock"
+              :disabled="isRefreshing"
+              @click="handleRefreshVdock"
+            >
+              <FontAwesomeIcon :icon="['fas', 'rotate-right']" :spin="isRefreshing" />
+            </button>
+          </div>
+          <div class="header-exit-group">
+            <button
+              class="btn-icon-circle animate-tap btn-exit"
+              title="Exit VDock"
+              aria-label="Exit VDock"
+              @click="handleExitApp"
+            >
+              <FontAwesomeIcon :icon="['fas', 'power-off']" />
+            </button>
+          </div>
         </div>
       </div>
       <div class="autohide-progress" :style="{ width: progressWidth + '%' }"></div>
@@ -99,6 +120,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useProfilesStore } from '@/stores/profiles'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useElectron } from '@/composables/useElectron'
+import socketClient from '@/api/socket'
 import { useSwipe } from '@/composables/useGestures'
 import type { Profile, Scene } from '@/types'
 
@@ -124,10 +149,14 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
+const profilesStore = useProfilesStore()
+const dashboardStore = useDashboardStore()
+const { quitApp } = useElectron()
 const triggerRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 const progressWidth = ref(100)
 const isFullscreen = ref(typeof document !== 'undefined' && !!document.fullscreenElement)
+const isRefreshing = ref(false)
 
 function handleFullscreenChange() {
   isFullscreen.value = !!document.fullscreenElement
@@ -142,6 +171,46 @@ async function toggleFullscreen() {
     }
   } catch (err) {
     console.error('Failed to toggle fullscreen:', err)
+  }
+}
+
+async function handleExitApp() {
+  const shouldExit = window.confirm('Exit VDock and shut down the app?')
+  if (!shouldExit) {
+    return
+  }
+
+  await quitApp()
+}
+
+async function handleRefreshVdock() {
+  if (isRefreshing.value) {
+    return
+  }
+
+  isRefreshing.value = true
+
+  try {
+    await settingsStore.loadSettingsFromServer()
+    await profilesStore.loadProfiles()
+
+    const profileId = dashboardStore.currentProfile?.id || localStorage.getItem('vdock_last_profile')
+    if (profileId) {
+      const profile = await profilesStore.getProfile(profileId)
+      if (profile) {
+        dashboardStore.setProfile(profile)
+      }
+    }
+
+    if (!socketClient.isConnected()) {
+      socketClient.disconnect()
+      socketClient.connect()
+    }
+  } catch (error) {
+    console.error('Failed to refresh VDock, reloading page:', error)
+    window.location.reload()
+  } finally {
+    isRefreshing.value = false
   }
 }
 let autohideTimer: ReturnType<typeof setInterval> | null = null
@@ -328,8 +397,20 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0;
   flex-shrink: 0;
+}
+
+.header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.header-exit-group {
+  margin-left: 1.75rem;
+  padding-left: 1.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .profile-avatar-container {
@@ -405,10 +486,36 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.22);
 }
 
+.btn-icon-circle:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.btn-icon-circle.btn-refresh:hover:not(:disabled) {
+  background: rgba(52, 152, 219, 0.22);
+  border-color: rgba(52, 152, 219, 0.55);
+}
+
 .btn-icon-circle.edit-active {
   background: linear-gradient(135deg, rgba(52, 152, 219, 0.35), rgba(52, 152, 219, 0.7));
   border-color: rgba(52, 152, 219, 0.65);
   box-shadow: 0 0 18px rgba(52, 152, 219, 0.4);
+}
+
+.btn-icon-circle.btn-exit {
+  color: #fff;
+  background: rgba(220, 53, 69, 0.38);
+  border-color: rgba(220, 53, 69, 0.82);
+  box-shadow: 0 0 14px rgba(220, 53, 69, 0.22);
+}
+
+.btn-icon-circle.btn-exit:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.58);
+  border-color: rgba(255, 120, 130, 0.95);
+}
+
+.btn-icon-circle.btn-exit:active:not(:disabled) {
+  background: rgba(185, 40, 55, 0.72);
 }
 
 /* Auto-hide countdown bar */

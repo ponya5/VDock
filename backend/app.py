@@ -231,6 +231,19 @@ def handle_execute_action(data):
     emit('action_result', result.to_dict())
 
 
+@socketio.on('user_settings_changed')
+def handle_user_settings_changed(data):
+    """Relay UI setting changes to other VDock windows (Electron + browser tabs)."""
+    if not isinstance(data, dict):
+        return
+
+    settings = data.get('settings')
+    if not isinstance(settings, dict):
+        return
+
+    emit('user_settings_updated', {'settings': settings}, include_self=False)
+
+
 # ============================================================================
 # Health Check
 # ============================================================================
@@ -241,7 +254,10 @@ def health_check():
     return jsonify({
         'status': 'ok',
         'version': '2.0.0',
-        'plugins_loaded': len(plugin_manager.plugins)
+        'plugins_loaded': len(plugin_manager.plugins),
+        'features': {
+            'user_settings': True
+        }
     })
 
 

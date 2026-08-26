@@ -12,6 +12,7 @@ interface ElectronAPI {
   setKioskMode: (enabled: boolean) => Promise<boolean>
   toggleAutoLaunch: (enabled: boolean) => Promise<boolean>
   isAutoLaunchEnabled: () => Promise<boolean>
+  quitApp: () => Promise<void>
   platform: string
   isElectron: boolean
 }
@@ -95,6 +96,16 @@ export function useElectron() {
     return getElectronApi()?.platform || 'web'
   }
 
+  const quitApp = async (): Promise<void> => {
+    const electronApi = getElectronApi()
+    if (electronApi?.quitApp) {
+      await electronApi.quitApp()
+      return
+    }
+
+    window.close()
+  }
+
   return {
     isElectron,
     pinWindow,
@@ -104,6 +115,7 @@ export function useElectron() {
     toggleFullscreen,
     isFullscreen,
     setKioskMode,
-    getPlatform
+    getPlatform,
+    quitApp,
   }
 }

@@ -34,6 +34,7 @@ ALLOWED_USER_SETTING_KEYS = {
     'weatherLocationMode',
     'weatherManualCity',
     'screensaverTimeout',
+    'autoCloseLauncher',
 }
 
 

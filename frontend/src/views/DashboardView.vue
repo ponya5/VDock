@@ -181,6 +181,7 @@ import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBac
 import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
+import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { useButtonActions } from '@/composables/useButtonActions'
 
 const router = useRouter()
@@ -612,8 +613,7 @@ const isEditingExistingScene = computed(() => {
 // Navigation & Scene handlers
 function handleNavigateSettings() {
   if (settingsStore.openSettingsInNewTab) {
-    const settingsUrl = router.resolve({ name: 'settings' }).href
-    window.open(settingsUrl, '_blank', 'noopener,noreferrer')
+    openStandaloneSettings({ router })
     return
   }
   router.push('/settings')
