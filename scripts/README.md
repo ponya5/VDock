@@ -1,125 +1,44 @@
-# VDock Scripts Directory
+# Scripts Directory
 
-This directory contains utility scripts for VDock setup, building, and deployment.
+Utility scripts for **maintainers and advanced users**. End users only need the root launchers:
 
-## 📋 Script Overview
+| File | Purpose |
+|------|---------|
+| [`../setup.bat`](../setup.bat) / [`../setup.sh`](../setup.sh) | Interactive setup menu (install, shortcut, launch) |
+| [`../launch.bat`](../launch.bat) / [`../launch.sh`](../launch.sh) | Start VDock (backend + frontend + Electron) |
 
-### 🚀 Launchers
+## Core
 
-| Script | Purpose | When to Use |
-|--------|---------|-------------|
-| `build-launcher.ps1` | Build VDock-Launcher.exe | When you want a standalone EXE |
-| `create-desktop-shortcut.bat` | Create desktop shortcut | Quick access to VDock |
+| Script | Purpose |
+|--------|---------|
+| `VDock-Launcher.py` | Cross-platform launcher used by `launch.bat` / `launch.sh` |
+| `create_desktop_shortcut.bat` | Wrapper for `setup.bat --shortcut` |
+| `setup.bat` | Wrapper for root `setup.bat` |
+| `setup.sh` | Wrapper for root `setup.sh` |
 
-### 📦 Build Scripts
+## Build & distribution (maintainers)
 
-| Script | Purpose | When to Use |
-|--------|---------|-------------|
-| `build-installer.bat` | Build Electron installer | Production distribution |
-| `build-installer.ps1` | PowerShell build script | Alternative to batch version |
-| `build-portable.bat` | Create portable package | Portable distribution |
-| `create-icon.ps1` | Generate app icon | Creating custom icon |
+| Script | Purpose |
+|--------|---------|
+| `build-launcher.ps1` | Build standalone `VDock-Launcher.exe` with PyInstaller |
+| `build-installer.ps1` | Build Electron installer package |
+| `build-portable.bat` | Create portable distribution |
+| `create-icon.ps1` | Generate or copy app icon |
+| `VDock.nsi` | NSIS installer script |
 
-### 🔧 Development Scripts
+## Deployment
 
-| Script | Purpose | When to Use |
-|--------|---------|-------------|
-| `setup.bat` | Initial setup | First-time installation |
-| `start_backend.bat` | Start backend only | Development mode |
-| `start_frontend.bat` | Start frontend only | Development mode |
-| `restart_backend.bat` | Restart backend | After backend changes |
-| `verify_launch.bat` | Check if servers running | Troubleshooting |
+| Script | Purpose |
+|--------|---------|
+| `deploy.bat` | Docker deployment (Windows) |
+| `deploy.sh` | Docker deployment (Linux/macOS) |
 
-### 🚢 Deployment Scripts
+## Removed scripts
 
-| Script | Purpose | When to Use |
-|--------|---------|-------------|
-| `deploy.bat` | Docker deployment | Production with Docker |
-| `deploy.sh` | Linux deployment | Linux production |
+These were development duplicates and are no longer needed:
 
-## 🎯 Quick Reference
+- `scripts/launchers/*.bat` — replaced by root `launch.bat` + `VDock-Launcher.py`
+- `scripts/setup.bat` (old 6-step copy) — replaced by root interactive setup
+- `start_backend.bat` / `start_frontend.bat` — dev-only helpers with broken paths
 
-### For End Users
-
-**Simplest setup:**
-1. Run `install.bat` (in root directory)
-2. Copy `Launch-VDock.bat` to desktop
-3. Double-click to launch
-
-**Create desktop shortcut:**
-```cmd
-scripts\create-desktop-shortcut.bat
-```
-
-### For Developers
-
-**Build launcher EXE:**
-```powershell
-.\scripts\build-launcher.ps1
-```
-
-**Build portable package:**
-```cmd
-scripts\build-portable.bat
-```
-
-**Build installer:**
-```cmd
-scripts\build-installer.bat
-```
-
-## 📁 Files Removed (Redundant)
-
-The following redundant scripts were removed:
-
-- ~~`build-vdock-exe.bat`~~ → Use `build-launcher.ps1` instead
-- ~~`create_shortcut.bat`~~ → Use `create-desktop-shortcut.bat` instead
-- ~~`create-distribution.bat`~~ → Use `build-portable.bat` instead
-- ~~`launch_fixed.bat`~~ → Use root `Launch-VDock.bat` instead
-- ~~`VDock-Launcher.vbs`~~ → No longer needed
-
-## 🔍 Script Purposes
-
-### `VDock-Launcher.py`
-Python launcher source code. Used to build `VDock-Launcher.exe`.
-
-### `VDock-Launcher.spec`
-PyInstaller spec file for building the EXE.
-
-### `VDock.nsi`
-NSIS installer script for creating Windows installer.
-
-### `LAUNCHER_README.md`
-Detailed launcher documentation.
-
-## 📖 Documentation
-
-- **Desktop Launcher**: `DESKTOP_LAUNCHER.md` (root)
-- **Portable Distribution**: `docs/deployment/PORTABLE_DISTRIBUTION.md`
-- **Launcher Guide**: `scripts/LAUNCHER_README.md`
-
-## ⚙️ Recommended Workflow
-
-### Fresh Installation
-1. Run `install.bat` in root directory
-2. Run `scripts\create-desktop-shortcut.bat`
-3. Launch from desktop shortcut
-
-### Daily Use
-- Double-click desktop shortcut
-- Or use `Launch-VDock.bat` in root directory
-
-### Building for Distribution
-1. `scripts\build-launcher.ps1` - Create EXE
-2. `scripts\build-portable.bat` - Create portable zip
-3. `scripts\build-installer.bat` - Create installer
-
-## 🎉 Summary
-
-All redundant scripts have been removed. Use:
-- **`Launch-VDock.bat`** for simple launching
-- **`scripts\create-desktop-shortcut.bat`** for desktop shortcut
-- **`scripts\build-launcher.ps1`** for EXE building
-
-That's it! Simple and clean. 🚀
-
+See [`docs/development/LAUNCHER_README.md`](../docs/development/LAUNCHER_README.md) for launcher details.

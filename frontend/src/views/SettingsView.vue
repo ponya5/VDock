@@ -401,6 +401,17 @@
             </section>
 
             <section class="settings-section card">
+              <h2>Navigation</h2>
+              <div class="toggle-row">
+                <div>
+                  <label class="toggle-row-label">Open settings in a new browser tab</label>
+                  <p class="form-help">When enabled, the Settings button opens settings in a separate browser tab instead of navigating within VDock</p>
+                </div>
+                <label class="toggle-switch"><input v-model="settings.openSettingsInNewTab" type="checkbox" /><span class="toggle-slider"></span></label>
+              </div>
+            </section>
+
+            <section class="settings-section card">
               <h2>Connection</h2>
               <div v-if="serverConfig" class="server-info">
                 <div class="info-row"><span class="info-label">Host</span><span class="info-value">{{ serverConfig.host }}</span></div>
@@ -828,6 +839,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
   { label: 'Startup', keywords: 'startup boot autostart', tabId: 'server', icon: ['fas', 'power-off'] },
+  { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'integration', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
   { label: 'Running Applications', keywords: 'running apps processes', tabId: 'integration', icon: ['fas', 'desktop'] },

@@ -611,6 +611,11 @@ const isEditingExistingScene = computed(() => {
 
 // Navigation & Scene handlers
 function handleNavigateSettings() {
+  if (settingsStore.openSettingsInNewTab) {
+    const settingsUrl = router.resolve({ name: 'settings' }).href
+    window.open(settingsUrl, '_blank', 'noopener,noreferrer')
+    return
+  }
   router.push('/settings')
 }
 

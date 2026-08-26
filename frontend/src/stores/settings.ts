@@ -50,6 +50,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // System settings
   const startOnBoot = ref(false)
+  const openSettingsInNewTab = ref(false)
 
   // Search settings
   const recentActions = ref<string[]>([])
@@ -94,6 +95,7 @@ export const useSettingsStore = defineStore('settings', () => {
         defaultGridRows.value = settings.defaultGridRows || 3
         defaultGridCols.value = settings.defaultGridCols || 3
         startOnBoot.value = settings.startOnBoot || false
+        openSettingsInNewTab.value = settings.openSettingsInNewTab === true
         recentActions.value = settings.recentActions || []
         weatherLocationMode.value = settings.weatherLocationMode || 'auto'
         weatherManualCity.value = settings.weatherManualCity || ''
@@ -125,6 +127,7 @@ export const useSettingsStore = defineStore('settings', () => {
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
       startOnBoot: startOnBoot.value,
+      openSettingsInNewTab: openSettingsInNewTab.value,
       recentActions: recentActions.value,
       weatherLocationMode: weatherLocationMode.value,
       weatherManualCity: weatherManualCity.value,
@@ -135,7 +138,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Watch for changes and save
   watch(
-    [buttonSize, showLabels, showTooltips, animationsEnabled, tiltEffectEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, recentActions, weatherLocationMode, weatherManualCity, screensaverTimeout],
+    [buttonSize, showLabels, showTooltips, animationsEnabled, tiltEffectEnabled, dockedSidebarEnabled, dockedSidebarWidth, dashboardBackground, backgroundPreference, uiBrightness, showHeader, toastLevel, touchMode, minimumTouchTargetSize, defaultGridRows, defaultGridCols, openSettingsInNewTab, recentActions, weatherLocationMode, weatherManualCity, screensaverTimeout],
     () => {
       saveSettings()
       applyTouchModeStyles()
@@ -275,6 +278,7 @@ export const useSettingsStore = defineStore('settings', () => {
     defaultGridRows,
     defaultGridCols,
     startOnBoot,
+    openSettingsInNewTab,
     recentActions,
     weatherLocationMode,
     weatherManualCity,
