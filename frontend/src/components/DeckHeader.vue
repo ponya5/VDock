@@ -1,6 +1,8 @@
 <template>
   <div class="deck-header-wrapper" :class="{ 'header-hidden': !settingsStore.showHeader }">
-    <!-- Reveal trigger area (visible when header is hidden) -->
+    <!-- Reveal trigger area (visible when header is hidden). Large + mostly
+         transparent hit-target so it's easy to grab with a swipe or tap
+         without needing pixel-perfect precision. -->
     <div
       v-if="!settingsStore.showHeader"
       ref="triggerRef"
@@ -111,6 +113,23 @@
         <div class="reveal-handle"></div>
       </button>
     </header>
+
+    <!-- Confirmation modal for exiting the app -->
+    <Teleport to="body">
+      <div v-if="showExitConfirm" class="exit-confirm-overlay" @click.self="cancelExitApp">
+        <div class="exit-confirm-dialog" role="alertdialog" aria-modal="true">
+          <div class="exit-confirm-icon">
+            <FontAwesomeIcon :icon="['fas', 'power-off']" />
+          </div>
+          <h3>Exit VDock?</h3>
+          <p>This will close the VDock application window.</p>
+          <div class="exit-confirm-actions">
+            <button class="btn btn-secondary" @click="cancelExitApp">Cancel</button>
+            <button class="btn btn-danger" @click="confirmExitApp">Exit</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -174,13 +193,33 @@ async function toggleFullscreen() {
   }
 }
 
-async function handleExitApp() {
-  const shouldExit = window.confirm('Exit VDock and shut down the app?')
-  if (!shouldExit) {
-    return
-  }
+const showExitConfirm = ref(false)
 
-  await quitApp()
+function handleExitApp() {
+  // Pause the auto-hide countdown while the confirmation dialog is open so
+  // the header can't disappear behind it.
+  stopAutohide()
+  showExitConfirm.value = true
+}
+
+function cancelExitApp() {
+  showExitConfirm.value = false
+  startAutohide()
+}
+
+async function confirmExitApp() {
+  showExitConfirm.value = false
+  try {
+    const quitHandledNatively = await quitApp()
+    if (!quitHandledNatively) {
+      // Running in a plain browser tab: window.close() is ignored by
+      // browsers for tabs not opened via script, so let the user know they
+      // need to close it themselves instead of leaving them guessing.
+      window.alert('VDock is running in a browser tab and cannot close itself. Please close this browser tab/window manually.')
+    }
+  } catch (error) {
+    console.error('Failed to quit VDock:', error)
+  }
 }
 
 async function handleRefreshVdock() {
@@ -307,18 +346,23 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   width: 100%;
-  height: 32px;
+  /* Large, fully-transparent hit area so a swipe-down or tap from anywhere
+     near the top edge reliably reveals the header, without needing to hit a
+     thin sliver of the screen. Only the small handle pill is ever visible. */
+  height: 84px;
+  background: transparent;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   cursor: pointer;
+  touch-action: none;
   z-index: 110;
 }
 
 .reveal-handle {
   width: 96px;
   height: 10px;
-  margin-top: 4px;
+  margin-top: 6px;
   background-color: rgba(255, 255, 255, 0.3);
   border-radius: 6px;
   transition: background-color 0.2s ease, transform 0.2s ease;
@@ -364,6 +408,7 @@ onUnmounted(() => {
   padding: 0.6rem 1rem;
   box-sizing: border-box;
   overflow: visible;
+  touch-action: pan-x;
 }
 
 .header-background {
@@ -551,5 +596,88 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex: 1 1 auto;
+}
+
+/* Exit confirmation modal */
+.exit-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.exit-confirm-dialog {
+  width: min(360px, 90vw);
+  background: rgba(20, 20, 32, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.exit-confirm-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 0.75rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  background: rgba(220, 53, 69, 0.35);
+  border: 2px solid rgba(220, 53, 69, 0.75);
+}
+
+.exit-confirm-dialog h3 {
+  margin: 0 0 0.4rem;
+  color: #fff;
+  font-size: 1.15rem;
+}
+
+.exit-confirm-dialog p {
+  margin: 0 0 1.4rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.exit-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.exit-confirm-actions .btn {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.exit-confirm-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.exit-confirm-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.exit-confirm-actions .btn-danger {
+  background: rgba(220, 53, 69, 0.85);
+  color: #fff;
+}
+
+.exit-confirm-actions .btn-danger:hover {
+  background: rgba(220, 53, 69, 1);
 }
 </style>

@@ -654,10 +654,12 @@ onUnmounted(() => {
 .toast-container {
   position: fixed;
   top: var(--spacing-lg);
-  right: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 10000;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--spacing-sm);
   pointer-events: none;
 }
@@ -677,11 +679,14 @@ onUnmounted(() => {
     max-width: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
-  
+
   .toast-container {
-    left: var(--spacing-md);
-    right: var(--spacing-md);
+    left: 50%;
+    right: auto;
     top: var(--spacing-md);
+    transform: translateX(-50%);
+    width: calc(100vw - 2 * var(--spacing-md));
+    align-items: stretch;
   }
 }
 </style>

@@ -247,10 +247,21 @@ function createWindow() {
 
 function quitApplication() {
   isQuitting = true
-  if (mainWindow) {
-    mainWindow.destroy()
-  }
-  app.quit()
+  // Defer the actual window teardown by a tick so any pending IPC reply
+  // (e.g. the 'quit-app' invoke() the renderer is awaiting) has a chance to
+  // flush over the webContents channel before it gets destroyed. Destroying
+  // the window synchronously here could otherwise leave the renderer's
+  // promise hanging/rejecting mid-flight.
+  setImmediate(() => {
+    if (mainWindow) {
+      mainWindow.destroy()
+      mainWindow = null
+    }
+    app.quit()
+    // Fallback in case something (e.g. a lingering tray reference) keeps the
+    // process alive after app.quit() — force-terminate as a last resort.
+    setTimeout(() => app.exit(0), 1000)
+  })
 }
 
 function fixFirewall() {

@@ -19,7 +19,6 @@ export interface PersistedUserSettings {
   dashboardBackground: string
   backgroundPreference: string
   uiBrightness: number
-  showHeader: boolean
   toastLevel: 'all' | 'errors-only' | 'off'
   touchMode: 'normal' | 'touch-friendly' | 'tablet'
   minimumTouchTargetSize: number
@@ -53,7 +52,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const dashboardBackground = ref('default')
   const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
   const uiBrightness = ref(100)
-  const showHeader = ref(false)
+  // Ephemeral UI state (not persisted/synced): whether the auto-hiding header
+  // is currently shown. Each window/tab manages its own header visibility
+  // independently — this must never be part of the cross-window settings sync
+  // or server persistence, otherwise one window's auto-hide timer would force
+  // the header closed (and unable to reopen) in every other connected window.
+  const showHeader = ref(true)
   const toastLevel = ref<'all' | 'errors-only' | 'off'>('all')
   
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
@@ -135,7 +139,6 @@ export const useSettingsStore = defineStore('settings', () => {
       dashboardBackground: dashboardBackground.value,
       backgroundPreference: backgroundPreference.value,
       uiBrightness: uiBrightness.value,
-      showHeader: showHeader.value,
       toastLevel: toastLevel.value,
       touchMode: touchMode.value,
       minimumTouchTargetSize: minimumTouchTargetSize.value,
@@ -164,7 +167,6 @@ export const useSettingsStore = defineStore('settings', () => {
       backgroundPreference.value = settings.backgroundPreference as typeof backgroundPreference.value
     }
     if (settings.uiBrightness !== undefined) uiBrightness.value = settings.uiBrightness
-    if (settings.showHeader !== undefined) showHeader.value = settings.showHeader
     if (settings.toastLevel !== undefined) toastLevel.value = settings.toastLevel
     if (settings.touchMode !== undefined) touchMode.value = settings.touchMode
     if (settings.minimumTouchTargetSize !== undefined) minimumTouchTargetSize.value = settings.minimumTouchTargetSize
@@ -201,7 +203,6 @@ export const useSettingsStore = defineStore('settings', () => {
         dashboardBackground: settings.dashboardBackground ?? 'default',
         backgroundPreference: settings.backgroundPreference ?? 'none',
         uiBrightness: settings.uiBrightness ?? 100,
-        showHeader: settings.showHeader === true,
         toastLevel: settings.toastLevel
           ?? (settings.showRegularToasts === false ? 'errors-only' : 'all'),
         touchMode: settings.touchMode ?? 'normal',
@@ -294,7 +295,6 @@ export const useSettingsStore = defineStore('settings', () => {
       dashboardBackground,
       backgroundPreference,
       uiBrightness,
-      showHeader,
       toastLevel,
       touchMode,
       minimumTouchTargetSize,

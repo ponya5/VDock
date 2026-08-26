@@ -96,14 +96,22 @@ export function useElectron() {
     return getElectronApi()?.platform || 'web'
   }
 
-  const quitApp = async (): Promise<void> => {
+  /**
+   * Attempts to quit the app. Returns `true` when running inside the
+   * Electron shell (where quitting is guaranteed to work), or `false` when
+   * running in a plain browser tab, where `window.close()` is silently
+   * ignored by browsers for tabs not opened via script — callers should
+   * inform the user to close the tab/window manually in that case.
+   */
+  const quitApp = async (): Promise<boolean> => {
     const electronApi = getElectronApi()
     if (electronApi?.quitApp) {
       await electronApi.quitApp()
-      return
+      return true
     }
 
     window.close()
+    return false
   }
 
   return {

@@ -22,7 +22,6 @@ ALLOWED_USER_SETTING_KEYS = {
     'dashboardBackground',
     'backgroundPreference',
     'uiBrightness',
-    'showHeader',
     'toastLevel',
     'touchMode',
     'minimumTouchTargetSize',
