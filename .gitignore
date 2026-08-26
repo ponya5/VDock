@@ -185,3 +185,8 @@ docs/superpowers/
 
 # Windows shortcuts
 *.lnk
+
+# Stray debug artifacts (e.g. `git diff > file.txt`)
+diff_output.txt
+*.diff
+*.patch
