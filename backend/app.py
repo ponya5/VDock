@@ -241,7 +241,11 @@ def handle_user_settings_changed(data):
     if not isinstance(settings, dict):
         return
 
-    emit('user_settings_updated', {'settings': settings}, include_self=False)
+    # `broadcast=True` is required for this to reach any client other than
+    # the sender — without it, Flask-SocketIO's `emit()` defaults to
+    # replying only to the requesting client's own session, so combined
+    # with `include_self=False` the message was silently going nowhere.
+    emit('user_settings_updated', {'settings': settings}, broadcast=True, include_self=False)
 
 
 # ============================================================================
