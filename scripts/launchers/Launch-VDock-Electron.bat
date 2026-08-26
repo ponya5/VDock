@@ -5,7 +5,7 @@ REM Starts backend, Vite dev server, then Electron
 setlocal
 
 echo ========================================
-echo    VDock Virtual Stream Deck (Electron)
+echo    VDock 2 Virtual Stream Deck (Electron)
 echo ========================================
 echo.
 
@@ -60,11 +60,11 @@ echo.
 
 REM ── Start backend in a new window ─────────────────────────────
 echo [1/3] Starting backend server...
-start "VDock Backend" /min cmd /c "cd /d "%ROOT%\backend" && call "%VENV%" && python app.py"
+start "VDock 2 Backend" /min cmd /c "cd /d "%ROOT%\backend" && call "%VENV%" && python app.py"
 
 REM ── Start Vite dev server in a new window ─────────────────────
 echo [2/3] Starting Vite dev server...
-start "VDock Frontend" /min cmd /c "cd /d "%ROOT%\frontend" && npm run dev"
+start "VDock 2 Frontend" /min cmd /c "cd /d "%ROOT%\frontend" && npm run dev"
 
 REM ── Wait for servers to be ready ──────────────────────────────
 echo Waiting for servers to start...

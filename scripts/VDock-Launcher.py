@@ -51,6 +51,19 @@ FRONTEND_LOG = LOG_DIR / "vdock-frontend-launcher.log"
 ELECTRON_LOG = LOG_DIR / "vdock-electron-launcher.log"
 
 
+def should_auto_close_launcher() -> bool:
+    """Return True when the launcher window should close without waiting for Enter."""
+    auto_close_value = os.environ.get("VDOCK_AUTO_CLOSE_LAUNCHER", "").strip().lower()
+    return auto_close_value in ("1", "true", "yes", "on")
+
+
+def wait_for_launcher_close(prompt: str = "Press Enter to exit...") -> None:
+    """Keep the launcher open for review unless auto-close is enabled."""
+    if should_auto_close_launcher():
+        return
+    input(prompt)
+
+
 def find_python():
     """Find a usable Python executable (prefer python3 on macOS/Linux)."""
     candidates = []
@@ -311,7 +324,7 @@ def main():
     print("Checking system requirements...")
     if not check_requirements():
         print("\n[WARN] Please install missing dependencies and try again")
-        input("Press Enter to exit...")
+        wait_for_launcher_close("Press Enter to exit...")
         return False
 
     print("[OK] Python found")
@@ -323,7 +336,7 @@ def main():
     if not venv:
         print("[ERROR] Virtual environment not found")
         print(f"[WARN] Please run {setup_hint()} first\n")
-        input("Press Enter to exit...")
+        wait_for_launcher_close("Press Enter to exit...")
         return False
 
     print(f"[OK] Virtual environment found: {venv}\n")
@@ -367,6 +380,10 @@ def main():
     print("Logs are saved under backend\\data\\")
     print("\nTo stop VDock, close the Electron window and end python/node tasks in Task Manager.")
 
+    if should_auto_close_launcher():
+        print("\nLauncher window will close automatically.")
+        return True
+
     input("\nPress Enter to close this launcher window...")
     return True
 
@@ -380,5 +397,5 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as error:
         print(f"\nUnexpected error: {error}")
-        input("Press Enter to exit...")
+        wait_for_launcher_close("Press Enter to exit...")
         sys.exit(1)
