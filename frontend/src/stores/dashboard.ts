@@ -5,6 +5,8 @@ import apiClient from '@/api/client'
 import { useSettingsStore } from './settings'
 import { createDefaultScene } from '@/utils/defaultProfile'
 
+export const LAST_PROFILE_STORAGE_KEY = 'vdock_last_profile'
+
 export const useDashboardStore = defineStore('dashboard', () => {
   const currentProfile = ref<Profile | null>(null)
   const currentSceneIndex = ref(0)
@@ -47,6 +49,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // auto-save, same as migrateProfileToScenes.
     history.value = [JSON.parse(JSON.stringify(migratedProfile))]
     historyIndex.value = 0
+
+    // Persisted here (rather than via a component-level watcher) so it's
+    // updated immediately regardless of which view called setProfile —
+    // e.g. ProfilesView setting a newly created/loaded profile and then
+    // navigating to '/' must not be undone by DashboardView's onMounted
+    // reloading a stale profile id from localStorage.
+    localStorage.setItem(LAST_PROFILE_STORAGE_KEY, migratedProfile.id)
   }
 
   /**
@@ -286,6 +295,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
         currentPageIndex.value = Math.max(0, currentScene.value.pages.length - 1)
       }
       addToHistory()
+      // Auto-save profile after removing page, matching addPage/updatePage
+      saveProfile()
     }
   }
 

@@ -159,9 +159,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDashboardStore } from '@/stores/dashboard'
+import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useProfilesStore } from '@/stores/profiles'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -691,7 +691,7 @@ function deleteCurrentPage() {
   }
   if (!currentPage.value) return
   if (!confirm(`Delete "${currentPage.value.name}"? This cannot be undone.`)) return
-  dashboardStore.removePage(currentPageIndex.value)
+  dashboardStore.removePage(currentPage.value.id)
   notificationsStore.success('Page Deleted', 'The page has been removed.')
 }
 
@@ -772,7 +772,7 @@ function handleKeyDown(event: KeyboardEvent) {
 
 onMounted(async () => {
   // Load last used profile or first available profile
-  const lastProfileId = localStorage.getItem('vdock_last_profile')
+  const lastProfileId = localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
   let profileLoaded = false
   if (lastProfileId) {
     const profile = await profilesStore.getProfile(lastProfileId)
@@ -821,12 +821,6 @@ onUnmounted(() => {
   if (idleTimer) clearTimeout(idleTimer)
 
   stopVdockRefreshListener?.()
-})
-
-watch(currentProfile, (profile) => {
-  if (profile) {
-    localStorage.setItem('vdock_last_profile', profile.id)
-  }
 })
 </script>
 

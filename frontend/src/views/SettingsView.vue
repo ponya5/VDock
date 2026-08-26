@@ -619,11 +619,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
-import { useDashboardStore } from '@/stores/dashboard'
+import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import TouchModeSelector from '@/components/TouchModeSelector.vue'
@@ -986,9 +986,16 @@ async function refreshRunningApps() {
   loadingApps.value = true
   try {
     const response = await apiClient.get('/metrics/running-apps')
-    runningApps.value = response.data.success ? response.data.data : []
-  } catch { runningApps.value = [] }
-  finally { loadingApps.value = false }
+    runningApps.value = response.data.success ? (response.data.data ?? []) : []
+    if (!response.data.success) {
+      console.error('Failed to load running applications:', response.data.error)
+    }
+  } catch (error) {
+    console.error('Failed to load running applications:', error)
+    runningApps.value = []
+  } finally {
+    loadingApps.value = false
+  }
 }
 
 function isAppIntegrationEnabled(appExe: string): boolean { return appIntegrations.value.some(i => i.appExe === appExe && i.enabled) }
@@ -1115,7 +1122,7 @@ function applySettingsRouteQuery() {
 async function ensureProfileLoaded() {
   if (dashboardStore.currentProfile) return
 
-  const lastProfileId = localStorage.getItem('vdock_last_profile')
+  const lastProfileId = localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
   if (lastProfileId) {
     const profile = await profilesStore.getProfile(lastProfileId)
     if (profile) {
@@ -1132,6 +1139,12 @@ async function ensureProfileLoaded() {
     }
   }
 }
+
+watch(activeTab, (tab) => {
+  if (tab === 'integration') {
+    void refreshRunningApps()
+  }
+})
 
 onMounted(async () => {
   applySettingsRouteQuery()

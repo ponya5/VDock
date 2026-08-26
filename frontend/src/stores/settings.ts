@@ -147,7 +147,11 @@ export const useSettingsStore = defineStore('settings', () => {
       startOnBoot: startOnBoot.value,
       openSettingsInNewTab: openSettingsInNewTab.value,
       autoCloseLauncher: autoCloseLauncher.value,
-      recentActions: recentActions.value,
+      // Spread into a plain array: `recentActions.value` is a Vue-reactive
+      // Proxy, which the structured clone algorithm used by
+      // BroadcastChannel.postMessage() cannot clone (throws DataCloneError)
+      // even when empty. This payload is broadcast on every settings change.
+      recentActions: [...recentActions.value],
       weatherLocationMode: weatherLocationMode.value,
       weatherManualCity: weatherManualCity.value,
       screensaverTimeout: screensaverTimeout.value,

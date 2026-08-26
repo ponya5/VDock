@@ -7,7 +7,7 @@
  */
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
-import { useDashboardStore } from '@/stores/dashboard'
+import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import socketClient from '@/api/socket'
 
 const REFRESH_REQUEST_CHANNEL = 'vdock-refresh-request'
@@ -22,7 +22,7 @@ export async function refreshVdock(): Promise<void> {
     await settingsStore.loadSettingsFromServer()
     await profilesStore.loadProfiles()
 
-    const profileId = dashboardStore.currentProfile?.id || localStorage.getItem('vdock_last_profile')
+    const profileId = dashboardStore.currentProfile?.id || localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
     if (profileId) {
       const profile = await profilesStore.getProfile(profileId)
       if (profile) {
