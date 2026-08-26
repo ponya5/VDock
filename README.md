@@ -4,6 +4,10 @@
 
 <br />
 
+<img src="https://raw.githubusercontent.com/ponya5/ponya5/main/assets/vdock2-demo.gif" alt="VDock demo — custom button layouts, animated backgrounds, and system controls" width="920" />
+
+<br />
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](README.md)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
@@ -11,7 +15,7 @@
 
 **Your customizable control deck — buttons, scenes, system actions, widgets, and animated backgrounds in one beautiful interface.**
 
-[Quick Start](#-quick-start) · [Features](#-features) · [Setup Menu](#-one-setup-for-everything) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock/issues)
+[Quick Start](#-quick-start) · [Features](#-features) · [Setup Menu](#-one-setup-for-everything) · [Creator](#-creator) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
 
 </div>
 
@@ -85,8 +89,8 @@ flowchart LR
 ### 1. Get the code
 
 ```bash
-git clone https://github.com/ponya5/VDock.git
-cd VDock
+git clone https://github.com/ponya5/VDock2.git
+cd VDock2
 ```
 
 Or download and extract the ZIP from GitHub.
@@ -226,6 +230,48 @@ See [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md)
 
 ---
 
+## 👤 Creator
+
+<div align="left">
+  <a href="https://github.com/ponya5">
+    <img src="https://raw.githubusercontent.com/ponya5/ponya5/main/assets/icons/Daniel%20fire.gif" alt="Daniel Shalom" width="420" />
+  </a>
+</div>
+
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/ponya5/ponya5/main/assets/ezgif-8ddb65fe506d34b8.gif" alt="Daniel Shalom" width="420" style="border-radius: 20px;" />
+
+</div>
+
+### Head of AI · Head of Delivery & QA | Site Management @ [employer]  
+**AI Innovator · Multi-Agent Systems Builder · Automation Architect**
+
+<p align="left">
+  <img src="https://raw.githubusercontent.com/ponya5/ponya5/main/assets/icons/social-media.gif" width="64" height="64" align="middle" alt="" />
+  <b style="font-size: 1.35em; margin-left: 10px;">Let's Connect</b>
+</p>
+
+<p align="left">
+  <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+  <a href="https://github.com/ponya5"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" /></a>
+  <a href="https://www.daniel-shalom.com"><img src="https://img.shields.io/badge/Website-www.daniel--shalom.com-green?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website" /></a>
+  <a href="https://www.instagram.com/daniel.shalom.ai/"><img src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" alt="Instagram" /></a>
+</p>
+
+<p align="left">
+  <img src="https://img.shields.io/badge/AI%20Innovator-%F0%9F%A4%96-purple?style=for-the-badge" alt="AI Innovator" />
+  <img src="https://img.shields.io/badge/Head%20of%20AI-%F0%9F%9A%80-blue?style=for-the-badge" alt="Head of AI" />
+  <img src="https://img.shields.io/badge/Delivery%20%26%20QA%20Leader-%F0%9F%9A%80-navy?style=for-the-badge" alt="Delivery and QA Leader" />
+  <img src="https://img.shields.io/badge/Multi--Agent%20Systems-%F0%9F%94%AE-orange?style=for-the-badge" alt="Multi-Agent Systems" />
+  <img src="https://img.shields.io/badge/Automation%20Architect-%E2%9A%99%EF%B8%8F-teal?style=for-the-badge" alt="Automation Architect" />
+</p>
+
+> **VDock2** is a fun project by **[Daniel Shalom (@ponya5)](https://github.com/ponya5)** — part of a portfolio of automation tools, AI apps, and creative builds.  
+> See more projects on [github.com/ponya5](https://github.com/ponya5).
+
+---
+
 ## 📜 License
 
 MIT — see [LICENSE](LICENSE).
@@ -238,6 +284,8 @@ Issues and pull requests are welcome. Fork → branch → PR.
 
 <div align="center">
 
-**VDock** — put your most-used controls one click away.
+**VDock2** — put your most-used controls one click away.
+
+Built by [Daniel Shalom](https://github.com/ponya5)
 
 </div>
