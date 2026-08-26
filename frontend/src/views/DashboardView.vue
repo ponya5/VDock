@@ -183,6 +183,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { useButtonActions } from '@/composables/useButtonActions'
+import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -191,6 +192,7 @@ const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 
 const editingScene = ref<Scene | null>(null)
+let stopVdockRefreshListener: (() => void) | null = null
 
 // Composables logic
 const {
@@ -804,6 +806,10 @@ onMounted(async () => {
   // Idle timer for screensaver
   IDLE_EVENTS.forEach(ev => document.addEventListener(ev, resetIdleTimer, { passive: true }))
   resetIdleTimer()
+
+  // Picks up settings/profile changes made in a separate Settings tab as
+  // soon as that tab is closed, without waiting for a manual refresh.
+  stopVdockRefreshListener = listenForVdockRefreshRequests()
 })
 
 onUnmounted(() => {
@@ -813,6 +819,8 @@ onUnmounted(() => {
   // Idle timer cleanup
   IDLE_EVENTS.forEach(ev => document.removeEventListener(ev, resetIdleTimer))
   if (idleTimer) clearTimeout(idleTimer)
+
+  stopVdockRefreshListener?.()
 })
 
 watch(currentProfile, (profile) => {

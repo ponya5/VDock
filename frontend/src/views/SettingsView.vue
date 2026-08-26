@@ -636,6 +636,7 @@ import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
+import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 
 const router = useRouter()
 const route = useRoute()
@@ -668,10 +669,17 @@ function openSettingsInBrowserTab() {
 
 function handleSettingsBack() {
   if (isStandaloneSettings.value) {
+    // The main dashboard runs in a different tab/window here, so ask it to
+    // refresh itself instead of calling refreshVdock() directly.
+    requestVdockRefresh()
     window.close()
     return
   }
 
+  // Settings changes made via direct API calls (templates, integrations,
+  // shortcuts, etc.) don't all flow through the reactive settings store, so
+  // re-sync everything from the backend when returning to the dashboard.
+  void refreshVdock()
   router.push('/')
 }
 
@@ -711,7 +719,13 @@ const previewButton = computed<Button>(() => ({
     animation: previewAnimation.value === 'none' ? undefined : (previewAnimation.value as any)
   },
   layers: {
-    icon: previewIconLoop.value === 'none' ? undefined : { loop: previewIconLoop.value as any },
+    // `layers.icon`, when present, is treated by resolveButtonVisual() as the
+    // authoritative icon definition — it must always carry `type`/`value`
+    // (not just `loop`), or the icon renders empty and the loop animation
+    // has nothing left to animate.
+    icon: previewIconLoop.value === 'none'
+      ? undefined
+      : { type: 'fontawesome', value: ['fas', 'star'], loop: previewIconLoop.value as any },
     effect: previewEffect.value === 'none' ? undefined : { type: previewEffect.value as any, tint: 'brand' }
   },
   enabled: true
@@ -1092,8 +1106,36 @@ function applySettingsRouteQuery() {
   }
 }
 
+// Settings is normally opened from within the already-running dashboard,
+// which has already loaded a profile into dashboardStore. But when opened as
+// its own standalone browser tab it's a fresh app instance with no profile
+// loaded at all, which left features like "Scene Background" permanently
+// disabled (no current scene to override). Mirrors the profile-loading logic
+// in DashboardView's onMounted.
+async function ensureProfileLoaded() {
+  if (dashboardStore.currentProfile) return
+
+  const lastProfileId = localStorage.getItem('vdock_last_profile')
+  if (lastProfileId) {
+    const profile = await profilesStore.getProfile(lastProfileId)
+    if (profile) {
+      dashboardStore.setProfile(profile)
+      return
+    }
+  }
+
+  await profilesStore.loadProfiles()
+  if (profilesStore.profiles.length > 0) {
+    const profile = await profilesStore.getProfile(profilesStore.profiles[0].id)
+    if (profile) {
+      dashboardStore.setProfile(profile)
+    }
+  }
+}
+
 onMounted(async () => {
   applySettingsRouteQuery()
+  await ensureProfileLoaded()
   await syncStartOnBootFromSystem()
   settingsStore.loadServerConfig()
   loadAppIntegrations()

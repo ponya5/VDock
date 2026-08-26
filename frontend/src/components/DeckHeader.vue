@@ -139,11 +139,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
 import { useSettingsStore } from '@/stores/settings'
-import { useProfilesStore } from '@/stores/profiles'
-import { useDashboardStore } from '@/stores/dashboard'
 import { useElectron } from '@/composables/useElectron'
-import socketClient from '@/api/socket'
 import { useSwipe } from '@/composables/useGestures'
+import { refreshVdock } from '@/composables/useVdockRefresh'
 import type { Profile, Scene } from '@/types'
 
 interface Props {
@@ -168,26 +166,26 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
-const profilesStore = useProfilesStore()
-const dashboardStore = useDashboardStore()
-const { quitApp } = useElectron()
+const { quitApp, isElectron, toggleFullscreen: toggleElectronFullscreen, isFullscreen: getElectronFullscreen } = useElectron()
 const triggerRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 const progressWidth = ref(100)
 const isFullscreen = ref(typeof document !== 'undefined' && !!document.fullscreenElement)
 const isRefreshing = ref(false)
 
+// In the Electron shell, fullscreen is a native window property controlled
+// via IPC and doesn't fire the DOM `fullscreenchange` event, so it can't be
+// tracked that way. In a plain browser tab we fall back to the DOM
+// Fullscreen API and its change event instead.
 function handleFullscreenChange() {
-  isFullscreen.value = !!document.fullscreenElement
+  if (!isElectron()) {
+    isFullscreen.value = !!document.fullscreenElement
+  }
 }
 
 async function toggleFullscreen() {
   try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen()
-    } else {
-      await document.documentElement.requestFullscreen()
-    }
+    isFullscreen.value = await toggleElectronFullscreen()
   } catch (err) {
     console.error('Failed to toggle fullscreen:', err)
   }
@@ -228,26 +226,8 @@ async function handleRefreshVdock() {
   }
 
   isRefreshing.value = true
-
   try {
-    await settingsStore.loadSettingsFromServer()
-    await profilesStore.loadProfiles()
-
-    const profileId = dashboardStore.currentProfile?.id || localStorage.getItem('vdock_last_profile')
-    if (profileId) {
-      const profile = await profilesStore.getProfile(profileId)
-      if (profile) {
-        dashboardStore.setProfile(profile)
-      }
-    }
-
-    if (!socketClient.isConnected()) {
-      socketClient.disconnect()
-      socketClient.connect()
-    }
-  } catch (error) {
-    console.error('Failed to refresh VDock, reloading page:', error)
-    window.location.reload()
+    await refreshVdock()
   } finally {
     isRefreshing.value = false
   }
@@ -322,6 +302,9 @@ useSwipe(headerRef, {
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+  getElectronFullscreen().then((value) => {
+    isFullscreen.value = value
+  })
 })
 
 onUnmounted(() => {
