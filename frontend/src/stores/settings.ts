@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
@@ -118,7 +118,7 @@ export const useSettingsStore = defineStore('settings', () => {
     return JSON.stringify(left) === JSON.stringify(right)
   }
 
-  function applySettingsFromRemote(remoteSettings: Partial<PersistedUserSettings>) {
+  async function applySettingsFromRemote(remoteSettings: Partial<PersistedUserSettings>) {
     const currentSettings = buildSettingsPayload()
     if (settingsPayloadEquals(currentSettings, remoteSettings)) {
       return
@@ -130,6 +130,17 @@ export const useSettingsStore = defineStore('settings', () => {
       saveSettingsLocalOnly()
       applyTouchModeStyles()
       applyUIBrightnessFilter()
+      // applySettingsObject() mutates every ref in one synchronous pass, but
+      // the deep watch([...]) below (which calls saveSettings(), and would
+      // re-broadcast) only runs on the NEXT microtask tick — not synchronously
+      // with these assignments. Resetting the guard here, before that watcher
+      // has actually fired, let it see isApplyingRemoteSettings as false and
+      // broadcast this remote update straight back out, including to the
+      // window that originally sent it — an echo that (with enough watched
+      // fields / windows) can cascade into rapid back-and-forth updates that
+      // look like flickering. Awaiting nextTick() keeps the guard up until
+      // that watcher has actually run and observed it.
+      await nextTick()
     } finally {
       isApplyingRemoteSettings = false
     }
