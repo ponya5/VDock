@@ -350,6 +350,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
               ...button.style,
               animation: updates.animation === 'none' ? undefined : (updates.animation as any)
             }
+            // layers.behaviour takes priority over style.animation in DeckButton's
+            // buttonClasses (`layers?.behaviour ?? style?.animation`), so a button
+            // seeded with a behaviour (e.g. defaultProfile's Volume Down/Previous)
+            // would otherwise silently ignore this global animation choice.
+            if (button.layers?.behaviour) {
+              button.layers = { ...button.layers, behaviour: undefined }
+            }
           }
           if (updates.iconLoop !== undefined) {
             const existingIcon = button.layers?.icon
