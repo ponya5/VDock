@@ -1,7 +1,7 @@
 <template>
   <div class="floating-paths-background">
     <!-- Animated Grid Background -->
-    <svg class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+    <svg class="grid-svg" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="floatingGrid" width="60" height="60" patternUnits="userSpaceOnUse">
           <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(74, 0, 224, 0.05)" stroke-width="0.5" />
@@ -23,9 +23,9 @@
     <div class="floating-element" style="top: 80%; left: 20%; animation-delay: 3s"></div>
 
     <!-- Floating Paths -->
-    <div class="absolute inset-0">
-      <div class="absolute inset-0 pointer-events-none">
-        <svg class="w-full h-full text-slate-950 dark:text-white" viewBox="0 0 696 316" fill="none">
+    <div class="paths-container">
+      <div class="paths-layer">
+        <svg class="paths-svg" viewBox="0 0 696 316" fill="none">
           <title>Background Paths</title>
           <path
             v-for="path in pathsA"
@@ -38,8 +38,8 @@
           />
         </svg>
       </div>
-      <div class="absolute inset-0 pointer-events-none">
-        <svg class="w-full h-full text-slate-950 dark:text-white" viewBox="0 0 696 316" fill="none">
+      <div class="paths-layer">
+        <svg class="paths-svg" viewBox="0 0 696 316" fill="none">
           <title>Background Paths</title>
           <path
             v-for="path in pathsB"
@@ -95,6 +95,33 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.grid-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.paths-container {
+  position: absolute;
+  inset: 0;
+}
+
+.paths-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.paths-svg {
+  width: 100%;
+  height: 100%;
+  color: #ffffff;
 }
 
 .grid-line {

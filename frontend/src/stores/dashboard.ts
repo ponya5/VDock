@@ -339,6 +339,43 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return currentPage.value.buttons.find(b => b.id === buttonId) || null
   }
 
+  function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }) {
+    if (!currentProfile.value) return
+
+    for (const scene of currentProfile.value.scenes) {
+      for (const page of scene.pages) {
+        for (const button of page.buttons) {
+          if (updates.animation !== undefined) {
+            button.style = {
+              ...button.style,
+              animation: updates.animation === 'none' ? undefined : (updates.animation as any)
+            }
+          }
+          if (updates.iconLoop !== undefined) {
+            const existingIcon = button.layers?.icon
+            const iconType = existingIcon?.type ?? (button.icon_type as any) ?? 'fontawesome'
+            const iconValue = existingIcon?.value ?? button.icon ?? 'star'
+            button.layers = {
+              ...button.layers,
+              icon: updates.iconLoop === 'none'
+                ? (existingIcon ? { ...existingIcon, loop: undefined } : undefined)
+                : { type: iconType, value: iconValue, loop: updates.iconLoop as any, size: existingIcon?.size }
+            }
+          }
+          if (updates.effect !== undefined) {
+            button.layers = {
+              ...button.layers,
+              effect: updates.effect === 'none' ? undefined : { type: updates.effect as any, tint: 'brand' }
+            }
+          }
+        }
+      }
+    }
+
+    addToHistory()
+    saveProfile()
+  }
+
   function toggleEditMode() {
     isEditMode.value = !isEditMode.value
   }
@@ -502,6 +539,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     moveButton,
     updateButton,
     getButton,
+    applyGlobalButtonStyle,
     toggleEditMode,
     saveProfile,
     executeButtonAction

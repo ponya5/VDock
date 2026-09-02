@@ -61,7 +61,7 @@
         <div v-if="activeTab === 'appearance'" class="tab-content">
           <div class="sub-tab-bar">
             <button :class="['sub-tab-btn', { active: appearanceSubTab === 'buttons' }]" @click="appearanceSubTab = 'buttons'">
-              <FontAwesomeIcon :icon="['fas', 'th-large']" /> Buttons
+              <FontAwesomeIcon :icon="['fas', 'sliders']" /> Button Behaviour
             </button>
             <button :class="['sub-tab-btn', { active: appearanceSubTab === 'layout' }]" @click="appearanceSubTab = 'layout'">
               <FontAwesomeIcon :icon="['fas', 'table-columns']" /> Layout &amp; Behavior
@@ -69,13 +69,12 @@
             <button :class="['sub-tab-btn', { active: appearanceSubTab === 'background' }]" @click="appearanceSubTab = 'background'">
               <FontAwesomeIcon :icon="['fas', 'image']" /> Background
             </button>
+            <button :class="['sub-tab-btn', { active: appearanceSubTab === 'screensaver' }]" @click="appearanceSubTab = 'screensaver'">
+              <FontAwesomeIcon :icon="['fas', 'moon']" /> Screen Saver
+            </button>
           </div>
 
-          <!-- Split layout: settings on the left, a live preview pinned on the right
-               that stays visible across all three sub-tabs above, so switching tabs
-               to tweak something never loses sight of how it looks. -->
-          <div class="appearance-split">
-            <div class="appearance-main">
+          <div class="appearance-main">
               <div v-if="appearanceSubTab === 'buttons'" class="settings-grid">
                 <section class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
@@ -115,6 +114,86 @@
                     <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
                   </div>
                 </section>
+
+                <section class="settings-section card preview-card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
+                  <div class="button-preview-stage" :class="previewBackgroundClass" :style="previewBackgroundStyle">
+                    <DeckButton
+                      :button="previewButton"
+                      :show-labels="settings.showLabels"
+                      :show-tooltips="settings.showTooltips"
+                      :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
+                      style="width: 110px; height: 110px;"
+                    />
+                  </div>
+                  <p class="form-help">Reflects your button size, labels, tooltips, touch mode, and background.</p>
+
+                  <div class="preview-demo-controls">
+                    <p class="preview-demo-label">Choose the animation, icon motion, and visual effect to apply to ALL buttons:</p>
+                    <div class="form-group">
+                      <label class="small-label">Button animation</label>
+                      <select v-model="previewAnimation" class="select">
+                        <option value="none">None</option>
+                        <option value="pulse">Pulse</option>
+                        <option value="shimmer">Shimmer</option>
+                        <option value="bounce">Bounce</option>
+                        <option value="rotate">Rotate</option>
+                        <option value="wiggle">Wiggle</option>
+                        <option value="float">Float</option>
+                        <option value="scale">Scale</option>
+                        <option value="slide">Slide</option>
+                        <option value="fade">Fade</option>
+                        <option value="spin">Spin</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="small-label">Icon animation</label>
+                      <select v-model="previewIconLoop" class="select">
+                        <option value="none">None</option>
+                        <option value="squash">Squash</option>
+                        <option value="bob">Bob</option>
+                        <option value="spin">Spin</option>
+                        <option value="pulse">Pulse</option>
+                        <option value="swing">Swing</option>
+                        <option value="flip">Flip</option>
+                        <option value="jump">Jump</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="small-label">Visual effect</label>
+                      <select v-model="previewEffect" class="select">
+                        <option value="none">None</option>
+                        <option value="glass">Glass</option>
+                        <option value="neumorphism">Neumorphism</option>
+                        <option value="gradient">Gradient</option>
+                        <option value="glow">Glow</option>
+                        <option value="neon">Neon</option>
+                        <option value="metallic">Metallic</option>
+                        <option value="liquid">Liquid</option>
+                        <option value="holographic">Holographic</option>
+                        <option value="shadow">Shadow</option>
+                        <option value="emissive">Emissive</option>
+                        <option value="fire">Fire</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="particles">Particles</option>
+                        <option value="aurora">Aurora</option>
+                        <option value="scanline">Scanline</option>
+                        <option value="rain">Rain</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-top: var(--spacing-md)">
+                    <button class="btn btn-primary" :disabled="applyingButtonBehaviour" @click="applyButtonBehaviourToAll">
+                      <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
+                      {{ applyingButtonBehaviour ? 'Applying...' : 'Save & Apply to All Buttons' }}
+                    </button>
+                    <p class="form-help" style="color: var(--color-warning, #f0ad4e)">
+                      <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+                      This overwrites the animation, icon motion, and visual effect on every button across all scenes and pages — including any per-button customization made in the Button Editor.
+                    </p>
+                  </div>
+                </section>
               </div>
 
               <div v-if="appearanceSubTab === 'layout'" class="settings-grid">
@@ -131,26 +210,6 @@
                 </div>
                 <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="360" step="10" class="slider" />
                 <p class="form-help">How much horizontal space the docked buttons column takes up.</p>
-              </div>
-            </section>
-
-            <section class="settings-section card" id="setting-screensaver">
-              <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver</h2>
-              <div class="form-group">
-                <div class="form-group-header">
-                  <label>Screensaver Delay</label>
-                  <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="600"
-                  step="30"
-                  :value="settingsStore.screensaverTimeout"
-                  @input="settingsStore.screensaverTimeout = Number(($event.target as HTMLInputElement).value)"
-                  class="slider"
-                />
-                <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
               </div>
             </section>
 
@@ -205,7 +264,7 @@
               <h2>Dashboard Background</h2>
               <div class="form-group">
                 <label>Background Style</label>
-                <select v-model="settings.dashboardBackground" class="select">
+                <select v-model="settings.dashboardBackground" class="select" @change="onDashboardBackgroundChange">
                   <option value="default">Default (Gradient)</option>
                   <optgroup label="Custom Background" v-if="isCustomBackground">
                     <option :value="settings.dashboardBackground">Custom Uploaded Image</option>
@@ -267,81 +326,80 @@
               </div>
             </section>
               </div>
-            </div>
 
-            <!-- Persistent preview pane: same DeckButton component the dashboard
-                 uses, over the actual selected background, visible regardless of
-                 which sub-tab above is active. -->
-            <aside class="appearance-preview-pane">
-              <section class="settings-section card preview-card">
-                <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
-                <div class="button-preview-stage" :class="previewBackgroundClass" :style="previewBackgroundStyle">
-                  <DeckButton
-                    :button="previewButton"
-                    :show-labels="settings.showLabels"
-                    :show-tooltips="settings.showTooltips"
-                    :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
-                    style="width: 110px; height: 110px;"
-                  />
-                </div>
-                <p class="form-help">Reflects your button size, labels, tooltips, touch mode, and background — no matter which tab above you're on.</p>
+              <div v-if="appearanceSubTab === 'screensaver'" class="settings-grid">
+                <section class="settings-section card" id="setting-screensaver">
+                  <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver</h2>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Screensaver Delay</label>
+                      <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="600"
+                      step="30"
+                      :value="settingsStore.screensaverTimeout"
+                      @input="settingsStore.screensaverTimeout = Number(($event.target as HTMLInputElement).value)"
+                      class="slider"
+                    />
+                    <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
+                  </div>
+                </section>
 
-                <div class="preview-demo-controls">
-                  <p class="preview-demo-label">Browse animation &amp; effect styles (preview only — set these per-button in the Button Editor):</p>
-                  <div class="form-group">
-                    <label class="small-label">Button animation</label>
-                    <select v-model="previewAnimation" class="select">
-                      <option value="none">None</option>
-                      <option value="pulse">Pulse</option>
-                      <option value="shimmer">Shimmer</option>
-                      <option value="bounce">Bounce</option>
-                      <option value="rotate">Rotate</option>
-                      <option value="wiggle">Wiggle</option>
-                      <option value="float">Float</option>
-                      <option value="scale">Scale</option>
-                      <option value="slide">Slide</option>
-                      <option value="fade">Fade</option>
-                      <option value="spin">Spin</option>
-                    </select>
+                <section class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
+                  <p class="form-help">Choose what shows on the screensaver besides the clock.</p>
+
+                  <div class="widget-toggle-list">
+                    <div class="widget-toggle-row">
+                      <div class="widget-toggle-preview" v-html="CLOCK_PREVIEW_SVG"></div>
+                      <div class="widget-toggle-label">
+                        <strong>Clock</strong>
+                        <span class="form-help">Always shown</span>
+                      </div>
+                      <label class="toggle-switch disabled"><input type="checkbox" checked disabled /><span class="toggle-slider"></span></label>
+                    </div>
+
+                    <div v-for="w in screensaverWidgetOptions" :key="w.id" class="widget-toggle-row">
+                      <div class="widget-toggle-preview" v-html="w.previewSvg"></div>
+                      <div class="widget-toggle-label">
+                        <strong>{{ w.label }}</strong>
+                        <span class="form-help">{{ w.description }}</span>
+                      </div>
+                      <label class="toggle-switch">
+                        <input type="checkbox" :checked="settingsStore.screensaverWidgets.includes(w.id)" @change="toggleScreensaverWidget(w.id)" />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
                   </div>
+                </section>
+
+                <section v-if="settingsStore.screensaverWidgets.includes('news')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'newspaper']" /> News Headlines</h2>
                   <div class="form-group">
-                    <label class="small-label">Icon animation</label>
-                    <select v-model="previewIconLoop" class="select">
-                      <option value="none">None</option>
-                      <option value="squash">Squash</option>
-                      <option value="bob">Bob</option>
-                      <option value="spin">Spin</option>
-                      <option value="pulse">Pulse</option>
-                      <option value="swing">Swing</option>
-                      <option value="flip">Flip</option>
-                      <option value="jump">Jump</option>
-                    </select>
+                    <label>GNews.io API Key</label>
+                    <input v-model="settingsStore.newsApiKey" type="password" class="input" placeholder="Paste your free API key" />
+                    <p class="form-help">Get a free key at gnews.io. Required for the news widget to show real headlines.</p>
                   </div>
+                  <button class="btn btn-secondary" :disabled="testingNews" @click="handleTestNews">
+                    <FontAwesomeIcon :icon="['fas', testingNews ? 'spinner' : 'plug']" :spin="testingNews" /> Test Connection
+                  </button>
+                </section>
+
+                <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
+                  <p class="form-help">Crypto prices (Bitcoin, Ethereum) work automatically via CoinGecko — no key needed.</p>
                   <div class="form-group">
-                    <label class="small-label">Visual effect</label>
-                    <select v-model="previewEffect" class="select">
-                      <option value="none">None</option>
-                      <option value="glass">Glass</option>
-                      <option value="neumorphism">Neumorphism</option>
-                      <option value="gradient">Gradient</option>
-                      <option value="glow">Glow</option>
-                      <option value="neon">Neon</option>
-                      <option value="metallic">Metallic</option>
-                      <option value="liquid">Liquid</option>
-                      <option value="holographic">Holographic</option>
-                      <option value="shadow">Shadow</option>
-                      <option value="emissive">Emissive</option>
-                      <option value="fire">Fire</option>
-                      <option value="plasma">Plasma</option>
-                      <option value="particles">Particles</option>
-                      <option value="aurora">Aurora</option>
-                      <option value="scanline">Scanline</option>
-                      <option value="rain">Rain</option>
-                    </select>
+                    <label>Stock quotes API key (optional)</label>
+                    <input v-model="settingsStore.marketApiKey" type="password" class="input" placeholder="Optional — leave blank for crypto only" />
                   </div>
-                </div>
-              </section>
-            </aside>
+                  <button class="btn btn-secondary" :disabled="testingMarket" @click="handleTestMarket">
+                    <FontAwesomeIcon :icon="['fas', testingMarket ? 'spinner' : 'plug']" :spin="testingMarket" /> Test Connection
+                  </button>
+                </section>
+              </div>
           </div>
         </div>
 
@@ -637,6 +695,8 @@ import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
+import { testNewsConnection } from '@/services/newsService'
+import { testMarketConnection } from '@/services/marketService'
 
 const router = useRouter()
 const route = useRoute()
@@ -693,16 +753,15 @@ const toastLevelOptions = [
 ] as const
 
 const activeTab = ref('appearance')
-const appearanceSubTab = ref<'buttons' | 'layout' | 'background'>('buttons')
+const appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')
 
 // Sample button for the live preview card — never persisted, just rendered
 // through the real DeckButton component so the preview matches actual
-// dashboard rendering exactly. The animation/loop/effect pickers below let
-// users browse what each style looks like without touching a real button;
-// actual buttons still set these individually in the Button Editor.
-const previewAnimation = ref('none')
-const previewIconLoop = ref('none')
-const previewEffect = ref('none')
+// dashboard rendering exactly. Initialized from the persisted defaults so the
+// picker still shows the last-applied style when the tab is reopened.
+const previewAnimation = ref(settingsStore.buttonDefaultAnimation)
+const previewIconLoop = ref(settingsStore.buttonDefaultIconLoop)
+const previewEffect = ref(settingsStore.buttonDefaultEffect)
 
 const previewButton = computed<Button>(() => ({
   id: 'preview-button',
@@ -857,10 +916,90 @@ function onAnimatedEffectChange() {
   settingsStore.saveSettings()
 }
 
+function onDashboardBackgroundChange() {
+  if (settingsStore.dashboardBackground !== 'default' && settingsStore.backgroundPreference !== 'none') {
+    settingsStore.backgroundPreference = 'none'
+  }
+  settingsStore.saveSettings()
+}
+
+const applyingButtonBehaviour = ref(false)
+
+async function applyButtonBehaviourToAll() {
+  applyingButtonBehaviour.value = true
+  try {
+    settingsStore.buttonDefaultAnimation = previewAnimation.value
+    settingsStore.buttonDefaultIconLoop = previewIconLoop.value
+    settingsStore.buttonDefaultEffect = previewEffect.value
+    settingsStore.saveSettings()
+
+    dashboardStore.applyGlobalButtonStyle({
+      animation: previewAnimation.value,
+      iconLoop: previewIconLoop.value,
+      effect: previewEffect.value
+    })
+
+    notificationsStore.success('Button style applied', 'Animation, icon motion, and effect applied to every button on your dashboard.')
+  } catch (err: any) {
+    notificationsStore.error('Failed to apply', err?.message || 'Could not apply the button style to all buttons.')
+  } finally {
+    applyingButtonBehaviour.value = false
+  }
+}
+
 const removeSceneBackground = () => {
   if (!currentScene.value) return
   dashboardStore.updateScene(currentScene.value.id, { background: undefined })
   notificationsStore.success('Scene background removed', `Background cleared for "${currentScene.value.name}".`)
+}
+
+// Static mockup SVGs for the screensaver widget picker — never data-bound or
+// timer-driven, unlike the real widgets in ScreenSaver.vue, so they're cheap
+// to render as a simple "what this looks like" swatch next to each toggle.
+const CLOCK_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><circle cx="32" cy="20" r="13" fill="none" stroke="#e5e5ea" stroke-width="2"/><line x1="32" y1="20" x2="32" y2="11" stroke="#e5e5ea" stroke-width="2"/><line x1="32" y1="20" x2="38" y2="20" stroke="#e5e5ea" stroke-width="2"/></svg>`
+const WEATHER_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><circle cx="16" cy="20" r="8" fill="#ff9f0a"/><rect x="30" y="14" width="26" height="5" rx="2" fill="#e5e5ea"/><rect x="30" y="23" width="18" height="4" rx="2" fill="#666"/></svg>`
+const NEWS_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><rect x="8" y="10" width="48" height="6" rx="2" fill="#e5e5ea"/><rect x="8" y="20" width="34" height="4" rx="2" fill="#777"/><rect x="8" y="27" width="24" height="4" rx="2" fill="#555"/></svg>`
+const MARKET_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><polyline points="8,28 18,22 26,25 36,14 46,17 56,9" fill="none" stroke="#34c759" stroke-width="2"/><rect x="8" y="31" width="20" height="4" rx="2" fill="#999"/></svg>`
+const WORLDCLOCK_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><rect x="8" y="8" width="48" height="10" rx="5" fill="#2c2c3a"/><text x="32" y="16" font-size="7" fill="#e5e5ea" text-anchor="middle">10:24</text><rect x="8" y="22" width="48" height="10" rx="5" fill="#2c2c3a"/><text x="32" y="30" font-size="7" fill="#e5e5ea" text-anchor="middle">03:24</text></svg>`
+
+const screensaverWidgetOptions = [
+  { id: 'weather', label: 'Weather', description: 'Current temperature and conditions', previewSvg: WEATHER_PREVIEW_SVG },
+  { id: 'news', label: 'News', description: 'Latest headline (requires free API key)', previewSvg: NEWS_PREVIEW_SVG },
+  { id: 'market', label: 'Stocks / Crypto', description: 'Live crypto prices; stocks optional', previewSvg: MARKET_PREVIEW_SVG },
+  { id: 'worldclock', label: 'World Clock', description: 'Time in a few other cities', previewSvg: WORLDCLOCK_PREVIEW_SVG },
+]
+
+function toggleScreensaverWidget(id: string) {
+  const list = settingsStore.screensaverWidgets
+  const idx = list.indexOf(id)
+  if (idx === -1) settingsStore.screensaverWidgets = [...list, id]
+  else settingsStore.screensaverWidgets = list.filter(w => w !== id)
+}
+
+const testingNews = ref(false)
+async function handleTestNews() {
+  testingNews.value = true
+  try {
+    await testNewsConnection(settingsStore.newsApiKey.trim())
+    notificationsStore.success('News connected', 'Successfully fetched a headline from GNews.io.')
+  } catch (err: any) {
+    notificationsStore.error('News connection failed', err?.message || 'Could not reach GNews.io with this key.')
+  } finally {
+    testingNews.value = false
+  }
+}
+
+const testingMarket = ref(false)
+async function handleTestMarket() {
+  testingMarket.value = true
+  try {
+    await testMarketConnection()
+    notificationsStore.success('Market data connected', 'Successfully fetched crypto prices from CoinGecko.')
+  } catch (err: any) {
+    notificationsStore.error('Market connection failed', err?.message || 'Could not reach the price API.')
+  } finally {
+    testingMarket.value = false
+  }
 }
 
 const runningApps = ref<RunningApp[]>([])
@@ -889,16 +1028,18 @@ interface SettingsSearchEntry {
   label: string
   keywords: string
   tabId: string
-  subTab?: 'buttons' | 'layout' | 'background'
+  subTab?: 'buttons' | 'layout' | 'background' | 'screensaver'
   icon: [string, string]
 }
 
 const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'hand-pointer'] },
   { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'th-large'] },
+  { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'sliders'] },
   { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'bell'] },
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
-  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'moon'] },
+  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'moon'] },
+  { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'grip'] },
   { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
@@ -1338,23 +1479,8 @@ onMounted(async () => {
   align-items: start;
 }
 
-/* ── Appearance split layout: settings + persistent live preview ── */
-.appearance-split {
-  display: flex;
-  gap: var(--spacing-lg);
-  align-items: flex-start;
-}
-
 .appearance-main {
-  flex: 1;
   min-width: 0;
-}
-
-.appearance-preview-pane {
-  width: 320px;
-  flex-shrink: 0;
-  position: sticky;
-  top: var(--spacing-lg);
 }
 
 .button-preview-stage {
@@ -1389,15 +1515,49 @@ onMounted(async () => {
   margin-bottom: 4px;
 }
 
-@media (max-width: 1000px) {
-  .appearance-split {
-    flex-direction: column;
-  }
+/* ── Screensaver widget picker ── */
+.widget-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
 
-  .appearance-preview-pane {
-    width: 100%;
-    position: static;
-  }
+.widget-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--glass-border, var(--color-border));
+}
+
+.widget-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.widget-toggle-preview {
+  flex-shrink: 0;
+  width: 64px;
+  height: 40px;
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+}
+
+.widget-toggle-preview svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.widget-toggle-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-switch.disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* ── Section Cards ── */

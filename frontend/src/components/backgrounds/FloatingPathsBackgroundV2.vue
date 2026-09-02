@@ -1,9 +1,9 @@
 <template>
   <div class="floating-paths-v2-background">
     <!-- Floating Paths -->
-    <div class="absolute inset-0">
-      <div class="absolute inset-0 pointer-events-none">
-        <svg class="w-full h-full text-slate-950 dark:text-white" viewBox="0 0 696 316" fill="none">
+    <div class="paths-container">
+      <div class="paths-layer">
+        <svg class="paths-svg" viewBox="0 0 696 316" fill="none">
           <title>Background Paths V2</title>
           <path
             v-for="path in pathsA"
@@ -16,8 +16,8 @@
           />
         </svg>
       </div>
-      <div class="absolute inset-0 pointer-events-none">
-        <svg class="w-full h-full text-slate-950 dark:text-white" viewBox="0 0 696 316" fill="none">
+      <div class="paths-layer">
+        <svg class="paths-svg" viewBox="0 0 696 316" fill="none">
           <title>Background Paths V2</title>
           <path
             v-for="path in pathsB"
@@ -73,7 +73,26 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.paths-container {
+  position: absolute;
+  inset: 0;
+}
+
+.paths-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.paths-svg {
+  width: 100%;
+  height: 100%;
+  color: #ffffff;
 }
 
 .animated-path-v2 {
@@ -90,10 +109,4 @@ onMounted(() => {
   100% { stroke-dashoffset: 0; opacity: 0.2; }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .floating-paths-v2-background {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  }
-}
 </style>

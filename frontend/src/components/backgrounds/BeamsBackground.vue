@@ -1,8 +1,8 @@
 <template>
   <div class="beams-background">
-    <canvas ref="canvasRef" class="absolute inset-0" style="filter: blur(15px)" />
-    
-    <div class="absolute inset-0 bg-neutral-950/5 backdrop-blur-[50px] animated-overlay"></div>
+    <canvas ref="canvasRef" class="beams-canvas" style="filter: blur(15px)" />
+
+    <div class="beams-overlay animated-overlay"></div>
   </div>
 </template>
 
@@ -150,6 +150,23 @@ onUnmounted(() => {
   inset: 0;
   overflow: hidden;
   background: #0a0a0a;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.beams-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.beams-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.05);
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
 }
 
 .animated-overlay {

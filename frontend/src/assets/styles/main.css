@@ -1239,6 +1239,33 @@ body {
   overflow: hidden;
 }
 
+.dashboard-bg-bubble-float::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle 14px at 10% 100%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(circle 10px at 25% 100%, rgba(255, 255, 255, 0.25), transparent 60%),
+    radial-gradient(circle 20px at 40% 100%, rgba(255, 255, 255, 0.3), transparent 60%),
+    radial-gradient(circle 8px at 55% 100%, rgba(255, 255, 255, 0.4), transparent 60%),
+    radial-gradient(circle 16px at 70% 100%, rgba(255, 255, 255, 0.25), transparent 60%),
+    radial-gradient(circle 12px at 85% 100%, rgba(255, 255, 255, 0.3), transparent 60%),
+    radial-gradient(circle 18px at 95% 100%, rgba(255, 255, 255, 0.2), transparent 60%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: bubble-float-rise 14s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes bubble-float-rise {
+  0% {
+    background-position: 10% 110%, 25% 130%, 40% 120%, 55% 140%, 70% 115%, 85% 135%, 95% 125%;
+  }
+  100% {
+    background-position: 10% -20%, 25% -30%, 40% -25%, 55% -35%, 70% -15%, 85% -30%, 95% -25%;
+  }
+}
+
 .dashboard-bg-neon-grid {
   background-color: #000;
   background-image: 
@@ -1269,7 +1296,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   z-index: -1;
 }
 
@@ -1283,7 +1310,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   z-index: -1;
 }
 

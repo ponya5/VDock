@@ -31,6 +31,12 @@ export interface PersistedUserSettings {
   weatherManualCity: string
   screensaverTimeout: number
   autoCloseLauncher: boolean
+  buttonDefaultAnimation: string
+  buttonDefaultIconLoop: string
+  buttonDefaultEffect: string
+  screensaverWidgets: string[]
+  newsApiKey: string
+  marketApiKey: string
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -88,6 +94,14 @@ export const useSettingsStore = defineStore('settings', () => {
   const weatherLocationMode = ref<'auto' | 'manual'>('auto')
   const weatherManualCity = ref('')
   const screensaverTimeout = ref(120)
+
+  const buttonDefaultAnimation = ref('none')
+  const buttonDefaultIconLoop = ref('none')
+  const buttonDefaultEffect = ref('none')
+
+  const screensaverWidgets = ref<string[]>(['weather'])
+  const newsApiKey = ref('')
+  const marketApiKey = ref('')
 
   const showHelpGuide = ref(false)
 
@@ -155,6 +169,13 @@ export const useSettingsStore = defineStore('settings', () => {
       weatherLocationMode: weatherLocationMode.value,
       weatherManualCity: weatherManualCity.value,
       screensaverTimeout: screensaverTimeout.value,
+      buttonDefaultAnimation: buttonDefaultAnimation.value,
+      buttonDefaultIconLoop: buttonDefaultIconLoop.value,
+      buttonDefaultEffect: buttonDefaultEffect.value,
+      // Spread for the same structured-clone reason as recentActions above.
+      screensaverWidgets: [...screensaverWidgets.value],
+      newsApiKey: newsApiKey.value,
+      marketApiKey: marketApiKey.value,
     }
   }
 
@@ -183,6 +204,12 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.weatherLocationMode !== undefined) weatherLocationMode.value = settings.weatherLocationMode
     if (settings.weatherManualCity !== undefined) weatherManualCity.value = settings.weatherManualCity
     if (settings.screensaverTimeout !== undefined) screensaverTimeout.value = settings.screensaverTimeout
+    if (settings.buttonDefaultAnimation !== undefined) buttonDefaultAnimation.value = settings.buttonDefaultAnimation
+    if (settings.buttonDefaultIconLoop !== undefined) buttonDefaultIconLoop.value = settings.buttonDefaultIconLoop
+    if (settings.buttonDefaultEffect !== undefined) buttonDefaultEffect.value = settings.buttonDefaultEffect
+    if (settings.screensaverWidgets !== undefined) screensaverWidgets.value = settings.screensaverWidgets
+    if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
+    if (settings.marketApiKey !== undefined) marketApiKey.value = settings.marketApiKey
   }
 
   function saveSettingsLocalOnly() {
@@ -220,6 +247,12 @@ export const useSettingsStore = defineStore('settings', () => {
         weatherLocationMode: settings.weatherLocationMode ?? 'auto',
         weatherManualCity: settings.weatherManualCity ?? '',
         screensaverTimeout: settings.screensaverTimeout ?? 120,
+        buttonDefaultAnimation: settings.buttonDefaultAnimation ?? 'none',
+        buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'none',
+        buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
+        screensaverWidgets: settings.screensaverWidgets ?? ['weather'],
+        newsApiKey: settings.newsApiKey ?? '',
+        marketApiKey: settings.marketApiKey ?? '',
       })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -311,6 +344,12 @@ export const useSettingsStore = defineStore('settings', () => {
       weatherLocationMode,
       weatherManualCity,
       screensaverTimeout,
+      buttonDefaultAnimation,
+      buttonDefaultIconLoop,
+      buttonDefaultEffect,
+      screensaverWidgets,
+      newsApiKey,
+      marketApiKey,
     ],
     () => {
       saveSettings()
@@ -487,6 +526,12 @@ export const useSettingsStore = defineStore('settings', () => {
     weatherLocationMode,
     weatherManualCity,
     screensaverTimeout,
+    buttonDefaultAnimation,
+    buttonDefaultIconLoop,
+    buttonDefaultEffect,
+    screensaverWidgets,
+    newsApiKey,
+    marketApiKey,
     showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,

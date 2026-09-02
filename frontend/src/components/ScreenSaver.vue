@@ -12,18 +12,34 @@
       <div class="ss-date">{{ dateStr }}</div>
     </div>
 
-    <div class="ss-bottom-bar">
-      <div class="ss-card">
+    <div class="ss-bottom-bar" :class="`ss-bottom-bar-count-${activeWidgetCount}`">
+      <div v-if="showWeatherWidget" class="ss-card ss-card-weather">
         <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-icon" />
         <div class="ss-card-info">
           <span class="ss-card-main">{{ tempStr }}</span>
           <span class="ss-card-sub">{{ location }}</span>
         </div>
       </div>
-      <div class="ss-card">
+
+      <div v-if="showNewsWidget" class="ss-card ss-card-news">
+        <FontAwesomeIcon :icon="['fas', 'newspaper']" class="ss-card-icon" />
         <div class="ss-card-info">
-          <span class="ss-card-main">{{ nextEventName }}</span>
-          <span class="ss-card-sub">{{ nextEventTime }}</span>
+          <span class="ss-card-main ss-card-main-truncate">{{ newsHeadline || 'Loading headlines…' }}</span>
+          <span class="ss-card-sub">{{ newsSource || 'News' }}</span>
+        </div>
+      </div>
+
+      <div v-if="showMarketWidget" class="ss-card ss-card-market">
+        <div v-for="coin in marketPrices" :key="coin.id" class="ss-market-row">
+          <span class="ss-market-symbol">{{ coin.symbol }}</span>
+          <span class="ss-market-price">${{ coin.price.toLocaleString() }}</span>
+        </div>
+      </div>
+
+      <div v-if="showWorldClockWidget" class="ss-card ss-card-worldclock">
+        <div v-for="tz in worldClocks" :key="tz.label" class="ss-worldclock-row">
+          <span class="ss-worldclock-label">{{ tz.label }}</span>
+          <span class="ss-worldclock-time">{{ tz.time }}</span>
         </div>
       </div>
     </div>
@@ -34,14 +50,21 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useWeather } from '@/composables/useWeather'
+import { useNews } from '@/composables/useNews'
+import { useMarket } from '@/composables/useMarket'
+import { useSettingsStore } from '@/stores/settings'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{ dismiss: [] }>()
+
+const settingsStore = useSettingsStore()
 
 const time = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval> | null = null
 
 const { weather, start: startWeather, stop: stopWeather } = useWeather()
+const { headline: newsHeadline, source: newsSource, start: startNews, stop: stopNews } = useNews()
+const { prices: marketPrices, start: startMarket, stop: stopMarket } = useMarket()
 
 const timeStr = computed(() =>
   time.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -54,30 +77,27 @@ const weatherIcon = computed(() => weather.value?.icon || ['fas', 'cloud-sun'])
 const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C` : '--°C')
 const location = computed(() => weather.value?.location || '—')
 
-const EVENTS = [
-  { name: 'Daily Standup', time: '10:00 AM' },
-  { name: 'Product Review', time: '2:00 PM' },
-  { name: 'Gym Session',    time: '6:30 PM' },
+const showWeatherWidget = computed(() => settingsStore.screensaverWidgets.includes('weather'))
+const showNewsWidget = computed(() => settingsStore.screensaverWidgets.includes('news'))
+const showMarketWidget = computed(() => settingsStore.screensaverWidgets.includes('market'))
+const showWorldClockWidget = computed(() => settingsStore.screensaverWidgets.includes('worldclock'))
+
+const activeWidgetCount = computed(() =>
+  [showWeatherWidget, showNewsWidget, showMarketWidget, showWorldClockWidget].filter(w => w.value).length
+)
+
+const WORLD_CLOCK_ZONES = [
+  { label: 'New York', tz: 'America/New_York' },
+  { label: 'London', tz: 'Europe/London' },
+  { label: 'Tokyo', tz: 'Asia/Tokyo' },
 ]
 
-function getNextEvent() {
-  const now = time.value
-  const h = now.getHours()
-  const m = now.getMinutes()
-  const currentMinutes = h * 60 + m
-  const parsed = EVENTS.map(e => {
-    const [hm, period] = e.time.split(' ')
-    let [eh, em] = hm.split(':').map(Number)
-    if (period === 'PM' && eh !== 12) eh += 12
-    if (period === 'AM' && eh === 12) eh = 0
-    return { ...e, totalMinutes: eh * 60 + em }
-  })
-  const upcoming = parsed.find(e => e.totalMinutes > currentMinutes)
-  return upcoming || parsed[0]
-}
-
-const nextEventName = computed(() => getNextEvent().name)
-const nextEventTime = computed(() => getNextEvent().time)
+const worldClocks = computed(() =>
+  WORLD_CLOCK_ZONES.map(z => ({
+    label: z.label,
+    time: new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: z.tz }).format(time.value)
+  }))
+)
 
 // Drift: ±20 px on X and Y on a 30-second sine cycle
 const driftX = ref(0)
@@ -105,12 +125,16 @@ onMounted(() => {
   clockTimer = setInterval(() => { time.value = new Date() }, 1000)
   driftTimer = setInterval(updateDrift, 500)
   startWeather()
+  if (showNewsWidget.value) startNews()
+  if (showMarketWidget.value) startMarket()
 })
 
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
   if (driftTimer) clearInterval(driftTimer)
   stopWeather()
+  stopNews()
+  stopMarket()
 })
 </script>
 
@@ -145,7 +169,7 @@ onUnmounted(() => {
 }
 
 .ss-time {
-  font-size: clamp(4rem, 12vw, 7rem);
+  font-size: clamp(5rem, 16vw, 10rem);
   font-weight: 200;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.92);
@@ -154,7 +178,7 @@ onUnmounted(() => {
 
 .ss-date {
   margin-top: 0.5rem;
-  font-size: clamp(0.7rem, 1.5vw, 1rem);
+  font-size: clamp(0.85rem, 1.8vw, 1.15rem);
   letter-spacing: 0.2em;
   color: rgba(255, 255, 255, 0.38);
 }
@@ -165,12 +189,15 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1rem;
-  width: min(90vw, 600px);
+  width: min(92vw, 900px);
 }
 
 .ss-card {
-  flex: 1;
+  flex: 1 1 220px;
+  min-width: 200px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -180,9 +207,23 @@ onUnmounted(() => {
   gap: 0.9rem;
 }
 
+.ss-card-weather {
+  padding: 1.1rem 1.4rem;
+}
+
 .ss-weather-icon {
   font-size: 2rem;
   color: #ff9f0a;
+  flex-shrink: 0;
+}
+
+.ss-card-weather .ss-weather-icon {
+  font-size: 3.2rem;
+}
+
+.ss-card-icon {
+  font-size: 1.6rem;
+  color: rgba(255, 255, 255, 0.5);
   flex-shrink: 0;
 }
 
@@ -190,6 +231,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .ss-card-main {
@@ -198,8 +240,46 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.88);
 }
 
+.ss-card-weather .ss-card-main {
+  font-size: 1.6rem;
+}
+
+.ss-card-main-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
 .ss-card-sub {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.4);
+}
+
+.ss-card-market,
+.ss-card-worldclock {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.ss-market-row,
+.ss-worldclock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ss-market-symbol,
+.ss-worldclock-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ss-market-price,
+.ss-worldclock-time {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
 }
 </style>
