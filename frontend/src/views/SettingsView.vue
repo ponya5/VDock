@@ -933,11 +933,17 @@ async function applyButtonBehaviourToAll() {
     settingsStore.buttonDefaultEffect = previewEffect.value
     settingsStore.saveSettings()
 
-    dashboardStore.applyGlobalButtonStyle({
+    await dashboardStore.applyGlobalButtonStyle({
       animation: previewAnimation.value,
       iconLoop: previewIconLoop.value,
       effect: previewEffect.value
     })
+
+    // applyGlobalButtonStyle mutates the dashboard/profile store, which — unlike
+    // the settings store — has no live cross-window sync. If Settings is open in
+    // a separate window/tab (e.g. via "Open in browser"), the actual dashboard
+    // window wouldn't otherwise see this until it was manually refreshed.
+    requestVdockRefresh()
 
     notificationsStore.success('Button style applied', 'Animation, icon motion, and effect applied to every button on your dashboard.')
   } catch (err: any) {

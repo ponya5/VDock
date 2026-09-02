@@ -339,7 +339,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return currentPage.value.buttons.find(b => b.id === buttonId) || null
   }
 
-  function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }) {
+  async function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }) {
     if (!currentProfile.value) return
 
     for (const scene of currentProfile.value.scenes) {
@@ -380,7 +380,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
 
     addToHistory()
-    saveProfile()
+    // Awaited (unlike the fire-and-forget saveProfile() calls elsewhere in
+    // this store) so callers can safely tell other open VDock windows to
+    // refresh only once the change has actually reached the backend —
+    // otherwise a same-tick refresh request could race the PUT and pull
+    // back stale data.
+    await saveProfile()
   }
 
   function toggleEditMode() {
