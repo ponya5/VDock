@@ -30,7 +30,7 @@
         <div class="ss-news-viewport" aria-live="polite">
           <div
             class="ss-news-track"
-            :style="{ transform: `translateY(-${newsIndex * 100}%)` }"
+            :style="{ transform: `translateY(calc(${-newsIndex} * var(--ss-news-slide-h)))` }"
           >
             <div
               v-for="(item, i) in newsHeadlines"
@@ -326,9 +326,13 @@ onUnmounted(() => {
 /* One row is visible; the track slides up a row at a time. Height is bound to
    the two lines inside a slide so the transform lands exactly on a boundary. */
 .ss-news-viewport {
+  /* One row tall. The track is translated by exactly this much per step --
+     a percentage would resolve against the track's own height (every slide
+     stacked), which moved the carousel far past the end and showed blanks. */
+  --ss-news-slide-h: 3.1em;
   flex: 1;
   min-width: 0;
-  height: 3.1em;
+  height: var(--ss-news-slide-h);
   overflow: hidden;
   position: relative;
   -webkit-mask-image: linear-gradient(
@@ -347,8 +351,8 @@ onUnmounted(() => {
 }
 
 .ss-news-slide {
-  height: 3.1em;
-  flex: 0 0 3.1em;
+  height: var(--ss-news-slide-h);
+  flex: 0 0 var(--ss-news-slide-h);
   display: flex;
   flex-direction: column;
   justify-content: center;
