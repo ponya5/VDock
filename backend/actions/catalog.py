@@ -573,9 +573,159 @@ _CUSTOM: Tuple[ActionSpec, ...] = (
 )
 
 
+
+# --- Window management -------------------------------------------------------
+# Stream Deck ships these. VDock's README claimed window management and
+# docs/testing/TESTING_GUIDE.md listed it as a category, but nothing
+# implemented it. They are plain hotkeys, so they need no new action class.
+
+def _window(entry_id: str, label: str, icon: str, keys: Tuple[str, ...],
+            description: str, keywords: Tuple[str, ...]) -> ActionSpec:
+    return ActionSpec(
+        id=entry_id, label=label, category='system', icon=('fas', icon),
+        action_type='hotkey', default_config={'keys': list(keys)},
+        description=description, keywords=keywords + ('window',),
+    )
+
+
+_WINDOWS: Tuple[ActionSpec, ...] = (
+    _window('window_minimize', 'Minimize Window', 'window-minimize',
+            ('cmd', 'down'), 'Minimize the focused window.', ('minimize',)),
+    _window('window_maximize', 'Maximize Window', 'window-maximize',
+            ('cmd', 'up'), 'Maximize the focused window.', ('maximize',)),
+    _window('window_close', 'Close Window', 'window-close',
+            ('alt', 'f4'), 'Close the focused window.', ('close', 'quit')),
+    _window('window_snap_left', 'Snap Left', 'align-left',
+            ('cmd', 'left'), 'Snap the window to the left half.',
+            ('snap', 'tile', 'left')),
+    _window('window_snap_right', 'Snap Right', 'align-right',
+            ('cmd', 'right'), 'Snap the window to the right half.',
+            ('snap', 'tile', 'right')),
+    _window('window_switch', 'Switch Window', 'window-restore',
+            ('alt', 'tab'), 'Switch to the next window.',
+            ('alt-tab', 'switch')),
+    _window('window_show_desktop', 'Show Desktop', 'desktop',
+            ('cmd', 'd'), 'Minimize everything and show the desktop.',
+            ('desktop', 'minimize')),
+    _window('window_task_view', 'Task View', 'table-cells',
+            ('cmd', 'tab'), 'Open Task View.', ('tasks', 'overview')),
+)
+
+
+# --- Web requests ------------------------------------------------------------
+
+_HTTP: Tuple[ActionSpec, ...] = (
+    ActionSpec(
+        id='http_request', label='HTTP Request', category='web',
+        icon=('fas', 'bolt'), action_type='http_request',
+        description='Call any URL or webhook. Works with Discord, Slack, n8n, '
+                    'Zapier, Home Assistant and any REST API.',
+        keywords=('webhook', 'api', 'rest', 'post', 'discord', 'slack',
+                  'n8n', 'zapier', 'home assistant', 'curl'),
+        default_config={'method': 'POST', 'content_type': 'json',
+                        'timeout': 15},
+        config_fields=(
+            ConfigField('url', 'URL', 'url', required=True,
+                        placeholder='https://example.com/webhook'),
+            ConfigField('method', 'Method', 'select', default='POST',
+                        options=tuple(
+                            {'value': m, 'label': m}
+                            for m in ('GET', 'POST', 'PUT', 'PATCH',
+                                      'DELETE', 'HEAD')
+                        )),
+            ConfigField('body', 'Body', 'textarea',
+                        placeholder='{"content": "Deploy finished"}'),
+            ConfigField('content_type', 'Body format', 'select',
+                        default='json', options=(
+                            {'value': 'json', 'label': 'JSON'},
+                            {'value': 'text', 'label': 'Raw text'},
+                        )),
+            ConfigField('headers', 'Headers', 'textarea',
+                        placeholder='Authorization: Bearer xxx',
+                        help='One per line, as "Key: value".'),
+            ConfigField('result_path', 'Show value from response', 'text',
+                        placeholder='data.0.name',
+                        help='Optional dotted path into a JSON response, '
+                             'shown on the button.'),
+            ConfigField('timeout', 'Timeout (seconds)', 'number', default=15),
+        ),
+    ),
+)
+
+
+# --- OBS Studio --------------------------------------------------------------
+# obs_action.py was fully written but never registered in ACTION_CLASSES, so
+# every OBS entry the old picker offered failed on press, while the README
+# advertised OBS support.
+
+_OBS_NOTE = ('Requires OBS with obs-websocket enabled, and the '
+             'obs-websocket-py package.')
+
+_OBS: Tuple[ActionSpec, ...] = (
+    ActionSpec(
+        id='obs_start_recording', label='Start Recording',
+        category='streaming', icon=('fas', 'circle'),
+        action_type='obs_start_recording',
+        description='Start recording in OBS. ' + _OBS_NOTE,
+        keywords=('obs', 'record', 'capture'),
+    ),
+    ActionSpec(
+        id='obs_stop_recording', label='Stop Recording', category='streaming',
+        icon=('fas', 'stop'), action_type='obs_stop_recording',
+        description='Stop recording in OBS. ' + _OBS_NOTE,
+        keywords=('obs', 'record', 'stop'),
+    ),
+    ActionSpec(
+        id='obs_start_streaming', label='Start Streaming',
+        category='streaming', icon=('fas', 'tower-broadcast'),
+        action_type='obs_start_streaming',
+        description='Go live in OBS. ' + _OBS_NOTE,
+        keywords=('obs', 'stream', 'live', 'twitch'),
+    ),
+    ActionSpec(
+        id='obs_stop_streaming', label='Stop Streaming', category='streaming',
+        icon=('fas', 'circle-stop'), action_type='obs_stop_streaming',
+        description='End the OBS stream. ' + _OBS_NOTE,
+        keywords=('obs', 'stream', 'stop'),
+    ),
+    ActionSpec(
+        id='obs_switch_scene', label='Switch OBS Scene', category='streaming',
+        icon=('fas', 'clapperboard'), action_type='obs_switch_scene',
+        description='Switch to a named OBS scene. ' + _OBS_NOTE,
+        keywords=('obs', 'scene', 'switch'),
+        config_fields=(
+            ConfigField('scene_name', 'Scene name', 'text', required=True,
+                        placeholder='Starting Soon'),
+        ),
+    ),
+    ActionSpec(
+        id='obs_toggle_source', label='Toggle OBS Source',
+        category='streaming', icon=('fas', 'eye'),
+        action_type='obs_toggle_source',
+        description='Show or hide an OBS source. ' + _OBS_NOTE,
+        keywords=('obs', 'source', 'visibility'),
+        config_fields=(
+            ConfigField('source_name', 'Source name', 'text', required=True,
+                        placeholder='Webcam'),
+        ),
+    ),
+    ActionSpec(
+        id='obs_toggle_filter', label='Toggle OBS Filter',
+        category='streaming', icon=('fas', 'wand-magic-sparkles'),
+        action_type='obs_toggle_filter',
+        description='Enable or disable a filter on a source. ' + _OBS_NOTE,
+        keywords=('obs', 'filter', 'effect'),
+        config_fields=(
+            ConfigField('source_name', 'Source name', 'text', required=True),
+            ConfigField('filter_name', 'Filter name', 'text', required=True),
+        ),
+    ),
+)
+
+
 ACTION_CATALOG: Tuple[ActionSpec, ...] = (
-    _SYSTEM + _NAVIGATION + _MEDIA + _WEB + _TEXT
-    + _METRICS + _TIME + _WEATHER + _CUSTOM
+    _SYSTEM + _WINDOWS + _NAVIGATION + _MEDIA + _WEB + _HTTP + _TEXT
+    + _METRICS + _TIME + _WEATHER + _OBS + _CUSTOM
 )
 
 CATALOG_BY_ID: Dict[str, ActionSpec] = {spec.id: spec for spec in ACTION_CATALOG}

@@ -82,6 +82,16 @@ class ActionType(str, Enum):
     HOME_PAGE = 'home_page'
     # Screenshot
     SCREENSHOT = 'screenshot'
+    # Web requests
+    HTTP_REQUEST = 'http_request'
+    # OBS Studio
+    OBS_START_RECORDING = 'obs_start_recording'
+    OBS_STOP_RECORDING = 'obs_stop_recording'
+    OBS_START_STREAMING = 'obs_start_streaming'
+    OBS_STOP_STREAMING = 'obs_stop_streaming'
+    OBS_SWITCH_SCENE = 'obs_switch_scene'
+    OBS_TOGGLE_SOURCE = 'obs_toggle_source'
+    OBS_TOGGLE_FILTER = 'obs_toggle_filter'
     # Custom (placeholder action type)
     CUSTOM = 'custom'
 

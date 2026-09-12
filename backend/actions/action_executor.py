@@ -14,6 +14,8 @@ from .navigation_action import NavigationAction
 from .time_action import TimeAction
 from .weather_action import WeatherAction
 from .ui_control_action import UIControlAction
+from .http_request_action import HTTPRequestAction
+from .obs_action import OBSAction
 
 
 class ActionExecutor:
@@ -47,7 +49,18 @@ class ActionExecutor:
         'weather': WeatherAction,
         'next_page': NavigationAction,
         'previous_page': NavigationAction,
-        'ui_control': UIControlAction
+        'ui_control': UIControlAction,
+        'http_request': HTTPRequestAction,
+        # OBSAction was written but never registered here, so the OBS entries
+        # the picker offered all failed with "Unknown action type" while the
+        # README advertised OBS support.
+        'obs_start_recording': OBSAction,
+        'obs_stop_recording': OBSAction,
+        'obs_start_streaming': OBSAction,
+        'obs_stop_streaming': OBSAction,
+        'obs_switch_scene': OBSAction,
+        'obs_toggle_source': OBSAction,
+        'obs_toggle_filter': OBSAction,
     }
     
     def __init__(self, plugin_manager: Optional[Any] = None):
@@ -141,6 +154,11 @@ class ActionExecutor:
                 config = config.copy()
                 config['action_type'] = action_type.replace('time_', '')
             
+            # OBS actions read the operation from config['action'].
+            if action_type.startswith('obs_'):
+                config = config.copy()
+                config.setdefault('action', action_type)
+
             # For navigation actions, add the action type to config
             if action_type in ['next_page', 'previous_page']:
                 config = config.copy()

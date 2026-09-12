@@ -41,6 +41,16 @@ export type ActionType =
   | 'screenshot'
   // UI Control
   | 'ui_control'
+  // Generic HTTP request / webhook
+  | 'http_request'
+  // OBS Studio
+  | 'obs_start_recording'
+  | 'obs_stop_recording'
+  | 'obs_start_streaming'
+  | 'obs_stop_streaming'
+  | 'obs_switch_scene'
+  | 'obs_toggle_source'
+  | 'obs_toggle_filter'
 
 export type ButtonShape = 'rectangle' | 'rounded' | 'circle' | 'hexagon' | 'diamond' | 'octagon'
 
