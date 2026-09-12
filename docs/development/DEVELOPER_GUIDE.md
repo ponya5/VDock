@@ -113,6 +113,20 @@ handler, an enum member and a frontend union member. Before the catalog
 existed, 22 of the 46 entries the picker offered dispatched to an action type
 with no handler and failed on press, because nothing enforced these steps.
 
+### Build toolchain
+
+`npm run build` runs `vue-tsc && vite build`, so a type error or a broken
+`vue-tsc` stops the build entirely. Two pins matter and must move together:
+
+- **vue-tsc 2.x** — the 1.x line patches TypeScript internals that moved in
+  5.4, and fails against TS 5.9 with
+  `Search string not found: "/supportedTSExtensions = .*(?=;)/"`.
+- **typescript `~5.9.3`** — pinned to a minor, not a caret, so a `npm install`
+  cannot pull a TypeScript that the installed vue-tsc has not caught up with.
+
+If the build dies in `vue-tsc` with a "Search string not found" error, these
+two have drifted apart.
+
 ### Adding an Integration (no core changes needed)
 
 An integration that shells out to a CLI or calls an API should be a **pack**,
