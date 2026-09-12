@@ -7,22 +7,32 @@
   >
     <div class="ss-glow"></div>
 
+    <!-- Weather pinned to its own corner so it never competes for reading
+         space with the clock or the widgets below it. -->
+    <div v-if="showWeatherWidget" class="ss-weather-corner">
+      <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-corner-icon" />
+      <div class="ss-weather-corner-info">
+        <span class="ss-weather-corner-temp">{{ tempStr }}</span>
+        <span class="ss-weather-corner-loc">{{ location }}</span>
+      </div>
+    </div>
+
     <div class="ss-body" :style="driftStyle">
       <div class="ss-time">{{ timeStr }}</div>
       <div class="ss-date">{{ dateStr }}</div>
     </div>
 
-    <div class="ss-bottom-bar" :class="`ss-bottom-bar-count-${activeWidgetCount}`">
-      <div v-if="showWeatherWidget" class="ss-card ss-card-weather">
-        <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-icon" />
-        <div class="ss-card-info">
-          <span class="ss-card-main">{{ tempStr }}</span>
-          <span class="ss-card-sub">{{ location }}</span>
-        </div>
-      </div>
-
-      <div v-if="showNewsWidget" class="ss-card ss-card-news">
-        <FontAwesomeIcon :icon="['fas', 'newspaper']" class="ss-card-icon" />
+    <!-- Everything below the clock is one narrow, centered column rather than
+         a row of side-by-side cards -- on a small touch panel a row like that
+         squeezed each widget's text down to the point of being unreadable.
+         News gets the most weight since it is the thing you actually read;
+         market and world clock are compact chips underneath it. -->
+    <div
+      v-if="showNewsWidget || showMarketWidget || showWorldClockWidget"
+      class="ss-widgets"
+    >
+      <div v-if="showNewsWidget" class="ss-news">
+        <FontAwesomeIcon :icon="['fas', 'newspaper']" class="ss-news-icon" />
 
         <!-- A vertical carousel: the whole track slides up by one row per
              tick, so several headlines share one widget instead of a single
@@ -38,15 +48,15 @@
               class="ss-news-slide"
               :aria-hidden="i !== newsIndex"
             >
-              <span class="ss-card-main ss-news-title">{{ item.title }}</span>
-              <span class="ss-card-sub">{{ item.source }}</span>
+              <span class="ss-news-title">{{ item.title }}</span>
+              <span class="ss-news-source">{{ item.source }}</span>
             </div>
 
             <div v-if="!newsHeadlines.length" class="ss-news-slide">
-              <span class="ss-card-main ss-news-title">
+              <span class="ss-news-title">
                 {{ newsError || 'Loading headlines…' }}
               </span>
-              <span class="ss-card-sub">News</span>
+              <span class="ss-news-source">News</span>
             </div>
           </div>
         </div>
@@ -61,17 +71,19 @@
         </div>
       </div>
 
-      <div v-if="showMarketWidget" class="ss-card ss-card-market">
-        <div v-for="coin in marketPrices" :key="coin.id" class="ss-market-row">
-          <span class="ss-market-symbol">{{ coin.symbol }}</span>
-          <span class="ss-market-price">${{ coin.price.toLocaleString() }}</span>
+      <div v-if="showMarketWidget || showWorldClockWidget" class="ss-chip-row">
+        <div v-if="showMarketWidget" class="ss-chip">
+          <div v-for="coin in marketPrices" :key="coin.id" class="ss-chip-line">
+            <span class="ss-chip-label">{{ coin.symbol }}</span>
+            <span class="ss-chip-value">${{ coin.price.toLocaleString() }}</span>
+          </div>
         </div>
-      </div>
 
-      <div v-if="showWorldClockWidget" class="ss-card ss-card-worldclock">
-        <div v-for="tz in worldClocks" :key="tz.label" class="ss-worldclock-row">
-          <span class="ss-worldclock-label">{{ tz.label }}</span>
-          <span class="ss-worldclock-time">{{ tz.time }}</span>
+        <div v-if="showWorldClockWidget" class="ss-chip">
+          <div v-for="tz in worldClocks" :key="tz.label" class="ss-chip-line">
+            <span class="ss-chip-label">{{ tz.label }}</span>
+            <span class="ss-chip-value">{{ tz.time }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -120,10 +132,6 @@ const showWeatherWidget = computed(() => settingsStore.screensaverWidgets.includ
 const showNewsWidget = computed(() => settingsStore.screensaverWidgets.includes('news'))
 const showMarketWidget = computed(() => settingsStore.screensaverWidgets.includes('market'))
 const showWorldClockWidget = computed(() => settingsStore.screensaverWidgets.includes('worldclock'))
-
-const activeWidgetCount = computed(() =>
-  [showWeatherWidget, showNewsWidget, showMarketWidget, showWorldClockWidget].filter(w => w.value).length
-)
 
 const WORLD_CLOCK_ZONES = [
   { label: 'New York', tz: 'America/New_York' },
@@ -208,7 +216,7 @@ onUnmounted(() => {
 }
 
 .ss-time {
-  font-size: clamp(5rem, 16vw, 10rem);
+  font-size: clamp(4.5rem, 15vw, 10rem);
   font-weight: 200;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.92);
@@ -222,114 +230,83 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.38);
 }
 
-.ss-bottom-bar {
+/* --- Weather: pinned to its own corner ------------------------------------ */
+/* Kept out of the reading column entirely -- it's a glance-and-go value, not
+   something you read, so it never has to fight the news carousel for space
+   on a small touch panel. */
+.ss-weather-corner {
   position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  width: min(92vw, 900px);
-}
-
-.ss-card {
-  flex: 1 1 220px;
-  min-width: 200px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.9rem 1.2rem;
+  top: clamp(1rem, 3vw, 2rem);
+  right: clamp(1rem, 3vw, 2rem);
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 0.6rem;
+  padding: 0.5rem 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  pointer-events: none;
 }
 
-.ss-card-weather {
-  padding: 1.1rem 1.4rem;
-}
-
-.ss-weather-icon {
-  font-size: 2rem;
+.ss-weather-corner-icon {
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
   color: #ff9f0a;
   flex-shrink: 0;
 }
 
-.ss-card-weather .ss-weather-icon {
-  font-size: 3.2rem;
+.ss-weather-corner-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
 }
 
-.ss-card-icon {
-  font-size: 1.6rem;
+.ss-weather-corner-temp {
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ss-weather-corner-loc {
+  font-size: clamp(0.65rem, 1vw, 0.78rem);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* --- Widgets column: news + chips, stacked below the clock ---------------- */
+/* One narrow column instead of a row of cards. A row squeezed each widget's
+   text down until it wasn't readable on a small touch screen; stacking lets
+   every widget use the full width for its own content instead. */
+.ss-widgets {
+  margin-top: clamp(1.75rem, 5vh, 3.25rem);
+  width: min(92vw, 640px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.9rem;
+}
+
+.ss-news {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+}
+
+.ss-news-icon {
+  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
   color: rgba(255, 255, 255, 0.5);
   flex-shrink: 0;
 }
 
-.ss-card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.ss-card-main {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.ss-card-weather .ss-card-main {
-  font-size: 1.6rem;
-}
-
-.ss-card-main-truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 260px;
-}
-
-.ss-card-sub {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.ss-card-market,
-.ss-card-worldclock {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
-}
-
-.ss-market-row,
-.ss-worldclock-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.ss-market-symbol,
-.ss-worldclock-label {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.ss-market-price,
-.ss-worldclock-time {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-/* --- News carousel ------------------------------------------------------- */
 /* One row is visible; the track slides up a row at a time. Height is bound to
    the two lines inside a slide so the transform lands exactly on a boundary. */
 .ss-news-viewport {
   /* One row tall. The track is translated by exactly this much per step --
      a percentage would resolve against the track's own height (every slide
      stacked), which moved the carousel far past the end and showed blanks. */
-  --ss-news-slide-h: 3.1em;
+  --ss-news-slide-h: 3.6em;
   flex: 1;
   min-width: 0;
   height: var(--ss-news-slide-h);
@@ -356,8 +333,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
+  text-align: left;
 }
 
 .ss-news-title {
@@ -365,21 +343,28 @@ onUnmounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.25;
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.92);
   white-space: normal;
+}
+
+.ss-news-source {
+  font-size: clamp(0.7rem, 1.2vw, 0.85rem);
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .ss-news-progress {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-left: var(--spacing-sm, 8px);
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .ss-news-dot {
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.25);
   transition: background 300ms ease, transform 300ms ease;
@@ -387,7 +372,46 @@ onUnmounted(() => {
 
 .ss-news-dot.is-active {
   background: rgba(255, 255, 255, 0.85);
-  transform: scale(1.5);
+  transform: scale(1.6);
+}
+
+/* Market + world clock: compact chips underneath the news card, side by side
+   on wide screens and stacked on a narrow touch panel. */
+.ss-chip-row {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.ss-chip {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.ss-chip-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.ss-chip-label {
+  font-size: clamp(0.75rem, 1.4vw, 0.9rem);
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.ss-chip-value {
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -396,6 +420,14 @@ onUnmounted(() => {
   }
   .ss-news-dot {
     transition: none;
+  }
+}
+
+/* Small touch panels: stack the chips instead of trying to fit them
+   side by side, since that's where a row of cards became unreadable. */
+@media (max-width: 480px) {
+  .ss-chip-row {
+    flex-direction: column;
   }
 }
 </style>

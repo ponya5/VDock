@@ -163,3 +163,36 @@ describe('carousel transform', () => {
     expect(source).toContain('prefers-reduced-motion')
   })
 })
+
+describe('screensaver layout', () => {
+  const source = readFileSync(
+    resolve(__dirname, '../components/ScreenSaver.vue'),
+    'utf-8'
+  )
+
+  it('pins weather to its own corner, separate from the widgets column', () => {
+    // Weather is a glance value, not something to read -- it must not sit
+    // inside the same reading column as news/market/world clock, where it
+    // would compete with the headline for space on a small touch screen.
+    expect(source).toContain('ss-weather-corner')
+    expect(source).toMatch(/\.ss-weather-corner\s*\{[^}]*position:\s*absolute/)
+  })
+
+  it('gives the news headline more visual weight than the secondary chips', () => {
+    const titleSize = source.match(/\.ss-news-title\s*\{[^}]*font-size:\s*clamp\(([^,]+)/)
+    const chipSize = source.match(/\.ss-chip-value\s*\{[^}]*font-size:\s*clamp\(([^,]+)/)
+    expect(titleSize).toBeTruthy()
+    expect(chipSize).toBeTruthy()
+    // Compare the clamp() minimums: the headline should never be the small one.
+    expect(parseFloat(titleSize![1])).toBeGreaterThanOrEqual(parseFloat(chipSize![1]))
+  })
+
+  it('stacks market and world clock as compact chips, not full-width cards', () => {
+    expect(source).toContain('ss-chip-row')
+    expect(source).toContain('ss-chip-line')
+  })
+
+  it('stacks the chips on a narrow touch panel instead of squeezing them side by side', () => {
+    expect(source).toMatch(/max-width:\s*480px[\s\S]*?ss-chip-row[\s\S]*?flex-direction:\s*column/)
+  })
+})
