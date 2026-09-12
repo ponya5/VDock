@@ -1,7 +1,41 @@
 """Button and action data models."""
+import logging
 from dataclasses import dataclass, field, asdict
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Type, TypeVar, Union
 from enum import Enum
+
+logger = logging.getLogger('vdock')
+
+E = TypeVar('E', bound=Enum)
+
+
+def coerce_enum(enum_cls: Type[E], value: Any, default: E) -> Union[E, str]:
+    """Coerce a persisted string to `enum_cls`, tolerating unknown values.
+
+    These models sit on the profile save path (PUT /api/profiles/<id> rebuilds
+    a Profile via from_dict and persists to_dict), so raising here turns any
+    value the backend does not recognise into a 500 and loses the user's
+    layout. Instead, keep the raw string and let the action executor decide at
+    press time whether it can dispatch it -- the executor, not the persistence
+    layer, is the authority on what is runnable.
+    """
+    if value is None:
+        return default
+    if isinstance(value, enum_cls):
+        return value
+    try:
+        return enum_cls(value)
+    except ValueError:
+        logger.debug(
+            "Unrecognised %s %r kept as a raw string",
+            enum_cls.__name__, value
+        )
+        return value
+
+
+def enum_value(value: Any) -> Any:
+    """Unwrap an Enum to its value, passing raw strings through untouched."""
+    return value.value if isinstance(value, Enum) else value
 
 
 class ActionType(str, Enum):
@@ -13,7 +47,9 @@ class ActionType(str, Enum):
     MULTI_ACTION = 'multi_action'
     MACRO = 'macro'
     SYSTEM_CONTROL = 'system_control'
+    SYSTEM = 'system'
     SYSTEM_METRIC = 'system_metric'
+    UI_CONTROL = 'ui_control'
     CROSS_PLATFORM = 'cross_platform'
     FOLDER = 'folder'
     PLUGIN = 'plugin'
@@ -32,6 +68,10 @@ class ActionType(str, Enum):
     METRIC_GPU_USAGE = 'metric_gpu_usage'
     METRIC_GPU_MEMORY_FREQ = 'metric_gpu_memory_freq'
     METRIC_GPU_MEMORY_USAGE = 'metric_gpu_memory_usage'
+    METRIC_DISK = 'metric_disk'
+    METRIC_NETWORK = 'metric_network'
+    METRIC_TEMPERATURE = 'metric_temperature'
+    METRIC_BATTERY = 'metric_battery'
     # Time options
     TIME_WORLD_CLOCK = 'time_world_clock'
     TIME_TIMER = 'time_timer'
@@ -63,26 +103,29 @@ class ButtonShape(str, Enum):
     RECTANGLE = 'rectangle'
     ROUNDED = 'rounded'
     CIRCLE = 'circle'
+    HEXAGON = 'hexagon'
+    DIAMOND = 'diamond'
+    OCTAGON = 'octagon'
 
 
 @dataclass
 class ButtonAction:
     """Represents an action that a button can perform."""
-    type: ActionType
+    type: Union[ActionType, str]
     config: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'type': self.type.value,
+            'type': enum_value(self.type),
             'config': self.config
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ButtonAction':
         """Create from dictionary."""
         return cls(
-            type=ActionType(data['type']),
+            type=coerce_enum(ActionType, data['type'], ActionType.CUSTOM),
             config=data.get('config', {})
         )
 
@@ -93,22 +136,25 @@ class Button:
     id: str
     label: str = ''
     secondary_label: str = ''
-    icon: Optional[str] = None
+    # FontAwesome icons arrive as ['fas', 'home']; custom icons as a path.
+    icon: Optional[Union[str, List[str]]] = None
     icon_type: str = 'fontawesome'  # fontawesome, material, custom
     media_url: Optional[str] = None  # For video/gif/image backgrounds
     media_type: Optional[str] = None  # video, gif, image
     action: Optional[ButtonAction] = None
-    shape: ButtonShape = ButtonShape.ROUNDED
+    shape: Union[ButtonShape, str] = ButtonShape.ROUNDED
     position: Dict[str, int] = field(default_factory=lambda: {'row': 0, 'col': 0})
     size: Dict[str, int] = field(default_factory=lambda: {'rows': 1, 'cols': 1})
     style: Dict[str, Any] = field(default_factory=dict)
+    # Visual layer model (fill / effect / icon / label / behaviour).
+    layers: Optional[Dict[str, Any]] = None
     tooltip: str = ''
     enabled: bool = True
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         data = asdict(self)
-        data['shape'] = self.shape.value
+        data['shape'] = enum_value(self.shape)
         if self.action:
             data['action'] = self.action.to_dict()
         return data
@@ -128,10 +174,13 @@ class Button:
             media_url=data.get('media_url'),
             media_type=data.get('media_type'),
             action=action,
-            shape=ButtonShape(data.get('shape', 'rounded')),
+            shape=coerce_enum(
+                ButtonShape, data.get('shape'), ButtonShape.ROUNDED
+            ),
             position=data.get('position', {'row': 0, 'col': 0}),
             size=data.get('size', {'rows': 1, 'cols': 1}),
             style=data.get('style', {}),
+            layers=data.get('layers'),
             tooltip=data.get('tooltip', ''),
             enabled=data.get('enabled', True)
         )

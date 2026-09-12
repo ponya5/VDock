@@ -21,7 +21,7 @@ class MacroAction(BaseAction):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.hotkey_action = HotkeyAction({'combo': ''})  # Initialize with empty config
+        self.hotkey_action = HotkeyAction({'keys': []})  # Initialize with empty config
         self.command_action = CommandAction({'command': ''})  # Initialize with empty config
 
     def execute(self) -> ActionResult:
@@ -45,6 +45,7 @@ class MacroAction(BaseAction):
                 return ActionResult(False, 'No macro steps defined')
             
             results = []
+            failures = []
             for i, step in enumerate(steps):
                 step_type = step.get('type')
                 
@@ -72,17 +73,36 @@ class MacroAction(BaseAction):
                         'result': result.to_dict() if hasattr(result, 'to_dict') else result
                     })
 
-                    # If any step fails, log it but continue
+                    # If any step fails, log it and keep running the rest.
                     if not result.success:
+                        failures.append(
+                            f'step {i + 1} ({step_type}): {result.message}'
+                        )
                         logger.warning(f"Macro step {i + 1} failed: {result.message}")
 
                 except Exception as e:
                     logger.error(f"Error executing macro step {i + 1}: {e}")
+                    failures.append(f'step {i + 1} ({step_type}): {e}')
                     results.append({
                         'step': i + 1,
                         'type': step_type,
                         'error': str(e)
                     })
+
+            if failures:
+                return ActionResult(
+                    success=False,
+                    message=(
+                        f'Macro ran {len(results)} steps, '
+                        f'{len(failures)} failed'
+                    ),
+                    data={
+                        'steps_executed': len(results),
+                        'results': results,
+                        'failures': failures
+                    },
+                    details='; '.join(failures)
+                )
 
             return ActionResult(
                 success=True,
@@ -103,9 +123,8 @@ class MacroAction(BaseAction):
         if not keys:
             return ActionResult(False, 'No keys specified')
 
-        # Convert keys list to combo string for HotkeyAction
-        combo = '+'.join(keys)
-        self.hotkey_action.config = {'combo': combo}
+        # HotkeyAction.validate() accepts 'keys' (list) or 'hotkey' (string).
+        self.hotkey_action.config = {'keys': keys}
         return self.hotkey_action.execute()
     
     def _execute_delay(self, step: Dict[str, Any]) -> ActionResult:
@@ -151,7 +170,7 @@ class MacroAction(BaseAction):
         """Execute clipboard copy (Ctrl+C equivalent)"""
         try:
             # Simulate Ctrl+C
-            self.hotkey_action.config = {'combo': 'ctrl+c'}
+            self.hotkey_action.config = {'keys': ['ctrl', 'c']}
             self.hotkey_action.execute()
             time.sleep(0.1)  # Wait for clipboard to update
 
@@ -175,7 +194,7 @@ class MacroAction(BaseAction):
         """Execute clipboard paste (Ctrl+V equivalent)"""
         try:
             # Simulate Ctrl+V
-            self.hotkey_action.config = {'combo': 'ctrl+v'}
+            self.hotkey_action.config = {'keys': ['ctrl', 'v']}
             self.hotkey_action.execute()
 
             # Try to read what was pasted

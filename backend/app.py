@@ -218,17 +218,27 @@ def handle_disconnect():
 
 @socketio.on('execute_action')
 def handle_execute_action(data):
-    """Execute an action via WebSocket."""
-    if 'action' not in data:
+    """Execute an action via WebSocket.
+
+    The client's `request_id` is echoed back on `action_result` so concurrent
+    actions can be told apart. Without it the client has no way to match a
+    result to the action that produced it.
+    """
+    request_id = data.get('request_id') if isinstance(data, dict) else None
+
+    if not isinstance(data, dict) or 'action' not in data:
         emit('action_result', {
-            'error': 'No action provided', 'success': False
+            'request_id': request_id,
+            'error': 'No action provided',
+            'success': False,
+            'message': 'No action provided'
         })
         return
 
     action_data = data['action']
     result = action_executor.execute_action(action_data)
 
-    emit('action_result', result.to_dict())
+    emit('action_result', {'request_id': request_id, **result.to_dict()})
 
 
 @socketio.on('user_settings_changed')

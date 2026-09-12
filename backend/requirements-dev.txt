@@ -1,0 +1,8 @@
+# Test-only dependencies. Not installed by setup.bat / setup.sh, which install
+# requirements.txt for end users.
+#
+#   pip install -r requirements-dev.txt
+#   pytest
+pytest==8.3.4
+pytest-mock==3.14.0
+hypothesis==6.122.3

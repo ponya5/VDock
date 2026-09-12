@@ -5,7 +5,11 @@ type SocketListener = (...args: any[]) => void
 
 class SocketClient {
   private socket: Socket | null = null
-  private actionCallbacks: Map<number, (result: ActionResult) => void> = new Map()
+  private actionCallbacks: Map<number, {
+    resolve: (result: ActionResult) => void
+    reject: (error: Error) => void
+    timeout: ReturnType<typeof setTimeout>
+  }> = new Map()
   private actionIdCounter = 0
   private pendingListeners: Array<{ event: string; callback: SocketListener }> = []
 
@@ -25,13 +29,19 @@ class SocketClient {
       console.log('Connected to VDock server:', data.message)
     })
 
-    this.socket.on('action_result', (result: ActionResult) => {
-      // Find and call the callback for this action
-      const callback = this.actionCallbacks.get(this.actionIdCounter - 1)
-      if (callback) {
-        callback(result)
-        this.actionCallbacks.delete(this.actionIdCounter - 1)
-      }
+    this.socket.on('action_result', (result: ActionResult & { request_id?: number }) => {
+      // Match the result to the action that produced it. Resolving by the
+      // latest issued id meant that with two actions in flight the first
+      // result settled the second one's promise and the second was dropped.
+      const { request_id: requestId, ...actionResult } = result
+      if (requestId === undefined) return
+
+      const pending = this.actionCallbacks.get(requestId)
+      if (!pending) return
+
+      clearTimeout(pending.timeout)
+      this.actionCallbacks.delete(requestId)
+      pending.resolve(actionResult as ActionResult)
     })
 
     this.socket.on('connect_error', (error) => {
@@ -67,18 +77,19 @@ class SocketClient {
       }
 
       const actionId = this.actionIdCounter++
-      this.actionCallbacks.set(actionId, resolve)
-
-      // Send action
-      this.socket.emit('execute_action', { action })
 
       // Timeout after 30 seconds
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         if (this.actionCallbacks.has(actionId)) {
           this.actionCallbacks.delete(actionId)
           reject(new Error('Action execution timeout'))
         }
       }, 30000)
+
+      this.actionCallbacks.set(actionId, { resolve, reject, timeout })
+
+      // Send action, tagged so the server can echo the id back
+      this.socket.emit('execute_action', { action, request_id: actionId })
     })
   }
 
