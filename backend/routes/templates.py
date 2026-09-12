@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime
 from flask import Blueprint, jsonify, request
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 templates_bp = Blueprint('templates', __name__)
 
@@ -23,7 +23,7 @@ def get_template_files() -> List[str]:
     return [f for f in os.listdir(TEMPLATES_DIR) if f.endswith('.json')]
 
 
-def load_template(template_id: str) -> Dict[str, Any] | None:
+def load_template(template_id: str) -> Optional[Dict[str, Any]]:
     """Load a template by its ID."""
     template_files = get_template_files()
 

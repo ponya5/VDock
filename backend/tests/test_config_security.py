@@ -7,6 +7,7 @@ The repo is public. A working API key committed to it is a leaked key no matter
 how it is labelled, and a fallback password is only ever a trap -- harmless
 until someone turns authentication on, then a wide-open door.
 """
+import ast
 import os
 import re
 import sys
@@ -135,3 +136,52 @@ def test_command_execution_is_off_by_default():
 def test_server_binds_to_localhost_by_default():
     assert Config.HOST in ('127.0.0.1', 'localhost')
     assert Config.ALLOW_LAN is False
+
+
+# --- the Python floor the installers promise ---------------------------------
+
+def test_backend_source_parses_on_the_minimum_python():
+    """setup.bat/setup.sh accept Python 3.9, so the source must run on it.
+
+    PEP 604 unions (`X | None`) in a signature are evaluated when the function
+    is defined, so a single one crashes the import on 3.9 -- after setup has
+    already told the user they are fine. Caught exactly that in
+    routes/templates.py.
+    """
+    offenders = []
+    skip = {'venv', '__pycache__', 'node_modules', 'tests'}
+
+    for path in BACKEND.rglob('*.py'):
+        if any(part in skip for part in path.parts):
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding='utf-8'))
+        except SyntaxError as e:  # pragma: no cover - would fail everywhere
+            offenders.append(f'{path.name}: unparseable ({e})')
+            continue
+
+        for node in ast.walk(tree):
+            # `X | Y` used as an annotation (PEP 604, 3.10+)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                annotations = [a.annotation for a in node.args.args if a.annotation]
+                if node.returns:
+                    annotations.append(node.returns)
+                for ann in annotations:
+                    if _uses_pep604(ann):
+                        offenders.append(
+                            f'{path.relative_to(BACKEND)}:{node.lineno} '
+                            f'({node.name}) uses `X | Y` in a signature'
+                        )
+
+    assert not offenders, (
+        'These need Python 3.10+, but the installers accept 3.9:\n  '
+        + '\n  '.join(offenders)
+    )
+
+
+def _uses_pep604(node) -> bool:
+    """True when an annotation contains a `X | Y` union."""
+    return any(
+        isinstance(child, ast.BinOp) and isinstance(child.op, ast.BitOr)
+        for child in ast.walk(node)
+    )

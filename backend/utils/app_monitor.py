@@ -7,7 +7,7 @@ import logging
 import platform
 import threading
 import time
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import psutil
 
@@ -49,7 +49,7 @@ class AppMonitor:
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.current_app: Optional[Dict[str, Any]] = None
-        self.callbacks: list[Callable[[Dict[str, Any]], None]] = []
+        self.callbacks: List[Callable[[Dict[str, Any]], None]] = []
 
     def get_active_window_app_windows(self) -> Optional[Dict[str, Any]]:
         """Get active window app info on Windows."""
