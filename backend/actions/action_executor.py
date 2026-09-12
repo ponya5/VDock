@@ -16,6 +16,8 @@ from .weather_action import WeatherAction
 from .ui_control_action import UIControlAction
 from .http_request_action import HTTPRequestAction
 from .obs_action import OBSAction
+from .toggle_action import ToggleAction
+from .random_action import RandomAction
 
 
 class ActionExecutor:
@@ -51,6 +53,8 @@ class ActionExecutor:
         'previous_page': NavigationAction,
         'ui_control': UIControlAction,
         'http_request': HTTPRequestAction,
+        'toggle': ToggleAction,
+        'random': RandomAction,
         # OBSAction was written but never registered here, so the OBS entries
         # the picker offered all failed with "Unknown action type" while the
         # README advertised OBS support.
@@ -166,8 +170,8 @@ class ActionExecutor:
             
             action = action_class(config)
             
-            # For multi-actions, set the executor reference
-            if action_type == 'multi_action':
+            # Actions that run other actions need the executor back.
+            if action_type in ('multi_action', 'toggle', 'random'):
                 action.executor = self
             
             # Validate and execute

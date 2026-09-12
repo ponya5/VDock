@@ -1,7 +1,7 @@
 {
   "name": "vdock-frontend",
   "version": "2.0.0",
-  "description": "VDock frontend — Vue 3 + TypeScript UI for the virtual stream deck",
+  "description": "VDock frontend \u2014 Vue 3 + TypeScript UI for the virtual stream deck",
   "license": "MIT",
   "author": "Daniel Shalom (https://github.com/ponya5)",
   "repository": {
@@ -39,10 +39,10 @@
     "@vue/test-utils": "^2.4.6",
     "fast-check": "^4.6.0",
     "jsdom": "^28.1.0",
-    "typescript": "^5.3.3",
+    "typescript": "~5.9.3",
     "vite": "^5.0.10",
     "vite-plugin-pwa": "^0.17.4",
     "vitest": "^4.1.0",
-    "vue-tsc": "^1.8.27"
+    "vue-tsc": "^2.2.12"
   }
 }

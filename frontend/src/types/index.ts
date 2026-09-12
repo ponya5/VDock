@@ -37,6 +37,13 @@ export type ActionType =
   | 'next_page'
   | 'previous_page'
   | 'home_page'
+  | 'goto_page'
+  | 'switch_scene'
+  | 'next_scene'
+  | 'previous_scene'
+  // Composite actions
+  | 'toggle'
+  | 'random'
   // Screenshot
   | 'screenshot'
   // UI Control

@@ -123,9 +123,46 @@
         {{ resolvedVisual.label.text }}
       </div>
 
-      <div v-if="resolvedVisual.label.secondary && showLabels && !isSpecialActionType" class="button-secondary-label" :style="secondaryLabelStyle">
-        {{ resolvedVisual.label.secondary }}
+      <div
+        v-if="(liveState?.sublabel || resolvedVisual.label.secondary) && showLabels && !isSpecialActionType"
+        class="button-secondary-label"
+        :style="secondaryLabelStyle"
+      >
+        {{ liveState?.sublabel || resolvedVisual.label.secondary }}
       </div>
+    </div>
+
+    <!-- Live action state: a spinner while the action runs, a tick or cross
+         when it finishes, and a persistent badge for widget buttons (a PR
+         count, a CI result). Hidden in edit mode, where it would just be
+         noise over the edit controls. -->
+    <div
+      v-if="liveState && liveState.status !== 'idle' && !isEditMode"
+      class="button-state"
+      :class="`is-${liveState.status}`"
+      :title="liveState.message || ''"
+    >
+      <FontAwesomeIcon
+        v-if="liveState.status === 'running'"
+        :icon="['fas', 'spinner']"
+        spin
+      />
+      <FontAwesomeIcon
+        v-else-if="liveState.status === 'success' && !liveState.badge"
+        :icon="['fas', 'check']"
+      />
+      <FontAwesomeIcon
+        v-else-if="liveState.status === 'error'"
+        :icon="['fas', 'triangle-exclamation']"
+      />
+    </div>
+
+    <div
+      v-if="liveState?.badge && !isEditMode"
+      class="button-badge"
+      :class="`tone-${liveState.tone || 'normal'}`"
+    >
+      {{ liveState.badge }}
     </div>
 
     <div v-if="button.tooltip && !isEditMode && showTooltips" class="button-tooltip">
@@ -149,6 +186,7 @@ import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
 import CalendarButton from './CalendarButton.vue'
+import { useButtonStateStore } from '@/stores/buttonState'
 
 interface Props {
   button: Button
@@ -170,6 +208,9 @@ const props = withDefaults(defineProps<Props>(), {
   buttonSize: 1.0,
   gridIndex: 0
 })
+
+const buttonStateStore = useButtonStateStore()
+const liveState = computed(() => buttonStateStore.states[props.button.id])
 
 const emit = defineEmits<{
   click: [button: Button]
@@ -941,6 +982,76 @@ function triggerRipple(event: PointerEvent) {
   0% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 52, 152, 219), 0.6); }
   70% { box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb, 52, 152, 219), 0); }
   100% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 52, 152, 219), 0); }
+}
+
+/* --- Live action state --------------------------------------------------- */
+/* A press used to give no feedback on the button itself, so a Claude prompt
+   that runs for half a minute looked like a tap that did nothing. */
+.button-state {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 4;
+  font-size: clamp(0.75rem, 1vw + 0.4rem, 0.95rem);
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.button-state.is-running {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.button-state.is-success {
+  color: #4ade80;
+  animation: state-pop 220ms ease-out;
+}
+
+.button-state.is-error {
+  color: #f87171;
+  animation: state-pop 220ms ease-out;
+}
+
+@keyframes state-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Persistent value for widget buttons: a PR count, a CI result. */
+.button-badge {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 4;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: clamp(0.7rem, 0.9vw + 0.35rem, 0.85rem);
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  color: #fff;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+
+.button-badge.tone-warning {
+  background: rgba(217, 119, 6, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.button-badge.tone-critical {
+  background: rgba(220, 38, 38, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* The running state is a progress indicator, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .button-state.is-success,
+  .button-state.is-error {
+    animation: none;
+  }
 }
 </style>
 

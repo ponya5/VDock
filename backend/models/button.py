@@ -92,6 +92,14 @@ class ActionType(str, Enum):
     OBS_SWITCH_SCENE = 'obs_switch_scene'
     OBS_TOGGLE_SOURCE = 'obs_toggle_source'
     OBS_TOGGLE_FILTER = 'obs_toggle_filter'
+    # Composite actions
+    TOGGLE = 'toggle'
+    RANDOM = 'random'
+    # Scene / page navigation
+    GOTO_PAGE = 'goto_page'
+    SWITCH_SCENE = 'switch_scene'
+    NEXT_SCENE = 'next_scene'
+    PREVIOUS_SCENE = 'previous_scene'
     # Custom (placeholder action type)
     CUSTOM = 'custom'
 

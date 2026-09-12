@@ -725,9 +725,82 @@ _OBS: Tuple[ActionSpec, ...] = (
 )
 
 
+
+# --- Composite & navigation extras -------------------------------------------
+
+_COMPOSITE: Tuple[ActionSpec, ...] = (
+    ActionSpec(
+        id='toggle', label='Toggle (Two States)', category='custom',
+        icon=('fas', 'toggle-on'), action_type='toggle',
+        description='One button, two actions, alternating on each press -- '
+                    'mute/unmute, start/stop, on/off.',
+        keywords=('switch', 'on off', 'two state', 'multi action switch'),
+        config_fields=(
+            ConfigField('on_action', 'First action', 'steps', required=True,
+                        help='Runs on the first press.'),
+            ConfigField('off_action', 'Second action', 'steps', required=True,
+                        help='Runs on the next press.'),
+            ConfigField('on_label', 'First label', 'text', default='On'),
+            ConfigField('off_label', 'Second label', 'text', default='Off'),
+        ),
+    ),
+    ActionSpec(
+        id='random', label='Random Action', category='custom',
+        icon=('fas', 'shuffle'), action_type='random',
+        description='Run one of several actions at random. The basis of a '
+                    'soundboard shuffle key.',
+        keywords=('shuffle', 'chance', 'soundboard', 'pick'),
+        config_fields=(
+            ConfigField('actions', 'Actions', 'steps', required=True),
+            ConfigField('avoid_repeat', 'Avoid repeating the last pick',
+                        'boolean', default=True),
+        ),
+    ),
+)
+
+_NAV_EXTRAS: Tuple[ActionSpec, ...] = (
+    ActionSpec(
+        id='goto_page', label='Go To Page', category='navigation',
+        icon=('fas', 'file-lines'), action_type='goto_page',
+        runs_on=RUNS_FRONTEND,
+        description='Jump straight to a page number in this scene.',
+        keywords=('page', 'jump', 'goto'),
+        default_config={'page': 1},
+        config_fields=(
+            ConfigField('page', 'Page number', 'number', required=True,
+                        default=1, help='1 is the first page.'),
+        ),
+    ),
+    ActionSpec(
+        id='switch_scene', label='Switch Scene', category='navigation',
+        icon=('fas', 'layer-group'), action_type='switch_scene',
+        runs_on=RUNS_FRONTEND,
+        description='Switch to another scene by name, the way Stream Deck '
+                    'switches profiles.',
+        keywords=('scene', 'profile', 'switch', 'change'),
+        config_fields=(
+            ConfigField('scene', 'Scene name', 'text', required=True,
+                        placeholder='Cursor'),
+        ),
+    ),
+    ActionSpec(
+        id='next_scene', label='Next Scene', category='navigation',
+        icon=('fas', 'forward'), action_type='next_scene',
+        runs_on=RUNS_FRONTEND, description='Move to the next scene.',
+        keywords=('scene', 'forward'),
+    ),
+    ActionSpec(
+        id='previous_scene', label='Previous Scene', category='navigation',
+        icon=('fas', 'backward'), action_type='previous_scene',
+        runs_on=RUNS_FRONTEND, description='Move to the previous scene.',
+        keywords=('scene', 'back'),
+    ),
+)
+
+
 ACTION_CATALOG: Tuple[ActionSpec, ...] = (
-    _SYSTEM + _WINDOWS + _NAVIGATION + _MEDIA + _WEB + _HTTP + _TEXT
-    + _METRICS + _TIME + _WEATHER + _OBS + _CUSTOM
+    _SYSTEM + _WINDOWS + _NAVIGATION + _NAV_EXTRAS + _MEDIA + _WEB + _HTTP
+    + _TEXT + _METRICS + _TIME + _WEATHER + _OBS + _CUSTOM + _COMPOSITE
 )
 
 CATALOG_BY_ID: Dict[str, ActionSpec] = {spec.id: spec for spec in ACTION_CATALOG}

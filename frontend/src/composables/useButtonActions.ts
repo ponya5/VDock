@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useActionCatalogStore } from '@/stores/actionCatalog'
+import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 
@@ -13,6 +14,7 @@ export function useButtonActions() {
   const profilesStore = useProfilesStore()
   const notificationsStore = useNotificationsStore()
   const actionCatalogStore = useActionCatalogStore()
+  const buttonStateStore = useButtonStateStore()
 
   const currentProfile = computed(() => dashboardStore.currentProfile)
   const currentScene = computed(() => dashboardStore.currentScene)
@@ -98,7 +100,19 @@ export function useButtonActions() {
       return
     }
 
+    // Show the press on the button face. A Claude prompt can run for half a
+    // minute; without this the deck looks like it ignored the tap.
+    buttonStateStore.markRunning(button.id)
+
     dashboardStore.executeButtonAction(button).then((result) => {
+      buttonStateStore.markFinished(button.id, result)
+      showActionResult(result)
+    }).catch((error) => {
+      const result = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Action failed'
+      }
+      buttonStateStore.markFinished(button.id, result)
       showActionResult(result)
     })
   }

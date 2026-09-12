@@ -481,6 +481,49 @@ export const useDashboardStore = defineStore('dashboard', () => {
       setPage(0)
       return { success: true, message: 'Navigated to home page' }
     }
+
+    if (button.action.type === 'goto_page') {
+      // Pages are 1-based in the UI and 0-based in the store.
+      const requested = Number(button.action.config?.page ?? 1)
+      const pageCount = currentScene.value?.pages?.length ?? 0
+      const index = Math.round(requested) - 1
+
+      if (!Number.isFinite(requested) || index < 0 || index >= pageCount) {
+        return {
+          success: false,
+          message: `Page ${requested} does not exist in this scene`
+        }
+      }
+      setPage(index)
+      return { success: true, message: `Page ${index + 1}` }
+    }
+
+    if (button.action.type === 'next_scene') {
+      nextScene()
+      return { success: true, message: 'Next scene' }
+    }
+
+    if (button.action.type === 'previous_scene') {
+      previousScene()
+      return { success: true, message: 'Previous scene' }
+    }
+
+    if (button.action.type === 'switch_scene') {
+      const wanted = String(button.action.config?.scene ?? '').trim().toLowerCase()
+      const scenes = currentProfile.value?.scenes ?? []
+      const index = scenes.findIndex(s => s.name.trim().toLowerCase() === wanted)
+
+      if (index === -1) {
+        return {
+          success: false,
+          message: wanted
+            ? `No scene named "${button.action.config?.scene}"`
+            : 'No scene configured for this button'
+        }
+      }
+      setScene(index)
+      return { success: true, message: `Scene: ${scenes[index].name}` }
+    }
     
     try {
       const response = await apiClient.post('/actions/execute', {
