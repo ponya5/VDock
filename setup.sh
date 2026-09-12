@@ -25,7 +25,7 @@ install_dependencies() {
   echo "  =========================================="
   echo ""
 
-  echo "  [1/7] Checking Python..."
+  echo "  [1/8] Checking Python..."
   if ! command -v python3 >/dev/null 2>&1; then
     err "Python 3 not found. Install 3.9+ from https://www.python.org/downloads/"
     return 1
@@ -40,7 +40,7 @@ install_dependencies() {
     return 1
   fi
 
-  echo "  [2/7] Checking Node.js..."
+  echo "  [2/8] Checking Node.js..."
   export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
   if ! command -v node >/dev/null 2>&1; then
     err "Node.js not found. Install 18+ from https://nodejs.org/"
@@ -49,7 +49,7 @@ install_dependencies() {
   ok "Node.js $(node --version)"
   ok "npm $(npm --version)"
 
-  echo "  [3/7] Python virtual environment..."
+  echo "  [3/8] Python virtual environment..."
   local venv_activate="$ROOT/backend/venv/bin/activate"
   if [[ ! -f "$venv_activate" ]]; then
     echo "           Creating venv..."
@@ -59,14 +59,14 @@ install_dependencies() {
     ok "Virtual environment already exists"
   fi
 
-  echo "  [4/7] Backend dependencies..."
+  echo "  [4/8] Backend dependencies..."
   # shellcheck disable=SC1090
   source "$venv_activate"
   python -m pip install --upgrade pip --quiet --disable-pip-version-check >/dev/null 2>&1 || warn "pip upgrade failed (non-fatal)"
   pip install -r "$ROOT/backend/requirements.txt" --quiet --disable-pip-version-check || return 1
   ok "Backend dependencies installed"
 
-  echo "  [5/7] Frontend dependencies..."
+  echo "  [5/8] Frontend dependencies..."
   if [[ ! -d "$ROOT/frontend/node_modules" ]]; then
     ( cd "$ROOT/frontend" && npm install --no-fund --no-audit ) || return 1
     ok "Frontend node_modules installed"
@@ -74,7 +74,7 @@ install_dependencies() {
     ok "frontend/node_modules already present"
   fi
 
-  echo "  [6/7] Electron dependencies..."
+  echo "  [6/8] Electron dependencies..."
   if [[ ! -d "$ROOT/frontend/electron/node_modules" ]]; then
     ( cd "$ROOT/frontend/electron" && npm install --no-fund --no-audit ) || return 1
     ok "Electron node_modules installed"
@@ -82,7 +82,7 @@ install_dependencies() {
     ok "frontend/electron/node_modules already present"
   fi
 
-  echo "  [7/7] Data directories..."
+  echo "  [7/8] Data directories..."
   for data_dir in \
     "$ROOT/backend/data" \
     "$ROOT/backend/data/profiles" \
@@ -96,6 +96,39 @@ install_dependencies() {
     mkdir -p "$data_dir"
   done
   ok "Data directories ready"
+
+  echo "  [8/8] Integrations..."
+  if [ ! -f "$ROOT/backend/.env" ] && [ -f "$ROOT/backend/.env.example" ]; then
+    cp "$ROOT/backend/.env.example" "$ROOT/backend/.env"
+    ok "Created backend/.env from the example"
+  else
+    ok "backend/.env already exists"
+  fi
+
+  # VDock works with none of these. Each pack detects what it can use and greys
+  # out only the actions it cannot run, so this is information, not a
+  # requirement.
+  found_any=""
+  if command -v claude >/dev/null 2>&1; then
+    ok "Claude Code CLI detected - Claude actions enabled"; found_any=1
+  else
+    echo "  [ --]  Claude Code CLI not found - https://claude.com/product/claude-code"
+  fi
+  if command -v gh >/dev/null 2>&1; then
+    ok "GitHub CLI detected - GitHub actions enabled"; found_any=1
+  else
+    echo "  [ --]  GitHub CLI not found - https://cli.github.com"
+  fi
+  if command -v git >/dev/null 2>&1; then
+    ok "Git detected - repository-aware actions enabled"
+  else
+    echo "  [ --]  Git not found - repo detection falls back to a default folder"
+  fi
+  if [ -z "$found_any" ]; then
+    echo "         No integration CLIs found. VDock still works fully;"
+    echo "         the Claude and GitHub buttons will show why they are unavailable."
+  fi
+
   chmod +x "$ROOT/setup.sh" "$ROOT/launch.sh" 2>/dev/null || true
   return 0
 }

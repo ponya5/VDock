@@ -91,7 +91,7 @@ echo     Installing VDock dependencies
 echo   ==========================================
 echo.
 
-echo   [1/7] Checking Python...
+echo   [1/8] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
     echo.
@@ -113,7 +113,7 @@ if !PYMAJ! EQU 3 if !PYMIN! LSS 9 (
     exit /b 1
 )
 
-echo   [2/7] Checking Node.js...
+echo   [2/8] Checking Node.js...
 set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
 node --version >nul 2>&1
 if errorlevel 1 (
@@ -123,7 +123,7 @@ if errorlevel 1 (
 for /f "tokens=*" %%v in ('node --version 2^>^&1') do echo   [OK]    Node.js %%v
 for /f "tokens=*" %%v in ('npm --version 2^>^&1') do echo   [OK]    npm %%v
 
-echo   [3/7] Python virtual environment...
+echo   [3/8] Python virtual environment...
 if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
     echo           Creating venv...
     python -m venv "%ROOT%\backend\venv"
@@ -133,7 +133,7 @@ if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
     echo   [OK]    Virtual environment already exists
 )
 
-echo   [4/7] Backend dependencies...
+echo   [4/8] Backend dependencies...
 call "%ROOT%\backend\venv\Scripts\activate.bat"
 python -m pip install --upgrade pip --quiet --disable-pip-version-check >nul 2>&1
 pip install -r "%ROOT%\backend\requirements.txt" --quiet --disable-pip-version-check
@@ -143,7 +143,7 @@ if errorlevel 1 (
 )
 echo   [OK]    Backend dependencies installed
 
-echo   [5/7] Frontend dependencies...
+echo   [5/8] Frontend dependencies...
 if not exist "%ROOT%\frontend\node_modules" (
     pushd "%ROOT%\frontend"
     call npm install --no-fund --no-audit
@@ -157,7 +157,7 @@ if not exist "%ROOT%\frontend\node_modules" (
     echo   [OK]    frontend\node_modules already present
 )
 
-echo   [6/7] Electron dependencies...
+echo   [6/8] Electron dependencies...
 if not exist "%ROOT%\frontend\electron\node_modules" (
     pushd "%ROOT%\frontend\electron"
     call npm install --no-fund --no-audit
@@ -171,7 +171,7 @@ if not exist "%ROOT%\frontend\electron\node_modules" (
     echo   [OK]    frontend\electron\node_modules already present
 )
 
-echo   [7/7] Data directories...
+echo   [7/8] Data directories...
 for %%d in (
     "%ROOT%\backend\data"
     "%ROOT%\backend\data\profiles"
@@ -185,6 +185,45 @@ for %%d in (
     if not exist %%d mkdir %%d 2>nul
 )
 echo   [OK]    Data directories ready
+
+echo   [8/8] Integrations...
+if not exist "%ROOT%\backend\.env" (
+    if exist "%ROOT%\backend\.env.example" (
+        copy /y "%ROOT%\backend\.env.example" "%ROOT%\backend\.env" >nul 2>&1
+        echo   [OK]    Created backend\.env from the example
+    )
+) else (
+    echo   [OK]    backend\.env already exists
+)
+
+REM VDock works with none of these. Each pack detects what it can use and
+REM greys out only the actions it cannot run, so this is information, not a
+REM requirement.
+set "FOUND_ANY="
+where claude >nul 2>&1
+if not errorlevel 1 (
+    echo   [OK]    Claude Code CLI detected - Claude actions enabled
+    set "FOUND_ANY=1"
+) else (
+    echo   [ --]   Claude Code CLI not found - install from https://claude.com/product/claude-code
+)
+where gh >nul 2>&1
+if not errorlevel 1 (
+    echo   [OK]    GitHub CLI detected - GitHub actions enabled
+    set "FOUND_ANY=1"
+) else (
+    echo   [ --]   GitHub CLI not found - install from https://cli.github.com
+)
+where git >nul 2>&1
+if not errorlevel 1 (
+    echo   [OK]    Git detected - repository-aware actions enabled
+) else (
+    echo   [ --]   Git not found - repo detection will fall back to a default folder
+)
+if not defined FOUND_ANY (
+    echo           No integration CLIs found. VDock still works fully;
+    echo           the Claude and GitHub buttons will show why they are unavailable.
+)
 exit /b 0
 
 :create_desktop_shortcut

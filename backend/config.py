@@ -18,7 +18,11 @@ class Config:
     
     # Security settings
     REQUIRE_AUTH = os.environ.get('REQUIRE_AUTH', 'False').lower() == 'true'  # No login screen in the UI; opt in via env var
-    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD') or 'admin'  # Defaults to admin
+    # No default password. 'admin' as a fallback is only ever a trap: it is
+    # fine while REQUIRE_AUTH is False (the default), and becomes a wide-open
+    # door the moment someone turns auth on without setting a password.
+    # init_app() refuses to start in that state instead.
+    AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', '')
     TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
     
     # Rate limiting settings
@@ -56,14 +60,32 @@ class Config:
         'media_play_pause', 'media_next', 'media_previous', 'media_stop'
     ]
     
-    # Weather API settings
-    # Default demo key for immediate functionality (limited usage)
-    # Users should replace with their own API key for production use
-    WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', 'REDACTED_WEATHERAPI_KEY')
+    # Weather API settings.
+    #
+    # No default key: a working credential committed to a public repo is a
+    # credential leak, and this one was dead config anyway -- WeatherAction
+    # reads WEATHERAPI_KEY from the environment directly, and the screensaver
+    # widget uses Open-Meteo, which needs no key at all. Set this only if you
+    # want the backend weather action to use weatherapi.com.
+    WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')
     
+    @classmethod
+    def validate(cls) -> None:
+        """Refuse to start in a configuration that is quietly insecure.
+
+        Raises:
+            RuntimeError: authentication is on but no password is set.
+        """
+        if cls.REQUIRE_AUTH and not cls.AUTH_PASSWORD:
+            raise RuntimeError(
+                'REQUIRE_AUTH is enabled but AUTH_PASSWORD is not set. '
+                'Set AUTH_PASSWORD in backend/.env, or disable REQUIRE_AUTH.'
+            )
+
     @classmethod
     def init_app(cls):
         """Initialize application directories and configuration."""
+        cls.validate()
         cls.DATA_DIR.mkdir(exist_ok=True)
         cls.PROFILES_DIR.mkdir(exist_ok=True)
         cls.UPLOADS_DIR.mkdir(exist_ok=True)

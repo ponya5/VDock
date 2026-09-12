@@ -13,9 +13,9 @@
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
 
-**Your customizable control deck — buttons, scenes, system actions, widgets, and animated backgrounds in one beautiful interface.**
+**Your customizable control deck — drive Claude Code, GitHub, Cursor and Copilot from real buttons, alongside system actions, live widgets, and animated backgrounds.**
 
-[Quick Start](#-quick-start) · [Features](#-features) · [Setup Menu](#-one-setup-for-everything) · [Creator](#-creator) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
+[Quick Start](#-quick-start) · [Features](#-features) · [Integrations](docs/INTEGRATIONS.md) · [Setup Menu](#-one-setup-for-everything) · [Creator](#-creator) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
 
 </div>
 
@@ -23,9 +23,16 @@
 
 ## What is VDock?
 
-VDock is a **virtual stream deck** for your computer. Build button grids for everyday tasks — launch apps, run hotkeys, control volume, monitor CPU/GPU, switch OBS scenes, show weather, and more.
+VDock is a **virtual stream deck** for your computer — no hardware required.
 
-Use it as a **desktop app (Electron)** or in your **browser**. Everything is editable: layouts, scenes, pages, icons, backgrounds, and actions.
+Build button grids for everyday tasks (launch apps, hotkeys, volume, CPU/GPU
+monitoring, OBS scenes, weather) **and for the work you actually do all day**:
+run a Claude Code prompt, open a pull request, check CI, fire Cursor's Composer,
+or POST to any webhook — all from a button.
+
+**117 built-in actions** across 12 categories. Use it as a **desktop app
+(Electron)** or in your **browser**. Everything is editable: layouts, scenes,
+pages, icons, backgrounds, and actions.
 
 ```mermaid
 flowchart LR
@@ -50,20 +57,37 @@ flowchart LR
 | 📌 **Docked sidebar** | Persistent buttons across all pages |
 | 🧩 **Templates** | Pre-built button sets to get started fast |
 
+### AI & developer integrations
+| | |
+|---|---|
+| 🤖 **Claude Code** | Run prompts and slash commands (`/code-review`, `/commit`), resume sessions. Uses your existing `claude` login |
+| 💬 **Claude API** | One-shot prompts straight to the clipboard (optional API key) |
+| 🐙 **GitHub** | PRs, issues, checks, workflow runs via `gh` — plus live PR count and CI status **on the button face** |
+| ✨ **Cursor** | Composer, AI chat, inline edit, accept/reject diff |
+| 🧑‍✈️ **GitHub Copilot** | Chat, inline suggestions, `/explain` `/fix` `/tests` `/doc` |
+| 🪝 **HTTP / webhooks** | Any REST endpoint — Discord, Slack, n8n, Zapier, Home Assistant |
+
+> Integrations are optional and self-detecting. VDock works fully with none of
+> them installed; actions it can't run are greyed out with the reason.
+
 ### Actions & automation
 | | |
 |---|---|
 | ⌨️ **Hotkeys & macros** | Keyboard shortcuts and chained actions |
 | 🖥️ **System control** | Volume, brightness, media, power, window management |
 | 🚀 **Apps & URLs** | Launch programs, open sites, run commands |
+| 🔀 **Toggles & random** | Two-state switches (mute/unmute) and shuffle keys |
+| 🧭 **Scene navigation** | Jump to a page, switch scenes, auto-switch by focused app |
 | 🎬 **OBS integration** | Scenes, sources, streaming controls |
 
 ### Live widgets
 | | |
 |---|---|
 | 📊 **System metrics** | CPU, RAM, GPU, disk, network |
-| 🌤️ **Weather** | Auto or manual city |
+| 🌤️ **Weather** | Auto or manual city, no API key needed |
 | 🕐 **Time widgets** | World clock, timer, countdown |
+| 📰 **News carousel** | RSS/Atom headlines that slide through on the screensaver — no API key |
+| 🔔 **Live button state** | Spinner while an action runs, badges for PR counts and CI status |
 
 ### Look & feel
 | | |
@@ -79,12 +103,25 @@ flowchart LR
 
 ### Prerequisites
 
+**Required**
+
 | Requirement | Version | Download |
 |-------------|---------|----------|
 | Python | 3.9+ | [python.org](https://www.python.org/downloads/) |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
 
 > **Windows:** During Python install, check **"Add Python to PATH"**.
+
+**Optional — only for the integrations you want**
+
+| Tool | Unlocks | Install |
+|------|---------|---------|
+| [Claude Code](https://claude.com/product/claude-code) | Claude prompt, slash command and session actions | `npm i -g @anthropic-ai/claude-code` |
+| [GitHub CLI](https://cli.github.com) | PR, issue, checks and workflow actions | `winget install GitHub.cli` then `gh auth login` |
+| Git | Repo-aware actions (branch, CI status) | [git-scm.com](https://git-scm.com/) |
+
+Setup detects each of these and tells you what it found. Nothing here is
+required to run VDock.
 
 ### 1. Get the code
 
@@ -139,7 +176,8 @@ The setup menu handles all first-run tasks:
 ========================================================
 
   [1] Full setup (recommended)
-      Install Python + Node deps, Electron, desktop shortcut
+      Install Python + Node deps, Electron, desktop shortcut,
+      create backend/.env, detect integration CLIs
 
   [2] Install dependencies only
       Skip desktop shortcut creation
@@ -192,7 +230,23 @@ VDock/
 
 - **Appearance** — button size, backgrounds, animations, touch mode
 - **Server** — auto-start on boot, open settings in new browser tab
-- **Integration** — weather location, auto scene switching per app
+- **Widgets & Integration** — weather location, RSS news feeds, screensaver
+  widgets, auto scene switching per app
+
+### Optional API keys
+
+Everything below is optional; the matching actions are greyed out with an
+explanation until you set them. Edit `backend/.env`:
+
+| Variable | Needed for | Notes |
+|----------|-----------|-------|
+| `ANTHROPIC_API_KEY` | "Ask Claude (API)" only | The Claude **Code** actions use your existing `claude` login and need no key |
+| `GITHUB_TOKEN` | Live PR / CI / notification widgets only | The `gh` actions use your existing `gh auth login`. Needs `repo` + `notifications` scopes |
+| `VDOCK_DEFAULT_REPO_PATH` | Fallback repo when VDock can't infer one | Optional |
+
+> VDock never sends these to the frontend — the action list exposes only
+> whether an integration is configured, and secrets are stripped from any
+> command output before it reaches a notification or the log.
 
 ---
 
@@ -205,8 +259,10 @@ VDock/
 | Setup failed on npm | Delete `frontend/node_modules`, run setup option **2** again |
 | Electron doesn't open | Open **http://localhost:3000** manually in your browser |
 | macOS blocks launcher | Right-click `VDock.command` → **Open** the first time |
+| Claude / GitHub buttons greyed out | Hover for the reason. Usually the CLI isn't installed or `gh auth login` hasn't been run |
+| Keystroke actions do nothing | They only fire when the target editor is focused — this is deliberate, so keys never land in the wrong window |
 
-More help: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) · [`docs/setup/DESKTOP_LAUNCHER.md`](docs/setup/DESKTOP_LAUNCHER.md)
+More help: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) · [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) · [`docs/setup/DESKTOP_LAUNCHER.md`](docs/setup/DESKTOP_LAUNCHER.md)
 
 ---
 
@@ -226,7 +282,19 @@ npm install
 npm run dev
 ```
 
-See [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) for architecture and contribution notes.
+### Tests
+
+```bash
+# Backend (install test deps once)
+cd backend && pip install -r requirements-dev.txt && pytest
+
+# Frontend
+cd frontend && npm test
+```
+
+See [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md)
+for architecture, how to add an action type, and how to write an integration
+pack.
 
 ---
 
