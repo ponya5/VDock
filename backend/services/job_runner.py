@@ -7,25 +7,44 @@ timeout while the work carries on invisibly, and the user has no idea whether
 it succeeded.
 
 So actions the catalog marks ``long_running`` are submitted here instead. The
-request returns a job id immediately and the result arrives over Socket.IO:
+request returns a job id immediately and the client learns the outcome by
+polling ``GET /api/actions/jobs/<id>``.
+
+An ``action_job`` event is also emitted at each transition::
 
     action_job  { job_id, status: running,   action_type }
     action_job  { job_id, status: succeeded, result: {...} }
     action_job  { job_id, status: failed,    result: {...} }
 
-The pool is bounded so a wall of button presses cannot spawn unbounded
-subprocesses, and finished jobs are retained briefly so a client that missed
-the event can still poll for the outcome.
+**but on this stack that event does not reach anyone.** Measured with
+Flask-SocketIO 5.3.5 in ``async_mode='threading'`` behind the Werkzeug
+development server: a connected client receives events emitted from inside a
+Socket.IO handler (which is why the existing settings sync works), and never
+events emitted from an HTTP request handler or a background thread.
+Flask-SocketIO documents the limitation. Running under eventlet or gevent
+would fix it, but their monkeypatching breaks the blocking subprocess,
+pyautogui and pynput calls the action system depends on.
+
+So polling is the mechanism, not the fallback, and finished jobs are retained
+long enough to be collected. The emit stays because it costs nothing and
+starts working the moment the server runs under an async worker.
 """
 import logging
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger('vdock')
+
+
+def _default_spawn(target: Callable[..., Any], *args: Any) -> Any:
+    """Plain daemon thread, used until app.py supplies the Socket.IO spawner."""
+    thread = threading.Thread(target=target, args=args, daemon=True)
+    thread.start()
+    return thread
+
 
 MAX_WORKERS = 4
 #: How long a finished job stays readable via get_job().
@@ -70,17 +89,29 @@ class JobRunner:
     """Runs long actions off the request thread and broadcasts the outcome."""
 
     def __init__(self, max_workers: int = MAX_WORKERS) -> None:
-        self._pool = ThreadPoolExecutor(
-            max_workers=max_workers, thread_name_prefix='vdock-job'
-        )
         self._jobs: Dict[str, Job] = {}
         self._lock = threading.Lock()
+        #: Bounds concurrency without owning the threads, since the spawner
+        #: may be Flask-SocketIO's rather than ours.
+        self._slots = threading.Semaphore(max_workers)
         #: Injected by app.py; kept optional so tests need no socket server.
         self._emit: Optional[Callable[[str, Dict[str, Any]], None]] = None
+        self._spawn: Callable[..., Any] = _default_spawn
 
     def set_emitter(self, emit: Callable[[str, Dict[str, Any]], None]) -> None:
         """Provide the Socket.IO broadcast function."""
         self._emit = emit
+
+    def set_spawner(self, spawn: Callable[..., Any]) -> None:
+        """Provide the function used to start background work.
+
+        app.py passes socketio.start_background_task. This matters: a thread
+        the Socket.IO server did not spawn cannot emit to clients in threading
+        mode -- emits from it are dropped with no error, which left every
+        long-running action waiting on the polling fallback instead of
+        reporting as soon as it finished.
+        """
+        self._spawn = spawn
 
     def _broadcast(self, job: Job) -> None:
         if self._emit is None:
@@ -129,10 +160,11 @@ class JobRunner:
             self._jobs[job.id] = job
 
         self._broadcast(job)
-        self._pool.submit(self._run, job, run)
+        self._spawn(self._run, job, run)
         return job
 
     def _run(self, job: Job, run: Callable[[], Any]) -> None:
+        self._slots.acquire()
         try:
             result = run()
             payload = result.to_dict() if hasattr(result, 'to_dict') else dict(result)
@@ -145,6 +177,7 @@ class JobRunner:
             job.status = STATUS_FAILED
             job.result = {'success': False, 'message': f'Action failed: {e}'}
         finally:
+            self._slots.release()
             job.finished_at = time.time()
             self._broadcast(job)
 
@@ -157,7 +190,8 @@ class JobRunner:
             return sum(1 for j in self._jobs.values() if j.finished_at is None)
 
     def shutdown(self, wait: bool = False) -> None:
-        self._pool.shutdown(wait=wait)
+        """No-op for the thread spawner; kept for API compatibility."""
+        return None
 
 
 #: Process-wide runner, mirroring how app.py holds its other singletons.

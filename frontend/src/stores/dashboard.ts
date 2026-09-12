@@ -408,9 +408,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
   /**
    * Resolve when a background action finishes.
    *
-   * Listens for the `action_job` broadcast and falls back to polling, so a
-   * dropped socket still produces a result rather than a button that spins
-   * forever.
+   * Polling is the primary channel, not a fallback. The backend also emits an
+   * `action_job` event, but on the current server stack (Flask-SocketIO in
+   * threading mode behind Werkzeug) events emitted from an HTTP handler or a
+   * background thread never reach clients -- only those emitted from inside a
+   * Socket.IO handler do. The listener is kept because it costs nothing and
+   * starts working the moment the server runs under an async worker; until
+   * then the poll is what actually resolves this.
    */
   function awaitActionJob(jobId: string, actionType: string): Promise<ActionResult> {
     return new Promise((resolve) => {
@@ -433,16 +437,21 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
       socketClient.on('action_job', onEvent)
 
-      const poll = setInterval(async () => {
+      const checkOnce = async () => {
         try {
           const { data } = await apiClient.get(`/actions/jobs/${jobId}`)
           if (data?.status && data.status !== 'running') {
             finish(data.result ?? { success: false, message: 'Action finished' })
           }
         } catch {
-          // Keep waiting; the socket may still deliver.
+          // Transient; the next tick will try again.
         }
-      }, 2000)
+      }
+
+      // Short actions finish in well under a second, so check straight away
+      // rather than making every press wait out a full interval.
+      const poll = setInterval(checkOnce, 700)
+      void checkOnce()
 
       const giveUp = setTimeout(() => {
         finish({

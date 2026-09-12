@@ -82,6 +82,9 @@ plugin_manager.load_builtin_packs()
 # thread and report back over Socket.IO.
 job_runner = get_job_runner()
 job_runner.set_emitter(lambda event, payload: socketio.emit(event, payload))
+# Threads the Socket.IO server did not spawn cannot emit to clients in
+# threading mode -- their emits are dropped silently.
+job_runner.set_spawner(socketio.start_background_task)
 
 # Register blueprints
 app.register_blueprint(auth_bp)
