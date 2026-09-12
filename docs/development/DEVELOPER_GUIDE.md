@@ -82,6 +82,60 @@ ACTION_CLASSES = {
 }
 ```
 
+3. **Add it to the `ActionType` enum** in `backend/models/button.py`. This step
+   is not optional and is easy to miss: `ButtonAction.from_dict` runs on every
+   profile save, so a type the enum does not recognise is kept as a raw string
+   and logged rather than strongly typed. `tests/test_catalog.py` fails if a
+   catalog entry has no enum member.
+
+4. **Add a catalog entry** in `backend/actions/catalog.py`. This is what makes
+   the action appear in the button picker and gives the editor its config form:
+
+```python
+ActionSpec(
+    id='my_action', label='My Action', category='system',
+    icon=('fas', 'star'), action_type='my_action',
+    description='What it does, in one line.',
+    keywords=('search', 'terms'),
+    config_fields=(
+        ConfigField('my_param', 'My parameter', 'text', required=True),
+    ),
+)
+```
+
+   Add the same string to the `ActionType` union in
+   `frontend/src/types/index.ts`. Do **not** hand-edit
+   `ButtonActionsSidebar.vue` or add a `v-if` block to `ButtonEditor.vue` --
+   both are generated from the catalog now.
+
+`pytest tests/test_catalog.py` checks all of this: every catalog entry has a
+handler, an enum member and a frontend union member. Before the catalog
+existed, 22 of the 46 entries the picker offered dispatched to an action type
+with no handler and failed on press, because nothing enforced these steps.
+
+### Adding an Integration (no core changes needed)
+
+An integration that shells out to a CLI or calls an API should be a **pack**,
+not a new action class. Packs live in `backend/integrations/`, subclass
+`BasePlugin`, and are discovered automatically by `load_builtin_packs()` -- the
+executor falls through to the plugin manager for any type it does not handle
+itself, so no core file changes.
+
+A pack must:
+
+- expose a module-level `Plugin` class in a `*_pack.py` module;
+- implement `get_action_specs()` so its actions appear in the picker with a
+  category, icon and config fields;
+- implement `is_available()` so a missing CLI or unset token greys the actions
+  out with a reason, instead of failing when the button is pressed;
+- run every shell command through `utils.subprocess_runner` (argv list,
+  `shell=False`) -- integration arguments are user-authored text, and a Claude
+  prompt containing `;` or backticks must be sent, not executed;
+- mark slow actions `long_running=True` so they run on the job runner rather
+  than blocking the request past the frontend's 30-second timeout.
+
+See `backend/integrations/claude_pack.py` for a worked example.
+
 ### Adding API Endpoints
 
 Add routes in `backend/app.py`:

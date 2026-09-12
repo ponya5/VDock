@@ -18,6 +18,7 @@ from models import BUILTIN_THEMES, Theme
 from actions import ActionExecutor
 from plugins import PluginManager
 from utils import FileManager, setup_logger
+from services.job_runner import get_job_runner
 
 # Import route blueprints
 from routes.auth import auth_bp
@@ -76,6 +77,11 @@ action_executor = ActionExecutor(plugin_manager)
 # Load user drop-in plugins and the integration packs that ship with VDock.
 plugin_manager.load_plugins()
 plugin_manager.load_builtin_packs()
+
+# Long-running actions (Claude Code prompts, gh commands) run off the request
+# thread and report back over Socket.IO.
+job_runner = get_job_runner()
+job_runner.set_emitter(lambda event, payload: socketio.emit(event, payload))
 
 # Register blueprints
 app.register_blueprint(auth_bp)

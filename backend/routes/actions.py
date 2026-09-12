@@ -37,6 +37,39 @@ def execute_action():
     if action_executor is None:
         return jsonify({'error': 'Action executor unavailable', 'success': False}), 503
         
+    action_type = action_data.get('type', '')
+
+    # Long actions cannot finish inside the request. Hand them to the job
+    # runner and answer immediately; the result arrives over Socket.IO.
+    if not data.get('wait') and action_executor.is_long_running(action_type):
+        from services.job_runner import get_job_runner
+
+        job = get_job_runner().submit(
+            action_type,
+            lambda: action_executor.execute_action(action_data),
+            button_id=data.get('button_id'),
+        )
+        return jsonify({
+            'success': True,
+            'pending': True,
+            'job_id': job.id,
+            'message': 'Running...',
+            'data': {'job_id': job.id, 'action_type': action_type},
+        }), 202
+
     result = action_executor.execute_action(action_data)
     
     return jsonify(result.to_dict())
+
+
+@actions_bp.route('/api/actions/jobs/<job_id>', methods=['GET'])
+@require_auth
+def get_action_job(job_id):
+    """Poll a background action, for clients that missed the socket event."""
+    from services.job_runner import get_job_runner
+
+    job = get_job_runner().get_job(job_id)
+    if job is None:
+        return jsonify({'error': 'Job not found', 'success': False}), 404
+
+    return jsonify({'success': True, **job.to_dict()})

@@ -87,6 +87,25 @@ class ActionExecutor:
             details=result.get('details'),
         )
 
+    def is_long_running(self, action_type: str) -> bool:
+        """True when this action should run off the request thread.
+
+        Built-in actions are quick. Pack actions that shell out to a CLI are
+        not: claude_prompt routinely takes 30s and is allowed ten minutes,
+        while the frontend's axios client times out at 30 -- so running one
+        synchronously reports a timeout in the UI while the work carries on.
+        """
+        manager = self.plugin_manager
+        if manager is None:
+            return False
+        try:
+            for spec in manager.get_action_specs():
+                if spec.action_type == action_type:
+                    return spec.long_running
+        except Exception:  # pragma: no cover - defensive
+            return False
+        return False
+
     def execute_action(self, action_data: Dict[str, Any]) -> ActionResult:
         """Execute an action based on its configuration.
         

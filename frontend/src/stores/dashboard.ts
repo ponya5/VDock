@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Profile, Page, Button, Scene } from '@/types'
+import type { Profile, Page, Button, Scene, ActionResult } from '@/types'
 import apiClient from '@/api/client'
+import socketClient from '@/api/socket'
 import { useSettingsStore } from './settings'
 import { createDefaultScene } from '@/utils/defaultProfile'
 
@@ -404,6 +405,55 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  /**
+   * Resolve when a background action finishes.
+   *
+   * Listens for the `action_job` broadcast and falls back to polling, so a
+   * dropped socket still produces a result rather than a button that spins
+   * forever.
+   */
+  function awaitActionJob(jobId: string, actionType: string): Promise<ActionResult> {
+    return new Promise((resolve) => {
+      let settled = false
+
+      const finish = (result: ActionResult) => {
+        if (settled) return
+        settled = true
+        socketClient.off('action_job', onEvent)
+        clearInterval(poll)
+        clearTimeout(giveUp)
+        resolve(result)
+      }
+
+      const onEvent = (payload: any) => {
+        if (payload?.job_id !== jobId) return
+        if (payload.status === 'running') return
+        finish(payload.result ?? { success: false, message: 'Action finished' })
+      }
+
+      socketClient.on('action_job', onEvent)
+
+      const poll = setInterval(async () => {
+        try {
+          const { data } = await apiClient.get(`/actions/jobs/${jobId}`)
+          if (data?.status && data.status !== 'running') {
+            finish(data.result ?? { success: false, message: 'Action finished' })
+          }
+        } catch {
+          // Keep waiting; the socket may still deliver.
+        }
+      }, 2000)
+
+      const giveUp = setTimeout(() => {
+        finish({
+          success: false,
+          message: `${actionType} is still running`,
+          data: { job_id: jobId }
+        })
+      }, 10 * 60 * 1000)
+    })
+  }
+
   async function executeButtonAction(button: Button) {
     if (!button.action) return
     
@@ -425,8 +475,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
     
     try {
       const response = await apiClient.post('/actions/execute', {
-        action: button.action
+        action: button.action,
+        button_id: button.id
       })
+
+      // A long action (a Claude Code prompt, a gh command) cannot finish
+      // inside the request -- the backend runs it in the background and
+      // returns 202 with a job id. Wait for the `action_job` event instead of
+      // letting axios time out at 30s while the work carries on invisibly.
+      if (response.data?.pending && response.data.job_id) {
+        return await awaitActionJob(response.data.job_id, button.action.type)
+      }
       
       // Handle fullscreen action locally
       if (button.action.type === 'system_control' && 
