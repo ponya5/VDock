@@ -274,3 +274,53 @@ def test_shipped_template_buttons_fit_their_grid(name, template):
             assert 0 <= col < grid['cols'], f'{name}: col {col} out of range'
             assert (row, col) not in occupied, f'{name}: overlap at {row},{col}'
             occupied.add((row, col))
+
+
+# --- config field names must match what the handler reads --------------------
+
+def _keys_read_by(method_name: str) -> set:
+    """Config keys a CrossPlatformAction handler actually reads."""
+    import inspect
+    source = inspect.getsource(getattr(CrossPlatformAction, method_name))
+    return set(re.findall(r"config\.get\(\s*'([a-z_]+)'", source))
+
+
+_XP_HANDLER_FOR = {
+    'open_app': '_open_app',
+    'close_app': '_close_app',
+    'open_folder': '_open_folder',
+    'open_file': '_open_file',
+    'screenshot': '_screenshot',
+    'run_command': '_run_command_action',
+}
+
+
+@pytest.mark.parametrize(
+    'spec',
+    [s for s in _CROSS_PLATFORM
+     if s.config_fields and s.default_config.get('action') in _XP_HANDLER_FOR],
+    ids=lambda s: s.id,
+)
+def test_cross_platform_config_fields_match_the_handler(spec):
+    """A field the handler never reads silently does nothing.
+
+    Caught a real one: the picker offered "Open Application" with a field named
+    'app', but CrossPlatformAction._open_app reads 'path' -- so configuring it
+    from the UI produced a button that failed with "Application path/name not
+    specified". Same for 'close_app', which reads 'app_name'.
+    """
+    handler = _XP_HANDLER_FOR[spec.default_config['action']]
+    try:
+        accepted = _keys_read_by(handler)
+    except AttributeError:
+        pytest.skip(f'{handler} is not a method on CrossPlatformAction')
+
+    if not accepted:
+        pytest.skip(f'{handler} reads no config keys')
+
+    for field in spec.config_fields:
+        assert field.name in accepted, (
+            f'{spec.id} offers a field {field.name!r} that '
+            f'CrossPlatformAction.{handler} never reads; it accepts '
+            f'{sorted(accepted)}'
+        )

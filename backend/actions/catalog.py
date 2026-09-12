@@ -371,8 +371,9 @@ _WEB: Tuple[ActionSpec, ...] = (
         description='Open an application by name or path.',
         keywords=('app', 'launch', 'program'),
         config_fields=(
-            ConfigField('app', 'Application', 'text', required=True,
-                        placeholder='notepad'),
+            # CrossPlatformAction._open_app reads 'path' (or 'name').
+            ConfigField('path', 'Application', 'text', required=True,
+                        placeholder='notepad.exe'),
         ),
     ),
     ActionSpec(
@@ -382,7 +383,8 @@ _WEB: Tuple[ActionSpec, ...] = (
         description='Close a running application by process name.',
         keywords=('app', 'quit', 'kill'),
         config_fields=(
-            ConfigField('app', 'Process name', 'text', required=True,
+            # CrossPlatformAction._close_app reads 'app_name'.
+            ConfigField('app_name', 'Process name', 'text', required=True,
                         placeholder='notepad.exe'),
         ),
     ),

@@ -162,6 +162,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
+import { useActionCatalogStore } from '@/stores/actionCatalog'
 import { useProfilesStore } from '@/stores/profiles'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -187,6 +188,7 @@ import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
+const actionCatalogStore = useActionCatalogStore()
 const profilesStore = useProfilesStore()
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
@@ -487,12 +489,94 @@ const actionCategories = ref([
   }
 ])
 
+/**
+ * Categories contributed by the backend action catalog (AI Assistants,
+ * Developer, and anything an integration pack adds).
+ *
+ * The hardcoded list above only covers presetRegistry entries, so without this
+ * the Claude, Cursor, Copilot and GitHub actions were reachable only from the
+ * button editor's "Browse Button Actions" panel -- the main sidebar offered 71
+ * items and none of them. Only categories the hardcoded list does not already
+ * cover are appended, so nothing appears twice.
+ */
+/**
+ * Names the hardcoded list already offers, so a catalog entry for the same
+ * thing is not listed twice.
+ *
+ * Deduplicating by name rather than by category matters: excluding whole
+ * categories hid genuinely new actions that happen to share a category with
+ * existing ones -- `http_request` sits in "Web & Apps" and the window
+ * management entries in "System", and both would have been dropped.
+ */
+const hardcodedActionNames = computed(
+  () => new Set(
+    actionCategories.value.flatMap(c => c.actions.map(a => a.name.toLowerCase()))
+  )
+)
+
+const catalogCategories = computed(() => {
+  const alreadyListed = hardcodedActionNames.value
+
+  return actionCatalogStore.populatedCategories
+    .map(category => ({
+      id: `catalog-${category.id}`,
+      name: category.label,
+      actions: actionCatalogStore
+        .actionsInCategory(category.id)
+        .filter(spec => !alreadyListed.has(spec.label.toLowerCase()))
+        .map(spec => ({
+          id: spec.id,
+          name: spec.label,
+          icon: spec.icon,
+          // Marks this as a catalog entry so resolveButtonForAction builds the
+          // button from the spec (type *and* config) instead of guessing.
+          catalogId: spec.id,
+          unavailableReason: spec.unavailable_reason
+        }))
+    }))
+    .filter(category => category.actions.length > 0)
+})
+
+/**
+ * Hardcoded categories first, with catalog entries merged into the category of
+ * the same name, and genuinely new categories (AI Assistants, Developer)
+ * appended. Merging rather than appending keeps one "Web & Apps" section
+ * instead of two that differ only in contents.
+ */
+/** Catalog category name -> the hardcoded section it belongs in. */
+const CATEGORY_ALIASES: Record<string, string> = {
+  'text & clipboard': 'text & input',
+  'system metrics': 'monitor metrics',
+  time: 'time & date',
+  streaming: 'streaming (obs)',
+  custom: 'custom media'
+}
+
+const allCategories = computed(() => {
+  const merged = actionCategories.value.map(category => ({ ...category }))
+  const byName = new Map(merged.map(c => [c.name.toLowerCase(), c]))
+  const appended: typeof merged = []
+
+  for (const category of catalogCategories.value) {
+    const key = category.name.toLowerCase()
+    const existing = byName.get(key) ?? byName.get(CATEGORY_ALIASES[key] ?? '')
+    if (existing) {
+      existing.actions = [...existing.actions, ...category.actions]
+    } else {
+      appended.push(category as (typeof merged)[number])
+    }
+  }
+
+  return [...merged, ...appended]
+})
+
 const filteredCategories = computed(() => {
-  if (!actionSearch.value) return actionCategories.value
-  return actionCategories.value.map(category => ({
+  if (!actionSearch.value) return allCategories.value
+  const query = actionSearch.value.toLowerCase()
+  return allCategories.value.map(category => ({
     ...category,
-    actions: category.actions.filter(action => 
-      action.name.toLowerCase().includes(actionSearch.value.toLowerCase())
+    actions: category.actions.filter(action =>
+      action.name.toLowerCase().includes(query)
     )
   })).filter(category => category.actions.length > 0)
 })

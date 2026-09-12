@@ -382,11 +382,46 @@ export function useButtonActions() {
     return baseButton
   }
 
+  /** Build a Button from a catalog entry: action type *and* its default config. */
+  function catalogSpecToButton(
+    spec: any,
+    position: { row: number; col: number }
+  ): Button {
+    return {
+      id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      label: spec.label,
+      icon: spec.icon,
+      icon_type: 'fontawesome',
+      shape: 'rounded',
+      position: { row: position.row, col: position.col },
+      size: { rows: 1, cols: 1 },
+      style: {
+        backgroundColor: '#2c3e50',
+        textColor: '#ffffff'
+      },
+      tooltip: spec.description || '',
+      enabled: true,
+      action: actionCatalogStore.toButtonAction(spec)
+    }
+  }
+
   function resolveButtonForAction(action: any, position: { row: number; col: number }): Button {
     const preset = presetRegistry.find((p) => p.id === action.id || p.name === action.name)
     if (preset) {
       return presetToButton(preset, position)
     }
+
+    // Catalog entries (AI, Developer, and anything an integration pack adds)
+    // are not in presetRegistry. Without this they fell through to the
+    // fallback below, which produces a button with no action at all.
+    const spec =
+      actionCatalogStore.byId[action.catalogId] ??
+      actionCatalogStore.byId[action.id] ??
+      actionCatalogStore.actions.find((s) => s.label === action.name)
+    if (spec) {
+      return catalogSpecToButton(spec, position)
+    }
+
     return createFallbackButton(action, position)
   }
 
