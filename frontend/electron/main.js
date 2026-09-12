@@ -180,7 +180,9 @@ function createWindow() {
 
   // Load app
   // Dev: load from Vite dev server (hot-reload). Prod: load from Flask which serves built dist.
-  const appUrl = isDev ? 'http://localhost:3000' : 'http://localhost:5000'
+  const frontendPort = process.env.VDOCK_FRONTEND_PORT || '3000'
+  const backendPort = process.env.VDOCK_BACKEND_PORT || '5000'
+  const appUrl = isDev ? `http://localhost:${frontendPort}` : `http://localhost:${backendPort}`
   setTimeout(() => {
     console.log('Loading URL:', appUrl)
     mainWindow.loadURL(appUrl).then(() => {

@@ -14,6 +14,7 @@ import threading
 import shutil
 import urllib.error
 import urllib.request
+from typing import Optional
 
 # Keep console output readable on Windows code pages (cp1252, etc.)
 if hasattr(sys.stdout, "reconfigure"):
@@ -50,7 +51,35 @@ BACKEND_LOG = LOG_DIR / "vdock-backend-launcher.log"
 FRONTEND_LOG = LOG_DIR / "vdock-frontend-launcher.log"
 ELECTRON_LOG = LOG_DIR / "vdock-electron-launcher.log"
 USER_SETTINGS_FILE = LOG_DIR / "user_settings.json"
-DEFAULT_BACKEND_PORT = 5000
+
+
+def _read_env_var(env_file: Path, key: str) -> Optional[str]:
+    """Read a single KEY=value line from a simple .env file, if present."""
+    if not env_file.exists():
+        return None
+    try:
+        with open(env_file, "r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if line.startswith(f"{key}="):
+                    return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return None
+
+
+def _read_port(env_file: Path, key: str, default: int) -> int:
+    value = _read_env_var(env_file, key)
+    if value and value.isdigit():
+        return int(value)
+    return default
+
+
+# Ports are chosen during setup (setup.bat/setup.sh --> "Configure ports") and
+# persisted to these .env files, so the launcher and Electron agree with the
+# dev server on where everything actually listens.
+DEFAULT_BACKEND_PORT = _read_port(BACKEND_PATH / ".env", "PORT", 5000)
+DEFAULT_FRONTEND_PORT = _read_port(FRONTEND_PATH / ".env", "VITE_PORT", 3000)
 
 
 def load_user_settings_file() -> dict:
@@ -455,6 +484,8 @@ def launch_electron():
         electron_env = os.environ.copy()
         electron_env["VDOCK_FULLSCREEN"] = "1"
         electron_env["VDOCK_USE_SMALLEST_DISPLAY"] = "1"
+        electron_env["VDOCK_FRONTEND_PORT"] = str(DEFAULT_FRONTEND_PORT)
+        electron_env["VDOCK_BACKEND_PORT"] = str(DEFAULT_BACKEND_PORT)
         # We already started (and waited for) the backend above — tell Electron's
         # main process not to spawn its own second copy, which would just fail to
         # bind the port and loop retrying forever in the background.
@@ -479,12 +510,13 @@ def launch_electron():
 def open_browser():
     """Open VDock in default browser (fallback when Electron is unavailable)."""
     time.sleep(2)
+    frontend_url = f"http://localhost:{DEFAULT_FRONTEND_PORT}"
     try:
-        webbrowser.open("http://localhost:3000")
-        print("[OK] Opening VDock in browser at http://localhost:3000")
+        webbrowser.open(frontend_url)
+        print(f"[OK] Opening VDock in browser at {frontend_url}")
     except Exception as error:
         print(f"[WARN] Could not open browser: {error}")
-        print("  Please open http://localhost:3000 manually")
+        print(f"  Please open {frontend_url} manually")
 
 
 def setup_hint():
@@ -530,8 +562,9 @@ def main():
     if not launch_frontend():
         return False
 
-    print("  Waiting for frontend at http://localhost:3000 ...")
-    if not wait_for_url("http://localhost:3000", timeout_seconds=60):
+    frontend_url = f"http://localhost:{DEFAULT_FRONTEND_PORT}"
+    print(f"  Waiting for frontend at {frontend_url} ...")
+    if not wait_for_url(frontend_url, timeout_seconds=60):
         print("[WARN] Frontend did not respond in time. Check log:")
         print(f"       {FRONTEND_LOG}")
 
@@ -544,8 +577,8 @@ def main():
     print("\n" + "=" * 50)
     print("  VDock Started Successfully!")
     print("=" * 50)
-    print("\nBackend:  http://localhost:5000")
-    print("Frontend: http://localhost:3000")
+    print(f"\nBackend:  http://localhost:{DEFAULT_BACKEND_PORT}")
+    print(f"Frontend: {frontend_url}")
     if electron_ok:
         print("\nElectron is running full-screen on your smallest display.")
         print("Use the 'Full Screen' button in the header to toggle window chrome.")

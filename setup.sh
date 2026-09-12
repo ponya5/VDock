@@ -133,6 +133,78 @@ install_dependencies() {
   return 0
 }
 
+configure_ports() {
+  echo ""
+  echo "  =========================================="
+  echo "    Port configuration"
+  echo "  =========================================="
+  echo ""
+
+  local cur_frontend_port=3000
+  if [[ -f "$ROOT/frontend/.env" ]]; then
+    local found
+    found="$(grep -m1 '^VITE_PORT=' "$ROOT/frontend/.env" 2>/dev/null | cut -d= -f2)" || true
+    [[ -n "$found" ]] && cur_frontend_port="$found"
+  fi
+  local cur_backend_port=5000
+  if [[ -f "$ROOT/backend/.env" ]]; then
+    local found
+    found="$(grep -m1 '^PORT=' "$ROOT/backend/.env" 2>/dev/null | cut -d= -f2)" || true
+    [[ -n "$found" ]] && cur_backend_port="$found"
+  fi
+
+  local frontend_port="$cur_frontend_port"
+  local backend_port="$cur_backend_port"
+
+  if [[ "${1:-}" != "silent" ]]; then
+    echo "  3000/5000 are common defaults - change them if another app already"
+    echo "  uses one. Press Enter to keep the current value shown in [brackets]."
+    echo ""
+    read -r -p "  Frontend port [$cur_frontend_port]: " frontend_port || frontend_port=""
+    [[ -z "$frontend_port" ]] && frontend_port="$cur_frontend_port"
+    read -r -p "  Backend port [$cur_backend_port]: " backend_port || backend_port=""
+    [[ -z "$backend_port" ]] && backend_port="$cur_backend_port"
+
+    if ! [[ "$frontend_port" =~ ^[0-9]+$ ]]; then
+      warn "\"$frontend_port\" is not a valid port number. Using $cur_frontend_port."
+      frontend_port="$cur_frontend_port"
+    fi
+    if ! [[ "$backend_port" =~ ^[0-9]+$ ]]; then
+      warn "\"$backend_port\" is not a valid port number. Using $cur_backend_port."
+      backend_port="$cur_backend_port"
+    fi
+    if [[ "$frontend_port" == "$backend_port" ]]; then
+      warn "Frontend and backend ports must differ. Keeping current values."
+      frontend_port="$cur_frontend_port"
+      backend_port="$cur_backend_port"
+    fi
+  fi
+
+  touch "$ROOT/backend/.env"
+  grep -v -E '^(PORT=|CORS_ORIGINS=)' "$ROOT/backend/.env" > "$ROOT/backend/.env.tmp" || true
+  {
+    cat "$ROOT/backend/.env.tmp"
+    echo "PORT=$backend_port"
+    echo "CORS_ORIGINS=http://localhost:$frontend_port,http://127.0.0.1:$frontend_port"
+  } > "$ROOT/backend/.env"
+  rm -f "$ROOT/backend/.env.tmp"
+
+  touch "$ROOT/frontend/.env"
+  grep -v -E '^(VITE_PORT=|VITE_BACKEND_PORT=)' "$ROOT/frontend/.env" > "$ROOT/frontend/.env.tmp" || true
+  {
+    cat "$ROOT/frontend/.env.tmp"
+    echo "VITE_PORT=$frontend_port"
+    echo "VITE_BACKEND_PORT=$backend_port"
+  } > "$ROOT/frontend/.env"
+  rm -f "$ROOT/frontend/.env.tmp"
+
+  ok "Frontend port: $frontend_port"
+  ok "Backend port:  $backend_port"
+
+  FRONTEND_PORT="$frontend_port"
+  BACKEND_PORT="$backend_port"
+}
+
 create_desktop_launcher() {
   echo ""
   echo "  Creating desktop launcher..."
@@ -217,14 +289,18 @@ show_menu() {
   echo ""
   echo "    [3] Create desktop launcher only"
   echo ""
-  echo "    [4] Launch VDock now"
+  echo "    [4] Configure ports"
+  echo "        Change which localhost ports VDock uses"
   echo ""
-  echo "    [5] Exit"
+  echo "    [5] Launch VDock now"
+  echo ""
+  echo "    [6] Exit"
   echo ""
 }
 
 run_full_setup() {
   install_dependencies || return 1
+  configure_ports "${1:-}"
   create_desktop_launcher
   echo ""
   echo "  =========================================="
@@ -237,6 +313,10 @@ run_full_setup() {
   fi
   echo "    - Or run: ./launch.sh"
   echo ""
+  echo "  URLs once running:"
+  echo "    Frontend: http://localhost:${FRONTEND_PORT:-3000}"
+  echo "    Backend:  http://localhost:${BACKEND_PORT:-5000}"
+  echo ""
   read -r -p "  Start VDock now? [Y/N]: " start_now || start_now="N"
   if [[ "$start_now" =~ ^[Yy]$ ]]; then
     launch_vdock
@@ -245,9 +325,10 @@ run_full_setup() {
 
 handle_cli_flag() {
   case "${1:-}" in
-    --full) run_full_setup; exit $? ;;
+    --full) run_full_setup silent; exit $? ;;
     --deps) install_dependencies; exit $? ;;
     --shortcut) create_desktop_launcher; exit $? ;;
+    --ports) configure_ports; exit $? ;;
     --launch) launch_vdock; exit $? ;;
   esac
 }
@@ -256,7 +337,7 @@ handle_cli_flag "${1:-}"
 
 while true; do
   show_menu
-  read -r -p "  Choose an option [1-5]: " menu_choice || menu_choice="5"
+  read -r -p "  Choose an option [1-6]: " menu_choice || menu_choice="6"
 
   case "$menu_choice" in
     1)
@@ -272,9 +353,13 @@ while true; do
       read -r -p "  Press Enter to continue..." _
       ;;
     4)
-      launch_vdock || read -r -p "  Press Enter to continue..." _
+      configure_ports
+      read -r -p "  Press Enter to continue..." _
       ;;
     5)
+      launch_vdock || read -r -p "  Press Enter to continue..." _
+      ;;
+    6)
       exit 0
       ;;
     *)

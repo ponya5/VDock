@@ -13,6 +13,7 @@ cd /d "%ROOT%"
 if /i "%~1"=="--full" (
     call :install_dependencies
     if errorlevel 1 exit /b 1
+    call :configure_ports silent
     call :create_desktop_shortcut
     goto :setup_complete_cli
 )
@@ -22,6 +23,10 @@ if /i "%~1"=="--deps" (
 )
 if /i "%~1"=="--shortcut" (
     call :create_desktop_shortcut
+    exit /b 0
+)
+if /i "%~1"=="--ports" (
+    call :configure_ports
     exit /b 0
 )
 if /i "%~1"=="--launch" (
@@ -46,18 +51,22 @@ echo.
 echo     [3] Create desktop shortcut only
 echo         Adds a VDock icon to your Desktop
 echo.
-echo     [4] Launch VDock now
+echo     [4] Configure ports
+echo         Change which localhost ports VDock uses
 echo.
-echo     [5] Exit
+echo     [5] Launch VDock now
+echo.
+echo     [6] Exit
 echo.
 set "MENU_CHOICE="
-set /p "MENU_CHOICE=  Choose an option [1-5]: "
+set /p "MENU_CHOICE=  Choose an option [1-6]: "
 
 if "%MENU_CHOICE%"=="1" goto :run_full
 if "%MENU_CHOICE%"=="2" goto :run_deps
 if "%MENU_CHOICE%"=="3" goto :run_shortcut
-if "%MENU_CHOICE%"=="4" goto :run_launch
-if "%MENU_CHOICE%"=="5" goto :exit_ok
+if "%MENU_CHOICE%"=="4" goto :run_ports
+if "%MENU_CHOICE%"=="5" goto :run_launch
+if "%MENU_CHOICE%"=="6" goto :exit_ok
 echo.
 echo   Invalid choice. Press any key to try again...
 pause >nul
@@ -66,6 +75,7 @@ goto :main_menu
 :run_full
 call :install_dependencies
 if errorlevel 1 goto :fail
+call :configure_ports
 call :create_desktop_shortcut
 goto :setup_complete
 
@@ -78,6 +88,10 @@ goto :pause_and_menu
 
 :run_shortcut
 call :create_desktop_shortcut
+goto :pause_and_menu
+
+:run_ports
+call :configure_ports
 goto :pause_and_menu
 
 :run_launch
@@ -252,9 +266,81 @@ if exist "%SHORTCUT%" (
 )
 exit /b 0
 
+:configure_ports
+echo.
+echo   ==========================================
+echo     Port configuration
+echo   ==========================================
+echo.
+
+set "CUR_FRONTEND_PORT=3000"
+if exist "%ROOT%\frontend\.env" (
+    for /f "tokens=2 delims==" %%p in ('findstr /b /i "VITE_PORT=" "%ROOT%\frontend\.env" 2^>nul') do set "CUR_FRONTEND_PORT=%%p"
+)
+set "CUR_BACKEND_PORT=5000"
+if exist "%ROOT%\backend\.env" (
+    for /f "tokens=2 delims==" %%p in ('findstr /b /i "PORT=" "%ROOT%\backend\.env" 2^>nul') do set "CUR_BACKEND_PORT=%%p"
+)
+
+if /i "%~1"=="silent" (
+    set "FRONTEND_PORT=!CUR_FRONTEND_PORT!"
+    set "BACKEND_PORT=!CUR_BACKEND_PORT!"
+    goto :configure_ports_write
+)
+
+echo   3000/5000 are common defaults - change them if another app already
+echo   uses one. Press Enter to keep the current value shown in [brackets].
+echo.
+set "FRONTEND_PORT="
+set /p "FRONTEND_PORT=  Frontend port [!CUR_FRONTEND_PORT!]: "
+if "!FRONTEND_PORT!"=="" set "FRONTEND_PORT=!CUR_FRONTEND_PORT!"
+
+set "BACKEND_PORT="
+set /p "BACKEND_PORT=  Backend port [!CUR_BACKEND_PORT!]: "
+if "!BACKEND_PORT!"=="" set "BACKEND_PORT=!CUR_BACKEND_PORT!"
+
+echo !FRONTEND_PORT!| findstr /r "^[0-9][0-9]*$" >nul
+if errorlevel 1 (
+    echo   [WARN]  "!FRONTEND_PORT!" is not a valid port number. Using !CUR_FRONTEND_PORT!.
+    set "FRONTEND_PORT=!CUR_FRONTEND_PORT!"
+)
+echo !BACKEND_PORT!| findstr /r "^[0-9][0-9]*$" >nul
+if errorlevel 1 (
+    echo   [WARN]  "!BACKEND_PORT!" is not a valid port number. Using !CUR_BACKEND_PORT!.
+    set "BACKEND_PORT=!CUR_BACKEND_PORT!"
+)
+if "!FRONTEND_PORT!"=="!BACKEND_PORT!" (
+    echo   [WARN]  Frontend and backend ports must differ. Keeping current values.
+    set "FRONTEND_PORT=!CUR_FRONTEND_PORT!"
+    set "BACKEND_PORT=!CUR_BACKEND_PORT!"
+)
+
+:configure_ports_write
+if not exist "%ROOT%\backend\.env" type nul > "%ROOT%\backend\.env"
+findstr /v /b /i "PORT= CORS_ORIGINS=" "%ROOT%\backend\.env" > "%ROOT%\backend\.env.tmp"
+(
+    type "%ROOT%\backend\.env.tmp"
+    echo PORT=!BACKEND_PORT!
+    echo CORS_ORIGINS=http://localhost:!FRONTEND_PORT!,http://127.0.0.1:!FRONTEND_PORT!
+) > "%ROOT%\backend\.env"
+del "%ROOT%\backend\.env.tmp" 2>nul
+
+if not exist "%ROOT%\frontend\.env" type nul > "%ROOT%\frontend\.env"
+findstr /v /b /i "VITE_PORT= VITE_BACKEND_PORT=" "%ROOT%\frontend\.env" > "%ROOT%\frontend\.env.tmp"
+(
+    type "%ROOT%\frontend\.env.tmp"
+    echo VITE_PORT=!FRONTEND_PORT!
+    echo VITE_BACKEND_PORT=!BACKEND_PORT!
+) > "%ROOT%\frontend\.env"
+del "%ROOT%\frontend\.env.tmp" 2>nul
+
+echo   [OK]    Frontend port: !FRONTEND_PORT!
+echo   [OK]    Backend port:  !BACKEND_PORT!
+exit /b 0
+
 :launch_vdock
 if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
-    echo   [ERROR] Run Full setup first (option 1).
+    echo   [ERROR] Run Full setup first ^(option 1^).
     exit /b 1
 )
 echo.
@@ -273,8 +359,8 @@ echo     - Double-click VDock on your Desktop
 echo     - Or run launch.bat from this folder
 echo.
 echo   URLs once running:
-echo     Frontend: http://localhost:3000
-echo     Backend:  http://localhost:5000
+echo     Frontend: http://localhost:!FRONTEND_PORT!
+echo     Backend:  http://localhost:!BACKEND_PORT!
 echo.
 set /p "LAUNCH=  Start VDock now? [Y/N]: "
 if /i "!LAUNCH!"=="Y" call :launch_vdock
@@ -285,6 +371,10 @@ echo.
 echo   ==========================================
 echo     Setup complete!
 echo   ==========================================
+echo.
+echo   URLs once running:
+echo     Frontend: http://localhost:!FRONTEND_PORT!
+echo     Backend:  http://localhost:!BACKEND_PORT!
 echo.
 set /p "LAUNCH=  Start VDock now? [Y/N]: "
 if /i "!LAUNCH!"=="Y" call :launch_vdock

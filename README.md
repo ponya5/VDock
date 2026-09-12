@@ -162,7 +162,7 @@ After setup, either:
 - **Double-click the desktop shortcut** (`VDock` on Windows, `VDock.command` on macOS)
 - Or run **`launch.bat`** (Windows) / **`./launch.sh`** (macOS/Linux)
 
-Wait **5–10 seconds** for services to start. VDock opens at **http://localhost:3000**.
+Wait **5–10 seconds** for services to start. VDock opens at **http://localhost:3000** (or whichever port you chose during setup).
 
 ---
 
@@ -185,17 +185,22 @@ The setup menu handles all first-run tasks:
   [3] Create desktop shortcut only
       Adds a VDock icon to your Desktop
 
-  [4] Launch VDock now
+  [4] Configure ports
+      Change which localhost ports VDock uses
+      (useful if 3000/5000 are already taken by other apps)
 
-  [5] Exit
+  [5] Launch VDock now
+
+  [6] Exit
 ```
 
 **Non-interactive flags** (for scripts/CI):
 
 ```cmd
-setup.bat --full       REM install + shortcut
+setup.bat --full       REM install + configure ports (kept as-is) + shortcut
 setup.bat --deps       REM dependencies only
 setup.bat --shortcut   REM desktop shortcut only
+setup.bat --ports      REM change frontend/backend ports
 setup.bat --launch     REM start VDock
 ```
 
