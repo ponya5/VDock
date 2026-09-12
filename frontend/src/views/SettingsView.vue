@@ -211,6 +211,14 @@
                 <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="360" step="10" class="slider" />
                 <p class="form-help">How much horizontal space the docked buttons column takes up.</p>
               </div>
+              <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
+                <div class="form-group-header">
+                  <label>Button Height</label>
+                  <span class="slider-value">{{ settings.dockedButtonHeight }}px</span>
+                </div>
+                <input v-model.number="settings.dockedButtonHeight" type="range" min="48" max="160" step="4" class="slider" />
+                <p class="form-help">How tall each docked button is. Automatically shrinks to fit if the sidebar doesn't have room for it.</p>
+              </div>
             </section>
 
             <section class="settings-section card">

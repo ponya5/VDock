@@ -5,7 +5,7 @@ import { useProfilesStore } from '@/stores/profiles'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useActionCatalogStore } from '@/stores/actionCatalog'
 import { useButtonStateStore } from '@/stores/buttonState'
-import type { Button, ActionResult } from '@/types'
+import type { Button, ActionResult, IconLoop } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 
 export function useButtonActions() {
@@ -26,6 +26,12 @@ export function useButtonActions() {
 
   const actionResult = ref<ActionResult | null>(null)
   let actionResultTimeout: ReturnType<typeof setTimeout> | null = null
+
+  /** The app-wide default icon animation for newly created buttons, or undefined for none. */
+  function resolveDefaultIconLoop(): IconLoop | undefined {
+    const loop = settingsStore.buttonDefaultIconLoop
+    return loop && loop !== 'none' ? (loop as IconLoop) : undefined
+  }
 
   function showActionResult(result: ActionResult) {
     if (result.success) {
@@ -173,6 +179,9 @@ export function useButtonActions() {
           backgroundColor: '#2c3e50',
           textColor: '#ffffff'
         },
+        layers: {
+          icon: { type: 'fontawesome', value: ['fas', 'home'], loop: resolveDefaultIconLoop() }
+        },
         enabled: true
       }
       editingButton.value = button
@@ -215,6 +224,9 @@ export function useButtonActions() {
       style: {
         backgroundColor: '#3498db',
         textColor: '#ffffff'
+      },
+      layers: {
+        icon: { type: 'fontawesome', value: ['fas', 'star'], loop: resolveDefaultIconLoop() }
       },
       tooltip: '',
       enabled: true

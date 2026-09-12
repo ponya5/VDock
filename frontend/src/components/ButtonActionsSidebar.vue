@@ -237,7 +237,8 @@ function selectAction(action: ActionSpec) {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  min-height: 52px;
+  padding: var(--spacing-md);
   background: rgba(255, 255, 255, 0.05);
   border: none;
   border-radius: var(--radius-sm);
@@ -268,8 +269,9 @@ function selectAction(action: ActionSpec) {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-md);
+  min-height: 52px;
+  padding: var(--spacing-md);
   background: none;
   border: none;
   border-radius: var(--radius-sm);
@@ -287,7 +289,8 @@ function selectAction(action: ActionSpec) {
 }
 
 .action-item svg {
-  width: 18px;
+  width: 22px;
+  flex-shrink: 0;
   color: var(--color-primary);
 }
 

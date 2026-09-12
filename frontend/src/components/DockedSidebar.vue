@@ -1,5 +1,5 @@
 <template>
-  <div class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode, 'is-mobile': isMobile, 'is-narrow': isNarrow, 'is-open': sidebarOpen }" :style="{ width: isMobile ? '100vw' : sidebarWidth }">
+  <div ref="sidebarEl" class="docked-sidebar" :class="{ 'is-edit-mode': isEditMode, 'is-mobile': isMobile, 'is-narrow': isNarrow, 'is-open': sidebarOpen }" :style="{ width: isMobile ? '100vw' : sidebarWidth }">
     <div
       v-if="isEditMode"
       class="resize-handle"
@@ -130,22 +130,46 @@ const isCompactScreen = ref(
 )
 const sidebarOpen = ref(false)
 
+// Available vertical space for the button column itself (sidebar height minus
+// its own padding), tracked so cell height can respond to the window/panel
+// actually shrinking or growing instead of only reacting to width.
+const sidebarEl = ref<HTMLElement | null>(null)
+const availableHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 600)
+let resizeObserver: ResizeObserver | null = null
+
+const handleAvailableHeightResize = () => {
+  if (sidebarEl.value) {
+    availableHeight.value = sidebarEl.value.clientHeight
+  }
+}
+
 const handleWindowResize = () => {
   isMobile.value = window.innerWidth < 768
   isNarrow.value = window.innerWidth < 480
   isCompactScreen.value = window.innerWidth <= 1100 || window.innerHeight <= 650
+  handleAvailableHeightResize()
 }
 
 onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleWindowResize)
   }
+  // Tracks the sidebar's own box, so cell height also reacts to the header
+  // being toggled or the docked panel switching to its mobile bottom-bar
+  // layout — changes a window-resize listener alone would miss.
+  if (typeof ResizeObserver !== 'undefined' && sidebarEl.value) {
+    resizeObserver = new ResizeObserver(handleAvailableHeightResize)
+    resizeObserver.observe(sidebarEl.value)
+  }
+  handleAvailableHeightResize()
 })
 
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', handleWindowResize)
   }
+  resizeObserver?.disconnect()
+  resizeObserver = null
 })
 
 // Use sidebar width from settings, capped on compact/7" screens
@@ -160,16 +184,24 @@ const sidebarWidth = computed(() => {
 })
 
 const gridStyle = computed(() => {
-  // Calculate cell height based on sidebar width
-  // Make buttons roughly square based on the sidebar width
-  const cellWidth = effectiveSidebarWidth.value - 32 // Subtract padding
-  const baseCellHeight = cellWidth * props.buttonSize
+  const gap = 8
+  const paddingBlock = 32 // 16px top + 16px bottom
+  const rows = Math.max(props.gridRows, 1)
+
+  // User-configured height, scaled by the global button-size setting, but
+  // capped so `rows` of them (plus gaps/padding) never exceed the sidebar's
+  // actual available height — otherwise a tall stack just overflows and has
+  // to scroll instead of fitting the panel it's in.
+  const desiredCellHeight = settingsStore.dockedButtonHeight * props.buttonSize
+  const maxTotalCellHeight = availableHeight.value - paddingBlock - gap * (rows - 1)
+  const maxCellHeight = Math.max(40, maxTotalCellHeight / rows)
+  const cellHeight = Math.min(desiredCellHeight, maxCellHeight)
 
   return {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gridTemplateRows: `repeat(${props.gridRows}, ${baseCellHeight}px)`,
-    gap: '8px',
+    gridTemplateRows: `repeat(${rows}, ${cellHeight}px)`,
+    gap: `${gap}px`,
     padding: '16px',
     height: '100%',
     overflow: 'auto'

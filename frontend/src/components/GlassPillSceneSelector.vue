@@ -22,22 +22,28 @@
         <span class="segment-label">{{ scene.name }}</span>
       </button>
 
-      <!-- edit controls -->
-      <div v-if="isEditMode" class="edit-controls">
-        <button class="edit-btn add-btn" @click="$emit('add-scene')" aria-label="Add scene">
-          <FontAwesomeIcon :icon="['fas', 'plus']" />
-        </button>
+      <!-- One edit badge per scene, anchored to that scene's own segment so
+           it's unambiguous which pencil edits which scene (previously these
+           were a detached row of identical icons with no visual link to the
+           scene they belonged to). -->
+      <div v-if="isEditMode" class="edit-badges">
         <button
           v-for="(scene, i) in scenes"
           :key="`edit-${scene.id}`"
-          class="edit-btn per-scene-btn"
+          class="scene-edit-badge"
+          :style="{ left: `${(i + 1) * segmentPercent}%` }"
           @click.stop="$emit('edit-scene', scene)"
           :aria-label="`Edit ${scene.name}`"
+          title="Edit scene"
         >
           <FontAwesomeIcon :icon="['fas', 'pen']" />
         </button>
       </div>
     </div>
+
+    <button v-if="isEditMode" class="edit-btn add-btn" @click="$emit('add-scene')" aria-label="Add scene">
+      <FontAwesomeIcon :icon="['fas', 'plus']" />
+    </button>
   </div>
 </template>
 
@@ -47,7 +53,6 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
-import { useDashboardStore } from '@/stores/dashboard'
 
 interface Props {
   scenes: Scene[]
@@ -57,18 +62,21 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  'scene-change': [index: number]
+  // Emits the scene id (not the index) so the single handler chain in
+  // DashboardView.setScene — also used by swipe-to-switch — is the only
+  // place that resolves a scene reference to a store index.
+  'scene-change': [sceneId: string]
   'add-scene': []
   'edit-scene': [scene: Scene]
 }>()
 
-const dashboardStore = useDashboardStore()
 const pillRef = ref<HTMLElement | null>(null)
 const segmentRefs = ref<HTMLElement[]>([])
 const disableAnimation = ref(false)
 const focusedIndex = ref(0)
 
-const segmentWidth = computed(() => `${100 / Math.max(props.scenes.length, 1)}%`)
+const segmentPercent = computed(() => 100 / Math.max(props.scenes.length, 1))
+const segmentWidth = computed(() => `${segmentPercent.value}%`)
 
 const gliderStyle = computed(() => {
   const safeIndex = Math.max(0, Math.min(props.currentSceneIndex, props.scenes.length - 1))
@@ -82,8 +90,7 @@ const gliderStyle = computed(() => {
 function selectScene(index: number) {
   if (index === props.currentSceneIndex) return
   vibrate(10)
-  dashboardStore.setScene(index)
-  emit('scene-change', index)
+  emit('scene-change', props.scenes[index].id)
 }
 
 function onKeyDown(event: KeyboardEvent, index: number) {
@@ -121,6 +128,7 @@ watch(() => props.scenes.length, () => {
 .glass-pill-scene-selector {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .pill-container {
@@ -160,14 +168,16 @@ watch(() => props.scenes.length, () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  min-width: 80px;
-  padding: 6px 14px;
+  gap: 8px;
+  /* Bigger touch target than a typical tab bar — these are tapped often on
+     touch panels, so err on the side of generous rather than compact. */
+  min-height: 56px;
+  min-width: 96px;
+  padding: 10px 18px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary, rgba(255,255,255,0.7));
-  font-size: clamp(0.65rem, 0.8vw + 0.4rem, 0.85rem);
+  font-size: clamp(0.78rem, 0.9vw + 0.5rem, 1rem);
   font-weight: 600;
   cursor: pointer;
   border-radius: calc(1rem - 4px);
@@ -184,49 +194,83 @@ watch(() => props.scenes.length, () => {
   color: var(--color-text, #fff);
 }
 
-.segment-icon { flex-shrink: 0; }
+.segment-icon {
+  flex-shrink: 0;
+  font-size: 1.1em;
+}
 
 .segment-label {
-  max-width: 96px;
+  max-width: 112px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.edit-controls {
-  display: flex;
-  gap: 4px;
-  margin-left: 4px;
-  flex-shrink: 0;
+.edit-badges {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
 }
 
-.edit-btn {
+.scene-edit-badge {
+  position: absolute;
+  top: -8px;
+  transform: translateX(-100%);
+  width: 30px;
+  height: 30px;
+  margin-left: -6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  background: var(--color-primary, #007aff);
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.scene-edit-badge:hover {
+  background: var(--color-primary-dark, #005fcc);
+  transform: translateX(-100%) scale(1.08);
+}
+
+.scene-edit-badge:active {
+  transform: translateX(-100%) scale(0.94);
+}
+
+.edit-btn.add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  flex-shrink: 0;
   border: 1px solid var(--glass-border, rgba(255,255,255,0.12));
   background: var(--glass-bg, rgba(0,0,0,0.15));
   color: var(--color-text-secondary);
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
 
-.edit-btn:hover {
+.edit-btn.add-btn:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
 
 @media (max-width: 768px) {
   .segment-label {
-    max-width: 72px;
+    max-width: 84px;
   }
 }
 
 @media (max-width: 480px) {
   .segment-icon { display: none; }
-  .segment { min-width: 56px; padding: 6px 8px; }
+  .segment { min-width: 64px; padding: 10px 10px; }
 }
 </style>

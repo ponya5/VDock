@@ -16,6 +16,7 @@ export interface PersistedUserSettings {
   tiltEffectEnabled: boolean
   dockedSidebarEnabled: boolean
   dockedSidebarWidth: number
+  dockedButtonHeight: number
   dashboardBackground: string
   backgroundPreference: string
   uiBrightness: number
@@ -57,6 +58,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const tiltEffectEnabled = ref(true)
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(190)
+  // Independent of width so docked buttons don't have to be square — a tall
+  // sidebar of wide-but-short buttons is far easier to hit on small touch panels.
+  const dockedButtonHeight = ref(84)
   const dashboardBackground = ref('default')
   const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
   const uiBrightness = ref(100)
@@ -98,7 +102,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const screensaverTimeout = ref(120)
 
   const buttonDefaultAnimation = ref('none')
-  const buttonDefaultIconLoop = ref('none')
+  // Swing on by default so new buttons feel alive out of the box; users can
+  // still turn it off per-button or change the app-wide default in Settings.
+  const buttonDefaultIconLoop = ref('swing')
   const buttonDefaultEffect = ref('none')
 
   const screensaverWidgets = ref<string[]>(['weather'])
@@ -166,6 +172,7 @@ export const useSettingsStore = defineStore('settings', () => {
       tiltEffectEnabled: tiltEffectEnabled.value,
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
+      dockedButtonHeight: dockedButtonHeight.value,
       dashboardBackground: dashboardBackground.value,
       backgroundPreference: backgroundPreference.value,
       uiBrightness: uiBrightness.value,
@@ -205,6 +212,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.tiltEffectEnabled !== undefined) tiltEffectEnabled.value = settings.tiltEffectEnabled
     if (settings.dockedSidebarEnabled !== undefined) dockedSidebarEnabled.value = settings.dockedSidebarEnabled
     if (settings.dockedSidebarWidth !== undefined) dockedSidebarWidth.value = settings.dockedSidebarWidth
+    if (settings.dockedButtonHeight !== undefined) dockedButtonHeight.value = settings.dockedButtonHeight
     if (settings.dashboardBackground !== undefined) dashboardBackground.value = settings.dashboardBackground
     if (settings.backgroundPreference !== undefined) {
       backgroundPreference.value = settings.backgroundPreference as typeof backgroundPreference.value
@@ -251,6 +259,7 @@ export const useSettingsStore = defineStore('settings', () => {
         tiltEffectEnabled: settings.tiltEffectEnabled !== false,
         dockedSidebarEnabled: settings.dockedSidebarEnabled !== false,
         dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
+        dockedButtonHeight: settings.dockedButtonHeight ?? 84,
         dashboardBackground: settings.dashboardBackground ?? 'default',
         backgroundPreference: settings.backgroundPreference ?? 'none',
         uiBrightness: settings.uiBrightness ?? 100,
@@ -268,7 +277,7 @@ export const useSettingsStore = defineStore('settings', () => {
         weatherManualCity: settings.weatherManualCity ?? '',
         screensaverTimeout: settings.screensaverTimeout ?? 120,
         buttonDefaultAnimation: settings.buttonDefaultAnimation ?? 'none',
-        buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'none',
+        buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'swing',
         buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
         screensaverWidgets: settings.screensaverWidgets ?? ['weather'],
         newsApiKey: settings.newsApiKey ?? '',
@@ -351,6 +360,7 @@ export const useSettingsStore = defineStore('settings', () => {
       tiltEffectEnabled,
       dockedSidebarEnabled,
       dockedSidebarWidth,
+      dockedButtonHeight,
       dashboardBackground,
       backgroundPreference,
       uiBrightness,
@@ -533,6 +543,7 @@ export const useSettingsStore = defineStore('settings', () => {
     tiltEffectEnabled,
     dockedSidebarEnabled,
     dockedSidebarWidth,
+    dockedButtonHeight,
     dashboardBackground,
     backgroundPreference,
     uiBrightness,

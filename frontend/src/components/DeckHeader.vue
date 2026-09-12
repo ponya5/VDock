@@ -157,7 +157,7 @@ const emit = defineEmits<{
   toggleEdit: []
   navigateSettings: []
   navigateProfiles: []
-  setScene: [index: number]
+  setScene: [sceneId: string]
   addScene: []
   editScene: [scene: Scene]
   setPage: [index: number]

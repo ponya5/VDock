@@ -4,9 +4,24 @@ import type { StaggerOrder } from '../utils/stagger'
 
 export type TransitionStyle = 'light-bar' | 'flip' | 'iris' | 'cascade' | 'glitch' | 'dissolve'
 
+type PendingTransition = {
+  rows: number
+  cols: number
+  order: StaggerOrder
+  style: TransitionStyle
+  onPageSwap: () => Promise<void> | void
+}
+
 export function useGridTransition() {
   const cellClasses = ref<Record<string, string>>({})
   const isTransitioning = ref(false)
+
+  // When a switch request comes in while one is already playing (e.g. tapping
+  // through scene tabs quickly), it used to be dropped outright — onPageSwap
+  // never ran, so the grid stayed stuck showing whichever scene the in-flight
+  // transition was for even though the store had already moved on. Queue the
+  // latest request instead and replay it in full once the current one ends.
+  let pending: PendingTransition | null = null
 
   const triggerTransition = async (
     rows: number,
@@ -15,7 +30,10 @@ export function useGridTransition() {
     style: TransitionStyle,
     onPageSwap: () => Promise<void> | void
   ) => {
-    if (isTransitioning.value) return
+    if (isTransitioning.value) {
+      pending = { rows, cols, order, style, onPageSwap }
+      return
+    }
     isTransitioning.value = true
 
     const isReduced = typeof window !== 'undefined' && 
@@ -44,7 +62,7 @@ export function useGridTransition() {
       }
       await new Promise(resolve => setTimeout(resolve, 340))
       cellClasses.value = {}
-      isTransitioning.value = false
+      finishAndRunPending()
       return
     }
 
@@ -99,7 +117,16 @@ export function useGridTransition() {
     await Promise.all(promises)
     await new Promise(resolve => setTimeout(resolve, 650))
     cellClasses.value = {}
+    finishAndRunPending()
+  }
+
+  const finishAndRunPending = () => {
     isTransitioning.value = false
+    if (pending) {
+      const next = pending
+      pending = null
+      void triggerTransition(next.rows, next.cols, next.order, next.style, next.onPageSwap)
+    }
   }
 
   return {
