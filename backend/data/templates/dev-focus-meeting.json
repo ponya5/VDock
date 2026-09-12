@@ -1,0 +1,508 @@
+{
+  "id": "dev-focus-meeting",
+  "name": "Focus & Meeting",
+  "description": "Mute, timers and distraction controls for calls and deep work.",
+  "icon": "fa-headset",
+  "color": "#0ea5e9",
+  "category": "development",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-dev-focus-meeting",
+      "name": "Focus & Meeting",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-cross_platform-0-0",
+          "label": "Mute Mic",
+          "icon": [
+            "fas",
+            "microphone-slash"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#dc2626",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "microphone_mute"
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-0-1",
+          "label": "Unmute Mic",
+          "icon": [
+            "fas",
+            "microphone"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a34a",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "microphone_unmute"
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-0-2",
+          "label": "Mute Audio",
+          "icon": [
+            "fas",
+            "volume-mute"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "volume_mute"
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-0-3",
+          "label": "Volume Up",
+          "icon": [
+            "fas",
+            "volume-up"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "volume_up"
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-0-4",
+          "label": "Volume Down",
+          "icon": [
+            "fas",
+            "volume-down"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "volume_down"
+            }
+          }
+        },
+        {
+          "id": "btn-time_timer-1-0",
+          "label": "Timer",
+          "icon": [
+            "fas",
+            "stopwatch"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "time_timer",
+            "config": {
+              "timer_duration": 1500
+            }
+          },
+          "tooltip": "25-minute focus block"
+        },
+        {
+          "id": "btn-time_world_clock-1-1",
+          "label": "Clock",
+          "icon": [
+            "fas",
+            "clock"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "time_world_clock",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-calendar-1-2",
+          "label": "Calendar",
+          "icon": [
+            "fas",
+            "calendar"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "calendar",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-weather-1-3",
+          "label": "Weather",
+          "icon": [
+            "fas",
+            "cloud-sun"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "weather",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-cross_platform-1-4",
+          "label": "Screenshot",
+          "icon": [
+            "fas",
+            "camera"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "screenshot"
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-2-0",
+          "label": "Lock",
+          "icon": [
+            "fas",
+            "lock"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "lock_screen"
+            }
+          }
+        },
+        {
+          "id": "btn-ui_control-2-1",
+          "label": "Dim Deck",
+          "icon": [
+            "fas",
+            "lightbulb"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "ui_control",
+            "config": {
+              "action": "ui_brightness_down",
+              "step": 10
+            }
+          }
+        },
+        {
+          "id": "btn-ui_control-2-2",
+          "label": "Brighten",
+          "icon": [
+            "fas",
+            "sun"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "ui_control",
+            "config": {
+              "action": "ui_brightness_up",
+              "step": 10
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-2-3",
+          "label": "Play/Pause",
+          "icon": [
+            "fas",
+            "play"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "media_play_pause"
+            }
+          }
+        },
+        {
+          "id": "btn-cross_platform-2-4",
+          "label": "Next Track",
+          "icon": [
+            "fas",
+            "forward"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cross_platform",
+            "config": {
+              "action": "media_next"
+            }
+          }
+        },
+        {
+          "id": "btn-previous_page-3-0",
+          "label": "Prev Page",
+          "icon": [
+            "fas",
+            "chevron-left"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "previous_page",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-next_page-3-1",
+          "label": "Next Page",
+          "icon": [
+            "fas",
+            "chevron-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "next_page",
+            "config": {}
+          }
+        }
+      ]
+    }
+  ]
+}

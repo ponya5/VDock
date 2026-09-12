@@ -223,3 +223,54 @@ def test_fallback_does_not_swallow_dispatched_types():
         if t in exact or t.startswith(prefixes)
     }
     assert not wrongly_caught
+
+
+# --- shipped scene templates -------------------------------------------------
+
+def _shipped_templates():
+    import json
+    templates_dir = Path(__file__).resolve().parents[1] / 'data' / 'templates'
+    for path in sorted(templates_dir.glob('*.json')):
+        yield path.name, json.loads(path.read_text(encoding='utf-8'))
+
+
+def _runnable_action_types():
+    """Catalog types plus everything the integration packs provide."""
+    from plugins.plugin_manager import PluginManager
+
+    types = {spec.action_type for spec in ACTION_CATALOG}
+    manager = PluginManager()
+    manager.load_builtin_packs()
+    types |= {spec.action_type for spec in manager.get_action_specs()}
+    return types
+
+
+@pytest.mark.parametrize('name,template', list(_shipped_templates()),
+                         ids=lambda v: v if isinstance(v, str) else '')
+def test_shipped_templates_only_use_runnable_actions(name, template):
+    """A template button with an unknown action type fails on press."""
+    runnable = _runnable_action_types()
+
+    unknown = set()
+    for page in template.get('pages', []):
+        for button in page.get('buttons', []):
+            action = button.get('action')
+            if action and action.get('type') not in runnable:
+                unknown.add(action['type'])
+
+    assert not unknown, f'{name} uses unrunnable action types: {sorted(unknown)}'
+
+
+@pytest.mark.parametrize('name,template', list(_shipped_templates()),
+                         ids=lambda v: v if isinstance(v, str) else '')
+def test_shipped_template_buttons_fit_their_grid(name, template):
+    for page in template.get('pages', []):
+        grid = page.get('grid_config', {'rows': 4, 'cols': 5})
+        occupied = set()
+        for button in page.get('buttons', []):
+            row = button['position']['row']
+            col = button['position']['col']
+            assert 0 <= row < grid['rows'], f'{name}: row {row} out of range'
+            assert 0 <= col < grid['cols'], f'{name}: col {col} out of range'
+            assert (row, col) not in occupied, f'{name}: overlap at {row},{col}'
+            occupied.add((row, col))

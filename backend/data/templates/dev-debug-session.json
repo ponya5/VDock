@@ -1,0 +1,550 @@
+{
+  "id": "dev-debug-session",
+  "name": "Debug Session",
+  "description": "Breakpoints and step controls for a VS Code or Cursor debugging session.",
+  "icon": "fa-bug",
+  "color": "#7c3aed",
+  "category": "development",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-dev-debug-session",
+      "name": "Debug Session",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-hotkey-0-0",
+          "label": "Start",
+          "icon": [
+            "fas",
+            "play"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a34a",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "f5"
+              ]
+            }
+          },
+          "secondary_label": "F5"
+        },
+        {
+          "id": "btn-hotkey-0-1",
+          "label": "Stop",
+          "icon": [
+            "fas",
+            "stop"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#dc2626",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "shift",
+                "f5"
+              ]
+            }
+          },
+          "secondary_label": "Shift+F5"
+        },
+        {
+          "id": "btn-hotkey-0-2",
+          "label": "Restart",
+          "icon": [
+            "fas",
+            "rotate-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#d97706",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "ctrl",
+                "shift",
+                "f5"
+              ]
+            }
+          },
+          "secondary_label": "Ctrl+Shift+F5"
+        },
+        {
+          "id": "btn-hotkey-0-3",
+          "label": "Breakpoint",
+          "icon": [
+            "fas",
+            "circle"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#7c3aed",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "f9"
+              ]
+            }
+          },
+          "secondary_label": "F9"
+        },
+        {
+          "id": "btn-hotkey-0-4",
+          "label": "Continue",
+          "icon": [
+            "fas",
+            "forward"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#7c3aed",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "f5"
+              ]
+            }
+          },
+          "secondary_label": "F5"
+        },
+        {
+          "id": "btn-hotkey-1-0",
+          "label": "Step Over",
+          "icon": [
+            "fas",
+            "arrow-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "f10"
+              ]
+            }
+          },
+          "secondary_label": "F10"
+        },
+        {
+          "id": "btn-hotkey-1-1",
+          "label": "Step Into",
+          "icon": [
+            "fas",
+            "arrow-down"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "f11"
+              ]
+            }
+          },
+          "secondary_label": "F11"
+        },
+        {
+          "id": "btn-hotkey-1-2",
+          "label": "Step Out",
+          "icon": [
+            "fas",
+            "arrow-up"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "shift",
+                "f11"
+              ]
+            }
+          },
+          "secondary_label": "Shift+F11"
+        },
+        {
+          "id": "btn-hotkey-1-3",
+          "label": "Console",
+          "icon": [
+            "fas",
+            "terminal"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "ctrl",
+                "shift",
+                "y"
+              ]
+            }
+          },
+          "secondary_label": "Ctrl+Shift+Y"
+        },
+        {
+          "id": "btn-hotkey-1-4",
+          "label": "Terminal",
+          "icon": [
+            "fas",
+            "terminal"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "hotkey",
+            "config": {
+              "keys": [
+                "ctrl",
+                "`"
+              ]
+            }
+          },
+          "secondary_label": "Ctrl+`"
+        },
+        {
+          "id": "btn-claude_prompt-2-0",
+          "label": "Explain Error",
+          "icon": [
+            "fas",
+            "robot"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "claude_prompt",
+            "config": {
+              "prompt": "Explain this error and how to fix it:\n\n{clipboard}",
+              "output": "both"
+            }
+          }
+        },
+        {
+          "id": "btn-claude_prompt-2-1",
+          "label": "Fix It",
+          "icon": [
+            "fas",
+            "screwdriver-wrench"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "claude_prompt",
+            "config": {
+              "prompt": "Fix this failing test or error:\n\n{clipboard}",
+              "output": "notify"
+            }
+          }
+        },
+        {
+          "id": "btn-macro-2-2",
+          "label": "Copy",
+          "icon": [
+            "fas",
+            "copy"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "macro",
+            "config": {
+              "steps": [
+                {
+                  "type": "clipboard_copy"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "btn-metric_cpu_usage-2-3",
+          "label": "CPU",
+          "icon": [
+            "fas",
+            "microchip"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "metric_cpu_usage",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-metric_memory-2-4",
+          "label": "Memory",
+          "icon": [
+            "fas",
+            "memory"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "metric_memory",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-previous_page-3-0",
+          "label": "Prev Page",
+          "icon": [
+            "fas",
+            "chevron-left"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "previous_page",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-next_page-3-1",
+          "label": "Next Page",
+          "icon": [
+            "fas",
+            "chevron-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "next_page",
+            "config": {}
+          }
+        }
+      ]
+    }
+  ]
+}

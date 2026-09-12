@@ -1,0 +1,508 @@
+{
+  "id": "dev-github-review",
+  "name": "GitHub Review",
+  "description": "Pull requests, checks and workflow runs, with live status on the button faces.",
+  "icon": "fa-code-pull-request",
+  "color": "#24292f",
+  "category": "development",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-dev-github-review",
+      "name": "GitHub Review",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-gh_widget_prs-0-0",
+          "label": "Open PRs",
+          "icon": [
+            "fas",
+            "code-pull-request"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#24292f",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_widget_prs",
+            "config": {
+              "refresh_interval": 120
+            }
+          },
+          "tooltip": "Live count (needs GITHUB_TOKEN)"
+        },
+        {
+          "id": "btn-gh_widget_ci-0-1",
+          "label": "CI",
+          "icon": [
+            "fas",
+            "heart-pulse"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#24292f",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_widget_ci",
+            "config": {
+              "refresh_interval": 120
+            }
+          },
+          "tooltip": "Live CI status for the current branch"
+        },
+        {
+          "id": "btn-gh_widget_notifications-0-2",
+          "label": "Inbox",
+          "icon": [
+            "fas",
+            "bell"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#24292f",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_widget_notifications",
+            "config": {
+              "refresh_interval": 300
+            }
+          }
+        },
+        {
+          "id": "btn-gh_widget_prs-0-3",
+          "label": "My Review",
+          "icon": [
+            "fas",
+            "user-check"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#24292f",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_widget_prs",
+            "config": {
+              "only_mine": true,
+              "refresh_interval": 120
+            }
+          },
+          "tooltip": "PRs awaiting your review"
+        },
+        {
+          "id": "btn-gh_status-0-4",
+          "label": "Status",
+          "icon": [
+            "fas",
+            "list-check"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#24292f",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_status",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-gh_pr_list-1-0",
+          "label": "List PRs",
+          "icon": [
+            "fas",
+            "list"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_pr_list",
+            "config": {
+              "limit": 10
+            }
+          }
+        },
+        {
+          "id": "btn-gh_pr_create-1-1",
+          "label": "New PR",
+          "icon": [
+            "fas",
+            "plus"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a34a",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_pr_create",
+            "config": {
+              "web": true
+            }
+          },
+          "tooltip": "Opens the PR form in the browser"
+        },
+        {
+          "id": "btn-gh_pr_checkout-1-2",
+          "label": "Checkout PR",
+          "icon": [
+            "fas",
+            "code-branch"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_pr_checkout",
+            "config": {}
+          },
+          "tooltip": "Set the PR number in the button config"
+        },
+        {
+          "id": "btn-gh_pr_view-1-3",
+          "label": "Open PR",
+          "icon": [
+            "fas",
+            "up-right-from-square"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_pr_view",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-gh_pr_checks-1-4",
+          "label": "Checks",
+          "icon": [
+            "fas",
+            "circle-check"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_pr_checks",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-gh_issue_list-2-0",
+          "label": "Issues",
+          "icon": [
+            "fas",
+            "circle-dot"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_issue_list",
+            "config": {
+              "limit": 10
+            }
+          }
+        },
+        {
+          "id": "btn-gh_issue_create-2-1",
+          "label": "New Issue",
+          "icon": [
+            "fas",
+            "circle-plus"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_issue_create",
+            "config": {
+              "title": "",
+              "web": true
+            }
+          }
+        },
+        {
+          "id": "btn-gh_run_list-2-2",
+          "label": "Runs",
+          "icon": [
+            "fas",
+            "play"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_run_list",
+            "config": {
+              "limit": 10
+            }
+          }
+        },
+        {
+          "id": "btn-gh_run_rerun-2-3",
+          "label": "Rerun Failed",
+          "icon": [
+            "fas",
+            "rotate-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#d97706",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_run_rerun",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-claude_slash-2-4",
+          "label": "Review w/ Claude",
+          "icon": [
+            "fas",
+            "robot"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "claude_slash",
+            "config": {
+              "command": "/code-review"
+            }
+          }
+        },
+        {
+          "id": "btn-previous_page-3-0",
+          "label": "Prev Page",
+          "icon": [
+            "fas",
+            "chevron-left"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "previous_page",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-next_page-3-1",
+          "label": "Next Page",
+          "icon": [
+            "fas",
+            "chevron-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "next_page",
+            "config": {}
+          }
+        }
+      ]
+    }
+  ]
+}

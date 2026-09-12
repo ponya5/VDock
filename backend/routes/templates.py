@@ -148,6 +148,13 @@ def apply_template(template_id: str):
             'updated_at': datetime.now().isoformat()
         }
 
+        # Carry the smart-profile binding through, so a template that declares
+        # the app it belongs to auto-activates when that app is focused. This
+        # was dropped before, which meant a shipped scene could never bind
+        # itself to an editor.
+        if template.get('triggeredByApp'):
+            scene['triggeredByApp'] = template['triggeredByApp']
+
         # Create pages with new IDs
         for page_template in template.get('pages', []):
             page = {

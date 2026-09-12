@@ -1,0 +1,523 @@
+{
+  "id": "dev-cursor-ai",
+  "name": "Cursor AI",
+  "description": "Composer, chat, inline edit and diff controls for Cursor.",
+  "icon": "fa-wand-magic-sparkles",
+  "color": "#6b7280",
+  "category": "development",
+  "version": "1.0",
+  "author": "VDock Team",
+  "pages": [
+    {
+      "id": "page-dev-cursor-ai",
+      "name": "Cursor AI",
+      "grid_config": {
+        "rows": 4,
+        "cols": 5
+      },
+      "buttons": [
+        {
+          "id": "btn-cursor_composer-0-0",
+          "label": "Composer",
+          "icon": [
+            "fas",
+            "wand-magic-sparkles"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_composer",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+I"
+        },
+        {
+          "id": "btn-cursor_chat-0-1",
+          "label": "Chat",
+          "icon": [
+            "fas",
+            "comments"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_chat",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+L"
+        },
+        {
+          "id": "btn-cursor_inline_edit-0-2",
+          "label": "Inline Edit",
+          "icon": [
+            "fas",
+            "pen"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_inline_edit",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+K"
+        },
+        {
+          "id": "btn-cursor_new_chat-0-3",
+          "label": "New Chat",
+          "icon": [
+            "fas",
+            "plus"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_new_chat",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+Shift+L"
+        },
+        {
+          "id": "btn-cursor_composer_full-0-4",
+          "label": "Full Composer",
+          "icon": [
+            "fas",
+            "expand"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#8b5cf6",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_composer_full",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-cursor_accept-1-0",
+          "label": "Accept",
+          "icon": [
+            "fas",
+            "check"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#16a34a",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_accept",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-cursor_reject-1-1",
+          "label": "Reject",
+          "icon": [
+            "fas",
+            "xmark"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#dc2626",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_reject",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-cursor_command_palette-1-2",
+          "label": "Palette",
+          "icon": [
+            "fas",
+            "terminal"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_command_palette",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+Shift+P"
+        },
+        {
+          "id": "btn-cursor_quick_open-1-3",
+          "label": "Quick Open",
+          "icon": [
+            "fas",
+            "magnifying-glass"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_quick_open",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+P"
+        },
+        {
+          "id": "btn-cursor_find_in_files-1-4",
+          "label": "Find in Files",
+          "icon": [
+            "fas",
+            "magnifying-glass"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_find_in_files",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+Shift+F"
+        },
+        {
+          "id": "btn-cursor_toggle_terminal-2-0",
+          "label": "Terminal",
+          "icon": [
+            "fas",
+            "terminal"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_toggle_terminal",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+`"
+        },
+        {
+          "id": "btn-cursor_toggle_sidebar-2-1",
+          "label": "Sidebar",
+          "icon": [
+            "fas",
+            "bars"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cursor_toggle_sidebar",
+            "config": {}
+          },
+          "secondary_label": "Ctrl+B"
+        },
+        {
+          "id": "btn-claude_prompt-2-2",
+          "label": "Ask Claude",
+          "icon": [
+            "fas",
+            "robot"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "claude_prompt",
+            "config": {
+              "prompt": "In {project}: ",
+              "output": "both"
+            }
+          }
+        },
+        {
+          "id": "btn-claude_slash-2-3",
+          "label": "Review",
+          "icon": [
+            "fas",
+            "magnifying-glass"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "claude_slash",
+            "config": {
+              "command": "/code-review"
+            }
+          }
+        },
+        {
+          "id": "btn-gh_pr_checks-2-4",
+          "label": "PR Checks",
+          "icon": [
+            "fas",
+            "circle-check"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#24292f",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "gh_pr_checks",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-previous_page-3-0",
+          "label": "Prev Page",
+          "icon": [
+            "fas",
+            "chevron-left"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 0
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "previous_page",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-next_page-3-1",
+          "label": "Next Page",
+          "icon": [
+            "fas",
+            "chevron-right"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 1
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "next_page",
+            "config": {}
+          }
+        },
+        {
+          "id": "btn-metric_cpu_usage-3-4",
+          "label": "CPU",
+          "icon": [
+            "fas",
+            "microchip"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 4
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#334155",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "metric_cpu_usage",
+            "config": {}
+          }
+        }
+      ]
+    }
+  ],
+  "triggeredByApp": "Cursor.exe"
+}
