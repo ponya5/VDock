@@ -378,13 +378,38 @@
 
                 <section v-if="settingsStore.screensaverWidgets.includes('news')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'newspaper']" /> News Headlines</h2>
+                  <p class="form-help">
+                    Headlines come from RSS feeds, so no API key is needed. Leave
+                    this blank to use the built-in sources (BBC World, Hacker
+                    News, Ars Technica).
+                  </p>
                   <div class="form-group">
-                    <label>GNews.io API Key</label>
-                    <input v-model="settingsStore.newsApiKey" type="password" class="input" placeholder="Paste your free API key" />
-                    <p class="form-help">Get a free key at gnews.io. Required for the news widget to show real headlines.</p>
+                    <label>Feed URLs</label>
+                    <textarea
+                      v-model="settingsStore.newsFeeds"
+                      class="input"
+                      rows="4"
+                      placeholder="https://feeds.bbci.co.uk/news/world/rss.xml&#10;https://hnrss.org/frontpage"
+                    ></textarea>
+                    <p class="form-help">One RSS or Atom URL per line.</p>
+                  </div>
+                  <div class="form-group">
+                    <label>Seconds per headline</label>
+                    <input
+                      v-model.number="settingsStore.newsRotateSeconds"
+                      type="number"
+                      min="3"
+                      max="60"
+                      class="input"
+                    />
+                    <p class="form-help">
+                      How long each headline stays before the carousel slides up.
+                      Rotation pauses automatically if your system prefers
+                      reduced motion.
+                    </p>
                   </div>
                   <button class="btn btn-secondary" :disabled="testingNews" @click="handleTestNews">
-                    <FontAwesomeIcon :icon="['fas', testingNews ? 'spinner' : 'plug']" :spin="testingNews" /> Test Connection
+                    <FontAwesomeIcon :icon="['fas', testingNews ? 'spinner' : 'plug']" :spin="testingNews" /> Test Feeds
                   </button>
                 </section>
 
@@ -695,7 +720,7 @@ import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
-import { testNewsConnection } from '@/services/newsService'
+import { testNewsConnection, parseFeedList } from '@/services/newsService'
 import { testMarketConnection } from '@/services/marketService'
 
 const router = useRouter()
@@ -986,10 +1011,14 @@ const testingNews = ref(false)
 async function handleTestNews() {
   testingNews.value = true
   try {
-    await testNewsConnection(settingsStore.newsApiKey.trim())
-    notificationsStore.success('News connected', 'Successfully fetched a headline from GNews.io.')
+    const feeds = parseFeedList(settingsStore.newsFeeds)
+    const count = await testNewsConnection(feeds)
+    notificationsStore.success(
+      'Feeds working',
+      `Fetched ${count} headlines from ${feeds.length || 'the built-in'} ${feeds.length === 1 ? 'feed' : 'feeds'}.`
+    )
   } catch (err: any) {
-    notificationsStore.error('News connection failed', err?.message || 'Could not reach GNews.io with this key.')
+    notificationsStore.error('Feed test failed', err?.message || 'Could not read those feeds.')
   } finally {
     testingNews.value = false
   }

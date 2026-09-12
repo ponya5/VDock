@@ -36,6 +36,8 @@ export interface PersistedUserSettings {
   buttonDefaultEffect: string
   screensaverWidgets: string[]
   newsApiKey: string
+  newsFeeds: string
+  newsRotateSeconds: number
   marketApiKey: string
 }
 
@@ -101,6 +103,9 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const screensaverWidgets = ref<string[]>(['weather'])
   const newsApiKey = ref('')
+  // RSS/Atom feed URLs, one per line. Blank uses the backend defaults.
+  const newsFeeds = ref('')
+  const newsRotateSeconds = ref(8)
   const marketApiKey = ref('')
 
   const showHelpGuide = ref(false)
@@ -186,6 +191,8 @@ export const useSettingsStore = defineStore('settings', () => {
       // Spread for the same structured-clone reason as recentActions above.
       screensaverWidgets: [...screensaverWidgets.value],
       newsApiKey: newsApiKey.value,
+      newsFeeds: newsFeeds.value,
+      newsRotateSeconds: newsRotateSeconds.value,
       marketApiKey: marketApiKey.value,
     }
   }
@@ -220,6 +227,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.buttonDefaultEffect !== undefined) buttonDefaultEffect.value = settings.buttonDefaultEffect
     if (settings.screensaverWidgets !== undefined) screensaverWidgets.value = settings.screensaverWidgets
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
+    if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
+    if (settings.newsRotateSeconds !== undefined) newsRotateSeconds.value = settings.newsRotateSeconds
     if (settings.marketApiKey !== undefined) marketApiKey.value = settings.marketApiKey
   }
 
@@ -263,6 +272,8 @@ export const useSettingsStore = defineStore('settings', () => {
         buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
         screensaverWidgets: settings.screensaverWidgets ?? ['weather'],
         newsApiKey: settings.newsApiKey ?? '',
+        newsFeeds: settings.newsFeeds ?? '',
+        newsRotateSeconds: settings.newsRotateSeconds ?? 8,
         marketApiKey: settings.marketApiKey ?? '',
       })
     } catch (error) {
@@ -360,6 +371,8 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultEffect,
       screensaverWidgets,
       newsApiKey,
+      newsFeeds,
+      newsRotateSeconds,
       marketApiKey,
     ],
     () => {
@@ -542,6 +555,8 @@ export const useSettingsStore = defineStore('settings', () => {
     buttonDefaultEffect,
     screensaverWidgets,
     newsApiKey,
+    newsFeeds,
+    newsRotateSeconds,
     marketApiKey,
     showHelpGuide,
     applyTouchModeStyles,

@@ -23,9 +23,41 @@
 
       <div v-if="showNewsWidget" class="ss-card ss-card-news">
         <FontAwesomeIcon :icon="['fas', 'newspaper']" class="ss-card-icon" />
-        <div class="ss-card-info">
-          <span class="ss-card-main ss-card-main-truncate">{{ newsHeadline || 'Loading headlines…' }}</span>
-          <span class="ss-card-sub">{{ newsSource || 'News' }}</span>
+
+        <!-- A vertical carousel: the whole track slides up by one row per
+             tick, so several headlines share one widget instead of a single
+             truncated line. -->
+        <div class="ss-news-viewport" aria-live="polite">
+          <div
+            class="ss-news-track"
+            :style="{ transform: `translateY(-${newsIndex * 100}%)` }"
+          >
+            <div
+              v-for="(item, i) in newsHeadlines"
+              :key="`${i}-${item.url || item.title}`"
+              class="ss-news-slide"
+              :aria-hidden="i !== newsIndex"
+            >
+              <span class="ss-card-main ss-news-title">{{ item.title }}</span>
+              <span class="ss-card-sub">{{ item.source }}</span>
+            </div>
+
+            <div v-if="!newsHeadlines.length" class="ss-news-slide">
+              <span class="ss-card-main ss-news-title">
+                {{ newsError || 'Loading headlines…' }}
+              </span>
+              <span class="ss-card-sub">News</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="newsHasMultiple" class="ss-news-progress">
+          <span
+            v-for="i in Math.min(newsHeadlines.length, 8)"
+            :key="i"
+            class="ss-news-dot"
+            :class="{ 'is-active': (i - 1) === newsIndex % 8 }"
+          ></span>
         </div>
       </div>
 
@@ -63,7 +95,14 @@ const time = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval> | null = null
 
 const { weather, start: startWeather, stop: stopWeather } = useWeather()
-const { headline: newsHeadline, source: newsSource, start: startNews, stop: stopNews } = useNews()
+const {
+  headlines: newsHeadlines,
+  index: newsIndex,
+  hasMultiple: newsHasMultiple,
+  error: newsError,
+  start: startNews,
+  stop: stopNews
+} = useNews()
 const { prices: marketPrices, start: startMarket, stop: stopMarket } = useMarket()
 
 const timeStr = computed(() =>
@@ -281,5 +320,78 @@ onUnmounted(() => {
   font-size: 1.1rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.88);
+}
+
+/* --- News carousel ------------------------------------------------------- */
+/* One row is visible; the track slides up a row at a time. Height is bound to
+   the two lines inside a slide so the transform lands exactly on a boundary. */
+.ss-news-viewport {
+  flex: 1;
+  min-width: 0;
+  height: 3.1em;
+  overflow: hidden;
+  position: relative;
+  -webkit-mask-image: linear-gradient(
+    to bottom, transparent, #000 14%, #000 86%, transparent
+  );
+  mask-image: linear-gradient(
+    to bottom, transparent, #000 14%, #000 86%, transparent
+  );
+}
+
+.ss-news-track {
+  display: flex;
+  flex-direction: column;
+  transition: transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+.ss-news-slide {
+  height: 3.1em;
+  flex: 0 0 3.1em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ss-news-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.ss-news-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: var(--spacing-sm, 8px);
+  flex-shrink: 0;
+}
+
+.ss-news-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: background 300ms ease, transform 300ms ease;
+}
+
+.ss-news-dot.is-active {
+  background: rgba(255, 255, 255, 0.85);
+  transform: scale(1.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-news-track {
+    transition: none;
+  }
+  .ss-news-dot {
+    transition: none;
+  }
 }
 </style>
