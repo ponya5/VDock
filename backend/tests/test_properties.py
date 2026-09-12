@@ -45,17 +45,22 @@ def test_file_manager_uses_logger(method, tmp_path, mocker):
 @given(route=st.sampled_from(['/api/profiles', '/api/profiles/123']), method=st.sampled_from(['GET', 'POST', 'PUT']))
 @settings(max_examples=20, deadline=None)  # 20 is enough for routing
 def test_profile_routes_require_auth(route, method):
-    # Enable auth
-    Config.REQUIRE_AUTH = True
-    
     valid_methods = {
         '/api/profiles': ['GET', 'POST'],
         '/api/profiles/123': ['GET', 'PUT']
     }
-    
+
     if method not in valid_methods.get(route, []):
         return
-        
-    with app.test_client() as c:
-        resp = getattr(c, method.lower())(route)
-        assert resp.status_code in (401, 403)
+
+    # Config is process-wide, so this must be restored. Leaving REQUIRE_AUTH
+    # set to True leaked into every later test that calls a @require_auth
+    # route, which then got 401 instead of its real response.
+    previous = Config.REQUIRE_AUTH
+    Config.REQUIRE_AUTH = True
+    try:
+        with app.test_client() as c:
+            resp = getattr(c, method.lower())(route)
+            assert resp.status_code in (401, 403)
+    finally:
+        Config.REQUIRE_AUTH = previous
