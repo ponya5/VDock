@@ -70,11 +70,12 @@ socketio = SocketIO(
 # Initialize services
 Config.init_app()
 logger = setup_logger('vdock', log_file=Config.DATA_DIR / 'vdock.log')
-action_executor = ActionExecutor()
 plugin_manager = PluginManager()
+action_executor = ActionExecutor(plugin_manager)
 
-# Load plugins on startup
+# Load user drop-in plugins and the integration packs that ship with VDock.
 plugin_manager.load_plugins()
+plugin_manager.load_builtin_packs()
 
 # Register blueprints
 app.register_blueprint(auth_bp)

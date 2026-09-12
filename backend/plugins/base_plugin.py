@@ -1,7 +1,10 @@
 """Base plugin class and interfaces."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from actions.catalog import ActionSpec
 
 
 @dataclass
@@ -81,6 +84,25 @@ class BasePlugin(ABC):
         """
         pass
     
+    def get_action_specs(self) -> Optional[Sequence['ActionSpec']]:
+        """Describe this plugin's actions for the button picker.
+
+        Return None (the default) to have PluginManager derive entries from
+        get_info() and get_action_schema(). Shipped integration packs override
+        this so they can set a category, icon, keywords and rich config fields
+        that a bare JSON schema cannot express.
+        """
+        return None
+
+    def is_available(self) -> tuple:
+        """Report whether this plugin can currently run.
+
+        Returns (available, reason). A pack whose CLI is missing or whose token
+        is unset should return (False, "...") so the picker can show it greyed
+        out with an explanation, rather than failing when the button is pressed.
+        """
+        return True, ''
+
     def enable(self):
         """Enable the plugin."""
         self._enabled = True

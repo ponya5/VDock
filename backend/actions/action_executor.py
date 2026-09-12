@@ -1,5 +1,5 @@
 """Central action executor that routes actions to appropriate handlers."""
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 from .base_action import ActionResult
 from .url_action import URLAction
 from .program_action import ProgramAction
@@ -17,7 +17,14 @@ from .ui_control_action import UIControlAction
 
 
 class ActionExecutor:
-    """Executes actions based on their type."""
+    """Executes actions based on their type.
+
+    Unknown types fall through to the plugin manager, which is what makes the
+    plugin system reachable at all: PluginManager.execute_plugin_action() was
+    fully implemented but had no caller, so every plugin action returned
+    "Unknown action type". Integration packs can now add actions without
+    touching this dispatch table.
+    """
     
     # Map action types to their classes
     ACTION_CLASSES = {
@@ -43,6 +50,43 @@ class ActionExecutor:
         'ui_control': UIControlAction
     }
     
+    def __init__(self, plugin_manager: Optional[Any] = None):
+        """Initialize the executor.
+
+        Args:
+            plugin_manager: Optional PluginManager used to resolve action types
+                this executor has no built-in handler for.
+        """
+        self.plugin_manager = plugin_manager
+
+    def set_plugin_manager(self, plugin_manager: Any) -> None:
+        """Attach a plugin manager after construction.
+
+        app.py builds both singletons at import time; this avoids ordering
+        constraints between them.
+        """
+        self.plugin_manager = plugin_manager
+
+    def _execute_plugin_action(
+        self, action_type: str, config: Dict[str, Any]
+    ) -> Optional[ActionResult]:
+        """Try to run `action_type` as a plugin action.
+
+        Returns None when no plugin provides it, so the caller can report the
+        original "unknown action type" error.
+        """
+        manager = self.plugin_manager
+        if manager is None or not manager.handles(action_type):
+            return None
+
+        result = manager.execute_plugin_action(action_type, config)
+        return ActionResult(
+            success=bool(result.get('success')),
+            message=result.get('message', ''),
+            data=result.get('data') or {},
+            details=result.get('details'),
+        )
+
     def execute_action(self, action_data: Dict[str, Any]) -> ActionResult:
         """Execute an action based on its configuration.
         
@@ -59,8 +103,11 @@ class ActionExecutor:
             return ActionResult(False, 'Action type not specified')
         
         if action_type not in self.ACTION_CLASSES:
+            plugin_result = self._execute_plugin_action(action_type, config)
+            if plugin_result is not None:
+                return plugin_result
             return ActionResult(False, f'Unknown action type: {action_type}')
-        
+
         try:
             # Create action instance
             action_class = self.ACTION_CLASSES[action_type]

@@ -28,6 +28,8 @@ export type ActionType =
   | 'time_countdown'
   // Weather
   | 'weather'
+  // Calendar widget
+  | 'calendar'
   | 'cross_platform'
   | 'folder'
   | 'plugin'

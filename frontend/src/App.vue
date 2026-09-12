@@ -20,6 +20,7 @@ import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useActionCatalogStore } from '@/stores/actionCatalog'
 import socketClient from '@/api/socket'
 import apiClient from '@/api/client'
 import NotificationCenter from '@/components/NotificationCenter.vue'
@@ -33,6 +34,7 @@ const route = useRoute()
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 const dashboardStore = useDashboardStore()
+const actionCatalogStore = useActionCatalogStore()
 
 const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
 
@@ -52,6 +54,10 @@ onMounted(async () => {
 
   await settingsStore.loadSettingsFromServer()
   await settingsStore.loadServerConfig()
+
+  // Load the action catalog before any button can be pressed: it decides which
+  // action types are live widgets that must not dispatch.
+  await actionCatalogStore.load()
 
   socketClient.connect()
   stopLiveSettingsSync = settingsStore.initLiveSync()

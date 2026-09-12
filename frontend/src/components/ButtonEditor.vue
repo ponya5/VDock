@@ -1437,6 +1437,7 @@ import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
+import type { ActionSpec } from '@/stores/actionCatalog'
 import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
 import type { ButtonTemplate } from '@/data/buttonTemplates'
@@ -2191,37 +2192,21 @@ function applyMacroCombination() {
   showMacroHotkeyDropdown.value = false
 }
 
-function handleActionSelection(selectedActionType: string) {
-  actionType.value = selectedActionType as ActionType
-  actionConfig.value = {}
+function handleActionSelection(spec: ActionSpec) {
+  // The catalog entry carries both the action type and the config it needs.
+  // Several entries share one type: `volume_up`, `media_play_pause` and
+  // `screenshot` are all `cross_platform` with a different config. Setting only
+  // the type (as this did when the sidebar emitted a bare string) produced
+  // buttons that failed on press.
+  actionType.value = spec.action_type as ActionType
+  actionConfig.value = { ...spec.default_config }
   hotkeyString.value = ''
   showActionsSidebar.value = false
-  
-  // Set default labels based on action type
-  const actionLabels: Record<string, string> = {
-    'metric_memory': 'Memory',
-    'metric_cpu_usage': 'CPU',
-    'metric_cpu_temperature': 'CPU Temp',
-    'metric_cpu_frequency': 'CPU Freq',
-    'metric_cpu_power': 'CPU Power',
-    'metric_internet_speed': 'Internet',
-    'metric_harddisk': 'Disk',
-    'metric_gpu_temperature': 'GPU Temp',
-    'metric_gpu_frequency': 'GPU Freq',
-    'metric_gpu_usage': 'GPU Usage',
-    'metric_gpu_memory_freq': 'GPU Mem Freq',
-    'metric_gpu_memory_usage': 'GPU Mem',
-    'calendar': 'Calendar',
-    'time_world_clock': 'World Clock',
-    'time_timer': 'Timer',
-    'time_countdown': 'Countdown',
-    'weather': 'Weather',
-    'next_page': 'Next Page',
-    'previous_page': 'Previous Page'
-  }
-  
-  if (actionLabels[selectedActionType]) {
-    editedButton.value.label = actionLabels[selectedActionType]
+
+  // Name the button after the catalog entry rather than a hardcoded map, so a
+  // new action is labelled correctly without editing this file.
+  if (!editedButton.value.label || editedButton.value.label === 'New Button') {
+    editedButton.value.label = spec.label
   }
 }
 

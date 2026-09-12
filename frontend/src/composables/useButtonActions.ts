@@ -3,6 +3,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useActionCatalogStore } from '@/stores/actionCatalog'
 import type { Button, ActionResult } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 
@@ -11,6 +12,7 @@ export function useButtonActions() {
   const settingsStore = useSettingsStore()
   const profilesStore = useProfilesStore()
   const notificationsStore = useNotificationsStore()
+  const actionCatalogStore = useActionCatalogStore()
 
   const currentProfile = computed(() => dashboardStore.currentProfile)
   const currentScene = computed(() => dashboardStore.currentScene)
@@ -87,25 +89,12 @@ export function useButtonActions() {
       }
     }
 
-    // Skip execution for display-only types
-    const displayOnlyTypes = [
-      'weather',
-      'time_world_clock',
-      'time_timer', 
-      'time_countdown',
-      'metric_memory',
-      'metric_cpu_usage',
-      'metric_cpu_frequency',
-      'metric_internet_speed',
-      'metric_harddisk',
-      'metric_gpu_temperature',
-      'metric_gpu_frequency',
-      'metric_gpu_usage',
-      'metric_gpu_memory_freq',
-      'metric_gpu_memory_usage'
-    ]
-
-    if (displayOnlyTypes.includes(button.action.type)) {
+    // Widgets render live data; pressing them must not dispatch. The catalog
+    // is the source of truth for which types those are -- the list used to be
+    // hardcoded here and had drifted, omitting metric_cpu_temperature and
+    // metric_cpu_power, so those two dispatched and failed with
+    // "Unknown action type".
+    if (actionCatalogStore.displayOnlyTypes.has(button.action.type)) {
       return
     }
 
