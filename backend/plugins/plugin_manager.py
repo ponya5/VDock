@@ -124,7 +124,8 @@ class PluginManager:
             return loaded
 
         for module_info in pkgutil.iter_modules(integrations.__path__):
-            if module_info.name.startswith('_'):
+            # Only *_pack modules are packs; the rest are shared helpers.
+            if not module_info.name.endswith('_pack'):
                 continue
             try:
                 module = importlib.import_module(

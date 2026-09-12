@@ -1,0 +1,181 @@
+"""Shared machinery for keystroke-driven editor packs (Copilot, Cursor).
+
+Neither GitHub Copilot nor Cursor exposes a CLI or local API, so the only way to
+drive them is to send the keystrokes a human would press. That carries a real
+hazard: if the wrong window has focus, those keystrokes land somewhere else, and
+"type this prompt then press Enter" is destructive in the wrong place.
+
+So every action here checks the foreground process first and refuses to send
+anything if the expected editor is not focused. That check is the whole reason
+this module exists rather than the packs each calling MacroAction directly.
+
+Note this file is deliberately not named ``*_pack``: PluginManager only scans
+modules matching that suffix, so shared helpers are never mistaken for packs.
+"""
+import logging
+from typing import Any, Dict, Optional, Sequence, Tuple
+
+from actions.catalog import ActionSpec, ConfigField, RUNS_BACKEND
+from actions.macro_action import MacroAction
+from plugins.base_plugin import BasePlugin, PluginInfo
+
+from . import context
+from .keymaps import Command
+
+logger = logging.getLogger('vdock')
+
+
+def foreground_exe() -> Optional[str]:
+    """Lowercased process name of the focused window, or None."""
+    editor = context.current_editor()
+    return editor.app_exe
+
+
+def send(command: Command, text_override: Optional[str] = None,
+         enforce_focus: bool = True) -> Dict[str, Any]:
+    """Send ``command`` to the focused editor.
+
+    Args:
+        command: The keymap entry to send.
+        text_override: Text to type instead of the command's own.
+        enforce_focus: Refuse to send if the expected editor is not focused.
+            Only turn this off deliberately -- it is what stops a prompt being
+            typed into whatever happens to be in front.
+    """
+    if enforce_focus and command.target_exes:
+        current = foreground_exe()
+        if current is None:
+            return {
+                'success': False,
+                'message': 'Could not determine the focused window',
+                'details': 'Refusing to send keystrokes when the target is '
+                           'unknown.',
+            }
+        if current not in command.target_exes:
+            expected = ' or '.join(command.target_exes)
+            return {
+                'success': False,
+                'message': f'{expected} is not focused',
+                'details': (
+                    f'The focused window is {current}. Focus the editor first '
+                    f'-- sending these keystrokes elsewhere could do damage.'
+                ),
+            }
+
+    steps = command.to_macro_steps(text_override)
+    result = MacroAction({'steps': steps}).execute()
+
+    return {
+        'success': result.success,
+        'message': result.message if not result.success else command.label,
+        'details': result.details,
+        'data': result.data,
+    }
+
+
+class KeystrokeEditorPlugin(BasePlugin):
+    """Base for packs whose actions are editor keystrokes.
+
+    Subclasses provide the plugin identity and a tuple of Commands.
+    """
+
+    #: Overridden by subclasses.
+    plugin_id = ''
+    plugin_name = ''
+    plugin_description = ''
+    commands: Tuple[Command, ...] = ()
+    category = 'dev'
+    #: Human-readable name of the editor, used in unavailability messages.
+    editor_label = 'the editor'
+    #: Process names that indicate the editor is installed/running.
+    editor_exes: Tuple[str, ...] = ()
+
+    def get_info(self) -> PluginInfo:
+        return PluginInfo(
+            id=self.plugin_id,
+            name=self.plugin_name,
+            version='1.0.0',
+            author='VDock',
+            description=self.plugin_description,
+            actions=[cmd.id for cmd in self.commands],
+        )
+
+    def initialize(self) -> bool:
+        return True
+
+    def cleanup(self) -> None:
+        pass
+
+    def is_available(self) -> tuple:
+        # Keystroke packs are always loadable; whether the editor is focused is
+        # decided per press, not at load time.
+        try:
+            from actions.hotkey_action import PYNPUT_AVAILABLE
+        except ImportError:
+            PYNPUT_AVAILABLE = False
+
+        if not PYNPUT_AVAILABLE:
+            return False, (
+                'pynput is not installed, so VDock cannot send keystrokes. '
+                'Run: pip install pynput'
+            )
+        return True, ''
+
+    def get_action_specs(self) -> Sequence[ActionSpec]:
+        specs = []
+        for cmd in self.commands:
+            fields = (
+                ConfigField(
+                    'enforce_focus', f'Only send when {self.editor_label} is focused',
+                    'boolean', default=True,
+                    help='Strongly recommended. Keystrokes sent to the wrong '
+                         'window can be destructive.',
+                ),
+            )
+            if cmd.types_text is not None:
+                fields = (
+                    ConfigField(
+                        'text', 'Text to send', 'textarea',
+                        default=cmd.types_text,
+                        help='Supports {clipboard}, {repo}, {project} and '
+                             '{branch}.',
+                    ),
+                ) + fields
+
+            specs.append(ActionSpec(
+                id=cmd.id, label=cmd.label, category=self.category,
+                icon=('fas', cmd.icon), action_type=cmd.id,
+                runs_on=RUNS_BACKEND, description=cmd.description,
+                keywords=cmd.keywords,
+                default_config={'enforce_focus': True},
+                config_fields=fields,
+            ))
+        return tuple(specs)
+
+    def get_action_schema(self, action_id: str) -> Dict[str, Any]:
+        for spec in self.get_action_specs():
+            if spec.id == action_id:
+                return {
+                    'type': 'object',
+                    'properties': {
+                        f.name: {'type': 'string', 'title': f.label}
+                        for f in spec.config_fields
+                    },
+                    'required': [],
+                }
+        return {}
+
+    def execute_action(self, action_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        command = next((c for c in self.commands if c.id == action_id), None)
+        if command is None:
+            return {'success': False, 'message': f'Unknown action: {action_id}'}
+
+        text = config.get('text')
+        if text is not None:
+            text = context.expand_placeholders(str(text))
+
+        return send(
+            command,
+            text_override=text,
+            enforce_focus=bool(config.get('enforce_focus', True)),
+        )

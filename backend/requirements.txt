@@ -18,3 +18,9 @@ Werkzeug==3.0.1
 requests==2.31.0
 pytz==2024.1
 
+# Optional: only needed for the "Ask Claude (API)" action, which calls the
+# Anthropic Messages API directly. The Claude Code CLI actions do not need it,
+# and the pack greys that one action out with an install hint when it is
+# missing, so VDock works fine without this.
+#   pip install anthropic
+# anthropic>=0.40.0
