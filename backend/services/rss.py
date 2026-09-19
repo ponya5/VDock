@@ -163,6 +163,10 @@ def fetch_headlines(
 ) -> List[Headline]:
     """Merge several feeds into one list, interleaved so no source dominates.
 
+    Feeds are fetched in parallel: three sequential fetches at FETCH_TIMEOUT
+    each kept the screensaver on 'Loading headlines' for 30s in the worst
+    case -- a dead feed should cost its own timeout, not everyone's.
+
     A failing feed is skipped rather than failing the whole request -- one dead
     URL should not blank the widget.
     """
@@ -170,7 +174,13 @@ def fetch_headlines(
     if not urls:
         urls = list(DEFAULT_FEEDS)
 
-    per_feed = [fetch_feed(url, use_cache=use_cache) for url in urls]
+    if len(urls) == 1:
+        per_feed = [fetch_feed(urls[0], use_cache=use_cache)]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(len(urls), 8)) as pool:
+            per_feed = list(pool.map(
+                lambda u: fetch_feed(u, use_cache=use_cache), urls))
 
     # Round-robin so a prolific feed does not push the others off the end.
     merged: List[Headline] = []

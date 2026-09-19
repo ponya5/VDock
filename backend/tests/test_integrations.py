@@ -413,6 +413,9 @@ def test_cc_clear_is_refused_without_a_live_session(mocker):
 def test_cc_clear_types_clear_into_a_live_session(mocker):
     mocker.patch('integrations.sessions.session_alive', return_value=True)
     mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=None)
+    mocker.patch(
         'integrations.editor_base.window_focus.focus_app_window',
         return_value=True)
     mocker.patch('integrations.editor_base.time.sleep')
@@ -432,6 +435,87 @@ def test_cc_clear_types_clear_into_a_live_session(mocker):
     assert steps[3]['keys'] == ['enter']
 
 
+def test_cc_commands_resolve_the_session_host_window(mocker):
+    """A session inside an IDE terminal resolves to the IDE's window -- the
+    whole point of host-window targeting: exe lists can't know the host."""
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    host = mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=4321)
+    focus = mocker.patch(
+        'integrations.editor_base.window_focus.focus_hwnd',
+        return_value=True)
+    by_exe = mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window')
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.window_focus.foreground_hwnd',
+                 return_value=4321)
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = ClaudeCodePlugin().execute_action('cc_clear', {})
+
+    assert result['success'] is True
+    host.assert_called_once_with('claude', prefer_title='claude')
+    focus.assert_called_once_with(4321)
+    by_exe.assert_not_called(), 'host resolution must win over the exe list'
+
+
+def test_cc_host_window_refuses_when_another_window_stays_foreground(mocker):
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=4321)
+    mocker.patch('integrations.editor_base.window_focus.focus_hwnd',
+                 return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.window_focus.foreground_hwnd',
+                 return_value=9999)
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_clear', {})
+
+    assert result['success'] is False
+    assert 'not focused' in result['message']
+    macro.assert_not_called()
+
+
+def test_cc_host_window_reports_when_focus_fails(mocker):
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=4321)
+    mocker.patch('integrations.editor_base.window_focus.focus_hwnd',
+                 return_value=False)
+    mocker.patch('integrations.editor_base.time.sleep')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_clear', {})
+
+    assert result['success'] is False
+    assert 'focus' in result['message'].lower()
+    macro.assert_not_called()
+
+
+def test_cc_falls_back_to_terminal_exes_when_no_host_resolves(mocker):
+    """No resolvable session window -> the old exe-list path still applies."""
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=None)
+    focus = mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=False)
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_clear', {})
+
+    assert result['success'] is False
+    focus.assert_called_once()
+    macro.assert_not_called()
+
+
 def test_cc_exit_is_refused_without_destructive_opt_in(mocker):
     mocker.patch('integrations.sessions.session_alive', return_value=True)
     macro = mocker.patch('integrations.editor_base.MacroAction')
@@ -445,6 +529,9 @@ def test_cc_exit_is_refused_without_destructive_opt_in(mocker):
 
 def test_cc_exit_sends_ctrl_c_twice_when_opted_in(mocker):
     mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=None)
     mocker.patch(
         'integrations.editor_base.window_focus.focus_app_window',
         return_value=True)
@@ -466,6 +553,9 @@ def test_cc_exit_sends_ctrl_c_twice_when_opted_in(mocker):
 
 def test_cc_interrupt_needs_no_session_gate(mocker):
     """Safe commands fire on the focus guard alone."""
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=None)
     mocker.patch(
         'integrations.editor_base.window_focus.focus_app_window',
         return_value=True)
@@ -494,6 +584,67 @@ def test_claude_code_profile_is_registered():
     profile = keymaps.PROFILES_BY_ID['claude-code']
     assert profile.kind == 'terminal_agent'
     assert all(c.id.startswith('cc_') for c in profile.commands)
+
+
+def test_session_host_window_walks_the_process_tree(mocker):
+    """A session inside an IDE terminal resolves to the IDE's own window:
+    claude.exe -> shell -> Cursor.exe, and the window belongs to Cursor."""
+    from utils import window_focus
+    mocker.patch('utils.window_focus.platform.system',
+                 return_value='Windows')
+    mocker.patch.object(window_focus, '_session_pids', return_value=[100])
+    mocker.patch.object(
+        window_focus, '_visible_windows_by_pid',
+        return_value={200: [(4321, 'VDock2 - Cursor')]})
+    mocker.patch('psutil.process_iter', return_value=[])
+
+    parent = mocker.Mock()
+    parent.pid = 200
+    proc = mocker.Mock()
+    proc.parents.return_value = [parent]
+    mocker.patch('psutil.Process', return_value=proc)
+
+    assert window_focus.find_session_host_window('claude') == 4321
+
+
+def test_session_host_window_prefers_hosted_over_self_owned(mocker):
+    """The Claude desktop app also matches 'claude' and owns a window, but a
+    hosted CLI session is what the deck buttons mean."""
+    from utils import window_focus
+    mocker.patch('utils.window_focus.platform.system',
+                 return_value='Windows')
+    # 150 is the desktop app (owns its own window); 100 is the CLI whose
+    # parent's child conhost (300) owns the console window.
+    mocker.patch.object(window_focus, '_session_pids',
+                        return_value=[150, 100])
+    mocker.patch.object(
+        window_focus, '_visible_windows_by_pid',
+        return_value={150: [(9000, 'Claude')], 300: [(4321, 'claude')]})
+
+    child = mocker.Mock()
+    child.info = {'ppid': 200}
+    child.pid = 300
+    mocker.patch('psutil.process_iter', return_value=[child])
+
+    def fake_process(pid):
+        proc = mocker.Mock()
+        proc.parents.return_value = ([mocker.Mock(pid=200)]
+                                     if pid == 100 else [])
+        return proc
+
+    mocker.patch('psutil.Process', side_effect=fake_process)
+
+    hwnd = window_focus.find_session_host_window('claude',
+                                                 prefer_title='claude')
+    assert hwnd == 4321
+
+
+def test_session_host_window_returns_none_without_a_session(mocker):
+    from utils import window_focus
+    mocker.patch('utils.window_focus.platform.system',
+                 return_value='Windows')
+    mocker.patch.object(window_focus, '_session_pids', return_value=[])
+    assert window_focus.find_session_host_window('claude') is None
 
 
 def test_keymap_commands_use_supported_macro_steps():

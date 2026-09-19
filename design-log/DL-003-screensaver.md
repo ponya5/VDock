@@ -203,3 +203,36 @@ the cost of an adapter per provider.
   the dashboard is unmounted when the button is pressed and would otherwise
   miss the command entirely.
 - Tasks 1–4, 6 still pending.
+
+### Batch 2 (2026-09-20): data plumbing + configurable content
+
+Driven by the user's report on the 7" touch panel: stocks had no ticker
+input, news sat on "Loading headlines", and world clock cities were not
+configurable.
+
+- **News (was stuck loading).** `backend/services/rss.py` now fetches all
+  configured feeds in parallel (threads) instead of sequentially with a
+  10 s timeout each — worst case was ~30 s of serial waiting, which looked
+  exactly like "stuck". Live check: 40 headlines in ~1.2 s.
+- **Stocks.** New `backend/services/market.py` + `GET /api/market?symbols=`
+  proxy: stock tickers go to Yahoo's chart endpoint (keyless server-side),
+  known crypto tickers to CoinGecko. `useMarket`/`marketService` send
+  user-configured `marketTickers` through it; blank keeps the old direct
+  CoinGecko BTC/ETH path. Verified: AAPL $336.13, MSFT $493.78, BTC live.
+- **World clock cities.** `worldClockTimezones` setting — one per line:
+  common city name (small lookup map, ~45 cities), bare IANA zone, or
+  `Label=Zone`. `ScreenSaver` parses it, drops invalid zones instead of
+  throwing, and falls back to NY/London/Tokyo when blank. Verified live:
+  Tel Aviv/London/Tokyo rendered with correct offsets.
+- **Widget text size.** New `screensaverWidgetSize` (%) setting scales the
+  whole widget column via CSS `zoom` on `.ss-widgets` (uniform scaling —
+  keeps the slide-height/transform geometry consistent), with the column
+  width divided back out so the footprint stays constant. Chosen over
+  per-rule `calc(clamp()*var)` because `zoom` also scales the news
+  carousel geometry; per-rule scaling was dropped after it broke the
+  slide-height unit test.
+- **Whitelist fix.** `marketApiKey` was read by Settings but missing from
+  `ALLOWED_USER_SETTING_KEYS`, so it was silently dropped on every save —
+  added along with `marketTickers`, `worldClockTimezones`,
+  `screensaverWidgetSize`.
+- **Tests:** `vue-tsc` clean; vitest 45 files / 138 tests; pytest 734.

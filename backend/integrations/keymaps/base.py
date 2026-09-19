@@ -15,7 +15,13 @@ from typing import Any, Dict, List, Optional, Tuple
 #: Process names for the editors these keymaps target.
 VSCODE_EXES = ('code.exe', 'codium.exe')
 CURSOR_EXES = ('cursor.exe',)
-JETBRAINS_EXES = ('idea64.exe', 'pycharm64.exe', 'webstorm64.exe')
+JETBRAINS_EXES = (
+    'idea64.exe', 'pycharm64.exe', 'webstorm64.exe', 'phpstorm64.exe',
+    'rider64.exe', 'clion64.exe', 'goland64.exe', 'datagrip64.exe',
+    'rubymine64.exe',
+)
+VISUAL_STUDIO_EXES = ('devenv.exe',)
+DEVIN_EXES = ('devin.exe',)
 
 #: Processes that can own a terminal window hosting a CLI agent.
 #: VS Code / Cursor are deliberately absent -- a keystroke meant for an

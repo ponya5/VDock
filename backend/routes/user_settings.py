@@ -42,6 +42,9 @@ ALLOWED_USER_SETTING_KEYS = {
     'newsApiKey',
     'worldClockTimezones',
     'marketCoins',
+    'marketTickers',
+    'marketApiKey',
+    'screensaverWidgetSize',
 }
 
 

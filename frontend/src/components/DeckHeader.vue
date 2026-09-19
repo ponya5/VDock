@@ -387,7 +387,9 @@ onUnmounted(() => {
 .deck-header {
   position: relative;
   width: 100%;
-  min-height: 90px;
+  /* Grows with touch mode so the taller icon buttons keep breathing room on
+     small panels instead of clipping. */
+  min-height: calc(64px * var(--touch-multiplier, 1) + 26px);
   padding: 0.6rem 1rem;
   box-sizing: border-box;
   overflow: visible;
@@ -411,7 +413,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 68px;
+  min-height: calc(68px * var(--touch-multiplier, 1));
 }
 
 .header-left {
@@ -432,7 +434,7 @@ onUnmounted(() => {
 .header-actions-group {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: calc(0.6rem * var(--touch-multiplier, 1));
 }
 
 .header-exit-group {
@@ -443,8 +445,8 @@ onUnmounted(() => {
 
 .profile-avatar-container {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: calc(56px * min(var(--touch-multiplier, 1), 1.4));
+  height: calc(56px * min(var(--touch-multiplier, 1), 1.4));
   flex-shrink: 0;
 }
 
@@ -486,17 +488,22 @@ onUnmounted(() => {
   touch-action: manipulation;
   min-width: 44px;
   min-height: 44px;
+  /* Touch mode enlarges the floor; the plain 44px lines above stay as the
+     baseline for engines without max()/var(). */
+  min-width: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
+  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
 }
 
-/* Large circular icon buttons */
+/* Large circular icon buttons — capped below the full multiplier so a row of
+   them still fits a small panel header. */
 .btn-icon-circle {
-  width: 64px;
-  height: 64px;
+  width: calc(64px * min(var(--touch-multiplier, 1), 1.4));
+  height: calc(64px * min(var(--touch-multiplier, 1), 1.4));
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 255, 255, 0.18);
   color: rgba(255, 255, 255, 0.9);
-  font-size: 1.5rem;
+  font-size: calc(clamp(1.2rem, 2vw, 1.5rem) * var(--touch-multiplier, 1));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -560,7 +567,7 @@ onUnmounted(() => {
 
 /* Enhanced scene nav sizing */
 .enhanced-scene-nav {
-  --pill-height: 56px;
+  --pill-height: calc(56px * var(--touch-multiplier, 1));
 }
 
 .profile-title-inline {

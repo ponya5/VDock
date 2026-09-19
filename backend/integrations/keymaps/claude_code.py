@@ -23,6 +23,11 @@ from .base import (
 _CLAUDE = {
     'target_exes': TERMINAL_EXES,
     'window_title_hint': 'claude',
+    # Also set on the safe commands: with requires_session off it only drives
+    # targeting -- the session's host window is resolved through the process
+    # tree, so these work inside Devin/Cursor/any terminal, not just exes in
+    # TERMINAL_EXES.
+    'session_marker': 'claude',
     'category': 'general',
 }
 
@@ -43,11 +48,20 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
         risk=RISK_SAFE, **_CLAUDE,
     ),
     Command(
+        id='cc_prompt', label='Send Prompt',
+        description='Type a prompt into the live session and send it. '
+                    'Defaults to "continue".',
+        keys=(), icon='paper-plane', types_text='continue', submit=True,
+        keywords=('claude', 'prompt', 'continue', 'send', 'ask', 'type'),
+        risk=RISK_INPUT, requires_session=True,
+        priority=10, **_CLAUDE,
+    ),
+    Command(
         id='cc_clear', label='New Session',
         description='Start a fresh session — clears the context (/clear).',
         keys=(), icon='plus', types_text='/clear', submit=True,
         keywords=('claude', 'new', 'clear', 'reset', 'session'),
-        risk=RISK_INPUT, requires_session=True, session_marker='claude',
+        risk=RISK_INPUT, requires_session=True,
         priority=10, **_CLAUDE,
     ),
     Command(
@@ -55,7 +69,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
         description='Pick up a previous session (/resume).',
         keys=(), icon='rotate-right', types_text='/resume', submit=True,
         keywords=('claude', 'resume', 'continue', 'session'),
-        risk=RISK_INPUT, requires_session=True, session_marker='claude',
+        risk=RISK_INPUT, requires_session=True,
         **_CLAUDE,
     ),
     Command(
@@ -63,7 +77,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
         description='Compact the conversation to free context (/compact).',
         keys=(), icon='compress', types_text='/compact', submit=True,
         keywords=('claude', 'compact', 'context', 'summarize'),
-        risk=RISK_INPUT, requires_session=True, session_marker='claude',
+        risk=RISK_INPUT, requires_session=True,
         **_CLAUDE,
     ),
     Command(
@@ -71,7 +85,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
         description='Open the model picker (/model).',
         keys=(), icon='brain', types_text='/model', submit=True,
         keywords=('claude', 'model', 'opus', 'sonnet', 'haiku'),
-        risk=RISK_INPUT, requires_session=True, session_marker='claude',
+        risk=RISK_INPUT, requires_session=True,
         **_CLAUDE,
     ),
     Command(
@@ -80,7 +94,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
                     'attaching a file.',
         keys=(), icon='paperclip', types_text='@',
         keywords=('claude', 'file', 'attach', 'mention', 'upload'),
-        risk=RISK_INPUT, requires_session=True, session_marker='claude',
+        risk=RISK_INPUT, requires_session=True,
         **_CLAUDE,
     ),
     Command(
@@ -88,7 +102,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
         description='Show available commands (/help).',
         keys=(), icon='circle-question', types_text='/help', submit=True,
         keywords=('claude', 'help', 'commands'),
-        risk=RISK_INPUT, requires_session=True, session_marker='claude',
+        risk=RISK_INPUT, requires_session=True,
         **_CLAUDE,
     ),
     Command(
@@ -96,8 +110,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
         description='Exit the session (Ctrl+C twice).',
         keys=('ctrl', 'c'), icon='power-off', repeat=2,
         keywords=('claude', 'exit', 'quit', 'close'),
-        risk=RISK_DESTRUCTIVE, requires_session=True,
-        session_marker='claude', **_CLAUDE,
+        risk=RISK_DESTRUCTIVE, requires_session=True, **_CLAUDE,
     ),
 )
 
@@ -107,7 +120,7 @@ CLAUDE_CODE_PROFILE = AppProfile(
     # Hooks land in Phase 3; until then sessions are detected by process scan.
     status_source=None,
     default_layout=(
-        ('cc_interrupt', 'cc_clear', 'cc_mode', 'cc_model'),
-        ('cc_resume', 'cc_compact', 'cc_add_file', 'cc_help'),
+        ('cc_prompt', 'cc_interrupt', 'cc_clear', 'cc_mode'),
+        ('cc_resume', 'cc_compact', 'cc_add_file', 'cc_model'),
     ),
 )

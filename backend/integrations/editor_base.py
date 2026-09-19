@@ -31,9 +31,29 @@ FOCUS_SETTLE_SECONDS = 0.25
 
 
 def foreground_exe() -> Optional[str]:
-    """Lowercased process name of the focused window, or None."""
+    """Lowercased process name of the focused window, or None.
+
+    Reads the live foreground window rather than AppMonitor's cache: the
+    monitor polls on a multi-second interval, so right after VDock raises a
+    window the cache still reports the previous app and the keystroke guard
+    would refuse every legitimately-refocused press.
+    """
+    exe = window_focus.foreground_exe_live()
+    if exe is not None:
+        return exe
+    # Non-Windows or a failed read: fall back to the monitor's view.
     editor = context.current_editor()
     return editor.app_exe
+
+
+def _resolve_session_host(command: Command) -> Optional[int]:
+    """HWND of the window hosting this command's session, or None."""
+    if not command.session_marker:
+        return None
+    return window_focus.find_session_host_window(
+        command.session_marker,
+        prefer_title=command.window_title_hint,
+    )
 
 
 def send(command: Command, text_override: Optional[str] = None,
@@ -74,43 +94,69 @@ def send(command: Command, text_override: Optional[str] = None,
                 ),
             }
 
-    if enforce_focus and command.target_exes:
-        if focus_first:
-            focused = window_focus.focus_app_window(
-                command.target_exes,
-                prefer_title=command.window_title_hint,
-            )
-            if focused is False:
+    if enforce_focus:
+        # Session hosting wins over the exe list when the command carries a
+        # session marker: the host window's owner is whatever IDE or terminal
+        # spawned the agent (Devin, Cursor, VS Code, Windows Terminal, a
+        # classic conhost console...) -- a static exe list can't know it.
+        host_hwnd = _resolve_session_host(command)
+        if host_hwnd is not None:
+            if focus_first:
+                if not window_focus.focus_hwnd(host_hwnd):
+                    return {
+                        'success': False,
+                        'message': 'Could not focus the session window',
+                        'details': 'The window hosting the session was found '
+                                   'but Windows would not bring it forward.',
+                    }
+                time.sleep(FOCUS_SETTLE_SECONDS)
+            fg = window_focus.foreground_hwnd()
+            if fg is not None and fg != host_hwnd:
+                return {
+                    'success': False,
+                    'message': 'The session window is not focused',
+                    'details': 'Refusing to send keystrokes -- they would '
+                               'land in a different window.',
+                }
+            # fg None means this platform can't verify; fall through.
+        elif command.target_exes:
+            if focus_first:
+                focused = window_focus.focus_app_window(
+                    command.target_exes,
+                    prefer_title=command.window_title_hint,
+                )
+                if focused is False:
+                    expected = ' or '.join(command.target_exes)
+                    return {
+                        'success': False,
+                        'message': f'No {expected} window found',
+                        'details': 'The app is not running, so there is '
+                                   'nowhere to send these keystrokes.',
+                    }
+                if focused:
+                    time.sleep(FOCUS_SETTLE_SECONDS)
+                # None means this platform can't refocus -- fall through to
+                # the foreground check exactly as before.
+
+            current = foreground_exe()
+            if current is None:
+                return {
+                    'success': False,
+                    'message': 'Could not determine the focused window',
+                    'details': 'Refusing to send keystrokes when the target '
+                               'is unknown.',
+                }
+            if current not in command.target_exes:
                 expected = ' or '.join(command.target_exes)
                 return {
                     'success': False,
-                    'message': f'No {expected} window found',
-                    'details': 'The app is not running, so there is nowhere '
-                               'to send these keystrokes.',
+                    'message': f'{expected} is not focused',
+                    'details': (
+                        f'The focused window is {current}. Focus the editor '
+                        f'first -- sending these keystrokes elsewhere could '
+                        f'do damage.'
+                    ),
                 }
-            if focused:
-                time.sleep(FOCUS_SETTLE_SECONDS)
-            # None means this platform can't refocus -- fall through to the
-            # foreground check exactly as before.
-
-        current = foreground_exe()
-        if current is None:
-            return {
-                'success': False,
-                'message': 'Could not determine the focused window',
-                'details': 'Refusing to send keystrokes when the target is '
-                           'unknown.',
-            }
-        if current not in command.target_exes:
-            expected = ' or '.join(command.target_exes)
-            return {
-                'success': False,
-                'message': f'{expected} is not focused',
-                'details': (
-                    f'The focused window is {current}. Focus the editor first '
-                    f'-- sending these keystrokes elsewhere could do damage.'
-                ),
-            }
 
     steps = command.to_macro_steps(text_override)
     result = MacroAction({'steps': steps}).execute()

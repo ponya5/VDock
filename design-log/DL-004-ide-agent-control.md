@@ -334,3 +334,56 @@ terminal** — not a standalone terminal window. Two consequences:
 The vision confirmed by the user is the stream-deck model: VDock detects
 which dev tool is running/focused and offers that tool's real actions —
 exactly the Phase-4 context scene.
+
+### Session-host window resolution (2026-09-20)
+
+The Phase-2 targeting gap — Claude inside a terminal *panel* owned by an
+editor process — is now closed without waiting for hooks:
+
+- `utils/window_focus.py` gained `find_session_host_window(marker)`: find
+  the agent process, walk its ancestor chain, return the first ancestor
+  that owns a visible top-level window. Verified against the live setup:
+  `claude.exe ← powershell.exe ← Devin.exe` resolves to the Devin window
+  (`hwnd 263938`). Works for Devin, Cursor, VS Code, Windows Terminal —
+  any host — because it follows the process tree instead of an exe list.
+- `editor_base` consults it first when a command carries `session_marker`;
+  the post-focus app check now reads the *live* foreground window instead
+  of the app monitor's cached value (the cache lags a refocus by up to
+  the poll interval).
+- `claude_code.py`: safe commands carry `session_marker='claude'` (targeting
+  only — no gating); new `cc_prompt` command types a configurable prompt
+  (default "continue") into the live session.
+- **Verified live:** `cc_interrupt` → resolved the Devin window →
+  `Sent hotkey: escape`. First VDock button to reach a real Claude session
+  hosted in an editor terminal.
+- The live `Daniel` profile's Claude Code and Cursor scenes were rewired
+  via the API to real `cc_*`/`cursor_*` actions (the previous build was
+  still on `command`/`open_url` placeholders).
+
+### Phase 4 (partial): out-of-the-box keymaps for major IDEs
+
+New keymap modules + auto-discovered `*_pack` plugins:
+
+- **vscode** (35 commands incl. merged Copilot set) — palette, quick open,
+  terminal, panels, F-row debugging, quick fix, rename.
+- **jetbrains** (20) — double-Shift Search Everywhere, Find Action,
+  Alt+F12 terminal, Alt+Enter intentions, F7/F8 stepping.
+- **visualstudio** (19) — Go to All, build, F5/F9/F10/F11. Chord-only
+  shortcuts (Ctrl+K Ctrl+D style) are deliberately absent — a one-shot
+  hotkey can't express them.
+- **devin** (5) — terminal-agent shape, `session_marker='devin'` so the
+  process-tree resolver finds its host window anywhere.
+
+Ordering note: `_PROFILE_BY_EXE` maps an exe to the LAST profile listing
+it. `vscode` is placed after `copilot` so `code.exe` resolves to the
+merged profile; `devin` precedes `claude-code` so terminal exes keep
+resolving to `claude-code` (session detection disambiguates at action
+time anyway).
+
+**Verified:** 9 plugins load, 206 catalog actions; `vsc_terminal` cleanly
+refuses when VS Code isn't running ("No code.exe or codium.exe window
+found"); pytest 734.
+
+**Still not started:** Phase 3 (Claude Code hooks → live session state on
+the deck), the Phase-4 context scene itself (auto-built per-app layout —
+profiles' `default_layout` rows are the input).

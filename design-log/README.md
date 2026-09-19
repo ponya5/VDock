@@ -14,12 +14,13 @@ believed at decision time rather than a tidied-up version of it.
 |---|---|---|
 | [DL-001](DL-001-unified-background.md) | Unified background setting | In progress — merged to `feat/unified-background`; manual browser verification outstanding |
 | [DL-002](DL-002-integrations-config.md) | Integrations configuration surface | Planned |
-| [DL-003](DL-003-screensaver.md) | Screensaver rework | In progress — Task 5 (Test Screensaver) done; Tasks 1–4, 6 pending |
-| [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | In progress — Phases 1–2 shipped (keymaps, Claude Code pack, focus-first); Phases 3–4 pending |
+| [DL-003](DL-003-screensaver.md) | Screensaver rework | In progress — Tasks 1–5 done (news feeds+rotation, market tickers, world-clock cities, widget text size, Test Screensaver); Task 6 manual verification pending |
+| [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | In progress — session-host window resolution + VS Code/JetBrains/Visual Studio/Devin packs shipped; Phase 3 hooks & context scene pending |
 | [DL-005](DL-005-screensaver-weather-size.md) | Screensaver weather widget size | Complete |
 | [DL-006](DL-006-dev-first-app-list.md) | Dev-first running-apps list + smart filter | Complete |
 | [DL-007](DL-007-port-configuration.md) | Port selection in Server settings | Complete |
 | [DL-008](DL-008-reactbits-backgrounds.md) | React Bits background import + scrollable picker | In progress — WebGPU pair needs hardware verification |
+| [DL-009](DL-009-small-panel-touch-chrome.md) | Touch-mode scaling for header & action sidebar | Complete |
 
 **Status values:** Planned → In progress → Complete.
 

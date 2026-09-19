@@ -61,6 +61,9 @@ export interface PersistedUserSettings {
   newsFeeds: string
   newsRotateSeconds: number
   marketApiKey: string
+  marketTickers: string
+  worldClockTimezones: string
+  screensaverWidgetSize: number
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -136,6 +139,14 @@ export const useSettingsStore = defineStore('settings', () => {
   const newsFeeds = ref('')
   const newsRotateSeconds = ref(8)
   const marketApiKey = ref('')
+  // Comma-separated symbols shown on the screensaver market chip — stocks
+  // (AAPL, MSFT) and crypto tickers (BTC, ETH) can be mixed freely.
+  const marketTickers = ref('')
+  // World clock entries, comma- or newline-separated: "Label=IANA/Zone" or a
+  // bare IANA zone or common city name. Blank uses the built-in defaults.
+  const worldClockTimezones = ref('')
+  // Percentage scale for the screensaver news/market/clock widget text.
+  const screensaverWidgetSize = ref(100)
 
   const showHelpGuide = ref(false)
 
@@ -224,6 +235,9 @@ export const useSettingsStore = defineStore('settings', () => {
       newsFeeds: newsFeeds.value,
       newsRotateSeconds: newsRotateSeconds.value,
       marketApiKey: marketApiKey.value,
+      marketTickers: marketTickers.value,
+      worldClockTimezones: worldClockTimezones.value,
+      screensaverWidgetSize: screensaverWidgetSize.value,
     }
   }
 
@@ -265,6 +279,9 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
     if (settings.newsRotateSeconds !== undefined) newsRotateSeconds.value = settings.newsRotateSeconds
     if (settings.marketApiKey !== undefined) marketApiKey.value = settings.marketApiKey
+    if (settings.marketTickers !== undefined) marketTickers.value = settings.marketTickers
+    if (settings.worldClockTimezones !== undefined) worldClockTimezones.value = settings.worldClockTimezones
+    if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
   }
 
   function saveSettingsLocalOnly() {
@@ -311,6 +328,9 @@ export const useSettingsStore = defineStore('settings', () => {
         newsFeeds: settings.newsFeeds ?? '',
         newsRotateSeconds: settings.newsRotateSeconds ?? 8,
         marketApiKey: settings.marketApiKey ?? '',
+        marketTickers: settings.marketTickers ?? '',
+        worldClockTimezones: settings.worldClockTimezones ?? '',
+        screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
       })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -411,6 +431,9 @@ export const useSettingsStore = defineStore('settings', () => {
       newsFeeds,
       newsRotateSeconds,
       marketApiKey,
+      marketTickers,
+      worldClockTimezones,
+      screensaverWidgetSize,
     ],
     () => {
       saveSettings()
@@ -596,6 +619,9 @@ export const useSettingsStore = defineStore('settings', () => {
     newsFeeds,
     newsRotateSeconds,
     marketApiKey,
+    marketTickers,
+    worldClockTimezones,
+    screensaverWidgetSize,
     showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,

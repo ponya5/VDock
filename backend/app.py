@@ -33,6 +33,7 @@ from routes.system import system_bp
 from routes.templates import templates_bp
 from routes.weather import weather_bp
 from routes.news import news_bp
+from routes.market import market_bp
 from routes.user_settings import user_settings_bp
 from routes.app_profiles import app_profiles_bp
 
@@ -101,6 +102,7 @@ app.register_blueprint(system_bp)
 app.register_blueprint(templates_bp, url_prefix='/api/templates')
 app.register_blueprint(weather_bp, url_prefix='/api')
 app.register_blueprint(news_bp)
+app.register_blueprint(market_bp)
 app.register_blueprint(user_settings_bp)
 app.register_blueprint(app_profiles_bp)
 

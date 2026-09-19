@@ -368,6 +368,29 @@
                   </div>
                 </section>
 
+                <section
+                  v-if="settingsStore.screensaverWidgets.some(w => ['news', 'market', 'worldclock'].includes(w))"
+                  class="settings-section card"
+                >
+                  <h2><FontAwesomeIcon :icon="['fas', 'text-height']" /> Widget Text Size</h2>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Text Size</label>
+                      <span class="slider-value">{{ settingsStore.screensaverWidgetSize }}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="80"
+                      max="250"
+                      step="10"
+                      :value="settingsStore.screensaverWidgetSize"
+                      @input="settingsStore.screensaverWidgetSize = Number(($event.target as HTMLInputElement).value)"
+                      class="slider"
+                    />
+                    <p class="form-help">Scale the news, market, and world-clock text. Push it up on small touch panels.</p>
+                  </div>
+                </section>
+
                 <section v-if="settingsStore.screensaverWidgets.includes('news')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'newspaper']" /> News Headlines</h2>
                   <p class="form-help">
@@ -407,7 +430,19 @@
 
                 <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
-                  <p class="form-help">Crypto prices (Bitcoin, Ethereum) work automatically via CoinGecko — no key needed.</p>
+                  <div class="form-group">
+                    <label>Symbols</label>
+                    <input
+                      v-model="settingsStore.marketTickers"
+                      type="text"
+                      class="input"
+                      placeholder="BTC, ETH, AAPL, MSFT, NVDA"
+                    />
+                    <p class="form-help">
+                      Comma-separated stock tickers and crypto symbols, mixable.
+                      Leave blank for the default Bitcoin + Ethereum pair.
+                    </p>
+                  </div>
                   <div class="form-group">
                     <label>Stock quotes API key (optional)</label>
                     <input v-model="settingsStore.marketApiKey" type="password" class="input" placeholder="Optional — leave blank for crypto only" />
@@ -415,6 +450,25 @@
                   <button class="btn btn-secondary" :disabled="testingMarket" @click="handleTestMarket">
                     <FontAwesomeIcon :icon="['fas', testingMarket ? 'spinner' : 'plug']" :spin="testingMarket" /> Test Connection
                   </button>
+                </section>
+
+                <section v-if="settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'globe']" /> World Clock</h2>
+                  <div class="form-group">
+                    <label>Cities</label>
+                    <textarea
+                      v-model="settingsStore.worldClockTimezones"
+                      class="input"
+                      rows="4"
+                      :placeholder="'Tel Aviv\nLondon\nHome Office=America/New_York\nAsia/Tokyo'"
+                    ></textarea>
+                    <p class="form-help">
+                      One city per line — a common city name (<code>Tokyo</code>,
+                      <code>Berlin</code>), an IANA zone (<code>Asia/Jerusalem</code>),
+                      or <code>Label=Zone</code> for a custom name. Blank shows
+                      New York, London, and Tokyo.
+                    </p>
+                  </div>
                 </section>
               </div>
           </div>
@@ -754,7 +808,7 @@ import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openS
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { sendUiCommand } from '@/composables/useUiCommands'
 import { testNewsConnection, parseFeedList } from '@/services/newsService'
-import { testMarketConnection } from '@/services/marketService'
+import { testMarketConnection, parseTickers } from '@/services/marketService'
 import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 
@@ -1109,8 +1163,14 @@ const testingMarket = ref(false)
 async function handleTestMarket() {
   testingMarket.value = true
   try {
-    await testMarketConnection()
-    notificationsStore.success('Market data connected', 'Successfully fetched crypto prices from CoinGecko.')
+    const tickers = parseTickers(settingsStore.marketTickers)
+    await testMarketConnection(tickers)
+    notificationsStore.success(
+      'Market data connected',
+      tickers.length
+        ? `Fetched quotes for ${tickers.join(', ')}.`
+        : 'Successfully fetched crypto prices from CoinGecko.'
+    )
   } catch (err: any) {
     notificationsStore.error('Market connection failed', err?.message || 'Could not reach the price API.')
   } finally {
