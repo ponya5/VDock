@@ -40,7 +40,7 @@
             :class="{ active: selectedCategory === category }"
             @click="selectedCategory = category"
           >
-            {{ categoryLabels[category] }} ({{ getShortcutsByCategory(category).length }})
+            {{ categoryLabel(category) }} ({{ getShortcutsByCategory(category).length }})
           </button>
         </div>
 
@@ -147,14 +147,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  getShortcutsForApp,
-  getCategoriesForApp,
-  getAppName,
+  fetchAppProfiles,
+  appShortcutsForExe,
+  appLabelForExe,
+  type AppProfileDto,
   type AppShortcut
-} from '@/data/appShortcuts'
+} from '@/api/appProfiles'
 
 interface Props {
   appExe: string
@@ -172,6 +173,7 @@ const searchQuery = ref('')
 const selectedCategory = ref<string>('all')
 const showManualCreator = ref(false)
 const newKey = ref('')
+const profiles = ref<AppProfileDto[]>([])
 
 const customShortcut = ref<Partial<AppShortcut>>({
   name: '',
@@ -180,9 +182,13 @@ const customShortcut = ref<Partial<AppShortcut>>({
   category: 'general'
 })
 
-const allShortcuts = computed(() => getShortcutsForApp(props.appExe))
-const categories = computed(() => getCategoriesForApp(props.appExe))
-const appName = computed(() => getAppName(props.appExe))
+onMounted(async () => {
+  profiles.value = await fetchAppProfiles()
+})
+
+const allShortcuts = computed(() => appShortcutsForExe(profiles.value, props.appExe))
+const categories = computed(() => Array.from(new Set(allShortcuts.value.map(s => s.category))))
+const appName = computed(() => appLabelForExe(profiles.value, props.appExe))
 
 const categoryLabels: Record<string, string> = {
   general: 'General',
@@ -194,6 +200,10 @@ const categoryLabels: Record<string, string> = {
   terminal: 'Terminal',
   git: 'Git',
   refactor: 'Refactor'
+}
+
+function categoryLabel(category: string): string {
+  return categoryLabels[category] ?? (category.charAt(0).toUpperCase() + category.slice(1))
 }
 
 const filteredShortcuts = computed(() => {
@@ -257,7 +267,7 @@ function addCustomShortcut() {
     name: customShortcut.value.name,
     keys: customShortcut.value.keys,
     description: customShortcut.value.description || '',
-    category: customShortcut.value.category as any || 'general',
+    category: customShortcut.value.category || 'general',
     priority: 5
   }
 

@@ -722,7 +722,7 @@ import DeckButton from '@/components/DeckButton.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
-import { hasShortcuts, getTopShortcutsForApp, type AppShortcut } from '@/data/appShortcuts'
+import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppShortcut } from '@/api/appProfiles'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
@@ -1202,7 +1202,8 @@ async function createSceneForApp(app: RunningApp) {
   if (!profile) { alert('No profile loaded.'); return }
   const sceneName = app.name.replace('.exe', '')
   try {
-    const topShortcuts = hasShortcuts(app.exe) ? getTopShortcutsForApp(app.exe, 8) : []
+    const profiles = await fetchAppProfiles()
+    const topShortcuts = hasAppShortcuts(profiles, app.exe) ? topAppShortcuts(profiles, app.exe, 8) : []
     const buttons: Button[] = topShortcuts.map((shortcut, index) => createButtonFromShortcut(shortcut, index))
     const newScene: Scene = {
       id: `scene-${Date.now()}`, name: sceneName, icon: 'window-maximize', color: '#3498db',
