@@ -218,3 +218,12 @@ browser available. Every one of the 26 catalog entries rendering correctly,
 and changing the background from a standalone settings window producing no
 flash/flicker, both still need a real-browser pass before this merges. Plan
 Task 6 Step 5 (manual verification) remains open.
+
+### Post-merge fix (2026-09-20, commit `4967582`)
+
+**Starfield speed.** `dashboard-bg-starfield` drifted its 200px star tile
+over 100s (~2px/s — visually static; reported by the user on the 7" panel).
+Duration cut to 20s (~10px/s) in `main.css`. CSS-only; no settings surface
+— background animation speed is not user-configurable by design. If more
+entries need speed control, that's a catalog-wide `speed` prop decision,
+not a per-entry patch.

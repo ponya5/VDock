@@ -312,3 +312,25 @@ clean. The live `Claude` scene (`scene-1789846753894`) was rewired via the
 profiles API: `New Session`→`cc_clear`, `Open Claude Code`→`claude_continue`,
 `Resume`→`cc_resume`, `Add File`→`cc_add_file`, `Interrupt`→`cc_interrupt` —
 button ids, positions and styles preserved.
+
+### User workflow context (2026-09-20)
+
+The user's real setup, stated directly: VDock itself is developed with
+**Devin + Cursor, and the Claude CLI runs inside Cursor's integrated
+terminal** — not a standalone terminal window. Two consequences:
+
+1. **Known gap in Phase 2 as shipped.** `cc_*` commands target
+   `TERMINAL_EXES`; a Cursor-hosted Claude session lives in a `Cursor.exe`
+   window, which isn't in that list. `focus_app_window` won't find it and
+   the guard correctly refuses rather than typing `/clear` into a source
+   file. Options for Phase 3: add `cursor.exe` to the Claude target list
+   gated on a focused-terminal-panel signal, or rely on the hook registry
+   to report the hosting window — hooks are the honest answer because the
+   session knows its own tty/parent process.
+2. **Devin CLI is another agent candidate** — same terminal-TUI shape as
+   Claude Code; a `devin` keymap/profile would slot into the existing
+   `terminal_agent` machinery.
+
+The vision confirmed by the user is the stream-deck model: VDock detects
+which dev tool is running/focused and offers that tool's real actions —
+exactly the Phase-4 context scene.

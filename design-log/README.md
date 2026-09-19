@@ -12,10 +12,12 @@ believed at decision time rather than a tidied-up version of it.
 
 | Entry | Feature | Status |
 |---|---|---|
-| [DL-001](DL-001-unified-background.md) | Unified background setting | Planned |
+| [DL-001](DL-001-unified-background.md) | Unified background setting | In progress — merged to `feat/unified-background`; manual browser verification outstanding |
 | [DL-002](DL-002-integrations-config.md) | Integrations configuration surface | Planned |
-| [DL-003](DL-003-screensaver.md) | Screensaver rework | Planned |
-| [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | Planned |
+| [DL-003](DL-003-screensaver.md) | Screensaver rework | In progress — Task 5 (Test Screensaver) done; Tasks 1–4, 6 pending |
+| [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | In progress — Phases 1–2 shipped (keymaps, Claude Code pack, focus-first); Phases 3–4 pending |
+| [DL-005](DL-005-screensaver-weather-size.md) | Screensaver weather widget size | Complete |
+| [DL-006](DL-006-dev-first-app-list.md) | Dev-first running-apps list + smart filter | Complete |
 
 **Status values:** Planned → In progress → Complete.
 
@@ -49,3 +51,9 @@ DL-001 (background) ──────────── independent
 
 DL-002 must land before DL-003 or DL-004 can start, because both take their
 credentials and paths from the settings surface it creates.
+
+**Branch note (2026-09-20):** the branches have since been joined —
+`upgrade/upgrade--keypad` was merged into `feat/unified-background`
+(commit `79eedbf`), which is the tree the running app serves
+(`.worktrees/unified-background`). New work lands there and flows back on
+the eventual merge into the main line.
