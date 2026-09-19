@@ -251,20 +251,11 @@
               <h2>Background</h2>
               <div class="form-group">
                 <label>Background Style</label>
-                <select v-model="settings.background" class="select" @change="settingsStore.saveSettings()">
-                  <optgroup label="Default">
-                    <option v-for="bg in backgroundsByGroup.default" :key="bg.id" :value="bg.id">{{ bg.label }}</option>
-                  </optgroup>
-                  <optgroup label="Custom Background" v-if="isCustomBackground">
-                    <option :value="settings.background">Custom Uploaded Image</option>
-                  </optgroup>
-                  <optgroup label="Gradients">
-                    <option v-for="bg in backgroundsByGroup.gradient" :key="bg.id" :value="bg.id">{{ bg.label }}</option>
-                  </optgroup>
-                  <optgroup label="Animated">
-                    <option v-for="bg in backgroundsByGroup.animated" :key="bg.id" :value="bg.id">{{ bg.label }}</option>
-                  </optgroup>
-                </select>
+                <BackgroundPicker
+                  v-model="settings.background"
+                  :groups="backgroundPickerGroups"
+                  @change="settingsStore.saveSettings()"
+                />
                 <p class="form-help">One background for the dashboard — animated effects included.</p>
               </div>
               <div class="form-group">
@@ -750,6 +741,7 @@ import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import TouchModeSelector from '@/components/TouchModeSelector.vue'
+import BackgroundPicker, { type BackgroundPickerGroup } from '@/components/BackgroundPicker.vue'
 import DeckButton from '@/components/DeckButton.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
@@ -973,6 +965,23 @@ const backgroundsByGroup = computed(() => ({
   gradient: BACKGROUNDS.filter(b => b.group === 'gradient'),
   animated: BACKGROUNDS.filter(b => b.group === 'animated'),
 }))
+
+const backgroundPickerGroups = computed<BackgroundPickerGroup[]>(() => {
+  const groups: BackgroundPickerGroup[] = [
+    { label: 'Default', options: backgroundsByGroup.value.default },
+    ...(isCustomBackground.value
+      ? [
+          {
+            label: 'Custom Background',
+            options: [{ id: settings.value.background, label: 'Custom Uploaded Image' }]
+          }
+        ]
+      : []),
+    { label: 'Gradients', options: backgroundsByGroup.value.gradient },
+    { label: 'Animated', options: backgroundsByGroup.value.animated }
+  ]
+  return groups
+})
 
 const isCustomBackground = computed(() => isImageBackground(settings.value.background))
 const currentScene = computed(() => dashboardStore.currentScene)

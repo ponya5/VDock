@@ -19,6 +19,7 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-005](DL-005-screensaver-weather-size.md) | Screensaver weather widget size | Complete |
 | [DL-006](DL-006-dev-first-app-list.md) | Dev-first running-apps list + smart filter | Complete |
 | [DL-007](DL-007-port-configuration.md) | Port selection in Server settings | Complete |
+| [DL-008](DL-008-reactbits-backgrounds.md) | React Bits background import + scrollable picker | In progress — WebGPU pair needs hardware verification |
 
 **Status values:** Planned → In progress → Complete.
 
