@@ -272,6 +272,24 @@ def handle_user_settings_changed(data):
     emit('user_settings_updated', {'settings': settings}, broadcast=True, include_self=False)
 
 
+# This event reaches every connected client, so it is an allowlist, not a
+# passthrough — a generic relay would be a remote-command channel.
+ALLOWED_UI_COMMANDS = {'show_screensaver'}
+
+
+@socketio.on('ui_command')
+def handle_ui_command(data):
+    """Relay allowlisted UI commands (e.g. 'show_screensaver') to all windows."""
+    if not isinstance(data, dict):
+        return
+
+    command = data.get('command')
+    if command not in ALLOWED_UI_COMMANDS:
+        return
+
+    emit('ui_command', {'command': command}, broadcast=True, include_self=False)
+
+
 # ============================================================================
 # Health Check
 # ============================================================================

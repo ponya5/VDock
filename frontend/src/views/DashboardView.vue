@@ -185,6 +185,7 @@ import { createDefaultProfile } from '@/utils/defaultProfile'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { useButtonActions } from '@/composables/useButtonActions'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
+import { listenForUiCommands } from '@/composables/useUiCommands'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -195,6 +196,7 @@ const notificationsStore = useNotificationsStore()
 
 const editingScene = ref<Scene | null>(null)
 let stopVdockRefreshListener: (() => void) | null = null
+let stopUiCommandListener: (() => void) | null = null
 
 // Composables logic
 const {
@@ -894,6 +896,15 @@ onMounted(async () => {
   // Picks up settings/profile changes made in a separate Settings tab as
   // soon as that tab is closed, without waiting for a manual refresh.
   stopVdockRefreshListener = listenForVdockRefreshRequests()
+
+  // UI commands from other windows (e.g. "Test Screensaver" in Settings).
+  // Setting the flag directly means the preview also works when
+  // screensaverTimeout is 0 (screensaver disabled).
+  stopUiCommandListener = listenForUiCommands((command) => {
+    if (command === 'show_screensaver') {
+      screensaverVisible.value = true
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -905,6 +916,7 @@ onUnmounted(() => {
   if (idleTimer) clearTimeout(idleTimer)
 
   stopVdockRefreshListener?.()
+  stopUiCommandListener?.()
 })
 </script>
 

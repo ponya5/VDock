@@ -37,6 +37,7 @@ ALLOWED_USER_SETTING_KEYS = {
     # Screensaver widgets. 'screensaverWidgets' was read by ScreenSaver.vue but
     # never allowlisted here, so the user's choice was dropped on every save.
     'screensaverWidgets',
+    'screensaverWeatherSize',
     'newsFeeds',
     'newsRotateSeconds',
     'newsApiKey',

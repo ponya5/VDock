@@ -354,6 +354,10 @@
                     />
                     <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
                   </div>
+                  <button class="btn btn-secondary" @click="handleTestScreensaver">
+                    <FontAwesomeIcon :icon="['fas', 'display']" /> Test Screensaver
+                  </button>
+                  <p class="form-help">Shows the screensaver on the deck window, even when the delay above is off.</p>
                 </section>
 
                 <section class="settings-section card">
@@ -381,6 +385,26 @@
                         <span class="toggle-slider"></span>
                       </label>
                     </div>
+                  </div>
+                </section>
+
+                <section v-if="settingsStore.screensaverWidgets.includes('weather')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'cloud-sun']" /> Weather Widget</h2>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Widget Size</label>
+                      <span class="slider-value">{{ settingsStore.screensaverWeatherSize }}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="300"
+                      step="10"
+                      :value="settingsStore.screensaverWeatherSize"
+                      @input="settingsStore.screensaverWeatherSize = Number(($event.target as HTMLInputElement).value)"
+                      class="slider"
+                    />
+                    <p class="form-help">Scale the corner weather pill. Larger values help on small touch panels.</p>
                   </div>
                 </section>
 
@@ -728,6 +752,7 @@ import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
+import { sendUiCommand } from '@/composables/useUiCommands'
 import { testNewsConnection, parseFeedList } from '@/services/newsService'
 import { testMarketConnection } from '@/services/marketService'
 
@@ -758,6 +783,14 @@ function openSettingsInBrowserTab() {
       { duration: 6000 }
     )
   }
+}
+
+function handleTestScreensaver() {
+  sendUiCommand('show_screensaver')
+  notificationsStore.success(
+    'Screensaver triggered',
+    'It is now showing on the deck window — tap it to dismiss.'
+  )
 }
 
 function handleSettingsBack() {
@@ -1083,6 +1116,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
   { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'moon'] },
   { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'grip'] },
+  { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'cloud-sun'] },
   { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
