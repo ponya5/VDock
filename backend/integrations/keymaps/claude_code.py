@@ -371,7 +371,8 @@ CLAUDE_CODE_PROFILE = AppProfile(
     # Hooks land in Phase 3; until then sessions are detected by process scan.
     status_source=None,
     default_layout=(
-        ('cc_prompt', 'cc_interrupt', 'cc_clear', 'cc_mode'),
+        ('cc_prompt', 'cc_interrupt', 'cc_approve', 'cc_deny'),
+        ('cc_clear', 'cc_mode', 'cc_rewind', 'cc_todos'),
         ('cc_resume', 'cc_compact', 'cc_add_file', 'cc_model'),
     ),
 )

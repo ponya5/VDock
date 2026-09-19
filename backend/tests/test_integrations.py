@@ -527,7 +527,7 @@ def test_cc_exit_is_refused_without_destructive_opt_in(mocker):
     macro.assert_not_called()
 
 
-def test_cc_exit_sends_ctrl_c_twice_when_opted_in(mocker):
+def test_cc_exit_sends_ctrl_d_twice_when_opted_in(mocker):
     mocker.patch('integrations.sessions.session_alive', return_value=True)
     mocker.patch(
         'integrations.editor_base.window_focus.find_session_host_window',
@@ -548,7 +548,7 @@ def test_cc_exit_sends_ctrl_c_twice_when_opted_in(mocker):
     assert result['success'] is True
     steps = macro.call_args[0][0]['steps']
     assert [s['type'] for s in steps] == ['hotkey', 'delay', 'hotkey']
-    assert steps[0]['keys'] == ['ctrl', 'c'] == steps[2]['keys']
+    assert steps[0]['keys'] == ['ctrl', 'd'] == steps[2]['keys']
 
 
 def test_cc_interrupt_needs_no_session_gate(mocker):
@@ -571,6 +571,33 @@ def test_cc_interrupt_needs_no_session_gate(mocker):
     assert result['success'] is True
     steps = macro.call_args[0][0]['steps']
     assert steps[0] == {'type': 'hotkey', 'keys': ['escape']}
+
+
+def test_cc_chord_commands_emit_two_hotkey_strokes(mocker):
+    """Ctrl+X Ctrl+K (kill agents) is a two-stroke chord: the keymap models
+    it as keys + after_keys, and the macro must send two hotkey steps."""
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=None)
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.foreground_exe',
+                 return_value='cmd.exe')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = ClaudeCodePlugin().execute_action(
+        'cc_kill_agents', {'allow_destructive': True})
+
+    assert result['success'] is True
+    steps = macro.call_args[0][0]['steps']
+    assert [s['type'] for s in steps] == ['hotkey', 'delay', 'hotkey']
+    assert steps[0]['keys'] == ['ctrl', 'x']
+    assert steps[2]['keys'] == ['ctrl', 'k']
 
 
 def test_destructive_commands_expose_the_opt_in_field():
