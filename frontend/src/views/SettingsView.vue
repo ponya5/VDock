@@ -517,11 +517,31 @@
               <h2>Connection</h2>
               <div v-if="serverConfig" class="server-info">
                 <div class="info-row"><span class="info-label">Host</span><span class="info-value">{{ serverConfig.host }}</span></div>
-                <div class="info-row"><span class="info-label">Port</span><span class="info-value">{{ serverConfig.port }}</span></div>
                 <div class="info-row"><span class="info-label">Auth</span><span class="info-value">{{ serverConfig.require_auth ? 'Enabled' : 'Disabled' }}</span></div>
               </div>
+              <div class="form-group">
+                <label>Frontend Port</label>
+                <input v-model.number="serverPorts.frontend" type="number" class="input" min="1024" max="65535" placeholder="3000" />
+                <p class="form-help">The port you open in the browser. 3000 is a common dev-server port — pick another if another app uses it.</p>
+                <p v-if="portErrors.frontend" class="status-msg status-error">{{ portErrors.frontend }}</p>
+              </div>
+              <div class="form-group">
+                <label>Backend Port</label>
+                <input v-model.number="serverPorts.backend" type="number" class="input" min="1024" max="65535" placeholder="5000" />
+                <p class="form-help">The API server port the frontend proxies to.</p>
+                <p v-if="portErrors.backend" class="status-msg status-error">{{ portErrors.backend }}</p>
+              </div>
+              <div class="button-row">
+                <button class="btn btn-secondary" :disabled="portsBusy" @click="checkPorts">
+                  <FontAwesomeIcon :icon="['fas', 'plug']" /> Check availability
+                </button>
+                <button class="btn btn-primary" :disabled="portsBusy" @click="savePorts">
+                  <FontAwesomeIcon :icon="['fas', 'save']" /> Save Ports
+                </button>
+              </div>
+              <p v-if="portsStatus" class="status-msg" :class="portsStatus.success ? 'status-success' : 'status-error'">{{ portsStatus.message }}</p>
               <p class="form-help mt-md">
-                Host and port are set via <code>HOST</code>/<code>PORT</code> environment variables in <code>backend/.env</code> and require restarting VDock to change &mdash; they can't be changed live from here.
+                Ports are written to <code>backend/.env</code> and <code>frontend/.env</code> and take effect on the next launch — restarting VDock via <code>launch.bat</code> is required.
               </p>
             </section>
           </div>
@@ -801,6 +821,53 @@ function handleSettingsBack() {
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
+
+// Ports are written to the .env files and bind at process start — the UI
+// validates and probes collisions, then tells the user to relaunch.
+const serverPorts = ref({ frontend: 0, backend: 0 })
+const portErrors = ref<{ frontend: string; backend: string }>({ frontend: '', backend: '' })
+const portsStatus = ref<{ success: boolean; message: string } | null>(null)
+const portsBusy = ref(false)
+
+async function loadPorts() {
+  try {
+    const { data } = await apiClient.get('/system/ports')
+    if (data.success) {
+      serverPorts.value = { frontend: data.frontend_port, backend: data.backend_port }
+    }
+  } catch { /* informational — fields stay editable */ }
+}
+
+async function submitPorts(checkOnly: boolean) {
+  portsBusy.value = true
+  portErrors.value = { frontend: '', backend: '' }
+  portsStatus.value = null
+  try {
+    const { data } = await apiClient.put('/system/ports', {
+      frontend_port: serverPorts.value.frontend,
+      backend_port: serverPorts.value.backend,
+      check_only: checkOnly,
+    })
+    portsStatus.value = { success: true, message: data.message }
+    if (!checkOnly) notificationsStore.success('Ports saved', data.message)
+  } catch (err: any) {
+    const errors = err?.response?.data?.errors
+    if (errors) {
+      portErrors.value = {
+        frontend: errors.frontend_port ?? '',
+        backend: errors.backend_port ?? '',
+      }
+      portsStatus.value = { success: false, message: 'Fix the highlighted ports and try again.' }
+    } else {
+      portsStatus.value = { success: false, message: err?.message || 'Could not save ports.' }
+    }
+  } finally {
+    portsBusy.value = false
+  }
+}
+
+const checkPorts = () => submitPorts(true)
+const savePorts = () => submitPorts(false)
 
 const toastLevelOptions = [
   { value: 'all', label: 'All' },
@@ -1416,6 +1483,7 @@ onMounted(async () => {
   await ensureProfileLoaded()
   await syncStartOnBootFromSystem()
   settingsStore.loadServerConfig()
+  loadPorts()
   loadAppIntegrations()
   if (activeTab.value === 'integration') await refreshRunningApps()
 })

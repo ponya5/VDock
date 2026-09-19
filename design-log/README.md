@@ -18,6 +18,7 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | In progress — Phases 1–2 shipped (keymaps, Claude Code pack, focus-first); Phases 3–4 pending |
 | [DL-005](DL-005-screensaver-weather-size.md) | Screensaver weather widget size | Complete |
 | [DL-006](DL-006-dev-first-app-list.md) | Dev-first running-apps list + smart filter | Complete |
+| [DL-007](DL-007-port-configuration.md) | Port selection in Server settings | Complete |
 
 **Status values:** Planned → In progress → Complete.
 
