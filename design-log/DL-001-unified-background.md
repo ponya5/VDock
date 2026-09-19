@@ -154,5 +154,67 @@ work **stops and reports** rather than reinstating a polling workaround.
 
 ## Implementation Results
 
-*(Not started. Append below once coding begins; do not modify the sections
-above.)*
+All six tasks are implemented and merged into this branch.
+
+- [x] Task 1: Background catalog (`data/backgrounds.ts`) — 26 entries, one
+  `kind` (`css` / `component` / `image`) per entry; catalog tests cover
+  resolution and unknown-id fallback to `'default'`.
+- [x] Task 2: Settings store migration (`migrateBackground` in
+  `stores/settings.ts`) + backend allowlist (`routes/user_settings.py`) that
+  strips `backgroundPreference` and `dashboardBackground` on save. Covered by
+  `background-migration.test.ts` (pure-function precedence, including `'none'`
+  not counting as a selection) and `test_user_settings_background.py`
+  (round-trip + legacy keys not persisted).
+- [x] Task 3: `BackgroundRenderer.vue` rewritten to a plain
+  `computed(() => store.background)` — the 400 ms poll and `$forceUpdate()`
+  are gone. `background-renderer.test.ts` guards against `setInterval` being
+  reintroduced.
+- [x] Task 4: `DashboardView.vue` precedence (page > scene > global) via the
+  extracted `backgroundClassFor` / `backgroundStyleFor` helpers in
+  `utils/backgroundStyle.ts`. `background-precedence.test.ts` covers the
+  helpers directly.
+- [x] Task 5: Single merged picker in `SettingsView.vue`; the old
+  mutual-reset handlers between "Animated Effect" and "Dashboard Background"
+  are deleted.
+- [x] Task 6: Backend persistence tests done (see Task 2). **Manual
+  verification is NOT done** — see Outstanding below.
+
+**Flicker fix.** Confirmed root cause was exactly as designed: the store's
+reactive `background` ref was already fine; the bug was
+`BackgroundRenderer.vue`'s poll-and-`$forceUpdate` plus `DashboardView.vue`
+applying `dashboard-bg-transparent` synchronously on preference change ahead
+of the polled component swap. Switching both sides to plain Vue reactivity
+removes the transparent window entirely; item 5 of Verification Criteria
+(no flash/flicker) has not needed the polling-workaround fallback.
+
+**Catalog consolidation.** `FloatingPathsBackground`, `FloatingPathsBackgroundV2`,
+and `BeamsBackground` moved into `BackgroundRenderer` as designed, all
+`component`-kind. `dashboard-bg-floating-paths`/`-v2` CSS classes in
+`main.css` are now dead (nothing emits those classes any more) but are left
+in place as they're paired with corresponding component backdrop styles and
+harmless; `dashboard-bg-transparent` in `DashboardView.vue` was confirmed
+dead by the same suppression removal and was deleted in the final review
+fix pass, along with adding the missing backdrop
+(`background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%)`) to
+`FloatingPathsBackground.vue`'s own scoped style, which had been left without
+one (its sibling V2 component already had it).
+
+**Final whole-branch review fixes (this pass).** A post-implementation review
+found and fixed: `DashboardView.vue`'s `mainStyle` computed double-painting a
+global image background on `<main>` on top of the same image already painted
+on `.dashboard-view`; the missing `FloatingPathsBackground` backdrop noted
+above; `dashboardBackgroundClass` not actually passing `currentPage.value?.background`
+through to `backgroundClassFor`, so the global CSS class stayed applied even
+when a page background was set; a missing test for the server-response
+migration path (`loadSettingsFromServer` given a legacy-only response); and
+two small dead-code removals (`dashboard-bg-transparent` CSS, an unused
+`import json` in a backend test).
+
+### Outstanding
+
+**Manual, required (Verification Criteria items 4 and 5) — NOT performed.**
+This branch was implemented and reviewed in an automated environment with no
+browser available. Every one of the 26 catalog entries rendering correctly,
+and changing the background from a standalone settings window producing no
+flash/flicker, both still need a real-browser pass before this merges. Plan
+Task 6 Step 5 (manual verification) remains open.

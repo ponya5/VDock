@@ -4,8 +4,6 @@ Feature: unified-background. The two legacy keys were mutually exclusive and
 are migrated client-side; persisting them again would let a stale value
 resurface after the migration had already run.
 """
-import json
-
 import pytest
 
 from app import app

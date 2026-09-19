@@ -1,6 +1,17 @@
 // frontend/src/tests/background-migration.test.ts
-import { describe, test, expect } from 'vitest'
-import { migrateBackground } from '../stores/settings'
+import { describe, test, expect, vi } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { migrateBackground, useSettingsStore } from '../stores/settings'
+import apiClient from '@/api/client'
+
+vi.mock('@/api/client', () => ({
+  default: {
+    get: vi.fn(),
+    put: vi.fn(() => Promise.resolve({ data: { success: true } })),
+    post: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
 
 describe('migrateBackground', () => {
   test('an explicit background wins over both legacy keys', () => {
@@ -37,5 +48,20 @@ describe('migrateBackground', () => {
   test('an uploaded image in dashboardBackground survives migration', () => {
     expect(migrateBackground({ dashboardBackground: '/api/uploads/bg.png' }))
       .toBe('/api/uploads/bg.png')
+  })
+})
+
+describe('loadSettingsFromServer migration', () => {
+  test('a legacy-only server response migrates into store.background', async () => {
+    setActivePinia(createPinia())
+    const store = useSettingsStore()
+
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { settings: { dashboardBackground: 'starfield' } },
+    })
+
+    await store.loadSettingsFromServer()
+
+    expect(store.background).toBe('starfield')
   })
 })

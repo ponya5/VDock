@@ -614,13 +614,20 @@ function closeSidebar() {
 
 // Background preferences
 const dashboardBackgroundClass = computed(() =>
-  backgroundClassFor(settingsStore.background, currentScene.value?.background)
+  backgroundClassFor(settingsStore.background, currentScene.value?.background, currentPage.value?.background)
 )
 const dashboardBackgroundStyle = computed(() =>
   backgroundStyleFor(settingsStore.background, currentScene.value?.background)
 )
+// `mainStyle` exists only to paint a page-level background on <main>. It must
+// never fall through to backgroundStyleFor's global-image branch — that
+// backdrop is already painted on .dashboard-view via dashboardBackgroundStyle,
+// and painting it again here double-paints the image with a different
+// cover-cropped rect, producing a visible seam at the header boundary.
 const mainStyle = computed(() =>
-  backgroundStyleFor(settingsStore.background, undefined, currentPage.value?.background)
+  currentPage.value?.background
+    ? backgroundStyleFor(settingsStore.background, undefined, currentPage.value.background)
+    : {}
 )
 
 const shouldUseCompactMode = computed(() => {
@@ -859,10 +866,6 @@ onUnmounted(() => {
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.dashboard-bg-transparent {
-  background: transparent !important;
 }
 
 .deck-main {
