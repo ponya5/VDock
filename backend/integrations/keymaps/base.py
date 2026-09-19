@@ -67,3 +67,48 @@ class Command:
             steps.append({'type': 'hotkey', 'keys': ['enter']})
 
         return steps
+
+
+@dataclass(frozen=True)
+class AppProfile:
+    """One application: how to recognise it, what it can do, how it lays out.
+
+    `default_layout` is rows of command ids. Phase 4 builds the context scene
+    from it, and keeping the same grid positions across apps is deliberate --
+    muscle memory should survive an alt-tab.
+    """
+    id: str
+    label: str
+    exes: Tuple[str, ...]
+    commands: Tuple[Command, ...]
+    #: 'editor' focuses the app itself; 'terminal_agent' runs inside a terminal.
+    kind: str = 'editor'
+    default_layout: Tuple[Tuple[str, ...], ...] = ()
+    #: Where live status comes from, e.g. 'claude_hooks'. None means no status.
+    status_source: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialise for GET /api/app-profiles."""
+        return {
+            'id': self.id,
+            'label': self.label,
+            'exes': list(self.exes),
+            'kind': self.kind,
+            'status_source': self.status_source,
+            'default_layout': [list(row) for row in self.default_layout],
+            'commands': [
+                {
+                    'id': cmd.id,
+                    'label': cmd.label,
+                    'description': cmd.description,
+                    'keys': list(cmd.keys),
+                    'icon': cmd.icon,
+                    'keywords': list(cmd.keywords),
+                    'category': cmd.category,
+                    'priority': cmd.priority,
+                    'risk': cmd.risk,
+                    'requires_session': cmd.requires_session,
+                }
+                for cmd in self.commands
+            ],
+        }

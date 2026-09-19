@@ -1,7 +1,7 @@
 """GitHub Copilot (VS Code) keybindings."""
 from typing import Tuple
 
-from .base import Command, VSCODE_EXES
+from .base import AppProfile, Command, VSCODE_EXES
 
 COPILOT_COMMANDS: Tuple[Command, ...] = (
     Command(
@@ -73,5 +73,14 @@ COPILOT_COMMANDS: Tuple[Command, ...] = (
         keys=('ctrl', 'alt', 'i'), icon='file-lines',
         keywords=('copilot', 'docs', 'comment', 'docstring'),
         target_exes=VSCODE_EXES, types_text='/doc', submit=True,
+    ),
+)
+
+COPILOT_PROFILE = AppProfile(
+    id='copilot', label='GitHub Copilot', exes=VSCODE_EXES,
+    commands=COPILOT_COMMANDS, kind='editor',
+    default_layout=(
+        ('copilot_chat', 'copilot_inline', 'copilot_accept', 'copilot_dismiss'),
+        ('copilot_edits', 'copilot_explain', 'copilot_fix', 'copilot_tests'),
     ),
 )

@@ -1,7 +1,7 @@
 """Cursor keybindings."""
 from typing import Tuple
 
-from .base import Command, CURSOR_EXES
+from .base import AppProfile, Command, CURSOR_EXES
 
 CURSOR_COMMANDS: Tuple[Command, ...] = (
     Command(
@@ -78,5 +78,14 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
         description='Search across the whole project.',
         keys=('ctrl', 'shift', 'f'), icon='magnifying-glass',
         keywords=('cursor', 'search', 'find', 'grep'), target_exes=CURSOR_EXES,
+    ),
+)
+
+CURSOR_PROFILE = AppProfile(
+    id='cursor', label='Cursor', exes=CURSOR_EXES,
+    commands=CURSOR_COMMANDS, kind='editor',
+    default_layout=(
+        ('cursor_composer', 'cursor_chat', 'cursor_accept', 'cursor_reject'),
+        ('cursor_inline_edit', 'cursor_new_chat', 'cursor_toggle_terminal', 'cursor_quick_open'),
     ),
 )
