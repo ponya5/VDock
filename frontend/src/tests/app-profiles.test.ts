@@ -1,5 +1,12 @@
 import { describe, test, expect } from 'vitest'
-import { shortcutsForExe, type AppProfileDto } from '../api/appProfiles'
+import {
+  shortcutsForExe,
+  appShortcutsForExe,
+  hasAppShortcuts,
+  topAppShortcuts,
+  appLabelForExe,
+  type AppProfileDto,
+} from '../api/appProfiles'
 
 const PROFILES: AppProfileDto[] = [
   {
@@ -32,5 +39,26 @@ describe('shortcutsForExe', () => {
 
   test('an empty exe yields an empty list', () => {
     expect(shortcutsForExe(PROFILES, '')).toEqual([])
+  })
+})
+
+describe('apps outside the backend keymap system fall back to the static database', () => {
+  test('a backend-covered app uses its API commands', () => {
+    expect(appShortcutsForExe(PROFILES, 'cursor.exe')).toHaveLength(2)
+    expect(appLabelForExe(PROFILES, 'cursor.exe')).toBe('Cursor')
+  })
+
+  test('chrome, Discord and OBS still have shortcuts despite no backend profile', () => {
+    for (const exe of ['chrome.exe', 'Discord.exe', 'obs64.exe']) {
+      expect(hasAppShortcuts(PROFILES, exe)).toBe(true)
+      expect(appShortcutsForExe(PROFILES, exe).length).toBeGreaterThan(0)
+      expect(topAppShortcuts(PROFILES, exe, 3)).toHaveLength(3)
+    }
+    expect(appLabelForExe(PROFILES, 'chrome.exe')).toBe('Google Chrome')
+  })
+
+  test('an app in neither source has no shortcuts', () => {
+    expect(hasAppShortcuts(PROFILES, 'notepad.exe')).toBe(false)
+    expect(appShortcutsForExe(PROFILES, 'notepad.exe')).toEqual([])
   })
 })
