@@ -298,3 +298,17 @@ tests pass**.
 
 **Not started:** Phase 3 (hooks, live session status, session-aware
 interlock beyond process scan), Phase 4 (remaining ~8 apps, context scene).
+
+### Porting note — merge into `feat/unified-background`
+
+The running app served `.worktrees/unified-background`, which had branched
+before Phase 1; the work above was developed on `upgrade/upgrade--keypad`
+(commits `2729768`, `e6bc18e`) and merged here in `79eedbf`. One conflict:
+`SettingsView.vue`'s search index — resolved by keeping this branch's
+unified `Background` entry (its two background pickers were merged into
+one) plus the new `Weather Widget Size` entry. Post-merge: **719 backend
+tests pass** (717 + 2 unified-background persistence tests), `vue-tsc`
+clean. The live `Claude` scene (`scene-1789846753894`) was rewired via the
+profiles API: `New Session`→`cc_clear`, `Open Claude Code`→`claude_continue`,
+`Resume`→`cc_resume`, `Add File`→`cc_add_file`, `Interrupt`→`cc_interrupt` —
+button ids, positions and styles preserved.
