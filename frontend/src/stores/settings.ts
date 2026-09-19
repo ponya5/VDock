@@ -3,10 +3,31 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
+import { DEFAULT_BACKGROUND_ID } from '@/data/backgrounds'
 
 const SETTINGS_STORAGE_KEY = 'vdock_settings'
 const SETTINGS_BROADCAST_CHANNEL = 'vdock-settings-sync'
 const SERVER_SYNC_DELAY_MS = 400
+
+export interface LegacyBackgroundFields {
+  background?: string
+  backgroundPreference?: string
+  dashboardBackground?: string
+}
+
+/**
+ * Resolve the single `background` value from stored settings.
+ *
+ * `backgroundPreference` and `dashboardBackground` were mutually exclusive —
+ * SettingsView reset one whenever the other changed — so at most one of them
+ * can hold a real selection and the migration is lossless.
+ */
+export function migrateBackground(settings: LegacyBackgroundFields): string {
+  if (settings.background) return settings.background
+  const pref = settings.backgroundPreference
+  if (pref && pref !== 'none') return pref
+  return settings.dashboardBackground || DEFAULT_BACKGROUND_ID
+}
 
 export interface PersistedUserSettings {
   buttonSize: number
@@ -17,8 +38,7 @@ export interface PersistedUserSettings {
   dockedSidebarEnabled: boolean
   dockedSidebarWidth: number
   dockedButtonHeight: number
-  dashboardBackground: string
-  backgroundPreference: string
+  background: string
   uiBrightness: number
   toastLevel: 'all' | 'errors-only' | 'off'
   touchMode: 'normal' | 'touch-friendly' | 'tablet'
@@ -61,8 +81,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Independent of width so docked buttons don't have to be square — a tall
   // sidebar of wide-but-short buttons is far easier to hit on small touch panels.
   const dockedButtonHeight = ref(84)
-  const dashboardBackground = ref('default')
-  const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
+  const background = ref<string>(DEFAULT_BACKGROUND_ID)
   const uiBrightness = ref(100)
   // Ephemeral UI state (not persisted/synced): whether the auto-hiding header
   // is currently shown. Each window/tab manages its own header visibility
@@ -173,8 +192,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
       dockedButtonHeight: dockedButtonHeight.value,
-      dashboardBackground: dashboardBackground.value,
-      backgroundPreference: backgroundPreference.value,
+      background: background.value,
       uiBrightness: uiBrightness.value,
       toastLevel: toastLevel.value,
       touchMode: touchMode.value,
@@ -204,7 +222,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  function applySettingsObject(settings: Partial<PersistedUserSettings>) {
+  function applySettingsObject(settings: Partial<PersistedUserSettings> & LegacyBackgroundFields) {
     if (settings.buttonSize !== undefined) buttonSize.value = settings.buttonSize
     if (settings.showLabels !== undefined) showLabels.value = settings.showLabels
     if (settings.showTooltips !== undefined) showTooltips.value = settings.showTooltips
@@ -213,10 +231,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.dockedSidebarEnabled !== undefined) dockedSidebarEnabled.value = settings.dockedSidebarEnabled
     if (settings.dockedSidebarWidth !== undefined) dockedSidebarWidth.value = settings.dockedSidebarWidth
     if (settings.dockedButtonHeight !== undefined) dockedButtonHeight.value = settings.dockedButtonHeight
-    if (settings.dashboardBackground !== undefined) dashboardBackground.value = settings.dashboardBackground
-    if (settings.backgroundPreference !== undefined) {
-      backgroundPreference.value = settings.backgroundPreference as typeof backgroundPreference.value
-    }
+    const migrated = migrateBackground(settings)
+    if (migrated) background.value = migrated
     if (settings.uiBrightness !== undefined) uiBrightness.value = settings.uiBrightness
     if (settings.toastLevel !== undefined) toastLevel.value = settings.toastLevel
     if (settings.touchMode !== undefined) touchMode.value = settings.touchMode
@@ -249,7 +265,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (!stored) return
 
     try {
-      const settings = JSON.parse(stored) as Partial<PersistedUserSettings> & { showRegularToasts?: boolean }
+      const settings = JSON.parse(stored) as Partial<PersistedUserSettings> &
+        LegacyBackgroundFields & { showRegularToasts?: boolean }
       applySettingsObject({
         ...settings,
         buttonSize: settings.buttonSize ?? 1.0,
@@ -260,8 +277,6 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarEnabled: settings.dockedSidebarEnabled !== false,
         dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
         dockedButtonHeight: settings.dockedButtonHeight ?? 84,
-        dashboardBackground: settings.dashboardBackground ?? 'default',
-        backgroundPreference: settings.backgroundPreference ?? 'none',
         uiBrightness: settings.uiBrightness ?? 100,
         toastLevel: settings.toastLevel
           ?? (settings.showRegularToasts === false ? 'errors-only' : 'all'),
@@ -361,8 +376,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled,
       dockedSidebarWidth,
       dockedButtonHeight,
-      dashboardBackground,
-      backgroundPreference,
+      background,
       uiBrightness,
       toastLevel,
       touchMode,
@@ -544,8 +558,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarEnabled,
     dockedSidebarWidth,
     dockedButtonHeight,
-    dashboardBackground,
-    backgroundPreference,
+    background,
     uiBrightness,
     showHeader,
     toastLevel,
