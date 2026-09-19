@@ -248,55 +248,24 @@
 
           <div v-if="appearanceSubTab === 'background'" class="settings-grid">
             <section class="settings-section card">
-              <h2>Animated Effect</h2>
-              <div class="form-group">
-                <label>Background Effect</label>
-                <select v-model="settings.backgroundPreference" class="select" @change="onAnimatedEffectChange">
-                  <option value="none">None</option>
-                  <option value="particles">Dark Veil (Particles)</option>
-                  <option value="waves">Floating Lines (Waves)</option>
-                  <option value="lightning">Lightning</option>
-                  <option value="light-pillar">Light Pillar</option>
-                  <option value="floating-lines-wave">Floating Lines Wave</option>
-                  <option value="prismatic-burst">Prismatic Burst</option>
-                  <option value="iridescence">Iridescence</option>
-                  <option value="silk">Silk</option>
-                  <option value="light-rays">Light Rays</option>
-                  <option value="aurora">Aurora</option>
-                </select>
-                <p class="form-help">Animated overlay on your dashboard</p>
-              </div>
-            </section>
-
-            <section class="settings-section card">
-              <h2>Dashboard Background</h2>
+              <h2>Background</h2>
               <div class="form-group">
                 <label>Background Style</label>
-                <select v-model="settings.dashboardBackground" class="select" @change="onDashboardBackgroundChange">
-                  <option value="default">Default (Gradient)</option>
+                <select v-model="settings.background" class="select" @change="settingsStore.saveSettings()">
+                  <optgroup label="Default">
+                    <option v-for="bg in backgroundsByGroup.default" :key="bg.id" :value="bg.id">{{ bg.label }}</option>
+                  </optgroup>
                   <optgroup label="Custom Background" v-if="isCustomBackground">
-                    <option :value="settings.dashboardBackground">Custom Uploaded Image</option>
+                    <option :value="settings.background">Custom Uploaded Image</option>
                   </optgroup>
-                  <optgroup label="Static Gradients">
-                    <option value="ocean-breeze">Ocean Breeze</option>
-                    <option value="sunset-glow">Sunset Glow</option>
-                    <option value="forest-mist">Forest Mist</option>
-                    <option value="royal-purple">Royal Purple</option>
-                    <option value="golden-hour">Golden Hour</option>
+                  <optgroup label="Gradients">
+                    <option v-for="bg in backgroundsByGroup.gradient" :key="bg.id" :value="bg.id">{{ bg.label }}</option>
                   </optgroup>
-                  <optgroup label="Animated Backgrounds">
-                    <option value="floating-particles">Floating Particles</option>
-                    <option value="gradient-waves">Gradient Waves</option>
-                    <option value="geometric-patterns">Geometric Patterns</option>
-                    <option value="aurora-borealis">Aurora Borealis</option>
-                    <option value="starfield">Starfield</option>
-                    <option value="bubble-float">Floating Bubbles</option>
-                    <option value="neon-grid">Neon Grid</option>
-                    <option value="floating-paths">Floating Paths</option>
-                    <option value="floating-paths-v2">Floating Paths V2</option>
-                    <option value="beams-background">Beams Background</option>
+                  <optgroup label="Animated">
+                    <option v-for="bg in backgroundsByGroup.animated" :key="bg.id" :value="bg.id">{{ bg.label }}</option>
                   </optgroup>
                 </select>
+                <p class="form-help">One background for the dashboard — animated effects included.</p>
               </div>
               <div class="form-group">
                 <label>Custom Upload</label>
@@ -311,7 +280,7 @@
                   </button>
                 </div>
                 <div v-if="isCustomBackground" class="background-preview">
-                  <img :src="settings.dashboardBackground" alt="Custom Background" />
+                  <img :src="settings.background" alt="Custom Background" />
                 </div>
               </div>
             </section>
@@ -730,6 +699,8 @@ import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openS
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { testNewsConnection, parseFeedList } from '@/services/newsService'
 import { testMarketConnection } from '@/services/marketService'
+import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
+import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 
 const router = useRouter()
 const route = useRoute()
@@ -826,13 +797,7 @@ const previewButton = computed<Button>(() => ({
 // Mirrors DashboardView's own background class/style resolution (minus the
 // scene/page-background overrides, which aren't relevant to a settings
 // preview) so the preview pane shows exactly what the dashboard would.
-const previewBackgroundClass = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') return ''
-  const bg = settingsStore.dashboardBackground
-  if (bg === 'default') return ''
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) return ''
-  return `dashboard-bg-${bg}`
-})
+const previewBackgroundClass = computed(() => backgroundClassFor(settingsStore.background))
 
 // Inline styles always win over the (global, unscoped) dashboard-bg-* classes
 // regardless of CSS specificity, so every branch here sets an explicit
@@ -841,22 +806,14 @@ const previewBackgroundClass = computed(() => {
 const PREVIEW_CHECKERBOARD = 'repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%) 50% / 20px 20px'
 
 const previewBackgroundStyle = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') {
+  const option = resolveBackground(settingsStore.background)
+  if (option.kind === 'component') {
     return { background: PREVIEW_CHECKERBOARD }
   }
-  const bg = settingsStore.dashboardBackground
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
-    return {
-      backgroundImage: `url(${bg})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-  if (bg === 'default') {
+  if (option.id === 'default') {
     return { background: 'var(--color-background)' }
   }
-  return {}
+  return backgroundStyleFor(settingsStore.background)
 })
 
 const expandedCategory = ref<string | null>(null)
@@ -891,12 +848,14 @@ const backgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingBackground = ref(false)
 const sceneBackgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingSceneBackground = ref(false)
-const NAMED_BACKGROUNDS = ['ocean-breeze','sunset-glow','forest-mist','royal-purple','golden-hour','floating-particles','gradient-waves','geometric-patterns','aurora-borealis','starfield','bubble-float','neon-grid','floating-paths','floating-paths-v2','beams-background','default']
 
-const isCustomBackground = computed(() => {
-  const bg = settings.value.dashboardBackground
-  return bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || (bg.startsWith('http') && !NAMED_BACKGROUNDS.includes(bg))
-})
+const backgroundsByGroup = computed(() => ({
+  default: BACKGROUNDS.filter(b => b.group === 'default'),
+  gradient: BACKGROUNDS.filter(b => b.group === 'gradient'),
+  animated: BACKGROUNDS.filter(b => b.group === 'animated'),
+}))
+
+const isCustomBackground = computed(() => isImageBackground(settings.value.background))
 const currentScene = computed(() => dashboardStore.currentScene)
 const hasSceneBackground = computed(() => !!currentScene.value?.background?.image)
 
@@ -913,7 +872,7 @@ const handleBackgroundUpload = async (event: Event) => {
     const response = await apiClient.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     if (response.data.success) {
       const url = response.data.url.startsWith('/api') ? response.data.url : '/api' + response.data.url
-      settingsStore.dashboardBackground = url
+      settingsStore.background = url
       notificationsStore.success('Background updated', 'Custom background applied successfully.')
     } else { notificationsStore.error('Upload failed', response.data.error || 'Unknown error') }
   } catch (error: any) { notificationsStore.error('Upload failed', error.message || 'Unknown error') }
@@ -940,21 +899,7 @@ const handleSceneBackgroundUpload = async (event: Event) => {
   finally { uploadingSceneBackground.value = false; if (target) target.value = '' }
 }
 
-const removeCustomBackground = () => { settingsStore.dashboardBackground = 'default'; notificationsStore.success('Background removed', 'Reverted to default background.') }
-
-function onAnimatedEffectChange() {
-  if (settingsStore.backgroundPreference !== 'none') {
-    settingsStore.dashboardBackground = 'default'
-  }
-  settingsStore.saveSettings()
-}
-
-function onDashboardBackgroundChange() {
-  if (settingsStore.dashboardBackground !== 'default' && settingsStore.backgroundPreference !== 'none') {
-    settingsStore.backgroundPreference = 'none'
-  }
-  settingsStore.saveSettings()
-}
+const removeCustomBackground = () => { settingsStore.background = 'default'; notificationsStore.success('Background removed', 'Reverted to default background.') }
 
 const applyingButtonBehaviour = ref(false)
 
@@ -1083,8 +1028,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
   { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'moon'] },
   { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'grip'] },
-  { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
-  { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
+  { label: 'Background', keywords: 'background animation particles waves aurora image wallpaper gradient', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
   { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
