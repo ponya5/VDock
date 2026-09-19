@@ -387,3 +387,41 @@ found"); pytest 734.
 **Still not started:** Phase 3 (Claude Code hooks → live session state on
 the deck), the Phase-4 context scene itself (auto-built per-app layout —
 profiles' `default_layout` rows are the input).
+
+### Claude Code keymap — full keyboard surface as deck buttons
+
+The Claude keymap now covers the official keybindings doc
+(`code.claude.com/docs/en/keybindings`) — 40 commands total:
+
+- **Permission prompts**: `cc_approve` (y) / `cc_deny` (n) / `cc_accept`
+  (Enter) — the deck's core value: answer a permission dialog without
+  touching the keyboard. Priority 10 so they sort first.
+- **View toggles (safe)**: `cc_todos` (Ctrl+T), `cc_transcript` (Ctrl+O),
+  `cc_history` (Ctrl+R), `cc_redraw` (Ctrl+L), `cc_rewind` (Esc x2 opens
+  the message-selector dialog), `cc_thinking` (Alt+T), `cc_fast` (Alt+O).
+- **Navigation**: `cc_scroll_up/down` (PgUp/PgDn), `cc_nav_up/down`
+  (arrows for dialogs/pickers).
+- **Draft controls (session-gated)**: `cc_cancel` (Ctrl+C =
+  `app:interrupt`), `cc_newline` (Ctrl+J), `cc_stash` (Ctrl+S), `cc_undo`
+  (Ctrl+Shift+-), `cc_editor` (Ctrl+G), `cc_paste_image` (Alt+V),
+  `cc_background` (Ctrl+B), `cc_queue` (Ctrl+X Enter chord, v2.1.247+).
+- **Slash commands**: `/tasks`, `/diff`, `/agents`, `/effort`,
+  `/permissions`, plus `!` (bash) and `#` (memory) prefixes.
+- **Destructive**: `cc_kill_agents` (Ctrl+X Ctrl+K), `cc_exit` — corrected
+  to Ctrl+D x2 per the docs (`app:exit`); the previous Ctrl+C x2 was
+  `app:interrupt`, which is now `cc_cancel`.
+
+`Command` gained `after_keys`: a tuple of follow-up keystrokes emitted as
+separate hotkey steps, expressing two-stroke chords (Ctrl+X Ctrl+K,
+Ctrl+X Enter) that a single hotkey can't.
+
+`default_layout` leads with the permission pair and surfaces
+rewind/todos: `(prompt, interrupt, approve, deny)` / `(clear, mode,
+rewind, todos)` / `(resume, compact, add_file, model)`. The live `Daniel`
+profile's Claude scene got the same additions in its free cells.
+
+**Verified:** 735 backend tests; `cc_todos` delivered `Ctrl+T` to the
+live Devin-hosted session. A stale backend process was found sharing
+port 5000 (Windows `SO_REUSEADDR` lets two listeners bind the same
+socket — the old code answered the first probe); killed it, the current
+backend reports all 40 `cc_*` actions.
