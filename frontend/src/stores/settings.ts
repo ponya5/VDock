@@ -231,8 +231,13 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.dockedSidebarEnabled !== undefined) dockedSidebarEnabled.value = settings.dockedSidebarEnabled
     if (settings.dockedSidebarWidth !== undefined) dockedSidebarWidth.value = settings.dockedSidebarWidth
     if (settings.dockedButtonHeight !== undefined) dockedButtonHeight.value = settings.dockedButtonHeight
-    const migrated = migrateBackground(settings)
-    if (migrated) background.value = migrated
+    if (
+      settings.background !== undefined ||
+      settings.backgroundPreference !== undefined ||
+      settings.dashboardBackground !== undefined
+    ) {
+      background.value = migrateBackground(settings)
+    }
     if (settings.uiBrightness !== undefined) uiBrightness.value = settings.uiBrightness
     if (settings.toastLevel !== undefined) toastLevel.value = settings.toastLevel
     if (settings.touchMode !== undefined) touchMode.value = settings.touchMode
