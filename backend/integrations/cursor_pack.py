@@ -1,8 +1,7 @@
 """Cursor pack.
 
-Extends what VDock already knew about Cursor (the ~35 shortcuts in
-frontend/src/data/appShortcuts.ts) with the AI surface that matters for a dev
-deck: Composer, chat, inline edit and accept/reject.
+Covers the AI surface that matters for a dev deck: Composer, chat, inline
+edit and accept/reject.
 
 Like the Copilot pack, these are keystrokes sent to a focused editor -- see
 ``editor_base.py`` for the focus guard.

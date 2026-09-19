@@ -137,7 +137,7 @@ be previewed.
 - [ ] Task 2: Tappable headline rows + `openArticle`
 - [ ] Task 3: Curated timezone catalog + three city pickers
 - [ ] Task 4: Finnhub proxy route + merged `useMarket` + ticker editor
-- [ ] Task 5: `ui_command` relay + Test Screensaver button
+- [x] Task 5: `ui_command` relay + Test Screensaver button
 - [ ] Task 6: Feed presets + full manual verification
 
 ## Trade-offs
@@ -185,5 +185,21 @@ the cost of an adapter per provider.
 
 ## Implementation Results
 
-*(Not started. Append below once coding begins; do not modify the sections
-above.)*
+- **Task 5 (2026-09-19):** `ui_command` socket relay added in `app.py` with an
+  `ALLOWED_UI_COMMANDS` allowlist (`'show_screensaver'` only) — a generic
+  passthrough would be a remote-command channel, per the design. New
+  `composables/useUiCommands.ts` delivers the command over four paths:
+  module-level pending queue (same-tab route navigation, where the dashboard
+  is unmounted while settings is open), window CustomEvent (same-tab live
+  listeners), BroadcastChannel + localStorage storage-event fallback (other
+  tabs — the `useVdockRefresh` pattern), and the socket relay (other
+  clients). `socket.ts` gained `sendUiCommand`. `DashboardView` registers a
+  listener that sets `screensaverVisible` directly, so the preview works even
+  with `screensaverTimeout = 0`. "Test Screensaver" button added to the
+  Screensaver settings card.
+- **Tests:** `vue-tsc --noEmit` clean; vitest 41 files / 115 tests pass.
+- **Deviations:** the design named only BroadcastChannel + socket; the pending
+  queue and CustomEvent were added because in the same-window navigation flow
+  the dashboard is unmounted when the button is pressed and would otherwise
+  miss the command entirely.
+- Tasks 1–4, 6 still pending.

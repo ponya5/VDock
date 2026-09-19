@@ -99,6 +99,12 @@ class SocketClient {
     }
   }
 
+  sendUiCommand(command: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('ui_command', { command })
+    }
+  }
+
   on(event: string, callback: SocketListener) {
     if (this.socket) {
       this.socket.on(event, callback)

@@ -56,6 +56,7 @@ export interface PersistedUserSettings {
   buttonDefaultIconLoop: string
   buttonDefaultEffect: string
   screensaverWidgets: string[]
+  screensaverWeatherSize: number
   newsApiKey: string
   newsFeeds: string
   newsRotateSeconds: number
@@ -127,6 +128,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const buttonDefaultEffect = ref('none')
 
   const screensaverWidgets = ref<string[]>(['weather'])
+  // Percentage scale for the screensaver's corner weather pill. 100 keeps the
+  // desktop-size rendering; small touch panels push it up for glanceability.
+  const screensaverWeatherSize = ref(100)
   const newsApiKey = ref('')
   // RSS/Atom feed URLs, one per line. Blank uses the backend defaults.
   const newsFeeds = ref('')
@@ -215,6 +219,7 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultEffect: buttonDefaultEffect.value,
       // Spread for the same structured-clone reason as recentActions above.
       screensaverWidgets: [...screensaverWidgets.value],
+      screensaverWeatherSize: screensaverWeatherSize.value,
       newsApiKey: newsApiKey.value,
       newsFeeds: newsFeeds.value,
       newsRotateSeconds: newsRotateSeconds.value,
@@ -255,6 +260,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.buttonDefaultIconLoop !== undefined) buttonDefaultIconLoop.value = settings.buttonDefaultIconLoop
     if (settings.buttonDefaultEffect !== undefined) buttonDefaultEffect.value = settings.buttonDefaultEffect
     if (settings.screensaverWidgets !== undefined) screensaverWidgets.value = settings.screensaverWidgets
+    if (settings.screensaverWeatherSize !== undefined) screensaverWeatherSize.value = settings.screensaverWeatherSize
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
     if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
     if (settings.newsRotateSeconds !== undefined) newsRotateSeconds.value = settings.newsRotateSeconds
@@ -300,6 +306,7 @@ export const useSettingsStore = defineStore('settings', () => {
         buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'swing',
         buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
         screensaverWidgets: settings.screensaverWidgets ?? ['weather'],
+        screensaverWeatherSize: settings.screensaverWeatherSize ?? 100,
         newsApiKey: settings.newsApiKey ?? '',
         newsFeeds: settings.newsFeeds ?? '',
         newsRotateSeconds: settings.newsRotateSeconds ?? 8,
@@ -399,6 +406,7 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultIconLoop,
       buttonDefaultEffect,
       screensaverWidgets,
+      screensaverWeatherSize,
       newsApiKey,
       newsFeeds,
       newsRotateSeconds,
@@ -583,6 +591,7 @@ export const useSettingsStore = defineStore('settings', () => {
     buttonDefaultIconLoop,
     buttonDefaultEffect,
     screensaverWidgets,
+    screensaverWeatherSize,
     newsApiKey,
     newsFeeds,
     newsRotateSeconds,

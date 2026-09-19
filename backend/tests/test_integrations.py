@@ -15,6 +15,7 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from integrations import context, keymaps  # noqa: E402
+from integrations.claude_code_pack import Plugin as ClaudeCodePlugin  # noqa: E402
 from integrations.claude_pack import Plugin as ClaudePlugin  # noqa: E402
 from integrations.copilot_pack import Plugin as CopilotPlugin  # noqa: E402
 from integrations.cursor_pack import Plugin as CursorPlugin  # noqa: E402
@@ -252,9 +253,17 @@ def test_repo_slug_parses_https_and_ssh_remotes(github, mocker, tmp_path):
 
 
 # --- Copilot / Cursor keystroke packs ----------------------------------------
+#
+# Every test mocks `window_focus.focus_app_window`: the real call would run
+# EnumWindows on the dev machine and could pull an actual editor window to
+# the front mid-test.
 
 def test_cursor_command_is_refused_when_cursor_is_not_focused(mocker):
     """The guard that stops a prompt being typed into the wrong window."""
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
     mocker.patch('integrations.editor_base.foreground_exe',
                  return_value='chrome.exe')
     macro = mocker.patch('integrations.editor_base.MacroAction')
@@ -267,6 +276,10 @@ def test_cursor_command_is_refused_when_cursor_is_not_focused(mocker):
 
 
 def test_cursor_command_is_refused_when_focus_is_unknown(mocker):
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
     mocker.patch('integrations.editor_base.foreground_exe', return_value=None)
     macro = mocker.patch('integrations.editor_base.MacroAction')
 
@@ -277,6 +290,10 @@ def test_cursor_command_is_refused_when_focus_is_unknown(mocker):
 
 
 def test_cursor_command_sends_keys_when_cursor_is_focused(mocker):
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
     mocker.patch('integrations.editor_base.foreground_exe',
                  return_value='cursor.exe')
     macro = mocker.patch('integrations.editor_base.MacroAction')
@@ -290,7 +307,60 @@ def test_cursor_command_sends_keys_when_cursor_is_focused(mocker):
     assert steps[0] == {'type': 'hotkey', 'keys': ['ctrl', 'i']}
 
 
+def test_focus_first_raises_the_target_window(mocker):
+    """On a touch deck the button press steals focus -- the send must put the
+    target window back in front before typing."""
+    focus = mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.foreground_exe',
+                 return_value='cursor.exe')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = CursorPlugin().execute_action('cursor_composer', {})
+
+    assert result['success'] is True
+    focus.assert_called_once()
+    assert set(focus.call_args[0][0]) == {'cursor.exe'}
+
+
+def test_command_is_refused_when_no_target_window_exists(mocker):
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=False)
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = CursorPlugin().execute_action('cursor_composer', {})
+
+    assert result['success'] is False
+    assert 'window found' in result['message']
+    macro.assert_not_called()
+
+
+def test_focus_first_can_be_disabled(mocker):
+    focus = mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window')
+    mocker.patch('integrations.editor_base.foreground_exe',
+                 return_value='cursor.exe')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = CursorPlugin().execute_action('cursor_composer',
+                                           {'focus_first': False})
+
+    assert result['success'] is True
+    focus.assert_not_called()
+
+
 def test_copilot_slash_command_types_and_submits(mocker):
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
     mocker.patch('integrations.editor_base.foreground_exe',
                  return_value='code.exe')
     macro = mocker.patch('integrations.editor_base.MacroAction')
@@ -320,9 +390,110 @@ def test_focus_guard_can_be_disabled_deliberately(mocker):
 
 
 def test_focus_guard_defaults_to_on_in_every_spec():
-    for plugin in (CursorPlugin(), CopilotPlugin()):
+    for plugin in (CursorPlugin(), CopilotPlugin(), ClaudeCodePlugin()):
         for spec in plugin.get_action_specs():
             assert spec.default_config.get('enforce_focus') is True, spec.id
+            assert spec.default_config.get('focus_first') is True, spec.id
+
+
+# --- Claude Code live-session pack -------------------------------------------
+
+def test_cc_clear_is_refused_without_a_live_session(mocker):
+    """Typed input must not reach a terminal that is not running the agent."""
+    mocker.patch('integrations.sessions.session_alive', return_value=False)
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_clear', {})
+
+    assert result['success'] is False
+    assert 'session' in result['message'].lower()
+    macro.assert_not_called()
+
+
+def test_cc_clear_types_clear_into_a_live_session(mocker):
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.foreground_exe',
+                 return_value='windowsterminal.exe')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = ClaudeCodePlugin().execute_action('cc_clear', {})
+
+    assert result['success'] is True
+    steps = macro.call_args[0][0]['steps']
+    # Typed-only command: no empty hotkey step may be emitted.
+    assert [s['type'] for s in steps] == ['delay', 'text', 'delay', 'hotkey']
+    assert steps[1]['text'] == '/clear'
+    assert steps[3]['keys'] == ['enter']
+
+
+def test_cc_exit_is_refused_without_destructive_opt_in(mocker):
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_exit', {})
+
+    assert result['success'] is False
+    assert 'destructive' in result['message'].lower()
+    macro.assert_not_called()
+
+
+def test_cc_exit_sends_ctrl_c_twice_when_opted_in(mocker):
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.foreground_exe',
+                 return_value='cmd.exe')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = ClaudeCodePlugin().execute_action(
+        'cc_exit', {'allow_destructive': True})
+
+    assert result['success'] is True
+    steps = macro.call_args[0][0]['steps']
+    assert [s['type'] for s in steps] == ['hotkey', 'delay', 'hotkey']
+    assert steps[0]['keys'] == ['ctrl', 'c'] == steps[2]['keys']
+
+
+def test_cc_interrupt_needs_no_session_gate(mocker):
+    """Safe commands fire on the focus guard alone."""
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.foreground_exe',
+                 return_value='windowsterminal.exe')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+    macro.return_value.execute.return_value = mocker.Mock(
+        success=True, message='ok', details=None, data={})
+
+    result = ClaudeCodePlugin().execute_action('cc_interrupt', {})
+
+    assert result['success'] is True
+    steps = macro.call_args[0][0]['steps']
+    assert steps[0] == {'type': 'hotkey', 'keys': ['escape']}
+
+
+def test_destructive_commands_expose_the_opt_in_field():
+    spec = next(s for s in ClaudeCodePlugin().get_action_specs()
+                if s.id == 'cc_exit')
+    names = [f.name for f in spec.config_fields]
+    assert 'allow_destructive' in names
+
+
+def test_claude_code_profile_is_registered():
+    profile = keymaps.PROFILES_BY_ID['claude-code']
+    assert profile.kind == 'terminal_agent'
+    assert all(c.id.startswith('cc_') for c in profile.commands)
 
 
 def test_keymap_commands_use_supported_macro_steps():

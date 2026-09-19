@@ -1,7 +1,7 @@
 """GitHub Copilot pack.
 
 Copilot has no external control surface, so these actions focus VS Code and
-send the keystrokes a human would press. Bindings live in ``keymaps.py``;
+send the keystrokes a human would press. Bindings live in ``keymaps/``;
 the focus guard and dispatch live in ``editor_base.py``.
 """
 from .editor_base import KeystrokeEditorPlugin

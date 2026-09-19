@@ -9,7 +9,11 @@
 
     <!-- Weather pinned to its own corner so it never competes for reading
          space with the clock or the widgets below it. -->
-    <div v-if="showWeatherWidget" class="ss-weather-corner">
+    <div
+      v-if="showWeatherWidget"
+      class="ss-weather-corner"
+      :style="{ '--ss-weather-scale': String(weatherScale) }"
+    >
       <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-corner-icon" />
       <div class="ss-weather-corner-info">
         <span class="ss-weather-corner-temp">{{ tempStr }}</span>
@@ -129,6 +133,9 @@ const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C`
 const location = computed(() => weather.value?.location || '—')
 
 const showWeatherWidget = computed(() => settingsStore.screensaverWidgets.includes('weather'))
+// User-set percentage (default 100) that enlarges the corner pill for small
+// touch panels, where the vw-clamped sizes end up too small to glance at.
+const weatherScale = computed(() => settingsStore.screensaverWeatherSize / 100)
 const showNewsWidget = computed(() => settingsStore.screensaverWidgets.includes('news'))
 const showMarketWidget = computed(() => settingsStore.screensaverWidgets.includes('market'))
 const showWorldClockWidget = computed(() => settingsStore.screensaverWidgets.includes('worldclock'))
@@ -235,13 +242,14 @@ onUnmounted(() => {
    something you read, so it never has to fight the news carousel for space
    on a small touch panel. */
 .ss-weather-corner {
+  --ss-weather-scale: 1;
   position: absolute;
   top: clamp(1rem, 3vw, 2rem);
   right: clamp(1rem, 3vw, 2rem);
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.9rem;
+  gap: calc(0.6rem * var(--ss-weather-scale));
+  padding: calc(0.5rem * var(--ss-weather-scale)) calc(0.9rem * var(--ss-weather-scale));
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
@@ -249,7 +257,7 @@ onUnmounted(() => {
 }
 
 .ss-weather-corner-icon {
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+  font-size: calc(clamp(1.3rem, 2.4vw, 1.8rem) * var(--ss-weather-scale));
   color: #ff9f0a;
   flex-shrink: 0;
 }
@@ -261,13 +269,13 @@ onUnmounted(() => {
 }
 
 .ss-weather-corner-temp {
-  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  font-size: calc(clamp(1rem, 1.8vw, 1.3rem) * var(--ss-weather-scale));
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .ss-weather-corner-loc {
-  font-size: clamp(0.65rem, 1vw, 0.78rem);
+  font-size: calc(clamp(0.65rem, 1vw, 0.78rem) * var(--ss-weather-scale));
   color: rgba(255, 255, 255, 0.45);
 }
 
