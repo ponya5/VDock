@@ -586,6 +586,21 @@
                 <FontAwesomeIcon :icon="['fas', 'sync']" :spin="loadingApps" /> Refresh
               </button>
             </div>
+            <div v-if="runningApps.length > 0" class="app-toolbar">
+              <div class="app-search">
+                <FontAwesomeIcon :icon="['fas', 'search']" class="app-search-icon" />
+                <input
+                  v-model="appSearch"
+                  type="text"
+                  class="app-search-input"
+                  placeholder="Filter apps — try 'terminal', 'vscode', 'git'"
+                />
+                <button v-if="appSearch" class="app-search-clear" title="Clear filter" @click="appSearch = ''">
+                  <FontAwesomeIcon :icon="['fas', 'times']" />
+                </button>
+              </div>
+              <span v-if="appSearch" class="app-count">{{ filteredApps.length }} of {{ runningApps.length }}</span>
+            </div>
             <div v-if="loadingApps" class="loading-state">
               <FontAwesomeIcon :icon="['fas', 'spinner']" spin /><span>Loading applications...</span>
             </div>
@@ -597,13 +612,17 @@
               <div class="list-header">
                 <span>Application</span><span>Status</span><span>Scene</span><span>Actions</span>
               </div>
-              <div v-for="app in runningApps" :key="app.exe" class="app-item">
+              <div v-if="filteredApps.length === 0" class="empty-state app-filter-empty">
+                <FontAwesomeIcon :icon="['fas', 'search']" /><p>No apps match "{{ appSearch }}"</p>
+              </div>
+              <div v-for="app in filteredApps" :key="app.exe" class="app-item" :class="{ 'app-item--dev': appTier(app) < 2 }">
                 <div class="app-info">
                   <FontAwesomeIcon :icon="['fas', 'window-maximize']" class="app-icon" />
                   <div class="app-details">
                     <span class="app-name">{{ app.name }}</span>
                     <span class="app-exe">{{ app.exe }}</span>
                   </div>
+                  <span v-if="appBadge(app)" class="app-badge" :class="{ 'app-badge--profile': appTier(app) === 0 }">{{ appBadge(app) }}</span>
                 </div>
                 <div class="app-status">
                   <label class="toggle-switch"><input type="checkbox" :checked="isAppIntegrationEnabled(app.exe)" @change="toggleAppIntegration(app)" /><span class="toggle-slider"></span></label>
@@ -715,7 +734,7 @@ import DeckButton from '@/components/DeckButton.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
-import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppShortcut } from '@/api/appProfiles'
+import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppShortcut, type AppProfileDto } from '@/api/appProfiles'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
@@ -1029,6 +1048,83 @@ const appIntegrations = ref<AppIntegration[]>([])
 const autoSwitchingEnabled = ref(false)
 const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
+const appSearch = ref('')
+const appProfiles = ref<AppProfileDto[]>([])
+const appProfilesLoaded = ref(false)
+
+// VDock is a development companion: dev tools sort above everything else.
+// Tier 0 is stronger still — an exe with a backend app profile means VDock
+// actually has keystroke actions for it.
+const DEV_APP_EXES = new Set([
+  'code.exe', 'code - insiders.exe', 'cursor.exe', 'devenv.exe', 'zed.exe',
+  'rider64.exe', 'idea64.exe', 'webstorm64.exe', 'pycharm64.exe',
+  'clion64.exe', 'goland64.exe', 'phpstorm64.exe', 'rubymine64.exe',
+  'datagrip64.exe', 'rustrover64.exe', 'fleet64.exe', 'studio64.exe',
+  'sublime_text.exe', 'notepad++.exe', 'neovide.exe',
+  'windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe',
+  'bash.exe', 'wsl.exe', 'wezterm-gui.exe', 'alacritty.exe', 'tabby.exe',
+  'termius.exe', 'putty.exe',
+  'gitkraken.exe', 'githubdesktop.exe', 'sourcetree.exe', 'fork.exe',
+  'postman.exe', 'insomnia.exe', 'bruno.exe',
+  'docker desktop.exe', 'com.docker.backend.exe', 'rancher desktop.exe',
+  'podman.exe', 'dbeaver.exe', 'mongodbcompass.exe',
+  'node.exe', 'python.exe', 'pythonw.exe', 'devtunnel.exe',
+])
+
+// Friendly queries -> exes, so "terminal" finds Windows Terminal, etc.
+const APP_ALIASES: Record<string, string[]> = {
+  vscode: ['code.exe', 'code - insiders.exe'],
+  'vs code': ['code.exe', 'code - insiders.exe'],
+  'visual studio code': ['code.exe'],
+  'visual studio': ['devenv.exe'],
+  terminal: ['windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe', 'wezterm-gui.exe', 'alacritty.exe', 'tabby.exe'],
+  claude: ['windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe'],
+  browser: ['chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'opera.exe'],
+  git: ['gitkraken.exe', 'githubdesktop.exe', 'sourcetree.exe', 'fork.exe'],
+  github: ['githubdesktop.exe'],
+  docker: ['docker desktop.exe', 'com.docker.backend.exe', 'rancher desktop.exe'],
+  jetbrains: ['idea64.exe', 'webstorm64.exe', 'pycharm64.exe', 'rider64.exe', 'clion64.exe', 'goland64.exe', 'phpstorm64.exe'],
+  editor: ['code.exe', 'cursor.exe', 'sublime_text.exe', 'notepad++.exe', 'devenv.exe', 'zed.exe'],
+}
+
+const appProfileByExe = computed(() => {
+  const map = new Map<string, AppProfileDto>()
+  for (const profile of appProfiles.value) {
+    for (const exe of profile.exes) {
+      const key = exe.toLowerCase()
+      if (!map.has(key)) map.set(key, profile)
+    }
+  }
+  return map
+})
+
+function appTier(app: RunningApp): number {
+  const exe = app.exe.toLowerCase()
+  if (appProfileByExe.value.has(exe)) return 0
+  if (DEV_APP_EXES.has(exe)) return 1
+  return 2
+}
+
+function appBadge(app: RunningApp): string | null {
+  const exe = app.exe.toLowerCase()
+  return appProfileByExe.value.get(exe)?.label ?? (DEV_APP_EXES.has(exe) ? 'Dev' : null)
+}
+
+const filteredApps = computed(() => {
+  const query = appSearch.value.trim().toLowerCase()
+  let list = runningApps.value
+  if (query) {
+    const aliases = APP_ALIASES[query] ?? []
+    list = list.filter((app) => {
+      const name = app.name.toLowerCase()
+      const exe = app.exe.toLowerCase()
+      return name.includes(query) || exe.includes(query) || aliases.includes(exe)
+    })
+  }
+  return [...list].sort(
+    (a, b) => appTier(a) - appTier(b) || a.name.localeCompare(b.name)
+  )
+})
 const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
 
 const availableScenes = computed(() => {
@@ -1070,7 +1166,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'integration', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
-  { label: 'Running Applications', keywords: 'running apps processes', tabId: 'integration', icon: ['fas', 'desktop'] },
+  { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', tabId: 'integration', icon: ['fas', 'desktop'] },
   { label: 'About VDock', keywords: 'version about info', tabId: 'about', icon: ['fas', 'info-circle'] }
 ]
 
@@ -1146,6 +1242,12 @@ function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subje
 
 async function refreshRunningApps() {
   loadingApps.value = true
+  if (!appProfilesLoaded.value) {
+    appProfilesLoaded.value = true
+    fetchAppProfiles()
+      .then((profiles) => { appProfiles.value = profiles })
+      .catch(() => { appProfilesLoaded.value = false })
+  }
   try {
     const response = await apiClient.get('/metrics/running-apps')
     runningApps.value = response.data.success ? (response.data.data ?? []) : []
@@ -1928,6 +2030,83 @@ onMounted(async () => {
 }
 
 .app-item:hover { background: var(--color-surface-hover, rgba(255,255,255,0.04)); }
+
+.app-item--dev { border-left: 2px solid var(--color-primary, #3498db); }
+
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.app-search { position: relative; flex: 1; }
+
+.app-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.app-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 30px 8px 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border, var(--color-border));
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.app-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #3498db);
+}
+
+.app-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.app-search-clear:hover { color: var(--color-text); }
+
+.app-count {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.app-badge {
+  margin-left: var(--spacing-xs);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.app-badge--profile {
+  background: color-mix(in srgb, var(--color-primary, #3498db) 22%, transparent);
+  color: var(--color-primary, #3498db);
+}
+
+.app-filter-empty { padding: var(--spacing-md); }
 
 .app-info {
   display: flex;
