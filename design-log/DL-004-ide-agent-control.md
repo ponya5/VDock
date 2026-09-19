@@ -253,5 +253,48 @@ buttons against that app's real shortcuts before any live use.
 
 ## Implementation Results
 
-*(Not started. Append below once coding begins; do not modify the sections
-above.)*
+### Phase 2 — Claude Code control (shipped, with deviations)
+
+**Keystroke delivery.** `backend/integrations/keymaps/claude_code.py` defines
+nine `cc_*` commands — `cc_interrupt` (Esc), `cc_mode` (Shift+Tab),
+`cc_clear`, `cc_resume`, `cc_compact`, `cc_model`, `cc_add_file`, `cc_help`,
+and `cc_exit` (Ctrl+C ×2) — all targeting `TERMINAL_EXES` with
+`window_title_hint='claude'`. `claude_code_pack.py` exposes them through
+`KeystrokeEditorPlugin`. The `claude-code` scene template in
+`appTemplates.ts` now offers live-session buttons.
+
+**Focus-first delivery (the touch-deck fix).** Tapping a VDock button steals
+focus to the browser, so keystrokes never reached the app — this is the
+actual reason the Claude scene appeared dead. `editor_base.send()` now
+raises the target window first via `utils/window_focus.py`
+(EnumWindows + force-foreground on Windows, `prefer_title` picks the tab
+whose title hints at the session), waits `FOCUS_SETTLE_SECONDS`, then runs
+the original foreground-process guard before `MacroAction` types anything.
+`app_monitor` records window handles to support this. Per-button
+`focus_first` and `enforce_focus` config fields ship on every keystroke
+action.
+
+**Gating.** `keymaps/base.py` `Command` gained `risk`, `requires_session`,
+`session_marker`, `window_title_hint`, `repeat`, `types_text`/`submit`,
+`category`, `priority`. Destructive commands refuse unless the button opts
+in (`allow_destructive`, default off); only `cc_exit` is destructive and no
+Confirmation-context command ships. `requires_session` commands are gated by
+`integrations/sessions.py` — a **process scan**, not the Phase-3 hook
+registry, which is the main deviation: hooks and live status remain
+unimplemented. A second deviation: no managed `keybindings.json` writer —
+commands send keystrokes directly rather than remapping Claude Code's own
+bindings.
+
+**Compatibility.** `claude_continue` keeps its id and still spawns
+`claude --resume` in a new terminal; only its label/description were
+corrected. Existing Cursor/Copilot commands are unchanged (Phase-1
+verification holds).
+
+**Tests.** `test_integrations.py` mocks the new focus step; new cases cover
+the session gate, destructive opt-in, and focus-first macro steps.
+`test_keymaps_package.py` union/default assertions updated for the third
+pack. Result: **717 backend tests pass**; `vue-tsc` clean; **115 frontend
+tests pass**.
+
+**Not started:** Phase 3 (hooks, live session status, session-aware
+interlock beyond process scan), Phase 4 (remaining ~8 apps, context scene).

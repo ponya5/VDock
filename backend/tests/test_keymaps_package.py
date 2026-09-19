@@ -11,8 +11,9 @@ from integrations import keymaps
 
 def test_public_names_are_all_re_exported():
     for name in ('Command', 'COPILOT_COMMANDS', 'CURSOR_COMMANDS',
-                 'ALL_COMMANDS', 'COMMANDS_BY_ID',
-                 'VSCODE_EXES', 'CURSOR_EXES', 'JETBRAINS_EXES'):
+                 'CLAUDE_CODE_COMMANDS', 'ALL_COMMANDS', 'COMMANDS_BY_ID',
+                 'VSCODE_EXES', 'CURSOR_EXES', 'JETBRAINS_EXES',
+                 'TERMINAL_EXES'):
         assert hasattr(keymaps, name), '{} is missing'.format(name)
 
 
@@ -24,6 +25,7 @@ def test_command_ids_are_unique():
 def test_all_commands_is_the_union_of_the_per_app_tuples():
     assert set(keymaps.ALL_COMMANDS) == (
         set(keymaps.COPILOT_COMMANDS) | set(keymaps.CURSOR_COMMANDS)
+        | set(keymaps.CLAUDE_CODE_COMMANDS)
     )
 
 
@@ -41,10 +43,18 @@ def test_known_commands_keep_their_keys():
 
 
 def test_new_fields_default_to_the_previous_behaviour():
-    """risk/requires_session are declared here but only enforced in phase 2."""
-    for cmd in keymaps.ALL_COMMANDS:
+    """risk/requires_session were declared in phase 1 and are enforced from
+    phase 2 -- pre-existing editor commands must keep the old defaults so a
+    saved button behaves exactly as before."""
+    for cmd in keymaps.COPILOT_COMMANDS + keymaps.CURSOR_COMMANDS:
         assert cmd.risk in ('safe', 'input', 'destructive')
         assert cmd.requires_session is False
+
+    # Phase-2 commands are allowed to declare the new fields.
+    for cmd in keymaps.ALL_COMMANDS:
+        assert cmd.risk in ('safe', 'input', 'destructive')
+        if cmd.requires_session:
+            assert cmd.session_marker, cmd.id
 
 
 def test_macro_steps_are_unchanged_for_a_text_command():

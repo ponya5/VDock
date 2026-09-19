@@ -68,6 +68,7 @@ class AppMonitor:
                     "exe": process.name(),
                     "path": process.exe(),
                     "pid": pid,
+                    "hwnd": hwnd,
                     "window_title": window_title,
                 }
             except (psutil.NoSuchProcess, psutil.AccessDenied):

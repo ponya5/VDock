@@ -17,6 +17,15 @@ VSCODE_EXES = ('code.exe', 'codium.exe')
 CURSOR_EXES = ('cursor.exe',)
 JETBRAINS_EXES = ('idea64.exe', 'pycharm64.exe', 'webstorm64.exe')
 
+#: Processes that can own a terminal window hosting a CLI agent.
+#: VS Code / Cursor are deliberately absent -- a keystroke meant for an
+#: integrated terminal would otherwise be typed into the editor itself.
+TERMINAL_EXES = (
+    'windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe',
+    'conhost.exe', 'mintty.exe', 'wezterm-gui.exe', 'alacritty.exe',
+    'tabby.exe',
+)
+
 #: How much damage a mistargeted keystroke could do.
 #: 'safe'        -- toggles a view; harmless anywhere.
 #: 'input'       -- types or submits; needs a confirmed live session.
@@ -41,10 +50,19 @@ class Command:
     types_text: Optional[str] = None
     #: Press Enter after typing.
     submit: bool = False
-    #: See RISK_* above. Enforced from phase 2.
+    #: See RISK_* above. Enforced by editor_base.
     risk: str = RISK_SAFE
-    #: Requires a registered agent session. Enforced from phase 3.
+    #: Requires a detected agent session. Enforced by editor_base via
+    #: `session_marker`.
     requires_session: bool = False
+    #: Process marker scanned for when requires_session is set ('claude'
+    #: matches claude.exe, node .../claude, claude.cmd, ...).
+    session_marker: Optional[str] = None
+    #: Prefer target windows whose title contains this substring when several
+    #: windows share the same process (e.g. the terminal tab running claude).
+    window_title_hint: Optional[str] = None
+    #: Press the chord this many times (Ctrl+C twice exits Claude Code).
+    repeat: int = 1
     #: Mirrors the categories the frontend shortcut list used.
     category: str = 'general'
     #: Higher sorts earlier when auto-populating a deck.
@@ -52,9 +70,15 @@ class Command:
 
     def to_macro_steps(self, text_override: Optional[str] = None) -> List[Dict[str, Any]]:
         """Build the macro step list MacroAction executes."""
-        steps: List[Dict[str, Any]] = [
-            {'type': 'hotkey', 'keys': list(self.keys)},
-        ]
+        steps: List[Dict[str, Any]] = []
+
+        if self.keys:
+            # MacroAction treats an empty key list as a failure, so typed-only
+            # commands must not emit a hotkey step at all.
+            for press in range(max(1, self.repeat)):
+                if press:
+                    steps.append({'type': 'delay', 'delay': 150})
+                steps.append({'type': 'hotkey', 'keys': list(self.keys)})
 
         text = text_override if text_override is not None else self.types_text
         if text:
@@ -108,6 +132,9 @@ class AppProfile:
                     'priority': cmd.priority,
                     'risk': cmd.risk,
                     'requires_session': cmd.requires_session,
+                    'session_marker': cmd.session_marker,
+                    'window_title_hint': cmd.window_title_hint,
+                    'repeat': cmd.repeat,
                 }
                 for cmd in self.commands
             ],

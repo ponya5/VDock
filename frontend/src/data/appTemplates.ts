@@ -73,11 +73,15 @@ const aiAssistants: AppTemplate[] = [
 ]
 const aiCoding: AppTemplate[] = [
   { id: "claude-code", name: "Claude Code", description: "Anthropic Claude Code CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/claudecode-color.png", color: "#d97757", buttons: [
-    { label: "New Session", icon: ["fas","plus"], action: cmd("claude"), tooltip: "Start Claude Code" },
-    { label: "Continue", icon: ["fas","rotate-right"], action: cmd("claude --continue"), tooltip: "Continue last session" },
-    { label: "Resume", icon: ["fas","play"], action: cmd("claude --resume"), tooltip: "Resume a session" },
-    { label: "Print Mode", icon: ["fas","print"], action: cmd('claude -p ""'), tooltip: "Non-interactive print mode" },
-    { label: "AI Commit", icon: ["fas","code-commit"], action: cmd('git add -A && claude -p "write a commit message and commit"'), tooltip: "AI-powered commit" },
+    // Live-session controls: keystrokes into the terminal running Claude Code.
+    { label: "Interrupt", icon: ["fas","hand"], action: { type: "cc_interrupt", config: {} }, tooltip: "Stop the current response (Esc)" },
+    { label: "New Session", icon: ["fas","plus"], action: { type: "cc_clear", config: {} }, tooltip: "/clear — fresh session" },
+    { label: "Resume", icon: ["fas","rotate-right"], action: { type: "cc_resume", config: {} }, tooltip: "/resume — pick up a session" },
+    { label: "Mode", icon: ["fas","arrows-rotate"], action: { type: "cc_mode", config: {} }, tooltip: "Cycle permission mode" },
+    { label: "Model", icon: ["fas","brain"], action: { type: "cc_model", config: {} }, tooltip: "/model — model picker" },
+    { label: "Add File", icon: ["fas","paperclip"], action: { type: "cc_add_file", config: {} }, tooltip: "@ file mention picker" },
+    // One-shot runs: these spawn their own claude process, no session needed.
+    { label: "Open Claude", icon: ["fas","window-maximize"], action: { type: "claude_continue", config: {} }, tooltip: "Open a new terminal session" },
     { label: "Review Diff", icon: ["fas","code-pull-request"], action: cmd('claude -p "review the current git diff"'), tooltip: "Review changes" },
   ]},
   { id: "github-copilot", name: "GitHub Copilot", description: "GitHub Copilot shortcuts", icon: ["fas","code"], logo: "/logos/githubcopilot.png", color: "#6e40c9", buttons: [
