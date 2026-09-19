@@ -120,9 +120,23 @@ def _write_env_keys(env_file: Path, updates: dict) -> None:
 
 
 def _port_in_use(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.settimeout(0.5)
-        return probe.connect_ex(('127.0.0.1', port)) == 0
+    """True if something answers on loopback — IPv4 or IPv6.
+
+    Vite dev servers commonly bind only ::1, so an IPv4-only probe would
+    report an occupied port as free and the collision check would miss it.
+    """
+    for family, addr in (
+        (socket.AF_INET, ('127.0.0.1', port)),
+        (socket.AF_INET6, ('::1', port)),
+    ):
+        try:
+            with socket.socket(family, socket.SOCK_STREAM) as probe:
+                probe.settimeout(0.5)
+                if probe.connect_ex(addr) == 0:
+                    return True
+        except OSError:
+            continue
+    return False
 
 
 def _configured_frontend_port() -> int:
