@@ -1221,7 +1221,7 @@ body {
     radial-gradient(1px 1px at 130px 80px, white, transparent),
     radial-gradient(2px 2px at 90px 10px, white, transparent);
   background-size: 200px 200px;
-  animation: starfield-move 100s linear infinite;
+  animation: starfield-move 20s linear infinite;
 }
 
 @keyframes starfield-move {
