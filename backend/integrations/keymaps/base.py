@@ -67,8 +67,13 @@ class Command:
     #: Prefer target windows whose title contains this substring when several
     #: windows share the same process (e.g. the terminal tab running claude).
     window_title_hint: Optional[str] = None
-    #: Press the chord this many times (Ctrl+C twice exits Claude Code).
+    #: Press the chord this many times (Ctrl+D twice exits Claude Code).
     repeat: int = 1
+    #: Follow-up keystrokes pressed after ``keys``, one tuple per stroke.
+    #: Expresses two-stroke chords like Ctrl+X Ctrl+K (kill agents) or
+    #: Ctrl+X Enter (queue submit): ``keys=('ctrl','x')`` plus
+    #: ``after_keys=(('ctrl','k'),)``.
+    after_keys: Tuple[Tuple[str, ...], ...] = ()
     #: Mirrors the categories the frontend shortcut list used.
     category: str = 'general'
     #: Higher sorts earlier when auto-populating a deck.
@@ -85,6 +90,9 @@ class Command:
                 if press:
                     steps.append({'type': 'delay', 'delay': 150})
                 steps.append({'type': 'hotkey', 'keys': list(self.keys)})
+            for stroke in self.after_keys:
+                steps.append({'type': 'delay', 'delay': 150})
+                steps.append({'type': 'hotkey', 'keys': list(stroke)})
 
         text = text_override if text_override is not None else self.types_text
         if text:
@@ -141,6 +149,7 @@ class AppProfile:
                     'session_marker': cmd.session_marker,
                     'window_title_hint': cmd.window_title_hint,
                     'repeat': cmd.repeat,
+                    'after_keys': [list(stroke) for stroke in cmd.after_keys],
                 }
                 for cmd in self.commands
             ],
