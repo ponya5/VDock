@@ -34,6 +34,7 @@ from routes.templates import templates_bp
 from routes.weather import weather_bp
 from routes.news import news_bp
 from routes.user_settings import user_settings_bp
+from routes.app_profiles import app_profiles_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -101,6 +102,7 @@ app.register_blueprint(templates_bp, url_prefix='/api/templates')
 app.register_blueprint(weather_bp, url_prefix='/api')
 app.register_blueprint(news_bp)
 app.register_blueprint(user_settings_bp)
+app.register_blueprint(app_profiles_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
