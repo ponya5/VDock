@@ -36,6 +36,7 @@ from routes.news import news_bp
 from routes.market import market_bp
 from routes.user_settings import user_settings_bp
 from routes.app_profiles import app_profiles_bp
+from routes.logs import logs_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -105,6 +106,7 @@ app.register_blueprint(news_bp)
 app.register_blueprint(market_bp)
 app.register_blueprint(user_settings_bp)
 app.register_blueprint(app_profiles_bp)
+app.register_blueprint(logs_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
@@ -121,6 +123,9 @@ limiter.exempt(weather_bp)
 limiter.exempt(system_metrics_bp)
 limiter.exempt(app_monitor_bp)
 limiter.exempt(config_bp)
+# Frontend error/event posts can burst during a failure — exempt so logging
+# can't burn the daily quota and take down the data widgets again (DL-023).
+limiter.exempt(logs_bp)
 
 
 # ============================================================================
