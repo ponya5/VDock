@@ -156,6 +156,9 @@
     <div v-if="actionResult && settingsStore.toastLevel !== 'off' && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
+
+    <!-- First-run bubble tutorial -->
+    <TutorialTour />
   </div>
 </template>
 
@@ -180,6 +183,8 @@ import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
+import TutorialTour from '@/components/TutorialTour.vue'
+import { useTutorial } from '@/services/tutorial'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import { appBackgroundForScene } from '@/data/appBackgrounds'
@@ -865,6 +870,11 @@ onMounted(async () => {
   if (!profileLoaded) {
     await createDefaultProfileForFirstTimeUser()
   }
+
+  // First-run bubble tutorial (or a "Launch Tutorial" request from Settings).
+  // Delayed so the deck renders before the tour starts measuring targets.
+  const tour = useTutorial()
+  setTimeout(() => tour.consumePendingOrFirstRun(), 800)
 
   // Auto scene switching is bootstrapped once, globally, in App.vue —
   // registering it here too would leak a duplicate listener on every

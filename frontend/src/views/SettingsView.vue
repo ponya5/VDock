@@ -1085,6 +1085,9 @@
                 <button class="btn btn-primary" @click="settingsStore.showHelpGuide = true">
                   <FontAwesomeIcon :icon="['fas', 'question-circle']" /> Open Help &amp; Guide
                 </button>
+                <button class="btn btn-secondary" @click="launchTutorial">
+                  <FontAwesomeIcon :icon="['fas', 'route']" /> Launch Tutorial
+                </button>
               </div>
 
               <div class="about-side-card">
@@ -1163,6 +1166,7 @@ import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { sendUiCommand } from '@/composables/useUiCommands'
+import { useTutorial } from '@/services/tutorial'
 import { confirmDialog } from '@/composables/useConfirm'
 import { testNewsConnection, parseFeedList, DEFAULT_SPORTS_FEEDS } from '@/services/newsService'
 import { testMarketConnection, parseTickers } from '@/services/marketService'
@@ -2061,6 +2065,13 @@ function formatScreensaverTimeout(seconds: number): string {
 }
 
 function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support' }
+
+// "Launch Tutorial" — flag the request, then go to the dashboard where the
+// tour measures live targets on mount.
+function launchTutorial() {
+  useTutorial().requestLaunch()
+  router.push('/')
+}
 
 function toggleAppScanning() {
   settingsStore.appScanningEnabled = !settingsStore.appScanningEnabled

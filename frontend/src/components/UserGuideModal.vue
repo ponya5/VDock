@@ -122,6 +122,29 @@
               </section>
             </div>
 
+            <!-- Annotated Screens Tab -->
+            <div v-if="activeTab === 'screens'" class="tab-content">
+              <div class="screen-subnav">
+                <button
+                  v-for="s in helpScreens"
+                  :key="s.id"
+                  class="screen-pill"
+                  :class="{ active: activeScreen === s.id }"
+                  @click="activeScreen = s.id"
+                >
+                  {{ s.title }}
+                </button>
+              </div>
+              <AnnotatedFigure
+                v-for="s in helpScreens"
+                v-show="activeScreen === s.id"
+                :key="s.id"
+                :title="s.title"
+                :img="s.img"
+                :markers="s.markers"
+              />
+            </div>
+
             <!-- Features & Actions Tab -->
             <div v-if="activeTab === 'features'" class="tab-content">
               <section class="guide-section">
@@ -183,13 +206,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import AnnotatedFigure from '@/components/AnnotatedFigure.vue'
+import { HELP_SCREENS } from '@/data/helpScreens'
 
 const emit = defineEmits(['close'])
 
 const activeTab = ref('usage')
+const helpScreens = HELP_SCREENS
+const activeScreen = ref(HELP_SCREENS[0]?.id || '')
 
 const tabs = [
   { id: 'usage', label: 'How to Use', icon: ['fas', 'rocket'] },
+  { id: 'screens', label: 'Screens', icon: ['fas', 'image'] },
   { id: 'config', label: 'Configuration', icon: ['fas', 'cog'] },
   { id: 'features', label: 'Features & Actions', icon: ['fas', 'star'] }
 ]
@@ -215,6 +243,36 @@ const activeTabLabel = computed(() => {
   display: flex;
   width: 100%;
   height: 100%;
+}
+
+/* Annotated screens tab */
+.screen-subnav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.screen-pill {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.screen-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.screen-pill.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
 }
 
 /* Sidebar */

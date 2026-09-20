@@ -193,3 +193,4 @@ diff_output.txt
 
 # Git worktrees used for isolated SDD plan execution
 .worktrees/
+backend/data/backups/
