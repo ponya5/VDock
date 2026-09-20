@@ -6,6 +6,7 @@ import sys
 import platform
 from flask import Blueprint, request, jsonify
 from pathlib import Path
+from auth import require_auth
 
 system_bp = Blueprint('system', __name__)
 
@@ -19,6 +20,7 @@ _MANAGED_ORIGIN = re.compile(
 
 
 @system_bp.route('/api/system/autostart', methods=['GET'])
+@require_auth
 def get_autostart_status():
     """Return whether VDock is configured to launch at OS login."""
     try:
@@ -33,6 +35,7 @@ def get_autostart_status():
 
 
 @system_bp.route('/api/system/autostart', methods=['POST'])
+@require_auth
 def toggle_autostart():
     """Enable or disable auto-start on system boot."""
     data = request.json
@@ -155,6 +158,7 @@ def _valid_port(value) -> bool:
 
 
 @system_bp.route('/api/system/ports', methods=['GET'])
+@require_auth
 def get_ports():
     """Return configured ports and whether each is currently listening."""
     from config import Config
@@ -171,6 +175,7 @@ def get_ports():
 
 
 @system_bp.route('/api/system/ports', methods=['PUT'])
+@require_auth
 def update_ports():
     """Validate and persist new frontend/backend ports in the .env files.
 

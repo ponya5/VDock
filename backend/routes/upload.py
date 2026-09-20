@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
 from config import Config
+from auth import require_auth
 
 logger = logging.getLogger('vdock')
 
@@ -43,6 +44,7 @@ def get_target_dir(file_type: str):
 
 
 @upload_bp.route('/api/upload', methods=['POST'])
+@require_auth
 def upload_file():
     """Upload a background or button image."""
     if 'file' not in request.files:
@@ -111,14 +113,18 @@ def upload_file():
 
 
 @upload_bp.route('/api/uploads/<path:filename>')
+@require_auth
 def serve_uploaded_file(filename):
     """Serve an uploaded file."""
-    if '..' in filename or filename.startswith('/'):
+    # Containment via resolve(), not substring checks — percent-decoded
+    # separators and '..' segments all collapse before this test runs.
+    uploads_root = Config.UPLOADS_DIR.resolve()
+    file_path = (uploads_root / filename).resolve()
+
+    if not file_path.is_relative_to(uploads_root):
         return jsonify({'error': 'Invalid filename'}), 400
 
-    file_path = Config.UPLOADS_DIR / filename
-
-    if not file_path.exists():
+    if not file_path.exists() or not file_path.is_file():
         return jsonify({'error': 'File not found'}), 404
 
     return send_file(str(file_path))

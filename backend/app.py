@@ -41,6 +41,9 @@ from routes.logs import logs_bp
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+# Bound request bodies — without this Werkzeug buffers an unlimited upload
+# in memory/disk before the route's own size check ever runs.
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB (upload cap is 10MB)
 
 # Add security headers
 @app.after_request
@@ -339,7 +342,13 @@ def serve_frontend(path):
     # Use absolute path resolution
     backend_dir = Path(__file__).resolve().parent
     project_root = backend_dir.parent
-    frontend_path = project_root / 'frontend' / 'dist' / path
+    dist_root = (project_root / 'frontend' / 'dist').resolve()
+    frontend_path = (dist_root / path).resolve()
+
+    # Path traversal guard — resolve() collapses '..', so anything escaping
+    # dist_root (e.g. /..%2F..%2Fbackend%2F.env) must never be served.
+    if not frontend_path.is_relative_to(dist_root):
+        return jsonify({'error': 'File not found'}), 404
 
     # Check if the file exists in the dist directory
     if frontend_path.exists() and frontend_path.is_file():

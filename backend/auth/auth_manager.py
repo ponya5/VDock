@@ -1,7 +1,8 @@
 """Authentication and authorization management."""
+import hmac
 import jwt
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify
 from typing import Optional, Dict, Any
@@ -57,8 +58,8 @@ class AuthManager:
         
         payload = {
             **data,
-            'exp': datetime.utcnow() + timedelta(seconds=expires_in),
-            'iat': datetime.utcnow()
+            'exp': datetime.now(timezone.utc) + timedelta(seconds=expires_in),
+            'iat': datetime.now(timezone.utc)
         }
         
         return jwt.encode(payload, Config.SECRET_KEY, algorithm='HS256')
@@ -94,9 +95,10 @@ class AuthManager:
         if not Config.REQUIRE_AUTH:
             return AuthManager.generate_token({'authenticated': True})
         
-        # For simplicity, we're using a single password from config
-        # In production, this should use a proper user database
-        if password == Config.AUTH_PASSWORD:
+        # Constant-time compare — a plain == leaks match-prefix timing.
+        if hmac.compare_digest(
+            password.encode('utf-8'), Config.AUTH_PASSWORD.encode('utf-8')
+        ):
             return AuthManager.generate_token({'authenticated': True})
         
         return None
@@ -114,11 +116,12 @@ def require_auth(f):
         if not auth_header:
             return jsonify({'error': 'No authorization header'}), 401
         
-        # Extract token (format: "Bearer <token>")
-        try:
-            token = auth_header.split(' ')[1]
-        except IndexError:
+        # Extract token — require the exact "Bearer <token>" shape so junk
+        # like "token <jwt>" or "Bearer  <jwt>" is never silently accepted.
+        parts = auth_header.split(' ')
+        if len(parts) != 2 or parts[0] != 'Bearer' or not parts[1]:
             return jsonify({'error': 'Invalid authorization header'}), 401
+        token = parts[1]
         
         # Verify token
         payload = AuthManager.verify_token(token)
