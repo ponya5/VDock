@@ -1,7 +1,7 @@
 <template>
   <div class="glass-pill-scene-selector">
     <!-- pill container -->
-    <div role="radiogroup" aria-label="Scene selector" class="pill-container" ref="pillRef">
+    <div role="radiogroup" aria-label="Scene selector" class="pill-container" :class="{ 'pill-edit': isEditMode }" ref="pillRef">
       <!-- glider (absolute positioned, behind segments) -->
       <div class="glider" :style="gliderStyle"></div>
 
@@ -20,25 +20,25 @@
       >
         <FontAwesomeIcon v-if="scene.icon" :icon="parseIcon(scene.icon)" class="segment-icon" />
         <span class="segment-label">{{ scene.name }}</span>
-      </button>
-
-      <!-- One edit badge per scene, anchored to that scene's own segment so
-           it's unambiguous which pencil edits which scene (previously these
-           were a detached row of identical icons with no visual link to the
-           scene they belonged to). -->
-      <div v-if="isEditMode" class="edit-badges">
-        <button
-          v-for="(scene, i) in scenes"
-          :key="`edit-${scene.id}`"
+        <!-- Edit pencil on the ACTIVE pill only, parked in a lane reserved by
+             its edit-mode padding-right — anchored to the real segment edge,
+             never covers the label, and only widens one pill (per-scene
+             badges on every pill pushed the row into horizontal scroll on
+             the narrow 1024px header). Tap another pill to move the pencil. -->
+        <span
+          v-if="isEditMode && i === currentSceneIndex"
           class="scene-edit-badge"
-          :style="{ left: `${(i + 1) * segmentPercent}%` }"
-          @click.stop="$emit('edit-scene', scene)"
+          role="button"
+          tabindex="0"
           :aria-label="`Edit ${scene.name}`"
           title="Edit scene"
+          @click.stop="$emit('edit-scene', scene)"
+          @keydown.enter.stop.prevent="$emit('edit-scene', scene)"
+          @keydown.space.stop.prevent="$emit('edit-scene', scene)"
         >
           <FontAwesomeIcon :icon="['fas', 'pen']" />
-        </button>
-      </div>
+        </span>
+      </button>
     </div>
 
     <button v-if="isEditMode" class="edit-btn add-btn" @click="$emit('add-scene')" aria-label="Add scene">
@@ -152,6 +152,20 @@ watch(() => props.scenes.length, () => {
 
 .pill-container::-webkit-scrollbar { display: none; }
 
+/* Edit mode: the ACTIVE segment reserves a badge-width lane at its right
+   edge so its pencil sits in its own space instead of covering the label.
+   Only the active pill gets a pencil (and the widening) — one badge per
+   pill pushed the row into horizontal scroll on the narrow 1024px header,
+   and a header-height badge strip was rejected because it pushes the
+   dashboard grid down and clips the bottom row on a 600px-tall panel. */
+.pill-container.pill-edit .segment.is-active {
+  /* Badge capped at 44px so it stays inside a ~48-60px pill (the uncapped
+     touch-scaled 55px badge spilled past the pill edges). */
+  --pill-badge: clamp(34px, calc(44px * var(--touch-multiplier, 1)), 44px);
+  min-width: calc(96px + var(--pill-badge) + 14px);
+  padding-right: calc(var(--pill-badge) + 12px);
+}
+
 .glider {
   position: absolute;
   top: 4px;
@@ -203,31 +217,31 @@ watch(() => props.scenes.length, () => {
 
 .segment-label {
   max-width: 112px;
+  /* min-width:0 lets the flex item shrink below its content width so the
+     edit-mode badge lane can reclaim space without the label overflowing
+     into it — ellipsis kicks in instead. */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.edit-badges {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
+/* The badge now lives inside its own .segment (positioned by `right`), so the
+   old overlay layer is gone — see the template note. */
+
 
 .scene-edit-badge {
   position: absolute;
-  /* Kept inside the pill: overflow-x:auto on .pill-container also clips
-     vertically, so a negative top cut the badge in half. */
-  top: 2px;
-  transform: translateX(-100%);
-  width: 34px;
-  height: 34px;
-  margin-left: -4px;
-  /* Real touch target in edit mode; capped so it can't swallow the whole
-     segment on tablet mode. */
-  width: max(34px, calc(44px * min(var(--touch-multiplier, 1), 1.25)));
-  height: max(34px, calc(44px * min(var(--touch-multiplier, 1), 1.25)));
+  /* Inside the segment's reserved padding lane, vertically centered on the
+     pill — never overlaps the icon/label. */
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  /* Real touch target; --pill-badge caps at 44px so it stays inside the
+     pill (set on .segment.is-active in edit mode; 44px fallback otherwise). */
+  width: var(--pill-badge, 44px);
+  height: var(--pill-badge, 44px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,18 +251,17 @@ watch(() => props.scenes.length, () => {
   color: #fff;
   font-size: calc(0.75rem * min(var(--touch-multiplier, 1), 1.25));
   cursor: pointer;
-  pointer-events: auto;
   box-shadow: 0 2px 8px rgba(8, 6, 30, 0.4);
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .scene-edit-badge:hover {
   background: var(--color-primary-dark, #005fcc);
-  transform: translateX(-100%) scale(1.08);
+  transform: translateY(-50%) scale(1.08);
 }
 
 .scene-edit-badge:active {
-  transform: translateX(-100%) scale(0.94);
+  transform: translateY(-50%) scale(0.94);
 }
 
 .edit-btn.add-btn {
