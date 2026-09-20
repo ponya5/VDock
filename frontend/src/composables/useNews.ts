@@ -13,6 +13,14 @@ import { fetchHeadlines, parseFeedList, type NewsHeadline } from '@/services/new
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000
 const DEFAULT_ROTATE_SECONDS = 8
 const MIN_ROTATE_SECONDS = 3
+/**
+ * The screensaver shows this many headlines at once and rotation steps a
+ * whole window, not one item — with one-at-a-time stepping a tap could land a
+ * beat after the headline you were reading swapped out.
+ */
+export const NEWS_WINDOW_SIZE = 4
+/** Rotation pauses this long after any touch so a tap hits what you saw. */
+const TOUCH_PAUSE_MS = 20 * 1000
 
 export function useNews() {
   const settingsStore = useSettingsStore()
@@ -24,10 +32,22 @@ export function useNews() {
 
   let refreshTimer: ReturnType<typeof setInterval> | null = null
   let rotateTimer: ReturnType<typeof setInterval> | null = null
+  let resumeTimer: ReturnType<typeof setTimeout> | null = null
 
   const current = computed<NewsHeadline | null>(
     () => headlines.value[index.value] ?? null
   )
+  /** The visible block: up to NEWS_WINDOW_SIZE items starting at `index`. */
+  const windowed = computed<NewsHeadline[]>(() => {
+    const list = headlines.value
+    if (!list.length) return []
+    const start = index.value % list.length
+    const size = Math.min(NEWS_WINDOW_SIZE, list.length)
+    return Array.from(
+      { length: size },
+      (_, i) => list[(start + i) % list.length]
+    )
+  })
   // Kept so existing template bindings (newsHeadline / newsSource) still work.
   const headline = computed(() => current.value?.title ?? '')
   const source = computed(() => current.value?.source ?? '')
@@ -66,13 +86,15 @@ export function useNews() {
 
   function next() {
     if (!headlines.value.length) return
-    index.value = (index.value + 1) % headlines.value.length
+    index.value = (index.value + NEWS_WINDOW_SIZE) % headlines.value.length
   }
 
   function previous() {
     if (!headlines.value.length) return
     index.value =
-      (index.value - 1 + headlines.value.length) % headlines.value.length
+      (((index.value - NEWS_WINDOW_SIZE) % headlines.value.length) +
+        headlines.value.length) %
+      headlines.value.length
   }
 
   function startRotation() {
@@ -94,6 +116,19 @@ export function useNews() {
     }
   }
 
+  /**
+   * Freeze rotation after a touch so the row under the finger stays put;
+   * resumes on its own once the pause elapses.
+   */
+  function pause(ms = TOUCH_PAUSE_MS) {
+    stopRotation()
+    if (resumeTimer) clearTimeout(resumeTimer)
+    resumeTimer = setTimeout(() => {
+      resumeTimer = null
+      startRotation()
+    }, ms)
+  }
+
   function start() {
     refresh()
     refreshTimer = setInterval(() => refresh(), REFRESH_INTERVAL_MS)
@@ -105,6 +140,10 @@ export function useNews() {
       clearInterval(refreshTimer)
       refreshTimer = null
     }
+    if (resumeTimer) {
+      clearTimeout(resumeTimer)
+      resumeTimer = null
+    }
     stopRotation()
   }
 
@@ -114,6 +153,7 @@ export function useNews() {
     headlines,
     index,
     current,
+    windowed,
     headline,
     source,
     hasMultiple,
@@ -123,6 +163,7 @@ export function useNews() {
     refresh,
     next,
     previous,
+    pause,
     start,
     stop
   }

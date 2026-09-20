@@ -16,6 +16,7 @@ ALLOWED_USER_SETTING_KEYS = {
     'showLabels',
     'showTooltips',
     'animationsEnabled',
+    'editModeWiggle',
     'tiltEffectEnabled',
     'dockedSidebarEnabled',
     'dockedSidebarWidth',
@@ -45,6 +46,8 @@ ALLOWED_USER_SETTING_KEYS = {
     'marketTickers',
     'marketApiKey',
     'screensaverWidgetSize',
+    'screensaverBackground',
+    'screensaverLayout',
 }
 
 

@@ -193,7 +193,9 @@ export interface Scene {
   icon?: string
   color?: string
   pages: Page[]
-  background?: Background  // Optional per-scene background (image URL, gradient, or solid)
+  background?: Background  // Optional per-scene background override (image URL, gradient, or solid)
+  appId?: string // Known app this scene is themed for (app-profile/template id, e.g. 'claude-code') — picks up its bundled default background
+  disableAppBackground?: boolean // Opt out of the app's bundled default background
   isActive?: boolean
   buttonSize?: number // Size multiplier for scene buttons
   triggeredByApp?: string // App executable name that triggers this scene
@@ -228,6 +230,7 @@ export interface ProfileSettings {
   showLabels?: boolean
   showTooltips?: boolean
   animationsEnabled?: boolean
+  editModeWiggle?: boolean
 }
 
 export interface Theme {

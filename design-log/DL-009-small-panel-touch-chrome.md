@@ -30,3 +30,32 @@ header min-height 154 px, no horizontal overflow.
 
 **Tests:** vitest 138 pass (dual-declaration kept so the Property-22
 44 px regex still sees the baseline), `vue-tsc` clean.
+
+## Addendum — EditSidebar coverage (2026-09-20)
+
+`EditSidebar.vue` — the "Button Actions" panel docked in edit mode — was
+missed: DL-009 scaled `ButtonActionsSidebar.vue`, which is the action picker
+inside ButtonEditor, not the edit-mode panel. Same treatment applied:
+
+- Width `280px` → `min(92vw, 280px × min(--touch-multiplier, 1.5))` +
+  `flex-shrink: 0`. Capped at 1.5 (not the full 2.0) because it shares the
+  flex row with the deck grid — uncapped it would take 560 px of an 800 px
+  panel.
+- `--spacing-*` → `--spacing-touch-*` throughout; category headers, action
+  rows, search input and `.btn-control` get the dual
+  `44px` / `max(--min-touch-target, 44px × multiplier)` min-height/width
+  (baseline kept for the Property-22 regex); fonts and the close button
+  scale by `--touch-multiplier`; scrollbar widens to `8px × multiplier`.
+
+`DeckFooter.vue` (page dots, Grid R×C inputs, Add/Delete/Save buttons) got
+the same pass:
+
+- Footer `min-height` 44 → `max(44px, 56px × multiplier)`; `.btn-sm` floor
+  36 → `44px × multiplier` with scaled padding/font; `.grid-input` 32px →
+  `44px × multiplier` tall and `56px × multiplier` wide; page dots scale
+  (dot `10px × mult`, padding `17px × mult` — literal kept first so the
+  Property-22 regex still reads the 17px baseline); edit section wraps so
+  scaled controls can't overflow on narrow widths.
+
+**Tests:** vitest 148 pass, `vue-tsc` clean. Manual verification at 800×480
+tablet mode outstanding.

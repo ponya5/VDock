@@ -151,6 +151,9 @@
                 <FontAwesomeIcon :icon="['fas', 'times']" />
               </button>
             </div>
+            <div v-else-if="editorAppBackground" class="scene-bg-preview">
+              <img :src="editorAppBackground.image" :alt="`${editorAppBackground.label} default`" />
+            </div>
             <div class="scene-bg-actions">
               <input
                 ref="sceneFileInput"
@@ -167,7 +170,15 @@
                 <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
               </button>
             </div>
-            <p class="form-help">Set a custom background image for this scene only. It overrides the global dashboard background.</p>
+            <label v-if="editorAppEntry" class="checkbox-label" style="margin-top: var(--spacing-xs);">
+              <input
+                type="checkbox"
+                :checked="!editedScene.disableAppBackground"
+                @change="editedScene.disableAppBackground = !($event.target as HTMLInputElement).checked"
+              />
+              <span>Use {{ editorAppEntry.label }} default background</span>
+            </label>
+            <p class="form-help">Set a custom background image for this scene only. It overrides the {{ editorAppEntry ? editorAppEntry.label + ' default and ' : '' }}global dashboard background.</p>
           </div>
         </div>
 
@@ -214,6 +225,8 @@ import type { Scene } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
 import apiClient from '@/api/client'
+import { appForScene } from '@/data/appBackgrounds'
+import { useAppIntegrations } from '@/composables/useAppIntegrations'
 
 interface Props {
   scene?: Scene
@@ -252,6 +265,14 @@ const editedScene = ref<Scene>(props.scene ? { ...props.scene } : {
   isActive: false,
   buttonSize: 1.0
 })
+
+// The app this scene is themed for (registry entry), and its bundled
+// wallpaper when the opt-out isn't set — shown as the scene's default.
+const appIntegrations = useAppIntegrations()
+const editorAppEntry = computed(() => appForScene(editedScene.value, appIntegrations.value))
+const editorAppBackground = computed(() =>
+  editedScene.value.disableAppBackground ? undefined : editorAppEntry.value
+)
 
 // Ensure pages array exists and has at least one page
 const pages = computed({

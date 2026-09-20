@@ -57,6 +57,7 @@
                 :alt="avatar.name"
                 class="avatar-image"
               />
+              <span v-if="avatar.url.endsWith('.gif')" class="avatar-badge">GIF</span>
             </div>
             <span class="avatar-name">{{ avatar.name }}</span>
           </div>
@@ -116,6 +117,14 @@ async function loadAvatars() {
     loading.value = true
     // Create avatar list directly from known files
     const avatarList = []
+    // Animated presets first — they are the discoverable demo of GIF avatars.
+    for (const a of [
+      { id: 'anim-orbit', name: 'Orbit', url: '/avatars/animated-orbit.gif' },
+      { id: 'anim-pulse', name: 'Pulse', url: '/avatars/animated-pulse.gif' },
+      { id: 'anim-spin', name: 'Spin', url: '/avatars/animated-spin.gif' },
+    ]) {
+      avatarList.push({ ...a, type: 'image', category: 'animated' })
+    }
     for (let i = 1; i <= 18; i++) {
       avatarList.push({
         id: `avatar-${i}`,
@@ -177,8 +186,9 @@ async function handleFileUpload(event: Event) {
     formData.append('file', file)
     formData.append('type', 'avatar')
     
-    // Upload to backend
-    const response = await apiClient.post('/upload/icon', formData, {
+    // Upload to backend — /api/upload accepts gif and stores raw bytes, so
+    // animation survives; there is no /api/upload/icon route (404).
+    const response = await apiClient.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -310,6 +320,20 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background-color: var(--color-background);
+  position: relative;
+}
+
+.avatar-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--color-primary, #007aff);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .avatar-image {

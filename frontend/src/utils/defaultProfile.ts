@@ -123,6 +123,7 @@ export function createDefaultProfile(): Profile {
     theme: 'default',
     settings: {
       animationsEnabled: true,
+      editModeWiggle: false,
       showLabels: true,
       showTooltips: true,
       defaultGridRows: 3,

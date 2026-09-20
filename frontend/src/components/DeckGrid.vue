@@ -2,7 +2,7 @@
   <div
     class="deck-grid"
     ref="gridRef"
-    :class="{ 'drag-over': isDragOver, 'is-edit-mode': isEditMode, 'dragging-active': isDraggingActive }"
+    :class="{ 'drag-over': isDragOver, 'is-edit-mode': isEditMode, 'wiggle-buttons': isEditMode && settingsStore.editModeWiggle, 'dragging-active': isDraggingActive }"
     :style="gridStyle"
     @dragover="handleDragOver"
     @drop="handleDrop"
@@ -589,8 +589,10 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
   border: 2px dashed var(--color-primary);
 }
 
-/* Edit mode: wiggle all buttons */
-.deck-grid.is-edit-mode .deck-button:not(.dragging-source) {
+/* Edit mode: wiggle all buttons — opt-in via Settings ("Wiggle buttons in
+   edit mode", default off). The ::after drag-handle dot below still marks
+   edit mode when the wiggle is off. */
+.deck-grid.wiggle-buttons .deck-button:not(.dragging-source) {
   animation: btn-wiggle 0.3s ease-in-out infinite alternate;
 }
 
