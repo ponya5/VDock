@@ -648,6 +648,10 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
   padding: 12px;
   box-sizing: border-box;
   border-radius: 50%;
+  background: transparent;
+}
+
+.button-placeholder.is-edit-mode > svg {
   background: rgba(255, 255, 255, 0.12);
 }
 
