@@ -490,7 +490,7 @@
                   </div>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card card-span">
+                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card card-span" :class="{ 'picker-collapsed': openWidgetCard !== null }">
                   <div class="form-group-header">
                     <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
                     <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
@@ -520,9 +520,16 @@
                     </div>
                   </div>
                 </section>
+              </div>
 
-                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('weather')" class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'cloud-sun']" /> Weather Widget</h2>
+              <!-- Collapsed config cards live in a compact 4-col strip; the
+                   open card jumps to a full-width row on top (order: -1). -->
+              <div v-if="screensaverSubTab === 'widgets'" class="widget-cards-grid">
+                <section v-if="settingsStore.screensaverWidgets.includes('weather')" class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'weather' }">
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('weather')" :aria-expanded="openWidgetCard === 'weather'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'cloud-sun']" /> Weather Widget</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'weather' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Widget Size</label>
@@ -546,8 +553,11 @@
 
                 <!-- Location feeds the docked weather card too, so it stays
                      reachable even when the screensaver widget is disabled. -->
-                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'location-dot']" /> Weather Location</h2>
+                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'location' }">
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('location')" :aria-expanded="openWidgetCard === 'location'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'location-dot']" /> Weather Location</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'location' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <div class="form-group">
                     <label>Location Source</label>
                     <select v-model="settings.weatherLocationMode" class="select">
@@ -565,9 +575,12 @@
 
                 <section
                   v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.some(w => ['news', 'sports', 'market', 'worldclock'].includes(w))"
-                  class="settings-section card"
+                  class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'textsize' }"
                 >
-                  <h2><FontAwesomeIcon :icon="['fas', 'text-height']" /> Widget Text Size</h2>
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('textsize')" :aria-expanded="openWidgetCard === 'textsize'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'text-height']" /> Widget Text Size</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'textsize' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Text Size</label>
@@ -589,8 +602,11 @@
                   </div>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('news')" class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'newspaper']" /> News Headlines</h2>
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('news')" class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'news' }">
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('news')" :aria-expanded="openWidgetCard === 'news'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'newspaper']" /> News Headlines</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'news' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <p class="form-help">
                     Headlines come from RSS feeds, so no API key is needed. Leave
                     this blank to use the built-in sources (BBC World, Hacker
@@ -637,8 +653,11 @@
                   </p>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('sports')" class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'football']" /> Sports Headlines</h2>
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('sports')" class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'sports' }">
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('sports')" :aria-expanded="openWidgetCard === 'sports'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'football']" /> Sports Headlines</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'sports' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <p class="form-help">
                     Sports headlines come from RSS feeds, so no API key is
                     needed. Leave this blank to use the built-in sources
@@ -666,8 +685,11 @@
                   </p>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('market')" class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'market' }">
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('market')" :aria-expanded="openWidgetCard === 'market'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'market' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Symbols</label>
@@ -695,8 +717,11 @@
                   </p>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'globe']" /> World Clock</h2>
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card widget-card" :class="{ 'is-open': openWidgetCard === 'worldclock' }">
+                  <button class="widget-card-head" type="button" @click="toggleWidgetCard('worldclock')" :aria-expanded="openWidgetCard === 'worldclock'">
+                    <h2><FontAwesomeIcon :icon="['fas', 'globe']" /> World Clock</h2>
+                    <FontAwesomeIcon :icon="['fas', openWidgetCard === 'worldclock' ? 'chevron-up' : 'chevron-down']" class="widget-card-chevron" />
+                  </button>
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Cities</label>
@@ -1622,10 +1647,20 @@ const screensaverWidgetOptions = [
   { id: 'worldclock', label: 'World Clock', description: 'Time in a few other cities', previewSvg: WORLDCLOCK_PREVIEW_SVG },
 ]
 
+// Widget config cards collapse to a header row — tap to expand one at a
+// time so the tab fits a 600px touchscreen without scrolling.
+const openWidgetCard = ref<string | null>(null)
+function toggleWidgetCard(id: string) {
+  openWidgetCard.value = openWidgetCard.value === id ? null : id
+}
+
 function toggleScreensaverWidget(id: string) {
   const list = settingsStore.screensaverWidgets
   const idx = list.indexOf(id)
-  if (idx === -1) settingsStore.screensaverWidgets = [...list, id]
+  if (idx === -1) {
+    settingsStore.screensaverWidgets = [...list, id]
+    openWidgetCard.value = id
+  }
   else settingsStore.screensaverWidgets = list.filter(w => w !== id)
 }
 
@@ -2450,10 +2485,65 @@ onMounted(async () => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 var(--spacing-md);
 }
-.card-span .widget-toggle-row { padding: var(--spacing-xs) 0; }
-.card-span .widget-toggle-preview { width: 48px; height: 30px; }
+.card-span .widget-toggle-row { padding: 6px 0; }
+.card-span .widget-toggle-preview { width: 44px; height: 28px; }
+.card-span .widget-toggle-label .form-help { display: none; }
 @media (max-width: 700px) {
   .card-span .widget-toggle-list { grid-template-columns: 1fr; }
+}
+
+/* Collapsed config cards live in a compact 4-up strip; tapping a card
+   makes it a full-width panel on top (order:-1). While a card is open the
+   strip hides so the pane still fits a 600px screen — tap the card head
+   again to close it and get the strip back. */
+.widget-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+.widget-cards-grid .widget-card { margin-bottom: 0; }
+.widget-card.is-open { grid-column: 1 / -1; order: -1; }
+.widget-cards-grid:has(.widget-card.is-open) .widget-card:not(.is-open) { display: none; }
+/* While a config card is open the picker folds to its header row — the
+   whole tab stays inside the viewport. */
+.picker-collapsed .widget-toggle-list, .picker-collapsed > .form-help { display: none; }
+@media (max-width: 900px) { .widget-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .widget-cards-grid { grid-template-columns: 1fr; } }
+
+/* Collapsible widget config cards — only the head shows until tapped, so
+   every enabled widget stays visible on a 600px screen. */
+.widget-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.widget-card-head h2 { margin: 0; flex: 1; min-width: 0; }
+.widget-card-chevron { opacity: 0.5; flex-shrink: 0; transition: transform 0.2s ease; }
+.widget-card:not(.is-open) > *:not(.widget-card-head) { display: none; }
+.widget-card:not(.is-open) { padding-top: 8px; padding-bottom: 8px; }
+.widget-card:not(.is-open) .widget-card-head h2 {
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.widget-card.is-open .widget-card-head { margin-bottom: var(--spacing-sm); }
+/* An open card spans the grid — flow its controls into ~300px columns so
+   the width is used instead of stacking into one tall strip. */
+.widget-card.is-open { column-width: 300px; column-gap: var(--spacing-lg); }
+.widget-card.is-open > .widget-card-head { column-span: all; }
+.widget-card.is-open > * { break-inside: avoid; }
+@media (hover: hover) {
+  .widget-card-head:hover .widget-card-chevron { opacity: 1; }
 }
 
 /* Inside a full-width card, flow control blocks into as many ~230px
