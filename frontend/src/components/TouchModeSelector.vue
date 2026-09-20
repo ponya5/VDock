@@ -63,6 +63,7 @@
     
     <!-- The Live Preview card above already shows this scale applied to a real
          button — no need for a second, separate preview here. Just the numbers. -->
+    <div class="side-col">
     <div class="preview-section">
       <div class="preview-info">
         <div class="info-item">
@@ -106,6 +107,7 @@
           <div class="slider-value">{{ settingsStore.minimumTouchTargetSize }}px</div>
         </div>
       </div>
+    </div>
     </div>
     
   </div>

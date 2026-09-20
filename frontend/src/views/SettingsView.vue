@@ -88,76 +88,82 @@
               </div>
 
               <div v-if="appearanceSubTab === 'buttons'" class="settings-grid settings-grid-masonry">
-                <section v-if="buttonsSubTab === 'display'" class="settings-section card">
+                <section v-if="buttonsSubTab === 'display'" class="settings-section card card-span">
                   <h2><FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display</h2>
-                  <div class="form-group">
-                    <div class="form-group-header">
-                      <label>Button Size</label>
-                      <SettingResetButton
-                        label="Button Size"
-                        :at-default="settings.buttonSize === SETTINGS_DEFAULTS.buttonSize"
-                        @reset="settings.buttonSize = SETTINGS_DEFAULTS.buttonSize"
-                      />
+                  <div class="slider-pair">
+                    <div class="form-group">
+                      <div class="form-group-header">
+                        <label>Button Size</label>
+                        <div class="header-end-group">
+                          <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
+                          <SettingResetButton
+                            label="Button Size"
+                            :at-default="settings.buttonSize === SETTINGS_DEFAULTS.buttonSize"
+                            @reset="settings.buttonSize = SETTINGS_DEFAULTS.buttonSize"
+                          />
+                        </div>
+                      </div>
+                      <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
+                      <p class="form-help">Resizes the button box itself (and its icon/label). Below 1x buttons shrink inside their cells; above 1x they grow slightly into the gaps. Combines with Touch Mode above.</p>
                     </div>
-                    <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
-                    <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
-                    <p class="form-help">Resizes the button box itself (and its icon/label). Below 1x buttons shrink inside their cells; above 1x they grow slightly into the gaps. Combines with Touch Mode above.</p>
-                  </div>
-                  <div class="form-group">
-                    <div class="form-group-header">
-                      <label>Button Transparency</label>
-                      <SettingResetButton
-                        label="Button Transparency"
-                        :at-default="settings.buttonTransparency === SETTINGS_DEFAULTS.buttonTransparency"
-                        @reset="settings.buttonTransparency = SETTINGS_DEFAULTS.buttonTransparency"
-                      />
-                    </div>
-                    <input v-model.number="settings.buttonTransparency" type="range" min="0" max="90" step="5" class="slider" />
-                    <span class="slider-value">{{ settings.buttonTransparency }}%</span>
-                    <p class="form-help">Lets the dashboard background animation show through the buttons. 0% keeps buttons solid; capped at 90% so buttons stay findable.</p>
-                  </div>
-                  <div class="toggle-row">
-                    <label class="toggle-row-label">Show button labels</label>
-                    <div class="toggle-row-end">
-                      <SettingResetButton label="Show button labels" :at-default="settings.showLabels === SETTINGS_DEFAULTS.showLabels" @reset="settings.showLabels = SETTINGS_DEFAULTS.showLabels" />
-                      <label class="toggle-switch"><input v-model="settings.showLabels" type="checkbox" /><span class="toggle-slider"></span></label>
-                    </div>
-                  </div>
-                  <div class="toggle-row">
-                    <label class="toggle-row-label">Show tooltips</label>
-                    <div class="toggle-row-end">
-                      <SettingResetButton label="Show tooltips" :at-default="settings.showTooltips === SETTINGS_DEFAULTS.showTooltips" @reset="settings.showTooltips = SETTINGS_DEFAULTS.showTooltips" />
-                      <label class="toggle-switch"><input v-model="settings.showTooltips" type="checkbox" /><span class="toggle-slider"></span></label>
+                    <div class="form-group">
+                      <div class="form-group-header">
+                        <label>Button Transparency</label>
+                        <div class="header-end-group">
+                          <span class="slider-value">{{ settings.buttonTransparency }}%</span>
+                          <SettingResetButton
+                            label="Button Transparency"
+                            :at-default="settings.buttonTransparency === SETTINGS_DEFAULTS.buttonTransparency"
+                            @reset="settings.buttonTransparency = SETTINGS_DEFAULTS.buttonTransparency"
+                          />
+                        </div>
+                      </div>
+                      <input v-model.number="settings.buttonTransparency" type="range" min="0" max="90" step="5" class="slider" />
+                      <p class="form-help">Lets the dashboard background animation show through the buttons. 0% keeps buttons solid; capped at 90% so buttons stay findable.</p>
                     </div>
                   </div>
-                  <div class="toggle-row">
-                    <label class="toggle-row-label">Enable animations</label>
-                    <div class="toggle-row-end">
-                      <SettingResetButton label="Enable animations" :at-default="settings.animationsEnabled === SETTINGS_DEFAULTS.animationsEnabled" @reset="settings.animationsEnabled = SETTINGS_DEFAULTS.animationsEnabled" />
-                      <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                  <div class="toggle-grid">
+                    <div class="toggle-row">
+                      <label class="toggle-row-label">Show button labels</label>
+                      <div class="toggle-row-end">
+                        <SettingResetButton label="Show button labels" :at-default="settings.showLabels === SETTINGS_DEFAULTS.showLabels" @reset="settings.showLabels = SETTINGS_DEFAULTS.showLabels" />
+                        <label class="toggle-switch"><input v-model="settings.showLabels" type="checkbox" /><span class="toggle-slider"></span></label>
+                      </div>
+                    </div>
+                    <div class="toggle-row">
+                      <label class="toggle-row-label">Show tooltips</label>
+                      <div class="toggle-row-end">
+                        <SettingResetButton label="Show tooltips" :at-default="settings.showTooltips === SETTINGS_DEFAULTS.showTooltips" @reset="settings.showTooltips = SETTINGS_DEFAULTS.showTooltips" />
+                        <label class="toggle-switch"><input v-model="settings.showTooltips" type="checkbox" /><span class="toggle-slider"></span></label>
+                      </div>
+                    </div>
+                    <div class="toggle-row">
+                      <label class="toggle-row-label">Enable animations</label>
+                      <div class="toggle-row-end">
+                        <SettingResetButton label="Enable animations" :at-default="settings.animationsEnabled === SETTINGS_DEFAULTS.animationsEnabled" @reset="settings.animationsEnabled = SETTINGS_DEFAULTS.animationsEnabled" />
+                        <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                      </div>
+                    </div>
+                    <div class="toggle-row">
+                      <div>
+                        <label class="toggle-row-label">Wiggle buttons in edit mode</label>
+                      </div>
+                      <div class="toggle-row-end">
+                        <SettingResetButton label="Wiggle buttons in edit mode" :at-default="settings.editModeWiggle === SETTINGS_DEFAULTS.editModeWiggle" @reset="settings.editModeWiggle = SETTINGS_DEFAULTS.editModeWiggle" />
+                        <label class="toggle-switch"><input v-model="settings.editModeWiggle" type="checkbox" /><span class="toggle-slider"></span></label>
+                      </div>
+                    </div>
+                    <div class="toggle-row">
+                      <div>
+                        <label class="toggle-row-label">3D tilt effect</label>
+                      </div>
+                      <div class="toggle-row-end">
+                        <SettingResetButton label="3D tilt effect" :at-default="settings.tiltEffectEnabled === SETTINGS_DEFAULTS.tiltEffectEnabled" @reset="settings.tiltEffectEnabled = SETTINGS_DEFAULTS.tiltEffectEnabled" />
+                        <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                      </div>
                     </div>
                   </div>
-                  <div class="toggle-row">
-                    <div>
-                      <label class="toggle-row-label">Wiggle buttons in edit mode</label>
-                      <p class="form-help">Buttons shake to show they can be dragged</p>
-                    </div>
-                    <div class="toggle-row-end">
-                      <SettingResetButton label="Wiggle buttons in edit mode" :at-default="settings.editModeWiggle === SETTINGS_DEFAULTS.editModeWiggle" @reset="settings.editModeWiggle = SETTINGS_DEFAULTS.editModeWiggle" />
-                      <label class="toggle-switch"><input v-model="settings.editModeWiggle" type="checkbox" /><span class="toggle-slider"></span></label>
-                    </div>
-                  </div>
-                  <div class="toggle-row">
-                    <div>
-                      <label class="toggle-row-label">3D tilt effect</label>
-                      <p class="form-help">Tilts the button grid as your mouse moves over it</p>
-                    </div>
-                    <div class="toggle-row-end">
-                      <SettingResetButton label="3D tilt effect" :at-default="settings.tiltEffectEnabled === SETTINGS_DEFAULTS.tiltEffectEnabled" @reset="settings.tiltEffectEnabled = SETTINGS_DEFAULTS.tiltEffectEnabled" />
-                      <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
-                    </div>
-                  </div>
-                  <div class="form-group" style="margin-top: var(--spacing-md)">
+                  <div class="form-group" style="margin-top: var(--spacing-sm); margin-bottom: 0">
                     <button class="btn btn-primary" @click="saveAndApplyButtonSettings">
                       <FontAwesomeIcon :icon="['fas', 'floppy-disk']" />
                       Save &amp; Apply
@@ -165,84 +171,93 @@
                   </div>
                 </section>
 
-                <section v-if="buttonsSubTab === 'preview'" class="settings-section card preview-card">
+                <section v-if="buttonsSubTab === 'preview'" class="settings-section card preview-card card-span">
                   <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
-                  <div class="button-preview-stage" :class="previewBackgroundClass" :style="previewBackgroundStyle">
-                    <DeckButton
-                      :button="previewButton"
-                      :show-labels="settings.showLabels"
-                      :show-tooltips="settings.showTooltips"
-                      :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
-                      style="width: 110px; height: 110px;"
-                    />
-                  </div>
-                  <p class="form-help">Reflects your button size, labels, tooltips, touch mode, and background.</p>
+                  <div class="preview-cols">
+                    <div class="preview-col">
+                      <div class="button-preview-stage" :class="previewBackgroundClass" :style="previewBackgroundStyle">
+                        <DeckButton
+                          :button="previewButton"
+                          :show-labels="settings.showLabels"
+                          :show-tooltips="settings.showTooltips"
+                          :button-size="settings.buttonSize * settingsStore.touchModeMultiplier"
+                          style="width: 110px; height: 110px;"
+                        />
+                      </div>
+                      <p class="form-help">Reflects your button size, labels, tooltips, touch mode, and background.</p>
 
-                  <div class="preview-demo-controls">
-                    <p class="preview-demo-label">Choose the animation, icon motion, and visual effect to apply to ALL buttons:</p>
-                    <div class="form-group">
-                      <div class="form-group-header">
-                        <label class="small-label">Button animation</label>
-                        <SettingResetButton label="Button animation" :at-default="previewAnimation === SETTINGS_DEFAULTS.buttonDefaultAnimation" @reset="resetButtonDefault('buttonDefaultAnimation')" />
+                      <div class="form-group" style="margin-top: var(--spacing-sm); margin-bottom: 0">
+                        <button class="btn btn-primary" :disabled="applyingButtonBehaviour" @click="applyButtonBehaviourToAll">
+                          <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
+                          {{ applyingButtonBehaviour ? 'Applying...' : 'Save & Apply' }}
+                        </button>
+                        <p class="form-help" style="color: var(--color-warning, #f0ad4e)">
+                          <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+                          Overwrites animation, icon motion, and design on every button — including per-button customization.
+                        </p>
                       </div>
-                      <select v-model="previewAnimation" class="select">
-                        <option value="none">None</option>
-                        <option value="pulse">Pulse</option>
-                        <option value="shimmer">Shimmer</option>
-                        <option value="bounce">Bounce</option>
-                        <option value="rotate">Rotate</option>
-                        <option value="wiggle">Wiggle</option>
-                        <option value="float">Float</option>
-                        <option value="scale">Scale</option>
-                        <option value="slide">Slide</option>
-                        <option value="fade">Fade</option>
-                        <option value="spin">Spin</option>
-                      </select>
                     </div>
-                    <div class="form-group">
-                      <div class="form-group-header">
-                        <label class="small-label">Icon animation</label>
-                        <SettingResetButton label="Icon animation" :at-default="previewIconLoop === SETTINGS_DEFAULTS.buttonDefaultIconLoop" @reset="resetButtonDefault('buttonDefaultIconLoop')" />
-                      </div>
-                      <select v-model="previewIconLoop" class="select">
-                        <option value="none">None</option>
-                        <option value="squash">Squash</option>
-                        <option value="bob">Bob</option>
-                        <option value="spin">Spin</option>
-                        <option value="pulse">Pulse</option>
-                        <option value="swing">Swing</option>
-                        <option value="flip">Flip</option>
-                        <option value="jump">Jump</option>
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <div class="form-group-header">
-                        <label class="small-label">Button design</label>
-                        <SettingResetButton label="Button design" :at-default="previewEffect === SETTINGS_DEFAULTS.buttonDefaultEffect" @reset="resetButtonDefault('buttonDefaultEffect')" />
-                      </div>
-                      <ButtonDesignPicker v-model="previewEffect" />
-                    </div>
-                  </div>
 
-                  <div class="form-group" style="margin-top: var(--spacing-md)">
-                    <button class="btn btn-primary" :disabled="applyingButtonBehaviour" @click="applyButtonBehaviourToAll">
-                      <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
-                      {{ applyingButtonBehaviour ? 'Applying...' : 'Save & Apply to All Buttons' }}
-                    </button>
-                    <p class="form-help" style="color: var(--color-warning, #f0ad4e)">
-                      <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
-                      This overwrites the animation, icon motion, and visual effect on every button across all scenes and pages — including any per-button customization made in the Button Editor.
-                    </p>
+                    <div class="preview-col">
+                      <div class="preview-demo-controls">
+                        <p class="preview-demo-label">Choose the animation, icon motion, and visual effect to apply to ALL buttons:</p>
+                        <div class="form-group">
+                          <div class="form-group-header">
+                            <label class="small-label">Button animation</label>
+                            <SettingResetButton label="Button animation" :at-default="previewAnimation === SETTINGS_DEFAULTS.buttonDefaultAnimation" @reset="resetButtonDefault('buttonDefaultAnimation')" />
+                          </div>
+                          <select v-model="previewAnimation" class="select">
+                            <option value="none">None</option>
+                            <option value="pulse">Pulse</option>
+                            <option value="shimmer">Shimmer</option>
+                            <option value="bounce">Bounce</option>
+                            <option value="rotate">Rotate</option>
+                            <option value="wiggle">Wiggle</option>
+                            <option value="float">Float</option>
+                            <option value="scale">Scale</option>
+                            <option value="slide">Slide</option>
+                            <option value="fade">Fade</option>
+                            <option value="spin">Spin</option>
+                          </select>
+                        </div>
+                        <div class="form-group">
+                          <div class="form-group-header">
+                            <label class="small-label">Icon animation</label>
+                            <SettingResetButton label="Icon animation" :at-default="previewIconLoop === SETTINGS_DEFAULTS.buttonDefaultIconLoop" @reset="resetButtonDefault('buttonDefaultIconLoop')" />
+                          </div>
+                          <select v-model="previewIconLoop" class="select">
+                            <option value="none">None</option>
+                            <option value="squash">Squash</option>
+                            <option value="bob">Bob</option>
+                            <option value="spin">Spin</option>
+                            <option value="pulse">Pulse</option>
+                            <option value="swing">Swing</option>
+                            <option value="flip">Flip</option>
+                            <option value="jump">Jump</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="preview-col">
+                      <div class="form-group" style="margin-bottom: 0">
+                        <div class="form-group-header">
+                          <label class="small-label">Button design</label>
+                          <SettingResetButton label="Button design" :at-default="previewEffect === SETTINGS_DEFAULTS.buttonDefaultEffect" @reset="resetButtonDefault('buttonDefaultEffect')" />
+                        </div>
+                        <ButtonDesignPicker v-model="previewEffect" />
+                      </div>
+                    </div>
                   </div>
                 </section>
 
-                <section v-if="buttonsSubTab === 'touch'" class="settings-section card">
+                <section v-if="buttonsSubTab === 'touch'" class="settings-section card card-span">
                   <div class="form-group-header">
                     <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
                     <SettingResetButton label="Touch Mode" :at-default="settings.touchMode === SETTINGS_DEFAULTS.touchMode" @reset="settings.touchMode = SETTINGS_DEFAULTS.touchMode" />
                   </div>
                   <TouchModeSelector />
-                  <div class="form-group" style="margin-top: var(--spacing-md)">
+                  <div class="form-group" style="margin-top: var(--spacing-sm); margin-bottom: 0">
                     <button class="btn btn-primary" @click="saveAndApplyButtonSettings">
                       <FontAwesomeIcon :icon="['fas', 'floppy-disk']" />
                       Save &amp; Apply
@@ -281,31 +296,33 @@
                   <label class="toggle-switch"><input v-model="settings.dockedSidebarEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
                 </div>
               </div>
-              <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
-                <div class="form-group-header">
-                  <label>Sidebar Width</label>
-                  <div class="header-end-group">
-                    <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
-                    <SettingResetButton label="Sidebar Width" :at-default="settings.dockedSidebarWidth === SETTINGS_DEFAULTS.dockedSidebarWidth" @reset="settings.dockedSidebarWidth = SETTINGS_DEFAULTS.dockedSidebarWidth" />
+              <div v-if="settings.dockedSidebarEnabled" class="sidebar-pair">
+                <div class="form-group">
+                  <div class="form-group-header">
+                    <label>Sidebar Width</label>
+                    <div class="header-end-group">
+                      <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
+                      <SettingResetButton label="Sidebar Width" :at-default="settings.dockedSidebarWidth === SETTINGS_DEFAULTS.dockedSidebarWidth" @reset="settings.dockedSidebarWidth = SETTINGS_DEFAULTS.dockedSidebarWidth" />
+                    </div>
                   </div>
+                  <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="360" step="10" class="slider" />
+                  <p class="form-help">How much horizontal space the docked buttons column takes up.</p>
                 </div>
-                <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="360" step="10" class="slider" />
-                <p class="form-help">How much horizontal space the docked buttons column takes up.</p>
-              </div>
-              <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
-                <div class="form-group-header">
-                  <label>Button Height</label>
-                  <div class="header-end-group">
-                    <span class="slider-value">{{ settings.dockedButtonHeight }}px</span>
-                    <SettingResetButton label="Button Height" :at-default="settings.dockedButtonHeight === SETTINGS_DEFAULTS.dockedButtonHeight" @reset="settings.dockedButtonHeight = SETTINGS_DEFAULTS.dockedButtonHeight" />
+                <div class="form-group">
+                  <div class="form-group-header">
+                    <label>Button Height</label>
+                    <div class="header-end-group">
+                      <span class="slider-value">{{ settings.dockedButtonHeight }}px</span>
+                      <SettingResetButton label="Button Height" :at-default="settings.dockedButtonHeight === SETTINGS_DEFAULTS.dockedButtonHeight" @reset="settings.dockedButtonHeight = SETTINGS_DEFAULTS.dockedButtonHeight" />
+                    </div>
                   </div>
+                  <input v-model.number="settings.dockedButtonHeight" type="range" min="48" max="160" step="4" class="slider" />
+                  <p class="form-help">How tall each docked button is. Automatically shrinks to fit if the sidebar doesn't have room for it.</p>
                 </div>
-                <input v-model.number="settings.dockedButtonHeight" type="range" min="48" max="160" step="4" class="slider" />
-                <p class="form-help">How tall each docked button is. Automatically shrinks to fit if the sidebar doesn't have room for it.</p>
               </div>
             </section>
 
-            <section class="settings-section card">
+            <section class="settings-section card card-span">
               <h2><FontAwesomeIcon :icon="['fas', 'bell']" /> Notifications</h2>
               <div class="toggle-row">
                 <div>
@@ -334,7 +351,7 @@
           </div>
 
           <div v-if="appearanceSubTab === 'background'" class="settings-grid settings-grid-masonry">
-            <section class="settings-section card">
+            <section class="settings-section card card-span">
               <h2>Background</h2>
               <div class="form-group">
                 <div class="form-group-header">
@@ -407,9 +424,10 @@
                   <FontAwesomeIcon :icon="['fas', 'image']" /> Backgrounds
                 </button>
               </div>
-              <div v-if="appearanceSubTab === 'screensaver'" class="settings-grid settings-grid-masonry">
-                <section v-if="screensaverSubTab === 'settings'" class="settings-section card" id="setting-screensaver">
+              <div v-if="appearanceSubTab === 'screensaver'" class="settings-grid settings-grid-masonry masonry-dense">
+                <section v-if="screensaverSubTab === 'settings'" class="settings-section card card-span" id="setting-screensaver">
                   <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver</h2>
+                  <div class="card-cols">
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Screensaver Delay</label>
@@ -438,9 +456,10 @@
                     </button>
                   </div>
                   <p class="form-help">Test shows the screensaver, even when the delay above is off. Customize Layout opens a live editor right here — drag widgets to move them, drag the corner dot to resize, then Save.</p>
+                  </div>
                 </section>
 
-                <section v-if="screensaverSubTab === 'backgrounds'" class="settings-section card">
+                <section v-if="screensaverSubTab === 'backgrounds'" class="settings-section card card-span">
                   <h2><FontAwesomeIcon :icon="['fas', 'image']" /> Screensaver Background</h2>
                   <p class="form-help">A background that shows only while the screensaver is on — the dashboard keeps its own.</p>
                   <div class="form-group">
@@ -471,7 +490,7 @@
                   </div>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card card-span">
                   <div class="form-group-header">
                     <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
                     <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
@@ -825,13 +844,13 @@
             <h2>Server Configuration</h2>
             <p>Manage startup and connection settings.</p>
           </div>
-          <div class="settings-grid">
+          <div class="settings-grid settings-grid-masonry">
             <section class="settings-section card">
               <h2>Startup</h2>
               <div class="toggle-row">
                 <div>
                   <label class="toggle-row-label">Launch VDock on startup</label>
-                  <p class="form-help">Automatically start VDock when you log in to Windows or macOS. Also works on Linux.</p>
+                  <p class="form-help">Start VDock when you log in to Windows, macOS, or Linux.</p>
                 </div>
                 <label class="toggle-switch"><input v-model="settings.startOnBoot" type="checkbox" @change="handleStartOnBootToggle" /><span class="toggle-slider"></span></label>
               </div>
@@ -839,7 +858,7 @@
               <div class="toggle-row">
                 <div>
                   <label class="toggle-row-label">Close launcher terminal after startup</label>
-                  <p class="form-help">When enabled, the black launcher window closes automatically once VDock starts. Disable to keep it open for logs and debugging. Takes effect on the next launch.</p>
+                  <p class="form-help">Closes the launcher window once VDock starts. Disable to keep it open for debugging.</p>
                 </div>
                 <label class="toggle-switch"><input v-model="settings.autoCloseLauncher" type="checkbox" /><span class="toggle-slider"></span></label>
               </div>
@@ -850,7 +869,7 @@
               <div class="toggle-row">
                 <div>
                   <label class="toggle-row-label">Open settings in a new browser tab</label>
-                  <p class="form-help">When enabled, the Settings button opens settings in a separate browser tab instead of navigating within VDock</p>
+                  <p class="form-help">Opens Settings in a separate browser tab instead of navigating within VDock.</p>
                 </div>
                 <label class="toggle-switch"><input v-model="settings.openSettingsInNewTab" type="checkbox" /><span class="toggle-slider"></span></label>
               </div>
@@ -862,17 +881,19 @@
                 <div class="info-row"><span class="info-label">Host</span><span class="info-value">{{ serverConfig.host }}</span></div>
                 <div class="info-row"><span class="info-label">Auth</span><span class="info-value">{{ serverConfig.require_auth ? 'Enabled' : 'Disabled' }}</span></div>
               </div>
-              <div class="form-group">
-                <label>Frontend Port</label>
-                <input v-model.number="serverPorts.frontend" type="number" class="input" min="1024" max="65535" placeholder="3000" />
-                <p class="form-help">The port you open in the browser. 3000 is a common dev-server port — pick another if another app uses it.</p>
-                <p v-if="portErrors.frontend" class="status-msg status-error">{{ portErrors.frontend }}</p>
-              </div>
-              <div class="form-group">
-                <label>Backend Port</label>
-                <input v-model.number="serverPorts.backend" type="number" class="input" min="1024" max="65535" placeholder="5000" />
-                <p class="form-help">The API server port the frontend proxies to.</p>
-                <p v-if="portErrors.backend" class="status-msg status-error">{{ portErrors.backend }}</p>
+              <div class="slider-pair">
+                <div class="form-group">
+                  <label>Frontend Port</label>
+                  <input v-model.number="serverPorts.frontend" type="number" class="input" min="1024" max="65535" placeholder="3000" />
+                  <p class="form-help">The port you open in the browser.</p>
+                  <p v-if="portErrors.frontend" class="status-msg status-error">{{ portErrors.frontend }}</p>
+                </div>
+                <div class="form-group">
+                  <label>Backend Port</label>
+                  <input v-model.number="serverPorts.backend" type="number" class="input" min="1024" max="65535" placeholder="5000" />
+                  <p class="form-help">The API server port the frontend proxies to.</p>
+                  <p v-if="portErrors.backend" class="status-msg status-error">{{ portErrors.backend }}</p>
+                </div>
               </div>
               <div class="button-row">
                 <button class="btn btn-secondary" :disabled="portsBusy" @click="checkPorts">
@@ -896,7 +917,7 @@
             <h2>Integrations</h2>
             <p>Automatic scene switching and recently used actions for monitored applications.</p>
           </div>
-          <div class="settings-grid">
+          <div class="settings-grid settings-grid-masonry">
             <section class="settings-section card">
               <h2>Auto Scene Switching</h2>
               <div class="toggle-row">
@@ -1021,57 +1042,54 @@
         <!-- ── About ── -->
         <div v-if="activeTab === 'about'" class="tab-content">
           <section class="settings-section card about-card">
-            <div class="about-brand">
-              <div class="about-logo-tile"><img :src="'/assets/branding/vdock-logo.jpg'" alt="VDock logo" class="about-logo-img" /></div>
-              <div>
-                <h2 class="about-title">VDock</h2>
-                <p class="about-version">Virtual Stream Interface <span class="version-chip">v{{ appVersion }}</span></p>
+            <div class="about-grid">
+              <div class="about-brand-row">
+                <div class="about-brand">
+                  <div class="about-logo-tile"><img :src="'/assets/branding/vdock-logo.jpg'" alt="VDock logo" class="about-logo-img" /></div>
+                  <div>
+                    <h2 class="about-title">VDock</h2>
+                    <p class="about-version">Virtual Stream Interface <span class="version-chip">v{{ appVersion }}</span></p>
+                  </div>
+                </div>
+                <p class="about-desc">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
               </div>
-            </div>
-            <p class="about-desc">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
 
-            <div class="feature-highlights">
-              <h4>Key Features</h4>
-              <div class="feature-grid">
-                <div v-for="feature in aboutFeatures" :key="feature.label" class="feature-chip">
-                  <span class="feature-chip-icon"><FontAwesomeIcon :icon="feature.icon" /></span>
-                  {{ feature.label }}
+              <div class="about-side-card">
+                <h3 class="about-side-title">Need help?</h3>
+                <p class="form-help">New to VDock? Walk through the quick start guide.</p>
+                <button class="btn btn-primary" @click="settingsStore.showHelpGuide = true">
+                  <FontAwesomeIcon :icon="['fas', 'question-circle']" /> Open Help &amp; Guide
+                </button>
+              </div>
+
+              <div class="about-side-card">
+                <h3 class="about-side-title">Connect</h3>
+                <div class="about-links">
+                  <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fas', 'globe']" /> Website</a>
+                  <a href="https://github.com/ponya5" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
+                  <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'linkedin']" /> LinkedIn</a>
+                  <button class="about-link-btn" @click="contactEmail"><FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact</button>
                 </div>
               </div>
-            </div>
 
-            <div class="about-divider"></div>
-
-            <div class="about-row">
-              <div>
-                <h3>Need help?</h3>
-                <p class="form-help">New to VDock? Walk through the quick start guide.</p>
-              </div>
-              <button class="btn btn-primary" @click="settingsStore.showHelpGuide = true">
-                <FontAwesomeIcon :icon="['fas', 'question-circle']" /> Open Help &amp; Guide
-              </button>
-            </div>
-
-            <div class="about-divider"></div>
-
-            <div class="about-links">
-              <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fas', 'globe']" /> Website</a>
-              <a href="https://github.com/ponya5" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
-              <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'linkedin']" /> LinkedIn</a>
-              <button class="about-link-btn" @click="contactEmail"><FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact</button>
-            </div>
-
-            <div class="about-divider"></div>
-
-            <div class="about-row">
-              <div>
-                <h3>Support the project</h3>
+              <div class="about-side-card">
+                <h3 class="about-side-title">Support the project</h3>
                 <p class="form-help">If you enjoy using VDock, consider buying me a coffee. It helps keep the project alive and growing.</p>
+                <a href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener" class="kofi-btn">
+                  <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
+                  Support me on Ko-fi
+                </a>
               </div>
-              <a href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener" class="kofi-btn">
-                <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
-                Support me on Ko-fi
-              </a>
+
+              <div class="feature-highlights about-features-all">
+                <h4>Key Features</h4>
+                <div class="feature-grid">
+                  <div v-for="feature in aboutFeatures" :key="feature.label" class="feature-chip">
+                    <span class="feature-chip-icon"><FontAwesomeIcon :icon="feature.icon" /></span>
+                    {{ feature.label }}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <p class="about-copyright">Daniel Shalom. All rights reserved 2026 ©</p>
@@ -2218,7 +2236,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  height: 60px;
   padding: 0 var(--spacing-lg);
   border-bottom: 1px solid rgba(255, 255, 255, 0.09);
   background: #121d31;
@@ -2395,7 +2413,7 @@ onMounted(async () => {
 /* ── Grid Layout ── */
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--spacing-lg);
   align-items: start;
 }
@@ -2413,6 +2431,139 @@ onMounted(async () => {
   break-inside: avoid;
   margin-bottom: var(--spacing-lg);
 }
+
+/* A lone card in a sub-tab shouldn't sit in one narrow column while the
+   rest of the pane stays empty — let it span the masonry width. */
+.settings-grid-masonry > section.card-span { column-span: all; }
+
+/* Dense masonry for card-heavy sub-tabs (screensaver widgets): narrower
+   columns turn unused width into a third column on wide panes. */
+@media (min-width: 900px) {
+  .settings-grid-masonry.masonry-dense { column-width: 220px; }
+  .settings-grid-masonry.masonry-dense textarea.input { height: 64px; }
+}
+
+/* The widget picker spans full width — lay its rows out as a grid instead
+   of one tall checklist. */
+.card-span .widget-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 var(--spacing-md);
+}
+.card-span .widget-toggle-row { padding: var(--spacing-xs) 0; }
+.card-span .widget-toggle-preview { width: 48px; height: 30px; }
+@media (max-width: 700px) {
+  .card-span .widget-toggle-list { grid-template-columns: 1fr; }
+}
+
+/* Inside a full-width card, flow control blocks into as many ~230px
+   columns as the width allows instead of one tall stack. Collapses to
+   fewer columns on narrow windows automatically. */
+.card-cols {
+  column-width: 290px;
+  column-gap: var(--spacing-lg);
+}
+.card-cols > * { break-inside: avoid; }
+
+/* Spanning cards lay related controls out horizontally: sliders in a
+   side-by-side pair, toggles as compact pills in an auto-fit grid. */
+.slider-pair {
+  display: flex;
+  gap: var(--spacing-lg);
+  align-items: flex-start;
+}
+.slider-pair > .form-group { flex: 1; min-width: 0; }
+
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+.toggle-grid .toggle-row + .toggle-row { margin-top: 0; }
+
+/* Pills are narrow — stack label above the switch instead of cramming
+   them into one row. */
+.toggle-grid .toggle-row {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 0;
+  padding: 8px 10px;
+}
+.toggle-grid .toggle-row-end { justify-content: flex-end; }
+.toggle-grid .toggle-row .form-help { margin: 2px 0 0 0; }
+
+/* Live Preview spanning card: stage | selects+save | design picker. */
+.preview-cols {
+  display: flex;
+  gap: var(--spacing-lg);
+  align-items: flex-start;
+}
+.preview-col { flex: 1; min-width: 0; }
+.preview-col:first-child { flex: 0 0 200px; }
+/* The picker's 5-up swatch grid is too wide for the ~240px column —
+   4 shrinkable columns keep it inside the card. */
+.preview-col :deep(.design-swatch-grid) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* Sidebar card on the Layout tab: pair its two sliders horizontally so the
+   masonry columns balance without scrolling on short screens. */
+.sidebar-pair {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+  margin-top: var(--spacing-md);
+}
+.sidebar-pair > .form-group { flex: 1; min-width: 0; }
+
+@media (max-width: 700px) {
+  .slider-pair, .sidebar-pair { flex-direction: column; }
+  .toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .preview-cols { flex-direction: column; }
+  .preview-col:first-child { flex: 1; }
+}
+
+/* Sub-tab cards split panes vertically — tighter padding/rows keep each
+   pane inside a 600px viewport instead of trading width for scroll. */
+.settings-grid-masonry > .settings-section.card { padding: 12px 18px; }
+.settings-grid-masonry .toggle-row { min-height: 48px; padding: 8px 14px; }
+.settings-grid-masonry .form-group { margin-bottom: var(--spacing-sm); }
+.settings-grid-masonry .form-help { font-size: 0.8rem; line-height: 1.35; }
+.settings-grid-masonry h2 { margin-bottom: var(--spacing-xs); }
+
+.button-row { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; align-items: center; }
+
+/* Touch Mode spanning card: options as a horizontal row, info + advanced
+   side by side beneath — fills the width instead of one tall column. */
+.card-span :deep(.mode-options) { flex-direction: row; }
+.card-span :deep(.mode-option) { flex: 1; }
+.card-span :deep(.side-col) {
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-lg);
+  align-items: flex-start;
+}
+.card-span :deep(.preview-section),
+.card-span :deep(.advanced-settings) { flex: 1; min-width: 0; }
+.card-span :deep(.preview-info) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+/* The wide card trades prose for density — the mode name + scale number
+   carry the information; the one-line descriptions would push the pane
+   past a 600px screen. */
+.card-span :deep(.mode-desc) { display: none; }
+.card-span :deep(.selector-header .description) { display: none; }
+.card-span :deep(.mode-options) { margin-top: var(--spacing-sm); }
+.card-span :deep(.mode-option) { padding: 10px; }
+.card-span :deep(.selector-header) { margin-bottom: var(--spacing-sm); }
+.card-span :deep(.preview-section) { margin-top: 0; }
+.card-span :deep(.advanced-settings) { margin-top: 0; }
+.card-span .btn { min-height: 40px; }
+.card-span .select { height: 40px; min-height: 40px; }
 
 .appearance-main {
   min-width: 0;
@@ -2542,7 +2693,7 @@ onMounted(async () => {
 .sub-tab-bar {
   display: inline-flex;
   gap: 4px;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 4px;
   padding: 4px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2553,7 +2704,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  height: 48px;
+  height: 36px;
   padding: 0 18px;
   border: none;
   background: transparent;
@@ -3480,7 +3631,60 @@ onMounted(async () => {
 
 /* ── About ── */
 .about-card {
-  max-width: 720px;
+  max-width: none;
+  padding: 14px 18px;
+}
+
+/* Three columns: a full-width brand header, three side cards, then the
+   feature chips spanning the bottom — fills the pane width instead of a
+   tall 720px strip. */
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+  align-items: start;
+}
+
+/* Brand+desc span the top as a horizontal header; features span the bottom
+   so chips lay out across the full card width. */
+.about-brand-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+.about-brand-row .about-brand { margin-bottom: 0; flex-shrink: 0; }
+.about-brand-row .about-desc { flex: 1; min-width: 0; margin: 0; }
+.about-features-all { grid-column: 1 / -1; }
+
+@media (max-width: 820px) {
+  .about-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .about-brand-row { flex-direction: column; align-items: flex-start; gap: var(--spacing-sm); }
+}
+@media (max-width: 560px) {
+  .about-grid { grid-template-columns: 1fr; }
+}
+
+.about-col--side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.about-side-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+}
+.about-side-card .form-help { font-size: 0.8rem; line-height: 1.35; margin-top: 2px; }
+.about-side-card .btn, .about-side-card .kofi-btn { min-height: 40px; width: 100%; margin-top: 6px; }
+
+.about-side-title {
+  font-size: clamp(13px, 0.8vw + 10px, 16px);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--color-text);
 }
 
 .about-brand {
@@ -3491,8 +3695,8 @@ onMounted(async () => {
 }
 
 .about-logo-tile {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -3547,7 +3751,7 @@ onMounted(async () => {
 .about-desc {
   font-size: clamp(12px, 0.7vw + 9px, 14px);
   color: var(--color-text-secondary);
-  margin: 0;
+  margin: 0 0 var(--spacing-md) 0;
 }
 
 .about-divider {
@@ -3574,31 +3778,31 @@ onMounted(async () => {
 .feature-highlights h4 {
   font-size: clamp(12px, 0.7vw + 9px, 14px);
   font-weight: 600;
-  margin: 0 0 var(--spacing-sm) 0;
+  margin: 0 0 8px 0;
 }
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
 }
 
 .feature-chip {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: 10px 14px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  font-size: clamp(12px, 0.7vw + 9px, 14px);
-  min-height: 44px;
+  font-size: clamp(11px, 0.65vw + 9px, 13px);
+  min-height: 40px;
 }
 
 .feature-chip-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3610,7 +3814,7 @@ onMounted(async () => {
 .about-links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
+  gap: 6px;
   align-items: center;
 }
 
@@ -3618,17 +3822,17 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: var(--spacing-xs) 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  font-size: clamp(11px, 0.65vw + 9px, 13px);
   text-decoration: none;
   cursor: pointer;
   transition: background var(--transition-fast);
-  min-height: 44px;
-  border-radius: 14px;
+  min-height: 36px;
+  border-radius: 12px;
 }
 
 .about-link-btn:hover { background: var(--color-surface-hover); }
@@ -3652,10 +3856,10 @@ onMounted(async () => {
   text-decoration: none;
   font-size: clamp(13px, 0.8vw + 10px, 16px);
   font-weight: 600;
-  margin-top: var(--spacing-md);
   transition: opacity var(--transition-fast), transform var(--transition-fast);
   align-self: flex-start;
   min-height: 44px;
+  flex-shrink: 0;
 }
 
 .kofi-btn:hover { opacity: 0.9; transform: translateY(-1px); }
