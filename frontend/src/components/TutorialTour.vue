@@ -51,7 +51,7 @@ const steps = TUTORIAL_STEPS
 const step = computed(() => tour.currentStep.value)
 const bubbleEl = ref<HTMLElement | null>(null)
 const targetRect = ref<DOMRect | null>(null)
-const bubbleSize = ref({ w: 320, h: 200 })
+const bubbleSize = ref({ w: 420, h: 240 })
 const viewport = ref({ w: window.innerWidth, h: window.innerHeight })
 
 const PAD = 10
@@ -187,11 +187,12 @@ const bubbleStyle = computed(() => {
 
 .tour-bubble {
   position: fixed;
-  width: min(320px, calc(100vw - 16px));
-  background: var(--color-surface, #141a24);
+  width: min(420px, calc(100vw - 16px));
+  background: rgba(16, 22, 36, 0.97);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--color-border, #2a3444);
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 18px 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   transition: top 0.25s ease, left 0.25s ease;
 }
@@ -200,11 +201,11 @@ const bubbleStyle = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .tour-step-count {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   letter-spacing: 0.08em;
   color: var(--color-text-secondary, #8b96a8);
   font-weight: 600;
@@ -215,41 +216,43 @@ const bubbleStyle = computed(() => {
   border: none;
   color: var(--color-text-secondary, #8b96a8);
   cursor: pointer;
-  font-size: 0.9rem;
-  padding: 4px;
+  font-size: 1.1rem;
+  padding: 6px;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 .tour-close:hover { color: var(--color-text, #fff); }
 
 .tour-title {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
+  margin: 0 0 8px;
+  font-size: 1.3rem;
   color: var(--color-text, #fff);
 }
 
 .tour-text {
-  margin: 0 0 14px;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--color-text-secondary, #a8b3c4);
+  margin: 0 0 16px;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #b9c2d0);
 }
 
 .tour-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .tour-spacer { flex: 1; }
 
 .tour-btn {
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.85rem;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  min-height: 40px;
+  min-height: 48px;
 }
 
 .tour-btn.primary {
@@ -271,8 +274,8 @@ const bubbleStyle = computed(() => {
 .tour-bubble::before {
   content: '';
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: inherit;
   border: inherit;
   transform: rotate(45deg);
@@ -280,19 +283,19 @@ const bubbleStyle = computed(() => {
 
 .tour-bubble.arrow-none::before { display: none; }
 .tour-bubble.arrow-bottom::before {
-  top: -7px; left: 50%; margin-left: -6px;
+  top: -8px; left: 50%; margin-left: -7px;
   border-right: none; border-bottom: none;
 }
 .tour-bubble.arrow-top::before {
-  bottom: -7px; left: 50%; margin-left: -6px;
+  bottom: -8px; left: 50%; margin-left: -7px;
   border-left: none; border-top: none;
 }
 .tour-bubble.arrow-right::before {
-  left: -7px; top: 50%; margin-top: -6px;
+  left: -8px; top: 50%; margin-top: -7px;
   border-right: none; border-top: none;
 }
 .tour-bubble.arrow-left::before {
-  right: -7px; top: 50%; margin-top: -6px;
+  right: -8px; top: 50%; margin-top: -7px;
   border-left: none; border-bottom: none;
 }
 </style>

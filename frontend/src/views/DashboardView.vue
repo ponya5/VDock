@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useActionCatalogStore } from '@/stores/actionCatalog'
@@ -241,6 +241,7 @@ const quickAddTarget = ref<'page' | 'docked'>('page')
 
 // Screensaver / idle-timer state
 const screensaverVisible = ref(false)
+const tour = useTutorial()
 // True while the screensaver is showing its drag/resize layout editor —
 // reached via the 'screensaver_layout_edit' ui_command from Settings.
 const screensaverLayoutEdit = ref(false)
@@ -253,7 +254,9 @@ function resetIdleTimer() {
   const timeoutMs = settingsStore.screensaverTimeout * 1000
   if (timeoutMs <= 0) return
   idleTimer = setTimeout(() => {
-    screensaverVisible.value = true
+    // Never cover the walkthrough with the screensaver — an open tour is
+    // active engagement even without pointer events.
+    if (!tour.state.active) screensaverVisible.value = true
   }, timeoutMs)
 }
 
@@ -262,6 +265,16 @@ function dismissScreensaver() {
   screensaverLayoutEdit.value = false
   resetIdleTimer()
 }
+
+// Tour ↔ screensaver mutex: starting the tour dismisses the screensaver;
+// the screensaver appearing (idle timer is guarded, but ui_commands can
+// force it) ends the tour so bubbles never float over the saver.
+watch(() => tour.state.active, (active) => {
+  if (active && screensaverVisible.value) dismissScreensaver()
+})
+watch(screensaverVisible, (visible) => {
+  if (visible && tour.state.active) tour.finish()
+})
 
 function saveScreensaverLayout(layout: ScreensaverLayout) {
   // Assigning the store ref persists through the settings watch → local +
@@ -873,7 +886,6 @@ onMounted(async () => {
 
   // First-run bubble tutorial (or a "Launch Tutorial" request from Settings).
   // Delayed so the deck renders before the tour starts measuring targets.
-  const tour = useTutorial()
   setTimeout(() => tour.consumePendingOrFirstRun(), 800)
 
   // Auto scene switching is bootstrapped once, globally, in App.vue —

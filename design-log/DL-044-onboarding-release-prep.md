@@ -58,3 +58,16 @@ arrow markers + caption list.
   sit on the right elements.
 - 231/231 frontend tests (5 new in `default-profile.test.ts`),
   typecheck clean, production build green.
+
+### Follow-up: tour ↔ screensaver mutex + 7" readability
+
+Device testing showed the tour running *under* the screensaver and the
+bubble too small on the 7" panel. Fixes:
+
+- `resetIdleTimer` never raises the screensaver while the tour is
+  active; starting the tour dismisses a visible screensaver; the
+  screensaver appearing mid-tour ends it (two watchers in
+  DashboardView).
+- Bubble widened to `min(420px, 100vw-16px)`, near-opaque background
+  (`rgba(16,22,36,.97)` + blur), 1rem body / 1.3rem title, 48px
+  buttons — readable and tappable at 1024×600.
