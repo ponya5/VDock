@@ -18,5 +18,17 @@ app.use(createPinia())
 app.use(router)
 app.component('FontAwesomeIcon', FontAwesomeIcon)
 
+// DL-027: the PWA service worker precaches index.html, so a deployed update
+// only takes effect on the SECOND reload. Reload once when a new SW claims
+// the page so the fresh bundle is served in the same session.
+if ('serviceWorker' in navigator) {
+  let swReloading = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloading) return
+    swReloading = true
+    window.location.reload()
+  })
+}
+
 app.mount('#app')
 
