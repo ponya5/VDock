@@ -71,3 +71,30 @@ bubble too small on the 7" panel. Fixes:
 - Bubble widened to `min(420px, 100vw-16px)`, near-opaque background
   (`rgba(16,22,36,.97)` + blur), 1rem body / 1.3rem title, 48px
   buttons — readable and tappable at 1024×600.
+
+### Follow-up: tour walks through Settings too
+
+The tour now crosses the dashboard → settings boundary instead of only
+pointing at the gear:
+
+- `TutorialTour` moved from `DashboardView` to `App.vue` so it survives
+  route changes (teleports to `body`, z 10000 — under agent alerts).
+- `TutorialStep` gained `route` (push before measuring) and `activate`
+  (click a selector — opens the Screen Saver sub-tab, jumps to About).
+  `prepareStep()` handles push → activate → poll-for-target → measure,
+  token-guarded against overlapping runs; a `route.path` watcher
+  re-anchors on manual navigation.
+- New steps: nav rail sections, "Find a setting" search, appearance
+  sub-tabs, screensaver widget picker (auto-opens the tab), About help
+  card — then returns to `/` for the finale. 12 steps total.
+- `data-tour` attributes on SettingsView targets (nav items,
+  appearance tab bar, screensaver sub-tab + picker, about help card) —
+  stable regardless of styling changes.
+- `consumePendingOrFirstRun` returns early while the tour is active —
+  returning to `/` mid-tour remounts DashboardView and would otherwise
+  restart at step 0.
+
+Verified live at 1024×600: full 12-step walk, spotlights land on the
+nav rail / search / tab bar / widget picker / about card, activates
+fire (Screen Saver + About tabs open), finale routes home, Done sets
+`vdock_tutorial_done` and closes. 231/231 tests, typecheck clean.

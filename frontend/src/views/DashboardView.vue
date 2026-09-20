@@ -156,9 +156,6 @@
     <div v-if="actionResult && settingsStore.toastLevel !== 'off' && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
-
-    <!-- First-run bubble tutorial -->
-    <TutorialTour />
   </div>
 </template>
 
@@ -183,7 +180,6 @@ import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
-import TutorialTour from '@/components/TutorialTour.vue'
 import { useTutorial } from '@/services/tutorial'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'

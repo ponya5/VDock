@@ -1,16 +1,20 @@
 import { reactive, computed } from 'vue'
 
 /**
- * First-run bubble tutorial. A small reactive store so both DashboardView
- * (auto-start / pending launch) and SettingsView ("Launch Tutorial" button)
- * can drive the single <TutorialTour> mounted in DashboardView.
+ * First-run bubble tutorial. A small reactive store so DashboardView
+ * (auto-start / pending launch), SettingsView ("Launch Tutorial" button)
+ * and the single <TutorialTour> mounted in App.vue can drive the tour.
+ *
+ * Steps can declare `route` (navigate first) and `activate` (click a
+ * selector — e.g. open a sub-tab) so the tour crosses the dashboard →
+ * settings boundary and back.
  *
  * Flags:
  *  - vdock_tutorial_done    — set when the tour completes or is skipped;
  *                           suppresses the first-run auto-start.
  *  - vdock_tutorial_pending — set by "Launch Tutorial" in Settings; consumed
  *                           by DashboardView on mount, so the tour always
- *                           runs against the live dashboard DOM.
+ *                           starts against the live dashboard DOM.
  */
 
 export const TUTORIAL_DONE_KEY = 'vdock_tutorial_done'
@@ -23,6 +27,10 @@ export interface TutorialStep {
   text: string
   /** Preferred bubble side relative to the target. */
   placement?: 'top' | 'bottom' | 'left' | 'right'
+  /** Route the step needs before measuring ('/' dashboard, '/settings'). */
+  route?: string
+  /** Selector clicked before measuring — e.g. to open a settings sub-tab. */
+  activate?: string
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -57,12 +65,50 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     target: '[aria-label="Settings"]',
     title: 'Settings',
-    text: 'Backgrounds, screensaver widgets, touch mode, app integrations, templates — everything is configured here.',
+    text: 'Everything is configured here — backgrounds, widgets, touch mode, integrations. Let\'s take a look inside.',
     placement: 'bottom',
   },
   {
+    route: '/settings',
+    target: '.settings-nav-rail',
+    title: 'Settings Sections',
+    text: 'Appearance, Templates, Server, Integrations, Logs, About — each rail item opens a group of related options.',
+    placement: 'right',
+  },
+  {
+    route: '/settings',
+    target: '.settings-search',
+    title: 'Find a Setting',
+    text: 'Not sure where something lives? Type it — "screensaver", "touch", "port" — and jump straight to the right card.',
+    placement: 'bottom',
+  },
+  {
+    route: '/settings',
+    target: '[data-tour="appearance-tabs"]',
+    title: 'Appearance Tabs',
+    text: 'Button Behaviour, Layout & Behavior, Background and Screen Saver — the deck\'s look and feel is tuned across these tabs.',
+    placement: 'bottom',
+  },
+  {
+    route: '/settings',
+    activate: '[data-tour="subtab-screensaver"]',
+    target: '[data-tour="screensaver-picker"]',
+    title: 'Screensaver Widgets',
+    text: 'Free widgets — weather, news, sports, markets, world clock. Toggle them on, then tap a card below to configure it.',
+    placement: 'bottom',
+  },
+  {
+    route: '/settings',
+    activate: '[data-tour="nav-about"]',
+    target: '[data-tour="about-help"]',
+    title: 'Help & Tutorial',
+    text: 'Re-open the Help & Guide or re-run this tour anytime from the About section.',
+    placement: 'left',
+  },
+  {
+    route: '/',
     title: 'You\'re all set',
-    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. Re-run this tour anytime from Settings → About.',
+    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. Enjoy your deck!',
   },
 ]
 
@@ -105,6 +151,9 @@ export function useTutorial() {
 
   /** Called by DashboardView on mount — starts a pending or first-run tour. */
   function consumePendingOrFirstRun() {
+    // The tour navigates between dashboard and settings — when it returns
+    // to '/', DashboardView remounts and would otherwise restart at step 0.
+    if (state.active) return false
     if (localStorage.getItem(TUTORIAL_PENDING_KEY) === '1') {
       localStorage.removeItem(TUTORIAL_PENDING_KEY)
       start()

@@ -15,6 +15,8 @@
     <NotificationCenter v-if="showNotifications" />
     <ConfirmDialog />
     <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
+    <!-- Tour lives above the router so it survives dashboard ↔ settings navigation -->
+    <TutorialTour />
     <AgentAlertOverlay />
   </div>
 </template>
@@ -32,6 +34,7 @@ import NotificationCenter from '@/components/NotificationCenter.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import UserGuideModal from '@/components/UserGuideModal.vue'
+import TutorialTour from '@/components/TutorialTour.vue'
 import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'

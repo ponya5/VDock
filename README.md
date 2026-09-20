@@ -4,18 +4,23 @@
 
 <br />
 
-<img src="https://raw.githubusercontent.com/ponya5/ponya5/main/assets/vdock2-demo.gif" alt="VDock demo — custom button layouts, animated backgrounds, and system controls" width="920" />
+<img src="docs/assets/vdock2-tour.gif" alt="VDock 2.0 — deck-key button designs, the design picker, rebuilt settings, and the editorial screensaver" width="920" />
+
+<br />
+
+**▶ [Watch the 40-second tour](docs/assets/vdock2-tour.mp4)** — 1080p, no sound
 
 <br />
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-2.0.0-6ea8ff)](#-whats-new-in-20)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](README.md)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
 
 **Your customizable control deck — drive Claude Code, GitHub, Cursor and Copilot from real buttons, alongside system actions, live widgets, and animated backgrounds.**
 
-[Quick Start](#-quick-start) · [Features](#-features) · [Integrations](docs/INTEGRATIONS.md) · [Setup Menu](#-one-setup-for-everything) · [Creator](#-creator) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
+[Quick Start](#-quick-start) · [What's new in 2.0](#-whats-new-in-20) · [Features](#-features) · [Integrations](docs/INTEGRATIONS.md) · [Setup Menu](#-one-setup-for-everything) · [Creator](#-creator) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
 
 </div>
 
@@ -30,9 +35,11 @@ monitoring, OBS scenes, weather) **and for the work you actually do all day**:
 run a Claude Code prompt, open a pull request, check CI, fire Cursor's Composer,
 or POST to any webhook — all from a button.
 
-**117 built-in actions** across 12 categories. Use it as a **desktop app
-(Electron)** or in your **browser**. Everything is editable: layouts, scenes,
-pages, icons, backgrounds, and actions.
+**76 built-in actions** across 10 categories, plus up to **160 more** that appear
+automatically when VDock detects the apps you already run — **236 actions across
+12 categories** with everything installed. Use it as a **desktop app (Electron)**,
+in your **browser**, or on a **7-inch touch panel** next to your keyboard.
+Everything is editable: layouts, scenes, pages, icons, designs, backgrounds, and actions.
 
 ```mermaid
 flowchart LR
@@ -47,25 +54,96 @@ flowchart LR
 
 ---
 
+## 🆕 What's new in 2.0
+
+### Ten deck-key designs — pick one, don't configure it
+
+Every button can now wear a real design, chosen from a grid of **live swatches**
+in the Button Editor instead of a text dropdown buried three fields down.
+
+| | |
+|---|---|
+| <img src="docs/assets/screens/button-design-picker.png" alt="Button Design picker showing ten live design swatches" width="440" /> | <img src="docs/assets/screens/deck-designs.png" alt="A deck mixing several button designs" width="440" /> |
+
+**Classic · Glass · Glow Glass · Gem · Neon Rim · Watermark · Deck Key · Status Key · Full Art · Folder**
+
+Each one is brand-parametric — it picks up the button's own colour — and stacks
+with any of **16 overlay effects** (fire, plasma, aurora, scanline, rain, holographic,
+metallic, liquid, and more). Set one button, or hit **Save & Apply to All Buttons**
+to push a design across every scene, page *and* the docked sidebar.
+
+The **Button Size** slider now resizes the actual button box, not just the icon and
+label inside it.
+
+### Settings, rebuilt
+
+<img src="docs/assets/screens/settings-appearance.png" alt="Appearance settings with live preview and touch mode panel" width="920" />
+
+- **Four Appearance sub-tabs** — Button Behaviour · Layout & Behavior · Background · Screen Saver
+- **Live Preview** renders a real deck button through the actual component, so what you see can't drift from what ships
+- **Find a setting** — search jumps straight to the right tab *and* sub-tab
+- **Per-setting reset** — 27 reset icons, one source of truth for defaults
+- **Session Logs** tab — browse and tail backend and frontend logs, colour-coded by level, exportable as a zip
+
+### The screensaver became an editorial dashboard
+
+<img src="docs/assets/screens/screensaver.png" alt="VDock screensaver showing clock, weather, headlines, markets and world clocks" width="920" />
+
+Walk away and the deck turns into a display piece: **clock, weather, RSS headlines,
+sports, stock & crypto quotes, and world clocks** — six widgets, **no API keys**
+for any of them.
+
+Drag any widget to move it, drag its corner to resize it, and save — all from a
+live editor inside Settings. Widget config, delay and backgrounds now sit in their
+own sub-tabs instead of one long scroll.
+
+### Dashboard typography
+
+The screensaver's editorial look is now available on the deck itself. Three
+dashboard fonts — **Modern Sans** (Heebo), **Editorial** (Instrument Serif +
+JetBrains Mono labels) and **Terminal Mono** (JetBrains Mono) — applied live,
+with the Settings UI left alone.
+
+### Built for the panel on your desk
+
+<img src="docs/assets/screens/settings-7inch.png" alt="VDock settings rendered on a 1024x600 touch panel" width="700" />
+
+The whole interface was redesigned around **1024×600**. Three touch modes —
+**Normal (1.0×)**, **Touch-Friendly (1.5×)** and **Tablet (2.0×)** — with a
+configurable minimum target size (44px default, WCAG 2.1 AA), auto-promoted when
+VDock detects a small or touch screen.
+
+### Under the hood
+
+- **Security hardening** — every API route behind auth, path-traversal containment on static and upload routes, upload type whitelist, 16MB request cap
+- **No more stale bundles** — the service worker now reloads the panel onto a new build instead of serving a cached one
+- **Frontend errors captured** — Vue errors, unhandled rejections and `console.error` are shipped to the log files you can read in Settings
+- **Smoother page transitions** — incoming buttons stay hidden until the reveal wave reaches them
+- **In-app confirm dialogs** replacing native `confirm()`, so nothing blocks a kiosk screen
+
+---
+
 ## ✨ Features
 
 ### Control deck
 | | |
 |---|---|
 | 🎛️ **Custom grids** | Drag, resize, and arrange buttons freely |
-| 🎬 **Scenes & pages** | Multiple layouts per profile with page navigation |
+| 🎬 **Scenes & pages** | Multiple layouts per profile with page navigation and 6 transition styles |
 | 📌 **Docked sidebar** | Persistent buttons across all pages |
-| 🧩 **Templates** | Pre-built button sets to get started fast |
+| 🎨 **10 button designs** | Live-swatch picker + 16 stackable overlay effects |
+| 🧩 **Templates** | 42 app templates across 6 categories to get started fast |
 
 ### AI & developer integrations
 | | |
 |---|---|
-| 🤖 **Claude Code** | Run prompts and slash commands (`/code-review`, `/commit`), resume sessions. Uses your existing `claude` login |
+| 🤖 **Claude Code** | 40 actions — prompts, slash commands (`/code-review`, `/commit`), session resume. Uses your existing `claude` login |
 | 💬 **Claude API** | One-shot prompts straight to the clipboard (optional API key) |
-| 🐙 **GitHub** | PRs, issues, checks, workflow runs via `gh` — plus live PR count and CI status **on the button face** |
+| 🐙 **GitHub** | PRs, issues, checks, workflow runs via `gh` — plus live PR count, CI status and notification badges **on the button face** |
 | ✨ **Cursor** | Composer, AI chat, inline edit, accept/reject diff |
 | 🧑‍✈️ **GitHub Copilot** | Chat, inline suggestions, `/explain` `/fix` `/tests` `/doc` |
-| 🪝 **HTTP / webhooks** | Any REST endpoint — Discord, Slack, n8n, Zapier, Home Assistant |
+| 🧠 **VS Code · JetBrains · Visual Studio · Devin** | 79 more editor and agent commands, per-app keymaps |
+| 🪝 **HTTP / webhooks** | Any REST endpoint — Discord, Slack, n8n, Zapier, Home Assistant — and show a value from the JSON response on the button |
 
 > Integrations are optional and self-detecting. VDock works fully with none of
 > them installed; actions it can't run are greyed out with the reason.
@@ -86,15 +164,18 @@ flowchart LR
 | 📊 **System metrics** | CPU, RAM, GPU, disk, network |
 | 🌤️ **Weather** | Auto or manual city, no API key needed |
 | 🕐 **Time widgets** | World clock, timer, countdown |
-| 📰 **News carousel** | RSS/Atom headlines that slide through on the screensaver — no API key |
+| 📰 **News & sports** | RSS/Atom headlines that rotate on the screensaver — no API key |
+| 📈 **Markets** | Free stock and crypto quotes — no API key |
 | 🔔 **Live button state** | Spinner while an action runs, badges for PR counts and CI status |
 
 ### Look & feel
 | | |
 |---|---|
-| 🌈 **26+ animated backgrounds** | Aurora, light rays, silk, iridescence, and more |
-| 🖼️ **Custom wallpapers** | Upload dashboard and button backgrounds |
-| ✨ **Touch modes** | Normal, touch-friendly, and tablet sizing |
+| 🌈 **54 animated backgrounds** | Aurora, light rays, silk, iridescence, prism, ferrofluid, and more (60 catalogue entries with gradients and custom uploads) |
+| 🖼️ **Custom wallpapers** | Upload dashboard and button backgrounds; per-scene and per-app backgrounds |
+| ✍️ **3 dashboard fonts** | Modern Sans, Editorial, Terminal Mono |
+| ✨ **Touch modes** | Normal, Touch-Friendly, and Tablet sizing |
+| 🎞️ **Animated avatars** | GIF and Lottie profile avatars, plus static presets |
 | 🌙 **Dark UI** | Polished dashboard with optional header and sidebar |
 
 ---
@@ -213,8 +294,10 @@ VDock/
 ├── setup.bat / setup.sh     ← Start here (interactive installer)
 ├── launch.bat / launch.sh   ← Daily launcher
 ├── backend/                 ← Python Flask API
+│   └── integrations/        ← Per-app action packs and keymaps
 ├── frontend/                ← Vue 3 + TypeScript UI
 │   └── electron/            ← Desktop app shell
+├── design-log/              ← Numbered design decisions (DL-001 …)
 ├── docs/                    ← Guides and assets
 └── scripts/                 ← Maintainer build/deploy tools
     └── VDock-Launcher.py    ← Launcher engine
@@ -231,12 +314,15 @@ VDock/
 | Local server config | `backend/data/config.json` (created on first run, not in git) |
 | Backend secrets | `backend/.env` (copy from `backend/.env.example`) |
 
-### Useful settings
+### Settings panes
 
-- **Appearance** — button size, backgrounds, animations, touch mode
-- **Server** — auto-start on boot, open settings in new browser tab
-- **Widgets & Integration** — weather location, RSS news feeds, screensaver
-  widgets, auto scene switching per app
+- **Appearance** — Button Behaviour, Layout & Behavior, Background, Screen Saver
+- **Templates** — 42 one-click app decks
+- **Server** — ports, auto-start on boot, open settings in a new browser tab
+- **Widgets & Integration** — weather location, RSS news and sports feeds, market
+  tickers, world clocks, auto scene switching per app
+- **Logs** — tail, filter and export backend/frontend logs
+- **About** — version and build info
 
 ### Optional API keys
 
@@ -266,6 +352,8 @@ explanation until you set them. Edit `backend/.env`:
 | macOS blocks launcher | Right-click `VDock.command` → **Open** the first time |
 | Claude / GitHub buttons greyed out | Hover for the reason. Usually the CLI isn't installed or `gh auth login` hasn't been run |
 | Keystroke actions do nothing | They only fire when the target editor is focused — this is deliberate, so keys never land in the wrong window |
+| UI looks like an older build | It self-heals on reload now; if not, hard-refresh once to clear the old service worker |
+| Something misbehaving | **Settings → Logs** — tail the backend and frontend logs, or export them with an issue |
 
 More help: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) · [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) · [`docs/setup/DESKTOP_LAUNCHER.md`](docs/setup/DESKTOP_LAUNCHER.md)
 
@@ -299,7 +387,8 @@ cd frontend && npm test
 
 See [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md)
 for architecture, how to add an action type, and how to write an integration
-pack.
+pack. Design decisions are logged in [`design-log/`](design-log/) — one numbered
+entry per change, with the problem, the design and the verification.
 
 ---
 

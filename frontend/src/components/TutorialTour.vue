@@ -43,10 +43,13 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useTutorial, TUTORIAL_STEPS } from '@/services/tutorial'
 
 const tour = useTutorial()
+const router = useRouter()
+const route = useRoute()
 const steps = TUTORIAL_STEPS
 const step = computed(() => tour.currentStep.value)
 const bubbleEl = ref<HTMLElement | null>(null)
@@ -68,15 +71,47 @@ function measure() {
   }
 }
 
-watch(
-  () => tour.state.stepIndex,
-  async () => {
+/** Poll for a selector to appear (view mounts async after a route push). */
+function waitForEl(sel: string, timeout = 2500): Promise<Element | null> {
+  return new Promise((resolve) => {
+    const t0 = performance.now()
+    const tick = () => {
+      const el = document.querySelector(sel)
+      if (el || performance.now() - t0 > timeout) resolve(el)
+      else setTimeout(tick, 60)
+    }
+    tick()
+  })
+}
+
+let prepareToken = 0
+/** Get the view into the state the step needs, then measure the target. */
+async function prepareStep() {
+  const token = ++prepareToken
+  const s = step.value
+  if (!tour.state.active || !s) return
+  if (s.route && route.path !== s.route) {
+    await router.push(s.route)
     await nextTick()
-    measure()
-    // Re-measure once more after the bubble settles at its new spot
-    requestAnimationFrame(measure)
   }
-)
+  if (token !== prepareToken) return
+  if (s.activate) {
+    const el = await waitForEl(s.activate)
+    if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await nextTick()
+  }
+  if (token !== prepareToken) return
+  if (s.target) await waitForEl(s.target)
+  if (token !== prepareToken) return
+  measure()
+  // Re-measure once more after the bubble settles at its new spot
+  requestAnimationFrame(measure)
+}
+
+watch(() => tour.state.stepIndex, prepareStep)
+watch(() => tour.state.active, (active) => { if (active) prepareStep() })
+// The user (or a Back step) may change routes mid-tour — re-anchor.
+watch(() => route.path, () => { if (tour.state.active) prepareStep() })
 
 onMounted(() => {
   measure()

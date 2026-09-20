@@ -48,6 +48,7 @@
           v-for="tab in tabs"
           :key="tab.id"
           :class="['nav-rail-item', { active: activeTab === tab.id }]"
+          :data-tour="`nav-${tab.id}`"
           @click="activeTab = tab.id"
         >
           <FontAwesomeIcon :icon="tab.icon" />
@@ -59,7 +60,7 @@
 
         <!-- ── Appearance ── -->
         <div v-if="activeTab === 'appearance'" class="tab-content">
-          <div class="sub-tab-bar">
+          <div class="sub-tab-bar" data-tour="appearance-tabs">
             <button :class="['sub-tab-btn', { active: appearanceSubTab === 'buttons' }]" @click="appearanceSubTab = 'buttons'">
               <FontAwesomeIcon :icon="['fas', 'sliders']" /> Button Behaviour
             </button>
@@ -69,7 +70,7 @@
             <button :class="['sub-tab-btn', { active: appearanceSubTab === 'background' }]" @click="appearanceSubTab = 'background'">
               <FontAwesomeIcon :icon="['fas', 'image']" /> Background
             </button>
-            <button :class="['sub-tab-btn', { active: appearanceSubTab === 'screensaver' }]" @click="appearanceSubTab = 'screensaver'">
+            <button :class="['sub-tab-btn', { active: appearanceSubTab === 'screensaver' }]" data-tour="subtab-screensaver" @click="appearanceSubTab = 'screensaver'">
               <FontAwesomeIcon :icon="['fas', 'moon']" /> Screen Saver
             </button>
           </div>
@@ -490,7 +491,7 @@
                   </div>
                 </section>
 
-                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card card-span" :class="{ 'picker-collapsed': openWidgetCard !== null }">
+                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card card-span" :class="{ 'picker-collapsed': openWidgetCard !== null }" data-tour="screensaver-picker">
                   <div class="form-group-header">
                     <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
                     <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
@@ -1109,7 +1110,7 @@
                 <p class="about-desc">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
               </div>
 
-              <div class="about-side-card">
+              <div class="about-side-card" data-tour="about-help">
                 <h3 class="about-side-title">Need help?</h3>
                 <p class="form-help">New to VDock? Walk through the quick start guide.</p>
                 <button class="btn btn-primary" @click="settingsStore.showHelpGuide = true">
