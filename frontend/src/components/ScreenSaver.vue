@@ -297,7 +297,7 @@ const {
 } = useNews(() => {
   const feeds = parseFeedList(settingsStore.sportsFeeds)
   return feeds.length ? feeds : DEFAULT_SPORTS_FEEDS
-})
+}, 'Sports')
 const {
   prices: marketPrices,
   error: marketError,

@@ -110,6 +110,17 @@ app.register_blueprint(app_profiles_bp)
 limiter.exempt(profiles_bp)  # Profile saves are critical
 limiter.exempt(actions_bp)  # Action execution (frequent button clicks)
 limiter.exempt(user_settings_bp)  # UI settings persistence
+# Self-refreshing data widgets (weather/news/market/sports, metrics, config)
+# poll on their own timers — a modest daily/hourly cap is exhausted by normal
+# operation, after which every endpoint 429s and widgets show stale/empty
+# states. These are local-network data reads, not abuse surface; auth and
+# upload stay rate-limited.
+limiter.exempt(news_bp)
+limiter.exempt(market_bp)
+limiter.exempt(weather_bp)
+limiter.exempt(system_metrics_bp)
+limiter.exempt(app_monitor_bp)
+limiter.exempt(config_bp)
 
 
 # ============================================================================
