@@ -445,15 +445,17 @@ function stopResize() {
   margin: 0;
 }
 
-/* Weather card — the mockup's top-of-column tile. Vertical layout so it
-   still reads on the compact column; sized up for 7" legibility (was ~10px
-   text, unreadable at arm's length). */
+/* Weather card — the mockup's top-of-column tile. Centered vertical stack:
+   the compact column is only ~140px of content, so left-aligned text read
+   cramped and tiny on the 7" panel — center everything and size it up. */
 .sidebar-weather-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
   margin: 12px 12px 0;
-  padding: 14px;
+  padding: 16px 10px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -462,42 +464,46 @@ function stopResize() {
 
 .weather-icon {
   flex-shrink: 0;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(74, 163, 255, 0.18);
   color: #7dbcff;
-  font-size: 1.35rem;
+  font-size: clamp(1.30rem, 2vw + 0.90rem, 1.60rem);
 }
 
 .weather-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
+  max-width: 100%;
   line-height: 1.2;
 }
 
 .weather-temp {
   font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 2.1rem;
+  font-size: clamp(1.90rem, 4vw + 1.10rem, 2.50rem);
   color: #eef2fa;
   line-height: 1.05;
 }
 
 .weather-desc {
-  font-size: 0.8rem;
+  font-size: clamp(0.80rem, 2vw + 0.50rem, 0.95rem);
   color: var(--color-text-secondary);
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .weather-loc {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: clamp(0.72rem, 2vw + 0.44rem, 0.85rem);
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
