@@ -7,6 +7,7 @@ import { fab } from '@fortawesome/free-brands-svg-icons'
 
 import App from './App.vue'
 import router from './router'
+import { installSessionLog } from './services/sessionLog'
 import './assets/styles/main.css'
 
 // Add all icons to the library
@@ -29,6 +30,8 @@ if ('serviceWorker' in navigator) {
     window.location.reload()
   })
 }
+
+installSessionLog(app)
 
 app.mount('#app')
 

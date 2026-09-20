@@ -626,6 +626,63 @@
           </div>
         </div>
 
+        <!-- ── Logs ── -->
+        <div v-if="activeTab === 'logs'" class="tab-content">
+          <div class="tab-page-header">
+            <h2>Session Logs</h2>
+            <p>App, launcher, and touchscreen events — for troubleshooting. Logs rotate automatically so this folder stays small ({{ formatBytes(logsTotalBytes) }} used).</p>
+          </div>
+          <div class="settings-grid">
+            <section class="settings-section card">
+              <h2><FontAwesomeIcon :icon="['fas', 'folder-open']" /> Log Files</h2>
+              <div class="log-file-list">
+                <button
+                  v-for="file in logFiles"
+                  :key="file.name"
+                  type="button"
+                  :class="['log-file-row', { active: selectedLog === file.name }]"
+                  @click="selectLog(file.name)"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'file-lines']" class="log-file-icon" />
+                  <span class="log-file-name">{{ file.name }}</span>
+                  <span class="log-file-meta">{{ formatBytes(file.size) }}</span>
+                </button>
+                <p v-if="!logFiles.length" class="form-help">No log files yet — they appear once the app writes events.</p>
+              </div>
+              <div class="screensaver-actions">
+                <button class="btn btn-secondary" :disabled="loadingLogs" @click="loadLogs">
+                  <FontAwesomeIcon :icon="['fas', loadingLogs ? 'spinner' : 'arrows-rotate']" :spin="loadingLogs" /> Refresh
+                </button>
+                <button class="btn btn-secondary" :disabled="exportingLogs || !logFiles.length" @click="exportLogs">
+                  <FontAwesomeIcon :icon="['fas', exportingLogs ? 'spinner' : 'download']" :spin="exportingLogs" />
+                  {{ exportingLogs ? 'Exporting...' : 'Export All (.zip)' }}
+                </button>
+                <button class="btn btn-danger" :disabled="!logFiles.length" @click="clearLogs">
+                  <FontAwesomeIcon :icon="['fas', 'trash']" /> Clear All
+                </button>
+              </div>
+            </section>
+
+            <section class="settings-section card">
+              <h2><FontAwesomeIcon :icon="['fas', 'terminal']" /> {{ selectedLog || 'Viewer' }}</h2>
+              <div v-if="selectedLog" class="form-group-header">
+                <label class="small-label">Last {{ logTailCount }} lines</label>
+                <select v-model.number="logTailCount" class="select log-tail-select" @change="refreshTail">
+                  <option :value="100">100</option>
+                  <option :value="300">300</option>
+                  <option :value="1000">1000</option>
+                </select>
+              </div>
+              <div ref="logViewerEl" class="log-viewer">
+                <template v-if="logLines.length">
+                  <div v-for="(line, i) in logLines" :key="i" class="log-line" :class="logLineClass(line)">{{ line }}</div>
+                </template>
+                <p v-else class="form-help">{{ selectedLog ? 'This log is empty.' : 'Pick a log file on the left to view its tail.' }}</p>
+              </div>
+            </section>
+          </div>
+        </div>
+
         <!-- ── Templates ── -->
         <div v-if="activeTab === 'templates'" class="tab-content">
           <div class="tab-page-header">
@@ -951,7 +1008,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref, watch } from 'vue'
+import { onMounted, computed, ref, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
@@ -1457,6 +1514,102 @@ function resetScreensaverWidgets() {
   settingsStore.screensaverWidgets = [...SETTINGS_DEFAULTS.screensaverWidgets]
 }
 
+// ── Session Logs tab (DL-029) ──
+interface LogFileEntry { name: string; size: number; mtime: string }
+const logFiles = ref<LogFileEntry[]>([])
+const logsTotalBytes = ref(0)
+const selectedLog = ref('')
+const logLines = ref<string[]>([])
+const logTailCount = ref(300)
+const loadingLogs = ref(false)
+const exportingLogs = ref(false)
+const logViewerEl = ref<HTMLElement | null>(null)
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function logLineClass(line: string) {
+  if (/ - (ERROR|CRITICAL) /.test(line)) return 'log-error'
+  if (/ - (WARNING|WARN) /.test(line)) return 'log-warn'
+  return ''
+}
+
+async function loadLogs() {
+  loadingLogs.value = true
+  try {
+    const { data } = await apiClient.get('/logs')
+    logFiles.value = data.logs ?? []
+    logsTotalBytes.value = data.total_bytes ?? 0
+    if (!selectedLog.value && logFiles.value.length) {
+      await selectLog(logFiles.value[0].name)
+    }
+  } catch (err: any) {
+    notificationsStore.error('Logs unavailable', err?.response?.data?.message || err?.message || 'Could not load log files.')
+  } finally {
+    loadingLogs.value = false
+  }
+}
+
+async function selectLog(name: string) {
+  selectedLog.value = name
+  await refreshTail()
+}
+
+async function refreshTail() {
+  if (!selectedLog.value) return
+  try {
+    const { data } = await apiClient.get(`/logs/${encodeURIComponent(selectedLog.value)}`, {
+      tail: logTailCount.value
+    })
+    logLines.value = data.lines ?? []
+    await nextTick()
+    if (logViewerEl.value) logViewerEl.value.scrollTop = logViewerEl.value.scrollHeight
+  } catch {
+    logLines.value = []
+  }
+}
+
+async function exportLogs() {
+  exportingLogs.value = true
+  try {
+    const response = await fetch('/api/logs/export')
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `vdock-logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    notificationsStore.success('Logs exported', 'A zip with every log file was downloaded.')
+  } catch (err: any) {
+    notificationsStore.error('Export failed', err?.message || 'Could not export logs.')
+  } finally {
+    exportingLogs.value = false
+  }
+}
+
+async function clearLogs() {
+  const ok = await confirmDialog({
+    title: 'Clear all logs?',
+    message: 'Every session log file will be emptied. This cannot be undone.',
+    confirmLabel: 'Clear',
+    danger: true
+  })
+  if (!ok) return
+  try {
+    await apiClient.delete('/logs')
+    logLines.value = []
+    await loadLogs()
+    notificationsStore.success('Logs cleared', 'All log files were emptied.')
+  } catch (err: any) {
+    notificationsStore.error('Clear failed', err?.message || 'Could not clear logs.')
+  }
+}
+
 type TestResult = { ok: boolean; text: string }
 const testingNews = ref(false)
 const testingSports = ref(false)
@@ -1617,6 +1770,7 @@ const tabs = [
   { id: 'templates', name: 'Templates', icon: ['fas', 'layer-group'] },
   { id: 'server', name: 'Server', icon: ['fas', 'server'] },
   { id: 'integration', name: 'Widgets & Integration', icon: ['fas', 'plug'] },
+  { id: 'logs', name: 'Logs', icon: ['fas', 'file-lines'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
 
@@ -1638,6 +1792,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'grip'] },
   { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'cloud-sun'] },
   { label: 'Background', keywords: 'background animation particles waves aurora image wallpaper gradient', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
+  { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', tabId: 'logs', icon: ['fas', 'file-lines'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
   { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
@@ -1894,6 +2049,9 @@ watch(activeTab, (tab) => {
   if (tab === 'integration') {
     void refreshRunningApps()
   }
+  if (tab === 'logs') {
+    void loadLogs()
+  }
 })
 
 onMounted(async () => {
@@ -1904,6 +2062,7 @@ onMounted(async () => {
   loadPorts()
   loadAppIntegrations()
   if (activeTab.value === 'integration') await refreshRunningApps()
+  if (activeTab.value === 'logs') void loadLogs()
 })
 </script>
 
@@ -2363,6 +2522,84 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+/* ── Logs tab (DL-029) ── */
+.log-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--spacing-md);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.log-file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  touch-action: manipulation;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.log-file-row:hover { background: rgba(255, 255, 255, 0.08); }
+
+.log-file-row.active {
+  border-color: var(--color-accent, #4aa3ff);
+  background: color-mix(in srgb, var(--color-accent, #4aa3ff) 14%, transparent);
+}
+
+.log-file-icon { color: var(--color-text-secondary); flex-shrink: 0; }
+
+.log-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.log-file-meta {
+  color: var(--color-text-secondary);
+  font-size: 0.85em;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-viewer {
+  max-height: 340px;
+  min-height: 160px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: clamp(10px, 0.55vw + 8px, 12px);
+  line-height: 1.55;
+}
+
+.log-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-secondary);
+}
+
+.log-line.log-error { color: #ff8a80; }
+.log-line.log-warn { color: #f0c674; }
+
+.log-tail-select {
+  width: auto;
+  min-width: 84px;
 }
 
 /* ── Toggle Switch — 60×34 pill rows per the mockup ── */

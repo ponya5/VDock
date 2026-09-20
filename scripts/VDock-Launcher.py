@@ -185,8 +185,28 @@ def ensure_log_dir():
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
+# DL-029: launcher logs are append-only files, so cap them once per launch —
+# above the limit we keep just the recent tail instead of growing forever.
+LAUNCHER_LOG_MAX_BYTES = 1 * 1024 * 1024
+LAUNCHER_LOG_KEEP_BYTES = 256 * 1024
+
+
+def _truncate_oversized_log(log_path: Path):
+    try:
+        if log_path.exists() and log_path.stat().st_size > LAUNCHER_LOG_MAX_BYTES:
+            with open(log_path, "rb") as f:
+                f.seek(-LAUNCHER_LOG_KEEP_BYTES, 2)
+                tail = f.read()
+            log_path.write_bytes(
+                b"... [older log truncated to keep size bounded] ...\n" + tail
+            )
+    except OSError:
+        pass
+
+
 def open_log_file(log_path: Path):
     ensure_log_dir()
+    _truncate_oversized_log(log_path)
     return open(log_path, "a", encoding="utf-8", errors="replace")
 
 
