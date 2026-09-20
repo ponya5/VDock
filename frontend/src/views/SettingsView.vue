@@ -928,10 +928,24 @@
           <section class="settings-section card" style="margin-top:var(--spacing-lg)">
             <div class="section-header">
               <h2>Running Applications</h2>
-              <button class="btn btn-sm btn-primary" @click="refreshRunningApps">
+              <button v-if="settingsStore.appScanningEnabled" class="btn btn-sm btn-primary" @click="refreshRunningApps">
                 <FontAwesomeIcon :icon="['fas', 'sync']" :spin="loadingApps" /> Refresh
               </button>
             </div>
+            <div class="toggle-row">
+              <div>
+                <label class="toggle-row-label">Enable App Scanning</label>
+                <p class="form-help">Periodically detect running apps — powers the live scene dots and this list</p>
+              </div>
+              <label class="toggle-switch-inline">
+                <input type="checkbox" :checked="settingsStore.appScanningEnabled" @change="toggleAppScanning" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div v-if="!settingsStore.appScanningEnabled" class="empty-state">
+              <FontAwesomeIcon :icon="['fas', 'desktop']" /><p>App scanning is disabled</p>
+            </div>
+            <template v-else>
             <div v-if="runningApps.length > 0" class="app-toolbar">
               <div class="app-search">
                 <FontAwesomeIcon :icon="['fas', 'search']" class="app-search-icon" />
@@ -991,6 +1005,7 @@
               <FontAwesomeIcon :icon="['fas', 'info-circle']" />
               <span>{{ appIntegrations.length }} app{{ appIntegrations.length > 1 ? 's' : '' }} integrated</span>
             </div>
+            </template>
           </section>
         </div>
 
@@ -1994,7 +2009,17 @@ function formatScreensaverTimeout(seconds: number): string {
 
 function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support' }
 
+function toggleAppScanning() {
+  settingsStore.appScanningEnabled = !settingsStore.appScanningEnabled
+  if (settingsStore.appScanningEnabled) void refreshRunningApps()
+  else runningApps.value = []
+}
+
 async function refreshRunningApps() {
+  if (!settingsStore.appScanningEnabled) {
+    runningApps.value = []
+    return
+  }
   loadingApps.value = true
   if (!appProfilesLoaded.value) {
     appProfilesLoaded.value = true

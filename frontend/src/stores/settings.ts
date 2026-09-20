@@ -61,6 +61,7 @@ export const SETTINGS_DEFAULTS = {
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_BACKGROUND_ID,
   dashboardFont: 'default' as const,
+  appScanningEnabled: true,
   newsFeeds: '',
   sportsFeeds: '',
   newsRotateSeconds: 8,
@@ -108,6 +109,7 @@ export interface PersistedUserSettings {
   screensaverWidgetSize: number
   screensaverBackground: string
   dashboardFont: 'default' | 'editorial' | 'mono'
+  appScanningEnabled: boolean
   screensaverLayout: ScreensaverLayout
 }
 
@@ -208,6 +210,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // image URL paints behind the screensaver widgets.
   const screensaverBackground = ref<string>(DEFAULT_BACKGROUND_ID)
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
+  const appScanningEnabled = ref(true)
   // Widget positions/scales in viewport percent (center-anchored). Edited via
   // the live layout editor reached from Settings -> Screensaver.
   const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
@@ -339,6 +342,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverWidgetSize: screensaverWidgetSize.value,
       screensaverBackground: screensaverBackground.value,
       dashboardFont: dashboardFont.value,
+      appScanningEnabled: appScanningEnabled.value,
       // Deep copy for the same structured-clone reason as recentActions above.
       screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value)),
     }
@@ -390,6 +394,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
     if (settings.screensaverBackground !== undefined) screensaverBackground.value = settings.screensaverBackground
     if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
+    if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.screensaverLayout !== undefined) {
       screensaverLayout.value = normalizeScreensaverLayout(settings.screensaverLayout)
     }
@@ -447,6 +452,7 @@ export const useSettingsStore = defineStore('settings', () => {
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
         screensaverBackground: settings.screensaverBackground ?? DEFAULT_BACKGROUND_ID,
         dashboardFont: settings.dashboardFont ?? 'default',
+        appScanningEnabled: settings.appScanningEnabled ?? true,
         screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
       })
     } catch (error) {
@@ -790,6 +796,7 @@ export const useSettingsStore = defineStore('settings', () => {
     screensaverWidgetSize,
     screensaverBackground,
     dashboardFont,
+    appScanningEnabled,
     screensaverLayout,
     showHelpGuide,
     applyTouchModeStyles,

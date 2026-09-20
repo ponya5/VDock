@@ -86,6 +86,10 @@ export function stopAppDetection(): void {
     clearInterval(timer)
     timer = null
   }
+  // Clearing the sets flips every sceneAppIsLive result to false — the dots
+  // disappear the moment scanning is disabled rather than lingering stale.
+  detectedProfiles.value = new Set()
+  runningExes.value = new Set()
 }
 
 /** Profile owning the most command-typed button actions in the scene. */

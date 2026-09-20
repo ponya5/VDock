@@ -56,18 +56,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
-import { startAppDetection, sceneAppIsLive } from '@/services/appDetection'
+import { startAppDetection, stopAppDetection, sceneAppIsLive } from '@/services/appDetection'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
+import { useSettingsStore } from '@/stores/settings'
 
 const appIntegrations = useAppIntegrations()
+const settingsStore = useSettingsStore()
 
-// Poll once per mounted selector — startAppDetection is idempotent.
-onMounted(startAppDetection)
+// Poll only while app scanning is enabled — the setting gates both the
+// 10s detected-profiles scan and the live dots it feeds.
+watch(() => settingsStore.appScanningEnabled,
+  enabled => (enabled ? startAppDetection() : stopAppDetection()),
+  { immediate: true })
 
 interface Props {
   scenes: Scene[]

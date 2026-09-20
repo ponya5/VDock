@@ -19,8 +19,11 @@ describe('scene live-dot component wiring', () => {
     expect(selector).toContain('right: 3px')
   })
 
-  it('starts the shared poller on mount', () => {
-    expect(selector).toContain('onMounted(startAppDetection)')
+  it('starts the shared poller only while app scanning is enabled', () => {
+    expect(selector).toContain('startAppDetection()')
+    expect(selector).toContain('stopAppDetection()')
+    expect(selector).toContain('appScanningEnabled')
+    expect(selector).toContain('immediate: true')
   })
 })
 
@@ -59,8 +62,18 @@ describe('backend detected-profiles endpoint', () => {
 })
 
 describe('sceneAppIsLive behavior', () => {
+  let loadedServices: Array<typeof import('@/services/appDetection')> = []
+
   beforeEach(() => {
     vi.resetModules()
+  })
+
+  // stopAppDetection now clears the detected sets (DL-040), so it must run
+  // after the assertions — not inside loadService — or every check reads
+  // wiped state.
+  afterEach(() => {
+    loadedServices.forEach(m => m.stopAppDetection())
+    loadedServices = []
   })
 
   async function loadService() {
@@ -92,7 +105,7 @@ describe('sceneAppIsLive behavior', () => {
     const mod = await import('@/services/appDetection')
     mod.startAppDetection()
     await new Promise(r => setTimeout(r, 0))
-    mod.stopAppDetection()
+    loadedServices.push(mod)
     return mod
   }
 
