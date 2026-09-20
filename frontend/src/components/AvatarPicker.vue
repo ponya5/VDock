@@ -93,6 +93,7 @@
 import { ref, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Avatar } from '@/assets/avatars'
+import { useNotificationsStore } from '@/stores/notifications'
 import apiClient from '@/api/client'
 
 interface Props {
@@ -106,6 +107,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const notificationsStore = useNotificationsStore()
 const selectedAvatar = ref<Avatar | null>(null)
 const avatars = ref<Avatar[]>([])
 const loading = ref(true)
@@ -170,13 +172,13 @@ async function handleFileUpload(event: Event) {
   
   // Validate file type
   if (!file.type.match(/^image\/(png|jpeg|jpg|gif)$/)) {
-    alert('Please upload a valid image file (PNG, JPG, or GIF)')
+    notificationsStore.error('Invalid file', 'Please upload a valid image file (PNG, JPG, or GIF)')
     return
   }
   
   // Validate file size (5MB)
   if (file.size > 5 * 1024 * 1024) {
-    alert('File size must be less than 5MB')
+    notificationsStore.error('File too large', 'File size must be less than 5MB')
     return
   }
   
@@ -209,11 +211,11 @@ async function handleFileUpload(event: Event) {
       // Auto-select the uploaded avatar
       selectedAvatar.value = uploadedAvatar.value
     } else {
-      alert('Failed to upload avatar: ' + (response.data.error || 'Unknown error'))
+      notificationsStore.error('Upload failed', response.data.error || 'Unknown error')
     }
   } catch (error: any) {
     console.error('Avatar upload error:', error)
-    alert('Failed to upload avatar: ' + (error.message || 'Network error'))
+    notificationsStore.error('Upload failed', error.message || 'Network error')
   }
   
   // Reset file input

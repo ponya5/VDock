@@ -154,6 +154,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useNotificationsStore } from '@/stores/notifications'
 import type { NotificationAction } from '@/stores/notifications'
 import NotificationToast from './NotificationToast.vue'
+import { confirmDialog } from '@/composables/useConfirm'
 
 const notificationsStore = useNotificationsStore()
 const showPanel = ref(false)
@@ -203,10 +204,14 @@ function handleAction(action: NotificationAction, notificationId: string) {
   notificationsStore.dismiss(notificationId)
 }
 
-function handleClearAll() {
-  if (confirm('Are you sure you want to clear all notifications?')) {
-    notificationsStore.dismissAll()
-  }
+async function handleClearAll() {
+  const ok = await confirmDialog({
+    title: 'Clear all notifications?',
+    message: 'Every notification in the list will be dismissed.',
+    confirmLabel: 'Clear All',
+    icon: 'bell-slash',
+  })
+  if (ok) notificationsStore.dismissAll()
 }
 
 function getNotificationIcon(type: string) {

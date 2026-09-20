@@ -12,6 +12,7 @@
     <!-- Toasts render in standalone settings too — the test buttons and
          layout editor live there and must surface results. -->
     <NotificationCenter v-if="showNotifications" />
+    <ConfirmDialog />
     <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
   </div>
 </template>
@@ -26,6 +27,7 @@ import { useActionCatalogStore } from '@/stores/actionCatalog'
 import socketClient from '@/api/socket'
 import apiClient from '@/api/client'
 import NotificationCenter from '@/components/NotificationCenter.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import UserGuideModal from '@/components/UserGuideModal.vue'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'

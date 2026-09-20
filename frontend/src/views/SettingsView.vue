@@ -920,6 +920,7 @@ import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { sendUiCommand } from '@/composables/useUiCommands'
+import { confirmDialog } from '@/composables/useConfirm'
 import { testNewsConnection, parseFeedList, DEFAULT_SPORTS_FEEDS } from '@/services/newsService'
 import { testMarketConnection, parseTickers } from '@/services/marketService'
 import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
@@ -1585,7 +1586,15 @@ function jumpToSearchResult(match: SettingsSearchEntry) {
   settingsSearch.value = ''
 }
 
-function clearRecentActions() { if (confirm('Clear all recent actions?')) settingsStore.clearRecentActions() }
+async function clearRecentActions() {
+  const ok = await confirmDialog({
+    title: 'Clear recent actions?',
+    message: 'The list of recently used actions will be emptied.',
+    confirmLabel: 'Clear',
+    icon: 'clock-rotate-left',
+  })
+  if (ok) settingsStore.clearRecentActions()
+}
 
 async function syncStartOnBootFromSystem() {
   try {
@@ -1679,7 +1688,7 @@ function updateAppScene(appExe: string, sceneId: string) {
 
 async function createSceneForApp(app: RunningApp) {
   const profile = dashboardStore.currentProfile
-  if (!profile) { alert('No profile loaded.'); return }
+  if (!profile) { notificationsStore.error('No profile', 'No profile loaded.'); return }
   const sceneName = app.name.replace('.exe', '')
   try {
     const profiles = await fetchAppProfiles()
@@ -1692,8 +1701,8 @@ async function createSceneForApp(app: RunningApp) {
     }
     dashboardStore.addScene(newScene)
     updateAppScene(app.exe, newScene.id)
-    alert(`Scene "${sceneName}" created with ${buttons.length} shortcut buttons!`)
-  } catch { alert('Failed to create scene') }
+    notificationsStore.success('Scene created', `"${sceneName}" created with ${buttons.length} shortcut buttons`)
+  } catch { notificationsStore.error('Create failed', 'Failed to create scene') }
 }
 
 function createButtonFromShortcut(shortcut: AppShortcut, index: number): Button {
@@ -1710,11 +1719,11 @@ function openShortcutManager(app: RunningApp) { selectedAppForShortcuts.value = 
 
 function handleAddShortcut(shortcut: AppShortcut) {
   const sceneId = getAppScene(selectedAppForShortcuts.value?.exe || '')
-  if (!sceneId) { alert('Please create a scene first'); return }
+  if (!sceneId) { notificationsStore.error('No scene', 'Please create a scene first'); return }
   const profile = dashboardStore.currentProfile
   if (!profile) return
   const scene = profile.scenes.find(s => s.id === sceneId)
-  if (!scene?.pages?.length) { alert('Scene not found'); return }
+  if (!scene?.pages?.length) { notificationsStore.error('Scene missing', 'Scene not found'); return }
   const page = scene.pages[0]
   const buttons = page.buttons || []
   let emptySlot = null
@@ -1723,12 +1732,12 @@ function handleAddShortcut(shortcut: AppShortcut) {
       if (!buttons.some(b => b.position.row === row && b.position.col === col)) emptySlot = { row, col }
     }
   }
-  if (!emptySlot) { alert('No empty slots available in the scene'); return }
+  if (!emptySlot) { notificationsStore.error('Scene full', 'No empty slots available in the scene'); return }
   const newButton = createButtonFromShortcut(shortcut, 0)
   newButton.position = emptySlot
   dashboardStore.addButton(newButton)
   showShortcutManager.value = false
-  alert(`Added "${shortcut.name}" to scene!`)
+  notificationsStore.success('Shortcut added', `"${shortcut.name}" added to scene`)
 }
 
 function saveAppIntegrations() {
@@ -1752,13 +1761,13 @@ async function toggleAutoSwitching() {
       autoSceneSwitcher.initialize(appIntegrations.value)
       const success = await autoSceneSwitcher.enable()
       if (success) { autoSwitchingEnabled.value = true; localStorage.setItem('autoSceneSwitching', 'true') }
-      else alert('Failed to enable auto scene switching')
+      else notificationsStore.error('Auto-switching', 'Failed to enable auto scene switching')
     } else {
       const success = await autoSceneSwitcher.disable()
       if (success) { autoSwitchingEnabled.value = false; localStorage.setItem('autoSceneSwitching', 'false') }
-      else alert('Failed to disable auto scene switching')
+      else notificationsStore.error('Auto-switching', 'Failed to disable auto scene switching')
     }
-  } catch { alert('Error toggling auto scene switching') }
+  } catch { notificationsStore.error('Auto-switching', 'Error toggling auto scene switching') }
 }
 
 function applySettingsRouteQuery() {
