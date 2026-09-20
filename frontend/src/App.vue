@@ -46,6 +46,17 @@ const actionCatalogStore = useActionCatalogStore()
 
 const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
 
+// Proportional UI scale: the layout is designed for a 1024x600 panel. On
+// bigger windows (a desktop browser running Settings standalone, a larger
+// screen) everything grows by this factor; on the 7" panel it is exactly 1.
+const BASE_W = 1024
+const BASE_H = 600
+function updateUiZoom() {
+  const z = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H)
+  const clamped = Math.min(Math.max(z, 1), 1.9)
+  document.documentElement.style.setProperty('--ui-zoom', String(Math.round(clamped * 20) / 20))
+}
+
 watch(isStandaloneSettings, (standalone) => {
   document.title = standalone ? 'VDock Settings' : 'VDock - Virtual Stream Deck'
 }, { immediate: true })
@@ -57,6 +68,8 @@ let stopLiveSettingsSync: (() => void) | undefined
 
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
+  updateUiZoom()
+  window.addEventListener('resize', updateUiZoom)
 
   apiClient.setNotificationsStore(notificationsStore)
 
@@ -112,6 +125,7 @@ function handleBeforeUnload() {
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('resize', updateUiZoom)
   stopLiveSettingsSync?.()
 })
 </script>

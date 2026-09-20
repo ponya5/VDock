@@ -2343,7 +2343,12 @@ onMounted(async () => {
 .settings-view {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* Scales the whole settings UI proportionally on screens larger than the
+     1024x600 design base (App.vue computes --ui-zoom). zoom multiplies
+     viewport units too, so divide them back out to keep the fill exact. */
+  zoom: var(--ui-zoom, 1);
+  height: calc(100vh / var(--ui-zoom, 1));
+  width: calc(100vw / var(--ui-zoom, 1));
   overflow: hidden;
   background: #0f1726;
   color: var(--color-text);
