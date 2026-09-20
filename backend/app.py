@@ -25,7 +25,7 @@ from routes.auth import auth_bp
 from routes.profiles import profiles_bp
 from routes.actions import actions_bp
 from routes.config import config_bp
-from routes.upload import upload_bp
+from routes.upload import upload_bp, serve_uploaded_file
 from routes.assets import assets_bp
 from routes.system_metrics import system_metrics_bp
 from routes.app_monitor import app_monitor_bp
@@ -129,6 +129,16 @@ limiter.exempt(config_bp)
 # Frontend error/event posts can burst during a failure — exempt so logging
 # can't burn the daily quota and take down the data widgets again (DL-023).
 limiter.exempt(logs_bp)
+# Uploaded files are served through upload_bp — every <img> on the dashboard
+# (avatars, backgrounds, button icons) plus picker thumbnail grids count as
+# requests. Keep the upload POST write path limited, exempt the GET view and
+# the remaining local-read blueprints (asset catalogs, autostart/ports,
+# templates, app-profiles) so browsing settings can't drain the quota.
+limiter.exempt(serve_uploaded_file)
+limiter.exempt(assets_bp)
+limiter.exempt(system_bp)
+limiter.exempt(templates_bp)
+limiter.exempt(app_profiles_bp)
 
 
 # ============================================================================
