@@ -37,6 +37,7 @@ from routes.market import market_bp
 from routes.user_settings import user_settings_bp
 from routes.app_profiles import app_profiles_bp
 from routes.logs import logs_bp
+from routes.agent_events import agent_events_bp, set_emitter as set_agent_events_emitter
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -92,6 +93,8 @@ job_runner.set_emitter(lambda event, payload: socketio.emit(event, payload))
 # Threads the Socket.IO server did not spawn cannot emit to clients in
 # threading mode -- their emits are dropped silently.
 job_runner.set_spawner(socketio.start_background_task)
+# Agent attention events (Claude Code hook POSTs) reach every client.
+set_agent_events_emitter(lambda event, payload: socketio.emit(event, payload))
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -110,6 +113,7 @@ app.register_blueprint(market_bp)
 app.register_blueprint(user_settings_bp)
 app.register_blueprint(app_profiles_bp)
 app.register_blueprint(logs_bp)
+app.register_blueprint(agent_events_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
@@ -139,6 +143,9 @@ limiter.exempt(assets_bp)
 limiter.exempt(system_bp)
 limiter.exempt(templates_bp)
 limiter.exempt(app_profiles_bp)
+# Agent hooks are localhost-only local calls — a 429 must never swallow an
+# "agent is waiting" alert.
+limiter.exempt(agent_events_bp)
 
 
 # ============================================================================

@@ -15,6 +15,7 @@
     <NotificationCenter v-if="showNotifications" />
     <ConfirmDialog />
     <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
+    <AgentAlertOverlay />
   </div>
 </template>
 
@@ -31,6 +32,8 @@ import NotificationCenter from '@/components/NotificationCenter.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import UserGuideModal from '@/components/UserGuideModal.vue'
+import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
+import { useAgentAlerts } from '@/services/agentAlerts'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import type { AppIntegration } from '@/types'
@@ -65,6 +68,7 @@ onMounted(async () => {
   await actionCatalogStore.load()
 
   socketClient.connect()
+  useAgentAlerts().init()
   stopLiveSettingsSync = settingsStore.initLiveSync()
 
   // Show welcome notification for first time users

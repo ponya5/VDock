@@ -973,6 +973,36 @@
 
           <section class="settings-section card" style="margin-top:var(--spacing-lg)">
             <div class="section-header">
+              <h2>Agent Attention Alerts</h2>
+              <span v-if="agentHookStatus" class="hook-status" :class="{ installed: agentHookInstalled }">
+                <FontAwesomeIcon :icon="['fas', agentHookInstalled ? 'check-circle' : 'circle-xmark']" />
+                {{ agentHookInstalled ? 'Claude hook installed' : 'Hook not installed' }}
+              </span>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <label class="toggle-row-label">Alert me when an agent waits</label>
+                <p class="form-help">Pops a banner — over the dashboard and the screensaver — when Claude Code needs input or finishes.</p>
+              </div>
+              <label class="toggle-switch-inline">
+                <input type="checkbox" :checked="settingsStore.agentAlertsEnabled" @change="toggleAgentAlerts" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="agent-hook-row">
+              <button class="btn btn-secondary" @click="installAgentHook" :disabled="installingHook">
+                <FontAwesomeIcon :icon="['fas', installingHook ? 'spinner' : 'plug']" :spin="installingHook" />
+                {{ agentHookInstalled ? 'Reinstall Claude Code hook' : 'Install Claude Code hook' }}
+              </button>
+              <p class="form-help">
+                Adds a Notification/Stop hook to <code>~/.claude/settings.json</code>. Other agents can POST
+                <code>/api/agent-events</code> with <code>{source, event: "waiting"|"clear"}</code>.
+              </p>
+            </div>
+          </section>
+
+          <section class="settings-section card" style="margin-top:var(--spacing-lg)">
+            <div class="section-header">
               <h2>Running Applications</h2>
               <button v-if="settingsStore.appScanningEnabled" class="btn btn-sm btn-primary" @click="refreshRunningApps">
                 <FontAwesomeIcon :icon="['fas', 'sync']" :spin="loadingApps" /> Refresh
@@ -2079,6 +2109,46 @@ function toggleAppScanning() {
   else runningApps.value = []
 }
 
+// --- Agent attention alerts -------------------------------------------------
+const agentHookInstalled = ref(false)
+const agentHookStatus = ref(false) // whether we've asked the backend yet
+const installingHook = ref(false)
+
+function toggleAgentAlerts() {
+  settingsStore.agentAlertsEnabled = !settingsStore.agentAlertsEnabled
+}
+
+async function fetchAgentHookStatus() {
+  try {
+    const res = await apiClient.get('/agent-events/hook-status')
+    agentHookInstalled.value = !!res.data?.installed
+    agentHookStatus.value = true
+  } catch {
+    agentHookStatus.value = false
+  }
+}
+
+async function installAgentHook() {
+  installingHook.value = true
+  try {
+    const res = await apiClient.post('/agent-events/install-hook')
+    if (res.data?.success) {
+      agentHookInstalled.value = true
+      agentHookStatus.value = true
+      notificationsStore.success(
+        'Agent alerts enabled',
+        'Claude Code will pop an alert when it waits for you.'
+      )
+    } else {
+      notificationsStore.error('Hook install failed', res.data?.error || 'Unknown error')
+    }
+  } catch (e: any) {
+    notificationsStore.error('Hook install failed', e?.response?.data?.error || 'Backend unreachable')
+  } finally {
+    installingHook.value = false
+  }
+}
+
 async function refreshRunningApps() {
   if (!settingsStore.appScanningEnabled) {
     runningApps.value = []
@@ -2249,6 +2319,7 @@ async function ensureProfileLoaded() {
 watch(activeTab, (tab) => {
   if (tab === 'integration') {
     void refreshRunningApps()
+    void fetchAgentHookStatus()
   }
   if (tab === 'logs') {
     void loadLogs()
@@ -2262,7 +2333,7 @@ onMounted(async () => {
   settingsStore.loadServerConfig()
   loadPorts()
   loadAppIntegrations()
-  if (activeTab.value === 'integration') await refreshRunningApps()
+  if (activeTab.value === 'integration') { await refreshRunningApps(); void fetchAgentHookStatus() }
   if (activeTab.value === 'logs') void loadLogs()
 })
 </script>
@@ -3361,6 +3432,29 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-md);
+}
+
+.hook-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.hook-status.installed { color: #4ade80; }
+
+.agent-hook-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+.agent-hook-row .form-help { flex: 1; min-width: 220px; margin: 0; }
+.agent-hook-row code {
+  background: rgba(255,255,255,0.08);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 0.75rem;
 }
 
 .section-header h2 { margin: 0; border-bottom: none; padding-bottom: 0; }
