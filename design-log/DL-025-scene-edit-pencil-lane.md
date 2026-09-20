@@ -49,3 +49,24 @@ edges and covered the truncated labels. The ~55px touch-scaled badge on a
 - Active pill widened 96→154px; label readable
 - Header height unchanged; no layout shift of the grid
 - vue-tsc clean; 49 files / 176 tests pass; build succeeds
+
+## Post-release fix — delete button dead (ConfirmDialog teleport crash)
+
+**Symptom:** after DL-024 shipped, tapping a button's red minus did nothing —
+no prompt, no deletion.
+
+**Root cause:** `ConfirmDialog.vue`'s root vnode was `<Teleport
+to=".theme-dark">` — teleporting into its *own ancestor*. On `pending` going
+non-null, Vue's `getNextHostNode` walked a null `nextSibling` during the
+fragment patch and threw; the overlay never mounted and the confirm promise
+never resolved, so `await confirmDialog(...)` hung forever → delete silently
+dead. (It rendered once in dev, but HMR/patch paths crash reliably.)
+
+**Fix:** Teleport to `body` instead, and carry the `theme-dark` class on the
+overlay div itself — `.theme-dark` only defines CSS custom properties, so
+the class on the overlay gives the dialog the same themed vars with no
+ancestor-teleport involved. (TouchModeSelector's `.theme-dark` teleport is
+safe because there the Teleport is a *child*, not the component root.)
+
+Verified live at 1024×600: badge click → themed dialog renders at body
+level; Delete resolves `true`; Cancel resolves `false` without deleting.

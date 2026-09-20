@@ -1,9 +1,12 @@
 <template>
-  <!-- Teleport to .theme-dark, not <body>: the theme class (and all themed
-       CSS vars) live on App.vue's root, so body-level teleports render with
-       unstyled light :root defaults. Same pattern as TouchModeSelector. -->
-  <Teleport to=".theme-dark">
-    <div v-if="request" class="modal-overlay confirm-overlay" @click.self="cancel">
+  <!-- Teleport to <body> — NOT .theme-dark: a component whose root vnode is a
+       Teleport into its own ancestor breaks Vue's host-anchor tracking on
+       update (getNextHostNode crash → the dialog silently never renders and
+       the confirm promise never resolves). Since .theme-dark only defines CSS
+       variables, carrying the class on the overlay itself gives the dialog
+       the same themed vars without the ancestor-teleport bug. -->
+  <Teleport to="body">
+    <div v-if="request" class="modal-overlay confirm-overlay theme-dark" @click.self="cancel">
       <div class="modal confirm-dialog" role="alertdialog" aria-modal="true">
         <div class="confirm-icon" :class="{ danger: request.danger }">
           <FontAwesomeIcon :icon="['fas', request.icon]" />
