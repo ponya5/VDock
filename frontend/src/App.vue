@@ -9,7 +9,9 @@
   >
     <BackgroundRenderer v-if="!isStandaloneSettings" />
     <router-view />
-    <NotificationCenter v-if="showNotifications && !isStandaloneSettings" />
+    <!-- Toasts render in standalone settings too — the test buttons and
+         layout editor live there and must surface results. -->
+    <NotificationCenter v-if="showNotifications" />
     <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
   </div>
 </template>

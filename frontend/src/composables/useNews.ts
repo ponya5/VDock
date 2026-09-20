@@ -22,7 +22,7 @@ export const NEWS_WINDOW_SIZE = 4
 /** Rotation pauses this long after any touch so a tap hits what you saw. */
 const TOUCH_PAUSE_MS = 20 * 1000
 
-export function useNews(feedsSource?: () => string[]) {
+export function useNews(feedsSource?: () => string[], label = 'News') {
   const settingsStore = useSettingsStore()
 
   const headlines = ref<NewsHeadline[]>([])
@@ -78,9 +78,9 @@ export function useNews(feedsSource?: () => string[]) {
       headlines.value = result
       // Keep the pointer valid when the list shrinks.
       if (index.value >= result.length) index.value = 0
-      if (!result.length) error.value = 'No headlines available'
+      if (!result.length) error.value = `No ${label.toLowerCase()} headlines available`
     } catch (err) {
-      error.value = 'News unavailable'
+      error.value = `${label} unavailable`
       console.error('News fetch failed:', err)
     } finally {
       loading.value = false

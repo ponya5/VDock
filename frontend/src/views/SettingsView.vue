@@ -355,7 +355,7 @@
                       <FontAwesomeIcon :icon="['fas', 'up-down-left-right']" /> Customize Layout
                     </button>
                   </div>
-                  <p class="form-help">Test shows the screensaver on the deck window, even when the delay above is off. Customize Layout opens a live editor — drag widgets to move them, drag the corner dot to resize, then Save.</p>
+                  <p class="form-help">Test shows the screensaver, even when the delay above is off. Customize Layout opens a live editor right here — drag widgets to move them, drag the corner dot to resize, then Save.</p>
                 </section>
 
                 <section class="settings-section card">
@@ -492,6 +492,10 @@
                   <button class="btn btn-secondary" :disabled="testingNews" @click="handleTestNews">
                     <FontAwesomeIcon :icon="['fas', testingNews ? 'spinner' : 'plug']" :spin="testingNews" /> Test Feeds
                   </button>
+                  <p v-if="newsTestResult" class="test-result" :class="{ ok: newsTestResult.ok }">
+                    <FontAwesomeIcon :icon="['fas', newsTestResult.ok ? 'circle-check' : 'circle-exclamation']" />
+                    {{ newsTestResult.text }}
+                  </p>
                 </section>
 
                 <section v-if="settingsStore.screensaverWidgets.includes('sports')" class="settings-section card">
@@ -514,6 +518,10 @@
                   <button class="btn btn-secondary" :disabled="testingSports" @click="handleTestSports">
                     <FontAwesomeIcon :icon="['fas', testingSports ? 'spinner' : 'plug']" :spin="testingSports" /> Test Feeds
                   </button>
+                  <p v-if="sportsTestResult" class="test-result" :class="{ ok: sportsTestResult.ok }">
+                    <FontAwesomeIcon :icon="['fas', sportsTestResult.ok ? 'circle-check' : 'circle-exclamation']" />
+                    {{ sportsTestResult.text }}
+                  </p>
                 </section>
 
                 <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
@@ -536,6 +544,10 @@
                   <button class="btn btn-secondary" :disabled="testingMarket" @click="handleTestMarket">
                     <FontAwesomeIcon :icon="['fas', testingMarket ? 'spinner' : 'plug']" :spin="testingMarket" /> Test Connection
                   </button>
+                  <p v-if="marketTestResult" class="test-result" :class="{ ok: marketTestResult.ok }">
+                    <FontAwesomeIcon :icon="['fas', marketTestResult.ok ? 'circle-check' : 'circle-exclamation']" />
+                    {{ marketTestResult.text }}
+                  </p>
                 </section>
 
                 <section v-if="settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
@@ -1366,44 +1378,65 @@ function toggleScreensaverWidget(id: string) {
   else settingsStore.screensaverWidgets = list.filter(w => w !== id)
 }
 
+type TestResult = { ok: boolean; text: string }
 const testingNews = ref(false)
 const testingSports = ref(false)
-async function testFeeds(feeds: string[], testing: typeof testingNews) {
+const newsTestResult = ref<TestResult | null>(null)
+const sportsTestResult = ref<TestResult | null>(null)
+const marketTestResult = ref<TestResult | null>(null)
+
+// Inline result next to the button plus a toast — toasts auto-dismiss, so
+// the inline line is what persists as the visible answer.
+function describeTestError(err: any, fallback: string): string {
+  const status = err?.response?.status
+  if (status === 429) return 'Server rate limit reached — wait a moment and retry.'
+  if (!err?.response) return 'Server unreachable — is the backend running?'
+  return err?.message || fallback
+}
+
+async function testFeeds(feeds: string[], testing: typeof testingNews, result: typeof newsTestResult) {
   testing.value = true
+  result.value = null
   try {
     const count = await testNewsConnection(feeds)
+    const text = `${count} headlines fetched`
+    result.value = { ok: true, text }
     notificationsStore.success(
       'Feeds working',
       `Fetched ${count} headlines from ${feeds.length || 'the built-in'} ${feeds.length === 1 ? 'feed' : 'feeds'}.`
     )
   } catch (err: any) {
-    notificationsStore.error('Feed test failed', err?.message || 'Could not read those feeds.')
+    const text = describeTestError(err, 'Could not read those feeds.')
+    result.value = { ok: false, text }
+    notificationsStore.error('Feed test failed', text)
   } finally {
     testing.value = false
   }
 }
 async function handleTestNews() {
-  await testFeeds(parseFeedList(settingsStore.newsFeeds), testingNews)
+  await testFeeds(parseFeedList(settingsStore.newsFeeds), testingNews, newsTestResult)
 }
 async function handleTestSports() {
   const feeds = parseFeedList(settingsStore.sportsFeeds)
-  await testFeeds(feeds.length ? feeds : DEFAULT_SPORTS_FEEDS, testingSports)
+  await testFeeds(feeds.length ? feeds : DEFAULT_SPORTS_FEEDS, testingSports, sportsTestResult)
 }
 
 const testingMarket = ref(false)
 async function handleTestMarket() {
   testingMarket.value = true
+  marketTestResult.value = null
   try {
     const tickers = parseTickers(settingsStore.marketTickers)
     await testMarketConnection(tickers)
-    notificationsStore.success(
-      'Market data connected',
-      tickers.length
-        ? `Fetched quotes for ${tickers.join(', ')}.`
-        : 'Successfully fetched crypto prices from CoinGecko.'
-    )
+    const text = tickers.length
+      ? `Quotes fetched for ${tickers.join(', ')}`
+      : 'Crypto prices fetched from CoinGecko'
+    marketTestResult.value = { ok: true, text }
+    notificationsStore.success('Market data connected', text + '.')
   } catch (err: any) {
-    notificationsStore.error('Market connection failed', err?.message || 'Could not reach the price API.')
+    const text = describeTestError(err, 'Could not reach the price API.')
+    marketTestResult.value = { ok: false, text }
+    notificationsStore.error('Market connection failed', text)
   } finally {
     testingMarket.value = false
   }
@@ -2427,6 +2460,28 @@ onMounted(async () => {
 }
 
 .status-icon.success { color: var(--color-success, #27ae60); }
+
+/* Inline result under the feed/market Test buttons — persists until the next
+   test run, so the answer can't be missed like an auto-dismissing toast. */
+.test-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--spacing-sm) 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-danger, #e74c3c);
+  background: color-mix(in srgb, var(--color-danger, #e74c3c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #e74c3c) 35%, transparent);
+}
+
+.test-result.ok {
+  color: var(--color-success, #27ae60);
+  background: color-mix(in srgb, var(--color-success, #27ae60) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #27ae60) 35%, transparent);
+}
 
 /* ── App Integration List ── */
 .app-integration-list {
