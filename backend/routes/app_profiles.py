@@ -7,11 +7,13 @@ once already.
 from flask import Blueprint, jsonify
 
 from integrations import keymaps
+from auth import require_auth
 
 app_profiles_bp = Blueprint('app_profiles', __name__)
 
 
 @app_profiles_bp.route('/api/app-profiles', methods=['GET'])
+@require_auth
 def get_app_profiles():
     """Every known application, its commands, and its default deck layout."""
     return jsonify({

@@ -4,11 +4,14 @@ Handles serving and managing assets (icons, animations, backgrounds)
 """
 
 from flask import Blueprint, jsonify, request, send_from_directory, current_app
+from werkzeug.utils import secure_filename
 import os
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import mimetypes
+
+from auth import require_auth
 
 # Create blueprint
 assets_bp = Blueprint('assets', __name__, url_prefix='/api/assets')
@@ -96,6 +99,7 @@ def scan_directory_assets(directory: Path, asset_type: str) -> List[Dict]:
     return assets
 
 @assets_bp.route('/metadata')
+@require_auth
 def get_metadata():
     """Get master asset metadata"""
     metadata_path = FRONTEND_ASSETS_DIR / 'metadata.json'
@@ -107,6 +111,7 @@ def get_metadata():
         return jsonify({'error': 'Metadata not found'}), 404
 
 @assets_bp.route('/categories')
+@require_auth
 def get_categories():
     """Get all asset categories"""
     categories = []
@@ -161,6 +166,7 @@ def get_categories():
     return jsonify(categories)
 
 @assets_bp.route('/icons')
+@require_auth
 def get_icons():
     """Get all icon assets"""
     category = request.args.get('category')
@@ -222,6 +228,7 @@ def get_icons():
     return jsonify(icons)
 
 @assets_bp.route('/backgrounds')
+@require_auth
 def get_backgrounds():
     """Get all background assets"""
     category = request.args.get('category')
@@ -279,6 +286,7 @@ def get_backgrounds():
     return jsonify(backgrounds)
 
 @assets_bp.route('/animations')
+@require_auth
 def get_animations():
     """Get all animation assets"""
     category = request.args.get('category')
@@ -306,6 +314,7 @@ def get_animations():
     return jsonify(animations)
 
 @assets_bp.route('/search')
+@require_auth
 def search_assets():
     """Search across all asset types"""
     query = request.args.get('q', '').lower()
@@ -367,6 +376,7 @@ def search_assets():
     return jsonify(results)
 
 @assets_bp.route('/file/<path:filename>')
+@require_auth
 def serve_asset_file(filename):
     """Serve asset files"""
     try:
@@ -394,52 +404,66 @@ def serve_asset_file(filename):
         return jsonify({'error': 'Internal server error'}), 500
 
 @assets_bp.route('/upload', methods=['POST'])
+@require_auth
 def upload_asset():
     """Upload a new asset file"""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file = request.files['file']
     asset_type = request.form.get('type', 'icons')
     category = request.form.get('category', 'custom')
-    
+
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
-    
-    # Validate file type
+
+    # Validate file type — the whitelist doubles as the asset_type allowlist.
     allowed_extensions = {
         'icons': ['.svg', '.png', '.jpg', '.jpeg', '.webp'],
         'animations': ['.gif', '.webm', '.mp4'],
         'backgrounds': ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm']
     }
-    
+
+    if asset_type not in allowed_extensions:
+        return jsonify({'error': 'Invalid asset type'}), 400
+
     file_ext = Path(file.filename).suffix.lower()
-    if file_ext not in allowed_extensions.get(asset_type, []):
+    if file_ext not in allowed_extensions[asset_type]:
         return jsonify({'error': f'Invalid file type for {asset_type}'}), 400
-    
+
+    # Sanitize every path component — category/filename are user input and
+    # '../' sequences would otherwise write outside the assets tree.
+    safe_category = secure_filename(category) or 'custom'
+    safe_filename = secure_filename(file.filename)
+    if not safe_filename:
+        return jsonify({'error': 'Invalid filename'}), 400
+
     try:
         # Create upload directory
-        upload_dir = get_asset_path(asset_type, category)
+        upload_dir = (get_asset_path(asset_type, safe_category)).resolve()
+        assets_root = FRONTEND_ASSETS_DIR.resolve()
+        file_path = (upload_dir / safe_filename).resolve()
+
+        if not file_path.is_relative_to(assets_root):
+            return jsonify({'error': 'Invalid file path'}), 400
+
         upload_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save file
-        file_path = upload_dir / file.filename
         file.save(str(file_path))
         
         # Generate asset metadata
         stat = file_path.stat()
-        relative_path = file_path.relative_to(FRONTEND_ASSETS_DIR)
-        
+        relative_path = file_path.relative_to(assets_root)
+
         asset = {
             'id': str(relative_path).replace('\\', '/').replace('/', '_'),
             'name': file_path.stem.replace('_', ' ').replace('-', ' ').title(),
-            'category': category,
+            'category': safe_category,
             'type': asset_type.rstrip('s'),
             'format': file_ext.lstrip('.'),
             'size': stat.st_size,
             'url': f'/assets/{relative_path}'.replace('\\', '/'),
-            'filename': file.filename,
-            'tags': [category, file_path.stem.lower()],
+            'filename': safe_filename,
+            'tags': [safe_category, file_path.stem.lower()],
             'uploaded_at': stat.st_ctime
         }
         
@@ -453,6 +477,7 @@ def upload_asset():
         return jsonify({'error': 'Upload failed'}), 500
 
 @assets_bp.route('/stats')
+@require_auth
 def get_asset_stats():
     """Get asset repository statistics"""
     stats = {

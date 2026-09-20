@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from flask import Blueprint, jsonify, request
 from typing import Dict, Any, List, Optional
+from auth import require_auth
 
 templates_bp = Blueprint('templates', __name__)
 
@@ -60,6 +61,7 @@ def load_all_templates() -> List[Dict[str, Any]]:
 
 
 @templates_bp.route('/list', methods=['GET'])
+@require_auth
 def list_templates():
     """List all available templates."""
     try:
@@ -101,6 +103,7 @@ def list_templates():
 
 
 @templates_bp.route('/<template_id>', methods=['GET'])
+@require_auth
 def get_template(template_id: str):
     """Get a specific template by ID."""
     try:
@@ -124,6 +127,7 @@ def get_template(template_id: str):
 
 
 @templates_bp.route('/<template_id>/apply', methods=['POST'])
+@require_auth
 def apply_template(template_id: str):
     """Apply a template to create a new scene."""
     try:
@@ -190,6 +194,7 @@ def apply_template(template_id: str):
 
 
 @templates_bp.route('/export', methods=['POST'])
+@require_auth
 def export_scene_as_template():
     """Export a scene as a template."""
     try:
@@ -239,6 +244,7 @@ def export_scene_as_template():
 
 
 @templates_bp.route('/<template_id>', methods=['DELETE'])
+@require_auth
 def delete_template(template_id: str):
     """Delete a custom template."""
     try:
@@ -283,6 +289,7 @@ def delete_template(template_id: str):
 
 
 @templates_bp.route('/categories', methods=['GET'])
+@require_auth
 def get_categories():
     """Get all template categories."""
     return jsonify({

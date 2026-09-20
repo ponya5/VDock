@@ -6,6 +6,7 @@ from typing import Any, Dict
 from flask import Blueprint, jsonify, request
 
 from config import Config
+from auth import require_auth
 
 user_settings_bp = Blueprint('user_settings', __name__)
 
@@ -90,6 +91,7 @@ def _sanitize_user_settings(raw_settings: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @user_settings_bp.route('/api/user-settings', methods=['GET'])
+@require_auth
 def get_user_settings():
     """Return persisted UI settings for the local VDock install."""
     settings = _load_user_settings_file()
@@ -97,6 +99,7 @@ def get_user_settings():
 
 
 @user_settings_bp.route('/api/user-settings', methods=['PUT'])
+@require_auth
 def update_user_settings():
     """Persist UI settings to disk."""
     payload = request.get_json(silent=True) or {}

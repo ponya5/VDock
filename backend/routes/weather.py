@@ -4,6 +4,7 @@ Weather API routes
 from flask import Blueprint, jsonify, request
 from actions.weather_action import WeatherAction
 import logging
+from auth import require_auth
 
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ weather_bp = Blueprint('weather', __name__)
 
 
 @weather_bp.route('/weather', methods=['GET'])
+@require_auth
 def get_weather():
     """Get weather data"""
     try:
