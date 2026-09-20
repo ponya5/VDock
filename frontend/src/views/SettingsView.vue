@@ -75,8 +75,20 @@
           </div>
 
           <div class="appearance-main">
+              <div v-if="appearanceSubTab === 'buttons'" class="sub-tab-bar">
+                <button :class="['sub-tab-btn', { active: buttonsSubTab === 'display' }]" @click="buttonsSubTab = 'display'">
+                  <FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display
+                </button>
+                <button :class="['sub-tab-btn', { active: buttonsSubTab === 'preview' }]" @click="buttonsSubTab = 'preview'">
+                  <FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview
+                </button>
+                <button :class="['sub-tab-btn', { active: buttonsSubTab === 'touch' }]" @click="buttonsSubTab = 'touch'">
+                  <FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode
+                </button>
+              </div>
+
               <div v-if="appearanceSubTab === 'buttons'" class="settings-grid settings-grid-masonry">
-                <section class="settings-section card">
+                <section v-if="buttonsSubTab === 'display'" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display</h2>
                   <div class="form-group">
                     <div class="form-group-header">
@@ -145,9 +157,15 @@
                       <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
                     </div>
                   </div>
+                  <div class="form-group" style="margin-top: var(--spacing-md)">
+                    <button class="btn btn-primary" @click="saveAndApplyButtonSettings">
+                      <FontAwesomeIcon :icon="['fas', 'floppy-disk']" />
+                      Save &amp; Apply
+                    </button>
+                  </div>
                 </section>
 
-                <section class="settings-section card preview-card">
+                <section v-if="buttonsSubTab === 'preview'" class="settings-section card preview-card">
                   <h2><FontAwesomeIcon :icon="['fas', 'eye']" /> Live Preview</h2>
                   <div class="button-preview-stage" :class="previewBackgroundClass" :style="previewBackgroundStyle">
                     <DeckButton
@@ -218,12 +236,18 @@
                   </div>
                 </section>
 
-                <section class="settings-section card">
+                <section v-if="buttonsSubTab === 'touch'" class="settings-section card">
                   <div class="form-group-header">
                     <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
                     <SettingResetButton label="Touch Mode" :at-default="settings.touchMode === SETTINGS_DEFAULTS.touchMode" @reset="settings.touchMode = SETTINGS_DEFAULTS.touchMode" />
                   </div>
                   <TouchModeSelector />
+                  <div class="form-group" style="margin-top: var(--spacing-md)">
+                    <button class="btn btn-primary" @click="saveAndApplyButtonSettings">
+                      <FontAwesomeIcon :icon="['fas', 'floppy-disk']" />
+                      Save &amp; Apply
+                    </button>
+                  </div>
                 </section>
               </div>
 
@@ -1209,6 +1233,7 @@ const toastLevelOptions = [
 const activeTab = ref('appearance')
 const appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')
 const screensaverSubTab = ref<'widgets' | 'settings' | 'backgrounds'>('widgets')
+const buttonsSubTab = ref<'display' | 'preview' | 'touch'>('display')
 
 // Dashboard font picker — samples render in the real font so the card can't
 // drift from what the dashboard will show.
@@ -1480,6 +1505,15 @@ const removeScreensaverBackground = () => {
 }
 
 const applyingButtonBehaviour = ref(false)
+
+// Settings autosave via the store's deep watch — this explicit action makes
+// the apply visible and covers Settings open in a second window, where the
+// dashboard wouldn't see the change until manually refreshed.
+function saveAndApplyButtonSettings() {
+  settingsStore.saveSettings()
+  requestVdockRefresh()
+  notificationsStore.success('Applied', 'Button settings saved and applied to the dashboard.')
+}
 
 async function applyButtonBehaviourToAll() {
   applyingButtonBehaviour.value = true
@@ -1819,18 +1853,20 @@ interface SettingsSearchEntry {
   keywords: string
   tabId: string
   subTab?: 'buttons' | 'layout' | 'background' | 'screensaver'
+  /** Nested tab inside 'buttons' (DL-035) or 'screensaver' (DL-032). */
+  deepTab?: 'display' | 'preview' | 'touch' | 'widgets' | 'settings' | 'backgrounds'
   icon: [string, string]
 }
 
 const settingsSearchIndex: SettingsSearchEntry[] = [
-  { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'hand-pointer'] },
-  { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'th-large'] },
-  { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all', tabId: 'appearance', subTab: 'buttons', icon: ['fas', 'sliders'] },
+  { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'buttons', deepTab: 'touch', icon: ['fas', 'hand-pointer'] },
+  { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'buttons', deepTab: 'display', icon: ['fas', 'th-large'] },
+  { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all', tabId: 'appearance', subTab: 'buttons', deepTab: 'preview', icon: ['fas', 'sliders'] },
   { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'bell'] },
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
-  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'moon'] },
-  { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'grip'] },
-  { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'cloud-sun'] },
+  { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', deepTab: 'settings', icon: ['fas', 'moon'] },
+  { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'grip'] },
+  { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Background', keywords: 'background animation particles waves aurora image wallpaper gradient', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', tabId: 'logs', icon: ['fas', 'file-lines'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
@@ -1856,6 +1892,13 @@ const searchMatches = computed(() => {
 function jumpToSearchResult(match: SettingsSearchEntry) {
   activeTab.value = match.tabId
   if (match.subTab) appearanceSubTab.value = match.subTab
+  if (match.deepTab) {
+    if (match.subTab === 'buttons') {
+      buttonsSubTab.value = match.deepTab as typeof buttonsSubTab.value
+    } else if (match.subTab === 'screensaver') {
+      screensaverSubTab.value = match.deepTab as typeof screensaverSubTab.value
+    }
+  }
   settingsSearch.value = ''
 }
 
