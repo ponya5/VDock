@@ -20,6 +20,14 @@
       >
         <FontAwesomeIcon v-if="scene.icon" :icon="parseIcon(scene.icon)" class="segment-icon" />
         <span class="segment-label">{{ scene.name }}</span>
+        <!-- Green dot when the scene's app is actually running — so a Claude
+             scene pill means "buttons will reach a live session", not just
+             "this scene exists". -->
+        <span
+          v-if="sceneAppIsLive(scene, appIntegrations)"
+          class="app-live-dot"
+          :title="`${scene.name}'s app is running`"
+        ></span>
         <!-- Edit pencil on the ACTIVE pill only, parked in a lane reserved by
              its edit-mode padding-right — anchored to the real segment edge,
              never covers the label, and only widens one pill (per-scene
@@ -48,11 +56,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
+import { startAppDetection, sceneAppIsLive } from '@/services/appDetection'
+import { useAppIntegrations } from '@/composables/useAppIntegrations'
+
+const appIntegrations = useAppIntegrations()
+
+// Poll once per mounted selector — startAppDetection is idempotent.
+onMounted(startAppDetection)
 
 interface Props {
   scenes: Scene[]
@@ -294,5 +309,29 @@ watch(() => props.scenes.length, () => {
 @media (max-width: 480px) {
   .segment-icon { display: none; }
   .segment { min-width: 64px; padding: 10px 10px; }
+}
+
+/* DL-033 — green "app is running" dot on the scene pill's top-right corner.
+   pointer-events:none so it never eats the pill's click or the edit badge. */
+.app-live-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #30d158;
+  box-shadow: 0 0 6px 1px rgba(48, 209, 88, 0.55);
+  pointer-events: none;
+  animation: app-live-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes app-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-live-dot { animation: none; }
 }
 </style>

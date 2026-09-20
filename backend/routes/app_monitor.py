@@ -98,6 +98,59 @@ def active_app():
         }), 404
 
 
+@app_monitor_bp.route('/detected-profiles', methods=['GET'])
+@require_auth
+def detected_profiles():
+    """App profiles whose process is currently running.
+
+    Terminal agents (claude-code, devin) claim host exes like cmd.exe — a
+    running terminal is not a running agent — so those are detected via
+    their commands' ``session_marker`` against process names and command
+    lines. Editor apps match on their real exes. ``running_exes`` is
+    included so custom integrations (user maps any exe to a scene) can
+    check membership client-side without a second process scan.
+    """
+    import logging
+    import psutil
+    from integrations.keymaps import ALL_PROFILES
+
+    logger = logging.getLogger('vdock')
+    try:
+        names = set()
+        haystacks = []
+        for proc in psutil.process_iter(['name', 'cmdline']):
+            try:
+                name = (proc.info.get('name') or '').lower()
+                if not name:
+                    continue
+                names.add(name)
+                cmdline = proc.info.get('cmdline')
+                if cmdline:
+                    haystacks.append(' '.join(cmdline).lower())
+            except (psutil.NoSuchProcess, psutil.AccessDenied,
+                    psutil.ZombieProcess):
+                continue
+
+        detected = []
+        for profile in ALL_PROFILES:
+            markers = {c.session_marker for c in profile.commands
+                       if c.session_marker}
+            if profile.kind == 'terminal_agent':
+                if any(m in name for m in markers for name in names) or \
+                   any(m in h for m in markers for h in haystacks):
+                    detected.append(profile.id)
+            elif any(exe.lower() in names for exe in profile.exes):
+                detected.append(profile.id)
+
+        return jsonify({
+            'detected_profiles': detected,
+            'running_exes': sorted(names),
+        })
+    except Exception as e:
+        logger.error('Failed to detect app profiles: %s', e)
+        return jsonify({'error': 'Detection failed'}), 500
+
+
 @app_monitor_bp.route('/running-apps', methods=['GET'])
 @require_auth
 def running_apps():
