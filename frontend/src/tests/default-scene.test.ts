@@ -73,7 +73,7 @@ test('resetScene restores a mutated default scene to the factory layout', () => 
   store.resetScene(defaultScene.id)
 
   const restored = store.currentProfile!.scenes.find((s) => s.id === defaultScene.id)!
-  expect(restored.name).toBe('Home')
+  expect(restored.name).toBe('Media')
   expect(restored.pages[0].buttons).toHaveLength(originalButtonCount)
   expect(restored.isDefault).toBe(true)
   expect(restored.id).toBe(defaultScene.id) // id preserved across reset

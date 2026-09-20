@@ -195,7 +195,7 @@
           </div>
 
           <footer class="main-footer">
-            <p>Still have questions? Check the full <code>docs/</code> folder in the source code or reach out at <a href="mailto:ponya81@gmail.com">ponya81@gmail.com</a>.</p>
+            <p>Still have questions? Check the full <code>docs/</code> folder in the source code or <a href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener">open an issue on GitHub</a>.</p>
           </footer>
         </main>
       </div>

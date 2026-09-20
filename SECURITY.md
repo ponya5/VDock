@@ -5,7 +5,7 @@
 If you discover a security vulnerability in VDock, please report it privately rather than opening a public issue:
 
 - Open a [GitHub Security Advisory](https://github.com/ponya5/VDock2/security/advisories/new) (preferred), **or**
-- Contact the maintainer directly via [LinkedIn](https://www.linkedin.com/in/daniel-shalom-13987a1a/) or through [github.com/ponya5](https://github.com/ponya5).
+- Report it through [GitHub Issues](https://github.com/ponya5/VDock2/issues) if it is not sensitive.
 
 Please include:
 

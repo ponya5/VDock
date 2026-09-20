@@ -1,17 +1,20 @@
 import { reactive, computed } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
 
 /**
  * First-run bubble tutorial. A small reactive store so DashboardView
  * (auto-start / pending launch), SettingsView ("Launch Tutorial" button)
  * and the single <TutorialTour> mounted in App.vue can drive the tour.
  *
- * Steps can declare `route` (navigate first) and `activate` (click a
- * selector — e.g. open a sub-tab) so the tour crosses the dashboard →
- * settings boundary and back.
+ * Steps can declare `route` (navigate first), `activate` (click a
+ * selector — e.g. open a sub-tab) and `advanceOnPath` (auto-advance when
+ * the app lands on that path — used so loading a profile moves the tour
+ * from the Profiles screen onto the dashboard).
  *
- * Flags:
- *  - vdock_tutorial_done    — set when the tour completes or is skipped;
- *                           suppresses the first-run auto-start.
+ * Completion lives in the server-persisted `tutorialCompleted` setting —
+ * a real boolean shared by every window — not localStorage. The legacy
+ * `vdock_tutorial_done` key is migrated on first read so existing users
+ * don't get re-toured.
  *  - vdock_tutorial_pending — set by "Launch Tutorial" in Settings; consumed
  *                           by DashboardView on mount, so the tour always
  *                           starts against the live dashboard DOM.
@@ -19,7 +22,6 @@ import { reactive, computed } from 'vue'
 
 export const TUTORIAL_DONE_KEY = 'vdock_tutorial_done'
 export const TUTORIAL_PENDING_KEY = 'vdock_tutorial_pending'
-
 export interface TutorialStep {
   /** CSS selector to spotlight; null/undefined renders a centered card. */
   target?: string
@@ -31,17 +33,29 @@ export interface TutorialStep {
   route?: string
   /** Selector clicked before measuring — e.g. to open a settings sub-tab. */
   activate?: string
+  /** Auto-advance when the app navigates to this path (e.g. user loads a
+      profile and lands on '/'). */
+  advanceOnPath?: string
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
+    route: '/profiles',
     title: 'Welcome to VDock',
     text: 'A quick tour of the main features — tap Next to walk through, or Skip to explore on your own.',
   },
   {
+    route: '/profiles',
+    target: '.profiles-grid',
+    title: 'Your First Profile',
+    text: 'Profiles hold your scenes and buttons. Tap ▶ on "My VDock" to load the starter profile — or "+ New Profile" to create your own. The tour continues on your dashboard.',
+    placement: 'bottom',
+    advanceOnPath: '/',
+  },
+  {
     target: '.enhanced-scene-nav',
     title: 'Scenes',
-    text: 'Each scene is a page of buttons for a context — media, AI, tools. Tap a pill to switch, or swipe up/down on the deck.',
+    text: 'Each scene is a page of buttons for a context — media, Claude Code, Cursor, websites. Tap a pill to switch, or swipe up/down on the deck.',
     placement: 'bottom',
   },
   {
@@ -141,6 +155,8 @@ export function useTutorial() {
   function finish() {
     state.active = false
     state.stepIndex = 0
+    // Persisted server-side boolean + legacy localStorage marker.
+    useSettingsStore().tutorialCompleted = true
     localStorage.setItem(TUTORIAL_DONE_KEY, '1')
   }
 
@@ -159,7 +175,12 @@ export function useTutorial() {
       start()
       return true
     }
-    if (!localStorage.getItem(TUTORIAL_DONE_KEY)) {
+    // Migrate the pre-settings flag so existing users don't get re-toured.
+    if (localStorage.getItem(TUTORIAL_DONE_KEY) === '1'
+        && !useSettingsStore().tutorialCompleted) {
+      useSettingsStore().tutorialCompleted = true
+    }
+    if (!useSettingsStore().tutorialCompleted) {
       start()
       return true
     }

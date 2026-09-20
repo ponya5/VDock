@@ -1,11 +1,11 @@
 import { test, expect } from 'vitest'
 import { createDefaultProfile, createDefaultScene } from '../utils/defaultProfile'
 
-test('createDefaultProfile seeds Home + AI Assistant + Tools scenes', () => {
+test('createDefaultProfile seeds Media + Claude Code + Cursor + Websites scenes', () => {
   const profile = createDefaultProfile()
 
   const names = profile.scenes.map((s) => s.name)
-  expect(names).toEqual(['Home', 'AI Assistant', 'Tools'])
+  expect(names).toEqual(['Media', 'Claude Code', 'Cursor', 'Websites'])
 
   const home = profile.scenes[0]
   expect(home.isDefault).toBe(true)
@@ -33,7 +33,13 @@ test('every seeded button has an action, position inside the grid, and a label',
 
 test('seeded buttons use only no-key action types', () => {
   const profile = createDefaultProfile()
-  const allowed = new Set(['url', 'hotkey', 'cross_platform', 'macro'])
+  const allowed = new Set([
+    'url', 'hotkey', 'cross_platform', 'macro',
+    'claude_continue', 'claude_slash', 'claude_prompt', 'claude_open',
+    'cursor_composer', 'cursor_chat', 'cursor_inline_edit', 'cursor_accept',
+    'cursor_reject', 'cursor_toggle_terminal', 'cursor_quick_open',
+    'cursor_command_palette'
+  ])
 
   for (const scene of profile.scenes) {
     for (const page of scene.pages) {
@@ -54,7 +60,7 @@ test('button ids are unique across the profile', () => {
 
 test('createDefaultScene output is unchanged (reset parity)', () => {
   const scene = createDefaultScene()
-  expect(scene.name).toBe('Home')
+  expect(scene.name).toBe('Media')
   expect(scene.isDefault).toBe(true)
   expect(scene.pages[0].buttons.length).toBeGreaterThan(0)
 })

@@ -566,98 +566,98 @@ const additionalPresets: ButtonPreset[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// News category — Israeli news/tech sites (no logo assets — generic icon)
+// News category — generic global news/tech/sports sites (generic icon)
 // ---------------------------------------------------------------------------
 const newsPresets: ButtonPreset[] = [
   {
-    id: 'n12',
-    name: 'N12',
+    id: 'bbc',
+    name: 'BBC News',
+    category: 'news',
+    brand: { primary: '#b80000' },
+    icon: { type: 'fontawesome', value: 'fas:newspaper' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.bbc.com/news' } },
+    keywords: ['news', 'world']
+  },
+  {
+    id: 'reuters',
+    name: 'Reuters',
+    category: 'news',
+    brand: { primary: '#ff8000' },
+    icon: { type: 'fontawesome', value: 'fas:newspaper' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.reuters.com' } },
+    keywords: ['news', 'world']
+  },
+  {
+    id: 'apnews',
+    name: 'AP News',
     category: 'news',
     brand: { primary: '#e74c3c' },
     icon: { type: 'fontawesome', value: 'fas:newspaper' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.n12.co.il' } },
-    keywords: ['news', 'israel']
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://apnews.com' } },
+    keywords: ['news', 'world']
   },
   {
-    id: 'ynet',
-    name: 'Ynet',
+    id: 'espn',
+    name: 'ESPN',
     category: 'news',
-    brand: { primary: '#c0392b' },
-    icon: { type: 'fontawesome', value: 'fas:newspaper' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.ynet.co.il' } },
-    keywords: ['news', 'israel']
+    brand: { primary: '#d70000' },
+    icon: { type: 'fontawesome', value: 'fas:futbol' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.espn.com' } },
+    keywords: ['sports', 'news']
   },
   {
-    id: 'walla',
-    name: 'Walla',
-    category: 'news',
-    brand: { primary: '#8e44ad' },
-    icon: { type: 'fontawesome', value: 'fas:newspaper' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.walla.co.il' } },
-    keywords: ['news', 'israel']
-  },
-  {
-    id: 'mako',
-    name: 'Mako',
-    category: 'news',
-    brand: { primary: '#2980b9' },
-    icon: { type: 'fontawesome', value: 'fas:newspaper' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.mako.co.il' } },
-    keywords: ['news', 'israel']
-  },
-  {
-    id: 'sport1',
-    name: 'Sport1',
+    id: 'skysports',
+    name: 'Sky Sports',
     category: 'news',
     brand: { primary: '#27ae60' },
     icon: { type: 'fontawesome', value: 'fas:futbol' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.sport1.co.il' } },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.skysports.com' } },
     keywords: ['sports', 'news']
   },
   {
-    id: 'one',
-    name: 'ONE',
+    id: 'techcrunch',
+    name: 'TechCrunch',
     category: 'news',
-    brand: { primary: '#16a085' },
-    icon: { type: 'fontawesome', value: 'fas:futbol' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.one.co.il' } },
-    keywords: ['sports', 'news']
+    brand: { primary: '#0a9e01' },
+    icon: { type: 'fontawesome', value: 'fas:microchip' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://techcrunch.com' } },
+    keywords: ['tech', 'news', 'startups']
   },
   {
-    id: 'geektime',
-    name: 'Geektime',
+    id: 'theverge',
+    name: 'The Verge',
     category: 'news',
-    brand: { primary: '#f39c12' },
-    icon: { type: 'fontawesome', value: 'fas:globe' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.geektime.co.il' } },
+    brand: { primary: '#5204d9' },
+    icon: { type: 'fontawesome', value: 'fas:microchip' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.theverge.com' } },
     keywords: ['tech', 'news']
   },
   {
-    id: 'tgspot',
-    name: 'TGSpot',
+    id: 'hackernews',
+    name: 'Hacker News',
     category: 'news',
-    brand: { primary: '#34495e' },
-    icon: { type: 'fontawesome', value: 'fas:globe' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.tgspot.co.il' } },
+    brand: { primary: '#ff6600' },
+    icon: { type: 'fontawesome', value: 'fas:code' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://news.ycombinator.com' } },
+    keywords: ['tech', 'news', 'dev']
+  },
+  {
+    id: 'arstechnica',
+    name: 'Ars Technica',
+    category: 'news',
+    brand: { primary: '#ff4e00' },
+    icon: { type: 'fontawesome', value: 'fas:microchip' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://arstechnica.com' } },
     keywords: ['tech', 'news']
   },
   {
-    id: 'lastartup',
-    name: 'Lastartup',
+    id: 'wired',
+    name: 'WIRED',
     category: 'news',
-    brand: { primary: '#e67e22' },
-    icon: { type: 'fontawesome', value: 'fas:globe' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.lastartup.co.il' } },
-    keywords: ['startups', 'news']
-  },
-  {
-    id: 'letsai',
-    name: 'Letsai',
-    category: 'news',
-    brand: { primary: '#9b59b6' },
-    icon: { type: 'fontawesome', value: 'fas:globe' },
-    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.letsai.co.il' } },
-    keywords: ['ai', 'news']
+    brand: { primary: '#000000' },
+    icon: { type: 'fontawesome', value: 'fas:microchip' },
+    action: { type: 'cross_platform', config: { action: 'open_url', url: 'https://www.wired.com' } },
+    keywords: ['tech', 'ai', 'news']
   }
 ]
 

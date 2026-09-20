@@ -1124,19 +1124,17 @@
               <div class="about-side-card">
                 <h3 class="about-side-title">Connect</h3>
                 <div class="about-links">
-                  <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fas', 'globe']" /> Website</a>
-                  <a href="https://github.com/ponya5" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
-                  <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'linkedin']" /> LinkedIn</a>
-                  <button class="about-link-btn" @click="contactEmail"><FontAwesomeIcon :icon="['fas', 'envelope']" /> Contact</button>
+                  <a href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
+                  <a href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener" class="about-link-btn"><FontAwesomeIcon :icon="['fas', 'bug']" /> Report Issue</a>
                 </div>
               </div>
 
               <div class="about-side-card">
                 <h3 class="about-side-title">Support the project</h3>
-                <p class="form-help">If you enjoy using VDock, consider buying me a coffee. It helps keep the project alive and growing.</p>
-                <a href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener" class="kofi-btn">
-                  <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
-                  Support me on Ko-fi
+                <p class="form-help">VDock is free and open source. Star the repo or open a discussion — feedback and contributions keep it growing.</p>
+                <a href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener" class="kofi-btn">
+                  <FontAwesomeIcon :icon="['fas', 'star']" />
+                  Star on GitHub
                 </a>
               </div>
 
@@ -1151,7 +1149,7 @@
               </div>
             </div>
 
-            <p class="about-copyright">Daniel Shalom. All rights reserved 2026 ©</p>
+            <p class="about-copyright">VDock Contributors. Open source under the MIT License ©</p>
           </section>
         </div>
 
@@ -2095,7 +2093,7 @@ function formatScreensaverTimeout(seconds: number): string {
   return s === 0 ? `${m}m` : `${m}m ${s}s`
 }
 
-function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subject=VDock%20Support' }
+
 
 // "Launch Tutorial" — flag the request, then go to the dashboard where the
 // tour measures live targets on mount.

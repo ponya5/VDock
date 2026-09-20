@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="tour.state.active" class="tour-overlay" @click.self="tour.finish">
+    <div v-if="tour.state.active" class="tour-overlay">
       <!-- Plain dim when the step has no target element -->
       <div v-if="!targetRect" class="tour-dim" aria-hidden="true"></div>
       <!-- Spotlight ring over the current target -->
@@ -110,8 +110,17 @@ async function prepareStep() {
 
 watch(() => tour.state.stepIndex, prepareStep)
 watch(() => tour.state.active, (active) => { if (active) prepareStep() })
-// The user (or a Back step) may change routes mid-tour — re-anchor.
-watch(() => route.path, () => { if (tour.state.active) prepareStep() })
+// The user (or a Back step) may change routes mid-tour — re-anchor, or
+// auto-advance when the step declares advanceOnPath (e.g. the Profiles
+// step completes itself when the user lands on the dashboard).
+watch(() => route.path, () => {
+  if (!tour.state.active) return
+  if (step.value?.advanceOnPath && route.path === step.value.advanceOnPath) {
+    tour.next()
+    return
+  }
+  prepareStep()
+})
 
 onMounted(() => {
   measure()
@@ -202,7 +211,9 @@ const bubbleStyle = computed(() => {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  /* The dim layer lives on the spotlight's box-shadow so the cutout stays clean */
+  /* Pass clicks through to the page — interactive steps (e.g. "tap ▶ to
+     load a profile") require it; only the bubble takes pointer events. */
+  pointer-events: none;
 }
 
 .tour-dim {
@@ -222,6 +233,7 @@ const bubbleStyle = computed(() => {
 
 .tour-bubble {
   position: fixed;
+  pointer-events: auto;
   width: min(420px, calc(100vw - 16px));
   background: rgba(16, 22, 36, 0.97);
   backdrop-filter: blur(12px);

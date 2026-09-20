@@ -63,6 +63,7 @@ export const SETTINGS_DEFAULTS = {
   dashboardFont: 'default' as const,
   appScanningEnabled: true,
   agentAlertsEnabled: true,
+  tutorialCompleted: false,
   newsFeeds: '',
   sportsFeeds: '',
   newsRotateSeconds: 8,
@@ -112,6 +113,7 @@ export interface PersistedUserSettings {
   dashboardFont: 'default' | 'editorial' | 'mono'
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
+  tutorialCompleted: boolean
   screensaverLayout: ScreensaverLayout
 }
 
@@ -214,6 +216,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   const appScanningEnabled = ref(true)
   const agentAlertsEnabled = ref(true)
+  // Persisted onboarding flag — true once the tour is finished or skipped.
+  // Server-backed (not localStorage) so it survives cache clears and is
+  // shared by every window/device on this backend.
+  const tutorialCompleted = ref(false)
   // Widget positions/scales in viewport percent (center-anchored). Edited via
   // the live layout editor reached from Settings -> Screensaver.
   const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
@@ -347,6 +353,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dashboardFont: dashboardFont.value,
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
+      tutorialCompleted: tutorialCompleted.value,
       // Deep copy for the same structured-clone reason as recentActions above.
       screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value)),
     }
@@ -400,6 +407,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
+    if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
     if (settings.screensaverLayout !== undefined) {
       screensaverLayout.value = normalizeScreensaverLayout(settings.screensaverLayout)
     }
@@ -459,6 +467,7 @@ export const useSettingsStore = defineStore('settings', () => {
         dashboardFont: settings.dashboardFont ?? 'default',
         appScanningEnabled: settings.appScanningEnabled ?? true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
+        tutorialCompleted: settings.tutorialCompleted ?? false,
         screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
       })
     } catch (error) {
@@ -598,6 +607,9 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverBackground,
       dashboardFont,
       screensaverLayout,
+      appScanningEnabled,
+      agentAlertsEnabled,
+      tutorialCompleted,
     ],
     () => {
       saveSettings()
@@ -804,6 +816,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dashboardFont,
     appScanningEnabled,
     agentAlertsEnabled,
+    tutorialCompleted,
     screensaverLayout,
     showHelpGuide,
     applyTouchModeStyles,

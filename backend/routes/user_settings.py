@@ -55,6 +55,9 @@ ALLOWED_USER_SETTING_KEYS = {
     'screensaverWidgetSize',
     'screensaverBackground',
     'screensaverLayout',
+    'tutorialCompleted',
+    'appScanningEnabled',
+    'agentAlertsEnabled',
 }
 
 
