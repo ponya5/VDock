@@ -343,41 +343,51 @@ export const useDashboardStore = defineStore('dashboard', () => {
   async function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }) {
     if (!currentProfile.value) return
 
+    const applyToButton = (button: Button) => {
+      if (updates.animation !== undefined) {
+        button.style = {
+          ...button.style,
+          animation: updates.animation === 'none' ? undefined : (updates.animation as any)
+        }
+        // layers.behaviour takes priority over style.animation in DeckButton's
+        // buttonClasses (`layers?.behaviour ?? style?.animation`), so a button
+        // seeded with a behaviour (e.g. defaultProfile's Volume Down/Previous)
+        // would otherwise silently ignore this global animation choice.
+        if (button.layers?.behaviour) {
+          button.layers = { ...button.layers, behaviour: undefined }
+        }
+      }
+      if (updates.iconLoop !== undefined) {
+        const existingIcon = button.layers?.icon
+        const iconType = existingIcon?.type ?? (button.icon_type as any) ?? 'fontawesome'
+        const iconValue = existingIcon?.value ?? button.icon ?? 'star'
+        button.layers = {
+          ...button.layers,
+          icon: updates.iconLoop === 'none'
+            ? (existingIcon ? { ...existingIcon, loop: undefined } : undefined)
+            : { type: iconType, value: iconValue, loop: updates.iconLoop as any, size: existingIcon?.size }
+        }
+      }
+      if (updates.effect !== undefined) {
+        button.layers = {
+          ...button.layers,
+          effect: updates.effect === 'none' ? undefined : { type: updates.effect as any, tint: 'brand' }
+        }
+      }
+    }
+
     for (const scene of currentProfile.value.scenes) {
       for (const page of scene.pages) {
         for (const button of page.buttons) {
-          if (updates.animation !== undefined) {
-            button.style = {
-              ...button.style,
-              animation: updates.animation === 'none' ? undefined : (updates.animation as any)
-            }
-            // layers.behaviour takes priority over style.animation in DeckButton's
-            // buttonClasses (`layers?.behaviour ?? style?.animation`), so a button
-            // seeded with a behaviour (e.g. defaultProfile's Volume Down/Previous)
-            // would otherwise silently ignore this global animation choice.
-            if (button.layers?.behaviour) {
-              button.layers = { ...button.layers, behaviour: undefined }
-            }
-          }
-          if (updates.iconLoop !== undefined) {
-            const existingIcon = button.layers?.icon
-            const iconType = existingIcon?.type ?? (button.icon_type as any) ?? 'fontawesome'
-            const iconValue = existingIcon?.value ?? button.icon ?? 'star'
-            button.layers = {
-              ...button.layers,
-              icon: updates.iconLoop === 'none'
-                ? (existingIcon ? { ...existingIcon, loop: undefined } : undefined)
-                : { type: iconType, value: iconValue, loop: updates.iconLoop as any, size: existingIcon?.size }
-            }
-          }
-          if (updates.effect !== undefined) {
-            button.layers = {
-              ...button.layers,
-              effect: updates.effect === 'none' ? undefined : { type: updates.effect as any, tint: 'brand' }
-            }
-          }
+          applyToButton(button)
         }
       }
+    }
+    // Docked sidebar buttons live outside scene/pages — without this they
+    // keep their old design while the grid changes, and the always-visible
+    // sidebar makes the apply look broken.
+    for (const button of currentProfile.value.dockedButtons ?? []) {
+      applyToButton(button)
     }
 
     addToHistory()

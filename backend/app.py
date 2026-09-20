@@ -136,6 +136,7 @@ limiter.exempt(logs_bp)
 # ============================================================================
 
 @app.route('/')
+@limiter.exempt
 def root():
     """Serve the frontend index.html for the Electron app."""
     # Use absolute path resolution
@@ -333,6 +334,7 @@ def health_check():
 # ============================================================================
 
 @app.route('/<path:path>')
+@limiter.exempt
 def serve_frontend(path):
     """Serve frontend files for the Electron app."""
     # Skip API routes
