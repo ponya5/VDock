@@ -411,6 +411,134 @@
           </div>
         </div>
 
+        <!-- Multi-Action: an ordered list of full actions with delays -->
+        <div v-if="actionType === 'multi_action'" class="multi-action-editor">
+          <div class="form-group">
+            <label>Action Steps</label>
+            <div
+              v-for="(step, index) in multiSteps"
+              :key="index"
+              class="multi-step"
+            >
+              <div class="multi-step-head">
+                <span class="step-number">{{ index + 1 }}</span>
+                <div class="multi-step-controls">
+                  <button
+                    class="btn-icon" title="Move up" :disabled="index === 0"
+                    @click="moveMultiStep(index, -1)"
+                  ><FontAwesomeIcon :icon="['fas', 'chevron-up']" /></button>
+                  <button
+                    class="btn-icon" title="Move down" :disabled="index === multiSteps.length - 1"
+                    @click="moveMultiStep(index, 1)"
+                  ><FontAwesomeIcon :icon="['fas', 'chevron-down']" /></button>
+                  <button
+                    class="btn-icon danger" title="Remove step"
+                    @click="multiSteps.splice(index, 1)"
+                  ><FontAwesomeIcon :icon="['fas', 'times']" /></button>
+                </div>
+              </div>
+              <SubActionEditor
+                :model-value="step.action"
+                @update:model-value="step.action = $event"
+              />
+              <div class="multi-step-delay">
+                <label>Delay after (ms)</label>
+                <input
+                  v-model.number="step.delay" type="number" min="0" max="60000"
+                  class="input delay-input" placeholder="0"
+                />
+              </div>
+            </div>
+            <button class="add-step-btn" @click="multiSteps.push({ action: undefined, delay: 0 })">
+              <FontAwesomeIcon :icon="['fas', 'plus']" />
+              Add Action
+            </button>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="multiStopOnError" type="checkbox" class="checkbox" />
+              Stop the sequence if a step fails
+            </label>
+          </div>
+        </div>
+
+        <!-- Toggle: two-state button with per-side action + appearance -->
+        <div v-if="actionType === 'toggle'" class="toggle-editor">
+          <div class="toggle-side">
+            <div class="toggle-side-header on">When ON</div>
+            <SubActionEditor v-model="toggleOnAction" />
+            <div class="toggle-fields">
+              <input v-model="toggleOnLabel" class="input" type="text" placeholder="On label (e.g. Muted)" />
+              <input v-model="toggleOnIcon" class="input" type="text" placeholder="On icon (e.g. fas:volume-mute)" />
+              <input v-model="toggleOnColor" class="input" type="color" title="On colour" />
+            </div>
+          </div>
+          <div class="toggle-side">
+            <div class="toggle-side-header off">When OFF</div>
+            <SubActionEditor v-model="toggleOffAction" />
+            <div class="toggle-fields">
+              <input v-model="toggleOffLabel" class="input" type="text" placeholder="Off label (e.g. Live)" />
+              <input v-model="toggleOffIcon" class="input" type="text" placeholder="Off icon (e.g. fas:volume-up)" />
+              <input v-model="toggleOffColor" class="input" type="color" title="Off colour" />
+            </div>
+          </div>
+          <p class="form-help">
+            Each press runs one side then flips. The face shows the current state —
+            the button turns red with your mute icon while muted.
+          </p>
+        </div>
+
+        <!-- Slider: drag control for volume / brightness -->
+        <div v-if="actionType === 'slider'" class="slider-editor">
+          <div class="form-group">
+            <label>Controls</label>
+            <select v-model="actionConfig.target" class="select">
+              <option value="volume">System volume</option>
+              <option value="brightness">Screen brightness</option>
+              <option value="ui_brightness">VDock brightness (this app)</option>
+            </select>
+          </div>
+          <div class="slider-range-grid">
+            <div class="form-group">
+              <label>Min</label>
+              <input v-model.number="actionConfig.min" type="number" class="input" />
+            </div>
+            <div class="form-group">
+              <label>Max</label>
+              <input v-model.number="actionConfig.max" type="number" class="input" />
+            </div>
+            <div class="form-group">
+              <label>Step</label>
+              <input v-model.number="actionConfig.step" type="number" min="1" class="input" />
+            </div>
+          </div>
+          <p class="form-help">
+            The button face becomes a drag track — drag horizontally to set the
+            level. Tap the edges to nudge by one step.
+          </p>
+        </div>
+
+        <!-- Press behaviour: when the action fires + push-to-talk release -->
+        <div
+          v-if="actionType && actionType !== 'slider' && isExecutableType"
+          class="press-behaviour"
+        >
+          <div class="form-group">
+            <label>Fires on</label>
+            <select v-model="pressTrigger" class="select">
+              <option value="release">Release (normal tap)</option>
+              <option value="press">Press (finger down)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="pushToTalk" type="checkbox" class="checkbox" />
+              Push-to-talk — run a different action on release
+            </label>
+            <SubActionEditor v-if="pushToTalk" v-model="releaseAction" />
+          </div>
+        </div>
+
         <!-- UI AND APPEARANCE SETTINGS (Bottom Priority) -->
         <div class="form-group">
           <label>Label</label>
@@ -1431,6 +1559,7 @@ import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
+import SubActionEditor from './SubActionEditor.vue'
 import ButtonDesignPicker from './ButtonDesignPicker.vue'
 import type { ActionSpec } from '@/stores/actionCatalog'
 import QuickTemplates from './QuickTemplates.vue'
@@ -1481,6 +1610,52 @@ const uploading = ref(false)
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
+
+// --- Composite action editors -------------------------------------------------
+
+interface MultiStep {
+  action?: { type: string; config: Record<string, any> }
+  delay: number
+}
+
+// multi_action: ordered steps, each a nested action + trailing delay (ms).
+const multiSteps = ref<MultiStep[]>(
+  (props.button.action?.config?.actions ?? []).map((a: any) => ({
+    action: a ? { type: a.type, config: { ...(a.config ?? {}) } } : undefined,
+    delay: 0,
+  }))
+)
+const multiStopOnError = ref(props.button.action?.config?.stop_on_error !== false)
+
+// toggle: per-side action + appearance.
+const toggleOnAction = ref(props.button.action?.config?.on_action)
+const toggleOffAction = ref(props.button.action?.config?.off_action)
+const toggleOnLabel = ref(props.button.action?.config?.on_label ?? '')
+const toggleOffLabel = ref(props.button.action?.config?.off_label ?? '')
+const toggleOnIcon = ref(props.button.action?.config?.on_icon ?? '')
+const toggleOffIcon = ref(props.button.action?.config?.off_icon ?? '')
+const toggleOnColor = ref(props.button.action?.config?.on_color ?? '#e5484d')
+const toggleOffColor = ref(props.button.action?.config?.off_color ?? '#2c3e50')
+
+// Press behaviour: 'press'|'release' trigger + push-to-talk release action.
+const pressTrigger = ref<'press' | 'release'>(props.button.action?.trigger ?? 'release')
+const releaseAction = ref(props.button.action?.release_action)
+const pushToTalk = ref(!!props.button.action?.release_action)
+
+// Sliders and display-only widgets have no meaningful press/release split —
+// the trigger row only makes sense for actions that actually dispatch.
+const isExecutableType = computed(() => {
+  const t = actionType.value
+  if (!t || t === 'slider' || t.startsWith('metric_') || t.startsWith('time_')) return false
+  return !['weather', 'calendar', 'folder'].includes(t)
+})
+
+function moveMultiStep(index: number, dir: -1 | 1) {
+  const target = index + dir
+  if (target < 0 || target >= multiSteps.value.length) return
+  const [step] = multiSteps.value.splice(index, 1)
+  multiSteps.value.splice(target, 0, step)
+}
 
 // Hotkey dropdown state
 const showHotkeyDropdown = ref(false)
@@ -1639,6 +1814,10 @@ watch(actionType, (newType) => {
       config: actionConfig.value
     }
   }
+  // Type switch discards press-behaviour state with the action object.
+  pressTrigger.value = 'release'
+  pushToTalk.value = false
+  releaseAction.value = undefined
 })
 
 watch(actionConfig, (newConfig) => {
@@ -2254,7 +2433,44 @@ function handleSave() {
     
     editedButton.value.action.type = actionType.value
     editedButton.value.action.config = actionConfig.value
-    
+
+    // Press behaviour — omitted entirely when defaults apply so existing
+    // buttons keep their exact current payload shape.
+    editedButton.value.action.trigger = pressTrigger.value === 'release' ? undefined : 'press'
+    editedButton.value.action.release_action =
+      pushToTalk.value && releaseAction.value?.type
+        ? { type: releaseAction.value.type as ActionType, config: { ...releaseAction.value.config } }
+        : undefined
+
+    // Multi-action: steps with at least a picked action, carrying per-step delay.
+    if (actionType.value === 'multi_action') {
+      editedButton.value.action.config = {
+        actions: multiSteps.value
+          .filter((s) => s.action?.type)
+          .map((s) => ({
+            type: s.action!.type,
+            config: { ...s.action!.config },
+            ...(s.delay > 0 ? { delay: s.delay } : {}),
+          })),
+        delay: 0,
+        stop_on_error: multiStopOnError.value,
+      }
+    }
+
+    // Toggle: both sides + per-side appearance.
+    if (actionType.value === 'toggle') {
+      editedButton.value.action.config = {
+        on_action: toggleOnAction.value,
+        off_action: toggleOffAction.value,
+        on_label: toggleOnLabel.value || undefined,
+        off_label: toggleOffLabel.value || undefined,
+        on_icon: toggleOnIcon.value || undefined,
+        off_icon: toggleOffIcon.value || undefined,
+        on_color: toggleOnColor.value || undefined,
+        off_color: toggleOffColor.value || undefined,
+      }
+    }
+
     // Handle macro steps
     if (actionType.value === 'macro') {
       editedButton.value.action.macro_steps = macroSteps.value.map(step => {
@@ -3507,6 +3723,124 @@ onUnmounted(() => {
   font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);
   font-weight: 500;
   color: var(--color-text-secondary);
+}
+
+/* ── Multi-action / toggle / slider editors ── */
+.multi-step {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+.multi-step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+}
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.multi-step-controls {
+  display: flex;
+  gap: 4px;
+}
+.btn-icon {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.btn-icon:hover:not(:disabled) { color: var(--color-text); border-color: var(--color-primary); }
+.btn-icon:disabled { opacity: 0.35; cursor: default; }
+.btn-icon.danger:hover { color: #e5484d; border-color: #e5484d; }
+.multi-step-delay {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+.multi-step-delay label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.delay-input { max-width: 110px; }
+
+.toggle-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.toggle-side {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+.toggle-side-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-xs);
+}
+.toggle-side-header.on { color: #46d08a; }
+.toggle-side-header.off { color: #9aa0b4; }
+.toggle-fields {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+.toggle-fields .input { flex: 1; min-width: 0; }
+.toggle-fields input[type='color'] {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider-range-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  font-weight: 500;
+}
+.checkbox-label .checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
+
+.select-inline {
+  min-height: 44px;
 }
 </style>
 

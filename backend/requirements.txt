@@ -10,6 +10,9 @@ pynput==1.7.7
 pyperclip==1.9.0
 GPUtil==1.4.0
 pywin32==311; sys_platform == 'win32'
+# Absolute volume get/set for the slider control — pure-Python COM wrapper,
+# no external tools. Optional at runtime: volume_set falls back to NirCmd.
+pycaw==20240210; sys_platform == 'win32'
 PyJWT==2.9.0
 bcrypt==4.2.1
 python-magic-bin==0.4.14; sys_platform == 'win32'

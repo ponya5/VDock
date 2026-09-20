@@ -31,9 +31,9 @@ class MultiAction(BaseAction):
         actions = self.config['actions']
         delay_between = self.config.get('delay', 0.1)  # Default 100ms delay
         stop_on_error = self.config.get('stop_on_error', False)
-        
+
         results = []
-        
+
         for i, action_config in enumerate(actions):
             try:
                 # Execute action using the executor
@@ -43,17 +43,20 @@ class MultiAction(BaseAction):
                     'success': result.success,
                     'message': result.message
                 })
-                
+
                 if not result.success and stop_on_error:
                     return ActionResult(
                         False,
                         f'Multi-action stopped at step {i + 1}: {result.message}',
                         {'results': results}
                     )
-                
-                # Delay between actions (except after last one)
+
+                # Delay between actions (except after last one). A step may
+                # carry its own 'delay' in milliseconds — that wins over the
+                # sequence-wide default.
                 if i < len(actions) - 1:
-                    time.sleep(delay_between)
+                    step_ms = action_config.get('delay') if isinstance(action_config, dict) else None
+                    time.sleep((step_ms / 1000) if step_ms else delay_between)
             except Exception as e:
                 error_result = {
                     'index': i,

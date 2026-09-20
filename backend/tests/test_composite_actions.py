@@ -83,7 +83,7 @@ def test_toggle_surfaces_the_side_label_for_the_button_face():
     first = action.execute()
 
     assert 'Muted' in first.message
-    assert first.data['sublabel'] == 'Unmuted'  # what the next press will do
+    assert first.data['sublabel'] == 'Muted'  # the state now active
 
 
 def test_a_failed_action_does_not_flip_the_switch():

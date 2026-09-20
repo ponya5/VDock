@@ -18,6 +18,11 @@ const electronBridge = {
   // Open URLs in the system browser (not another Electron window)
   openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 
+  // Global summon (Ctrl+Shift+D in main) → overlay toggle in the renderer.
+  onQuickDeckToggle: (handler) => {
+    ipcRenderer.on('quick-deck-toggle', () => handler())
+  },
+
   // Platform info
   platform: process.platform,
   isElectron: true

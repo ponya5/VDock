@@ -22,6 +22,8 @@
       :class="cellClasses[`${button.position.row}-${button.position.col}`]"
       :data-button-id="button.id"
       @click="handleButtonClick"
+      @press="handleButtonPress"
+      @release="handleButtonRelease"
       @edit="handleButtonEdit"
       @copy="handleButtonCopy"
       @delete="handleButtonDelete"
@@ -101,6 +103,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   buttonClick: [button: Button]
+  buttonPress: [button: Button]
+  buttonRelease: [button: Button]
   buttonEdit: [button: Button]
   buttonCopy: [button: Button]
   buttonDelete: [buttonId: string]
@@ -227,6 +231,14 @@ const placeholderStyle = computed(() => {
 
 function handleButtonClick(button: Button) {
   emit('buttonClick', button)
+}
+
+function handleButtonPress(button: Button) {
+  emit('buttonPress', button)
+}
+
+function handleButtonRelease(button: Button) {
+  emit('buttonRelease', button)
 }
 
 function handleButtonEdit(button: Button) {

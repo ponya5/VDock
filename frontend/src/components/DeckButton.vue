@@ -10,7 +10,9 @@
     @contextmenu.prevent="handleRightClick"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
-    @pointerdown="triggerRipple"
+    @pointerdown="handlePointerDown"
+    @pointerup="handlePointerUp"
+    @pointercancel="handlePointerUp"
   >
     <!-- Video background for video media (from resolved fill) -->
     <video
@@ -91,6 +93,13 @@
       <!-- Calendar -->
       <CalendarButton
         v-else-if="button.action?.type === 'calendar'"
+      />
+
+      <!-- Slider: the whole face is a drag track -->
+      <SliderButtonFace
+        v-else-if="button.action?.type === 'slider'"
+        :button="button"
+        :compact="compact"
       />
 
       <div v-else-if="isFolderStyle || resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
@@ -204,7 +213,9 @@ import { useDoubleTap, useLongPress } from '@/composables/useGestures'
 import { resolveBrandTint } from '@/utils/brandTint'
 import { resolveButtonVisual, resolveButtonBrandTint } from '@/utils/buttonVisual'
 import { vibrate } from '@/utils/haptics'
+import { usePressFeedback } from '@/composables/usePressFeedback'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
+import SliderButtonFace from './SliderButtonFace.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
 import CalendarButton from './CalendarButton.vue'
@@ -240,6 +251,8 @@ const liveState = computed(() => buttonStateStore.states[props.button.id])
 
 const emit = defineEmits<{
   click: [button: Button]
+  press: [button: Button]
+  release: [button: Button]
   edit: [button: Button]
   copy: [button: Button]
   delete: [buttonId: string]
@@ -269,7 +282,7 @@ useLongPress(buttonRef, {
 // Check if this is a special action type that renders its own content
 const isSpecialActionType = computed(() => {
   const type = props.button.action?.type
-  return type?.startsWith('metric_') || type?.startsWith('time_') || type === 'weather'
+  return type?.startsWith('metric_') || type?.startsWith('time_') || type === 'weather' || type === 'slider'
 })
 
 // Check if this is a metric action type
@@ -300,7 +313,34 @@ const getMetricFromActionType = computed(() => {
   return metricMap[type] || ''
 })
 
-const resolvedVisual = computed(() => resolveButtonVisual(props.button))
+const { playPressSound } = usePressFeedback()
+
+/**
+ * Toggle buttons render their current side: side 1 ("on" ran last) applies the
+ * configured on-icon/on-color/on-label; side 0 the off- set. The backend owns
+ * the state — this only paints what `buttonStateStore` already recorded.
+ */
+const resolvedVisual = computed(() => {
+  const vis = resolveButtonVisual(props.button)
+  const cfg = props.button.action?.config
+  if (props.button.action?.type !== 'toggle' || !cfg) return vis
+
+  const on = liveState.value?.toggleSide === 1
+  const icon = on ? cfg.on_icon : cfg.off_icon
+  const color = on ? cfg.on_color : cfg.off_color
+  const stateLabel = on ? cfg.on_label : cfg.off_label
+
+  return {
+    ...vis,
+    icon: icon
+      ? { ...vis.icon, type: 'fontawesome' as const, value: icon }
+      : vis.icon,
+    fill: color ? { type: 'solid' as const, value: color } : vis.fill,
+    label: stateLabel
+      ? { ...vis.label, secondary: stateLabel }
+      : vis.label,
+  }
+})
 
 const buttonClasses = computed(() => {
   const vis = resolvedVisual.value
@@ -639,8 +679,46 @@ function parseIcon(iconString: string) {
   return ['fas', 'question']
 }
 
+// On-press vs on-release: 'release' (default) dispatches on click, matching a
+// normal button. 'press' or a configured release_action dispatches on
+// pointerdown — push-to-talk style — and release_action then fires on up.
+let pressFiredOnDown = false
+let releasePending = false
+
+function handlePointerDown(event: PointerEvent) {
+  triggerRipple(event)
+  if (props.isEditMode || !props.button.enabled || props.isPlaceholder) return
+  const action = props.button.action
+  if (!action || action.type === 'slider') return // slider owns its pointer lifecycle
+
+  if (action.trigger === 'press' || action.release_action) {
+    pressFiredOnDown = true
+    emit('press', props.button)
+  }
+  if (action.release_action) {
+    releasePending = true
+    // Capture so a finger sliding off still delivers pointerup — PTT must
+    // never wedge in the "held" state.
+    try {
+      buttonRef.value?.setPointerCapture(event.pointerId)
+    } catch { /* capture unsupported — up may be missed */ }
+  }
+}
+
+function handlePointerUp() {
+  if (releasePending) {
+    releasePending = false
+    emit('release', props.button)
+  }
+}
+
 function handleClick() {
   if (!props.isEditMode && props.button.enabled) {
+    // pointerdown already dispatched — swallow the trailing click.
+    if (pressFiredOnDown) {
+      pressFiredOnDown = false
+      return
+    }
     emit('click', props.button)
   }
 }
@@ -666,9 +744,10 @@ function handleDragEnd() {
 
 function triggerRipple(event: PointerEvent) {
   if (!buttonRef.value) return
-  // Call haptics on press (non-placeholder, non-edit-mode)
-  if (!props.isEditMode && props.button.enabled) {
+  // Call haptics + press sound on press (non-placeholder, non-edit-mode)
+  if (!props.isEditMode && props.button.enabled && !props.isPlaceholder) {
     vibrate(50)
+    playPressSound()
   }
 
   const btn = buttonRef.value

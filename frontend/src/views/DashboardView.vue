@@ -13,6 +13,7 @@
       @set-scene="setScene"
       @add-scene="addScene"
       @edit-scene="editScene"
+      @import-scene="importScene"
       @set-page="setPage"
       @previous-page="previousPage"
       @next-page="nextPage"
@@ -31,6 +32,9 @@
         :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
         :show-header="settingsStore.showHeader"
         @button-click="handleButtonClick"
+        @press="handleButtonPress"
+        @release="handleButtonRelease"
+        @button-release="handleButtonRelease"
         @button-edit="handleButtonEdit"
         @button-copy="handleButtonCopy"
         @button-delete="handleDockedButtonDelete"
@@ -50,6 +54,8 @@
             :show-tooltips="settingsStore.showTooltips"
             :compact="shouldUseCompactMode"
             @button-click="handleButtonClick"
+            @button-press="handleButtonPress"
+            @button-release="handleButtonRelease"
             @button-edit="handleButtonEdit"
             @button-copy="handleButtonCopy"
             @button-delete="handleButtonDelete"
@@ -210,6 +216,8 @@ const {
   actionResult,
   showActionResult,
   handleButtonClick,
+  handleButtonPress,
+  handleButtonRelease,
   handleButtonEdit,
   handleButtonCopy,
   handleButtonDelete,
@@ -730,6 +738,11 @@ function addScene() {
 
 function editScene(scene: Scene) {
   editingScene.value = { ...scene }
+}
+
+function importScene(scene: Scene) {
+  dashboardStore.addScene(scene)
+  notificationsStore.success('Scene imported', `"${scene.name}" added to this profile.`)
 }
 
 function setPage(index: number) {

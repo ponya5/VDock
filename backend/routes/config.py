@@ -1,9 +1,31 @@
 """Configuration routes."""
+import socket
+from typing import Optional
 from flask import Blueprint, request, jsonify
 from config import Config
 from auth import require_auth
 
 config_bp = Blueprint('config', __name__)
+
+
+def _lan_ip() -> Optional[str]:
+    """Primary LAN IPv4 — used by the 'Connect a device' QR card.
+
+    The UDP-connect trick picks the right interface without sending traffic;
+    falls back to the hostname lookup, then None when there is no route.
+    """
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            probe.connect(('192.168.255.255', 1))  # unroutable — no packets sent
+            return probe.getsockname()[0]
+        finally:
+            probe.close()
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return None
 
 
 @config_bp.route('/api/config', methods=['GET'])
@@ -18,7 +40,10 @@ def get_config():
             'require_auth': Config.REQUIRE_AUTH,
             'allow_lan': Config.ALLOW_LAN,
             'use_ssl': Config.USE_SSL,
-            'enable_plugins': Config.ENABLE_PLUGINS
+            'enable_plugins': Config.ENABLE_PLUGINS,
+            'lan_ip': _lan_ip(),
+            # Effective bind is 0.0.0.0 whenever ALLOW_LAN is on (see app.py).
+            'lan_reachable': bool(Config.ALLOW_LAN),
         }
     })
 

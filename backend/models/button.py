@@ -95,6 +95,8 @@ class ActionType(str, Enum):
     # Composite actions
     TOGGLE = 'toggle'
     RANDOM = 'random'
+    # Drag control — the face is a slider; never dispatched as a type itself
+    SLIDER = 'slider'
     # Scene / page navigation
     GOTO_PAGE = 'goto_page'
     SWITCH_SCENE = 'switch_scene'

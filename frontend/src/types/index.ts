@@ -44,6 +44,8 @@ export type ActionType =
   // Composite actions
   | 'toggle'
   | 'random'
+  // Drag control — volume/brightness as a slider face
+  | 'slider'
   // Screenshot
   | 'screenshot'
   // UI Control
@@ -108,6 +110,10 @@ export type TimeOptionType = 'world_time' | 'timer' | 'countdown'
 export interface ButtonAction {
   type: ActionType
   config: Record<string, any>
+  /** When the press fires: 'release' (default, today's click) or 'press' (pointerdown). */
+  trigger?: 'press' | 'release'
+  /** Push-to-talk: fires on pointerup after `action` ran on pointerdown. */
+  release_action?: { type: ActionType; config: Record<string, any> }
   macro_steps?: MacroStep[]
   performance_metrics?: PerformanceMetric[]
   time_option?: TimeOptionType
@@ -286,5 +292,9 @@ export interface ServerConfig {
   allow_lan: boolean
   use_ssl: boolean
   enable_plugins: boolean
+  /** Primary LAN IPv4 — target of the 'Connect a device' QR. */
+  lan_ip?: string | null
+  /** True when the server binds broadly enough for LAN devices to reach it. */
+  lan_reachable?: boolean
 }
 

@@ -67,6 +67,8 @@
             :show-tooltips="showTooltips"
             :button-size="buttonSize"
             @click="handleButtonClick"
+            @press="handleButtonClick"
+            @release="(b) => emit('buttonRelease', b)"
             @edit="handleButtonEdit"
             @copy="handleButtonCopy"
             @delete="handleButtonDelete"
@@ -129,6 +131,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   buttonClick: [button: Button]
+  buttonRelease: [button: Button]
   buttonEdit: [button: Button]
   buttonCopy: [button: Button]
   buttonDelete: [buttonId: string]

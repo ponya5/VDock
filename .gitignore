@@ -195,3 +195,7 @@ diff_output.txt
 # Git worktrees used for isolated SDD plan execution
 .worktrees/
 backend/data/backups/
+
+# Personal development playbook — private, not for the public repo
+DEVELOPMENT-GUIDELINES.md
+SKILL.md

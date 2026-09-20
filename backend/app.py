@@ -38,6 +38,7 @@ from routes.user_settings import user_settings_bp
 from routes.app_profiles import app_profiles_bp
 from routes.logs import logs_bp
 from routes.agent_events import agent_events_bp, set_emitter as set_agent_events_emitter
+from routes.actions import set_emitter as set_actions_emitter
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -95,6 +96,8 @@ job_runner.set_emitter(lambda event, payload: socketio.emit(event, payload))
 job_runner.set_spawner(socketio.start_background_task)
 # Agent attention events (Claude Code hook POSTs) reach every client.
 set_agent_events_emitter(lambda event, payload: socketio.emit(event, payload))
+# Toggle side changes reach every client too — same deck, same switch state.
+set_actions_emitter(lambda event, payload: socketio.emit(event, payload))
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -292,6 +295,12 @@ def handle_execute_action(data):
     result = action_executor.execute_action(action_data)
 
     emit('action_result', {'request_id': request_id, **result.to_dict()})
+    if result.success and isinstance(result.data, dict) and 'side' in result.data:
+        socketio.emit('toggle_state', {
+            'button_id': data.get('button_id'),
+            'side': result.data['side'],
+            'sublabel': result.data.get('sublabel'),
+        })
 
 
 @socketio.on('user_settings_changed')
@@ -313,7 +322,7 @@ def handle_user_settings_changed(data):
 
 # This event reaches every connected client, so it is an allowlist, not a
 # passthrough — a generic relay would be a remote-command channel.
-ALLOWED_UI_COMMANDS = {'show_screensaver', 'screensaver_layout_edit'}
+ALLOWED_UI_COMMANDS = {'show_screensaver', 'screensaver_layout_edit', 'toggle_quick_deck'}
 
 
 @socketio.on('ui_command')
@@ -387,7 +396,11 @@ def serve_frontend(path):
 # ============================================================================
 
 if __name__ == '__main__':
+    # ALLOW_LAN asked for a LAN-visible server but HOST defaults to localhost —
+    # bind broadly unless the user pinned a specific interface.
     host = Config.HOST if Config.ALLOW_LAN else '127.0.0.1'
+    if Config.ALLOW_LAN and host in ('127.0.0.1', 'localhost'):
+        host = '0.0.0.0'
     port = Config.PORT
 
     logger.info(f"Starting VDock server on {host}:{port}")

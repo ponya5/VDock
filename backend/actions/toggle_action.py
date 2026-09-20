@@ -98,9 +98,11 @@ class ToggleAction(BaseAction):
             {
                 **(result.data or {}),
                 'side': next_side,
+                # Sublabel is the CURRENT state ("Muted"), not the next press —
+                # the face answers "what state am I in", not "what will tap do".
                 'sublabel': (
-                    self.config.get('off_label', 'Off') if next_side == 1
-                    else self.config.get('on_label', 'On')
+                    self.config.get('on_label', 'On') if next_side == 1
+                    else self.config.get('off_label', 'Off')
                 ),
             },
         )

@@ -192,6 +192,14 @@
 
       <div class="modal-footer">
         <button
+          v-if="isEditing"
+          class="btn btn-secondary"
+          title="Download this scene as a shareable pack"
+          @click="exportScene"
+        >
+          <FontAwesomeIcon :icon="['fas', 'download']" /> Export
+        </button>
+        <button
           v-if="isEditing && editedScene.isDefault"
           class="btn btn-secondary"
           @click="resetScene"
@@ -229,6 +237,7 @@ import { appForScene } from '@/data/appBackgrounds'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useNotificationsStore } from '@/stores/notifications'
 import { confirmDialog } from '@/composables/useConfirm'
+import { downloadScenePack } from '@/utils/scenePack'
 
 interface Props {
   scene?: Scene
@@ -361,6 +370,12 @@ async function handleSceneBackgroundUpload(event: Event) {
 
 function removeSceneBackground() {
   editedScene.value.background = undefined
+}
+
+function exportScene() {
+  // Export the live edits — what you see is what the pack carries.
+  downloadScenePack(editedScene.value)
+  notificationsStore.success('Scene exported', `"${editedScene.value.name}" downloaded as a pack file.`)
 }
 
 function handleSave() {

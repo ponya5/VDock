@@ -58,6 +58,8 @@ ALLOWED_USER_SETTING_KEYS = {
     'tutorialCompleted',
     'appScanningEnabled',
     'agentAlertsEnabled',
+    'pressSoundEnabled',
+    'pressSoundStyle',
 }
 
 

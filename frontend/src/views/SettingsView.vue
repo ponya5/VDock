@@ -163,6 +163,29 @@
                         <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
                       </div>
                     </div>
+                    <div class="toggle-row">
+                      <div>
+                        <label class="toggle-row-label">Press sound</label>
+                        <p class="form-help">A short click on every press — makes the panel feel physical.</p>
+                      </div>
+                      <div class="toggle-row-end">
+                        <SettingResetButton label="Press sound" :at-default="settings.pressSoundEnabled === SETTINGS_DEFAULTS.pressSoundEnabled" @reset="settings.pressSoundEnabled = SETTINGS_DEFAULTS.pressSoundEnabled" />
+                        <label class="toggle-switch"><input v-model="settings.pressSoundEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                      </div>
+                    </div>
+                    <div class="toggle-row" v-if="settings.pressSoundEnabled">
+                      <div>
+                        <label class="toggle-row-label">Sound style</label>
+                      </div>
+                      <div class="toggle-row-end">
+                        <select v-model="settings.pressSoundStyle" class="select select-inline">
+                          <option value="click">Click</option>
+                          <option value="blip">Blip</option>
+                          <option value="pop">Pop</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                   <div class="form-group" style="margin-top: var(--spacing-sm); margin-bottom: 0">
                     <button class="btn btn-primary" @click="saveAndApplyButtonSettings">
@@ -934,6 +957,51 @@
                 Ports are written to <code>backend/.env</code> and <code>frontend/.env</code> and take effect on the next launch — restarting VDock via <code>launch.bat</code> is required.
               </p>
             </section>
+
+            <!-- Connect a device: any phone/tablet on the LAN becomes a deck -->
+            <section class="settings-section card">
+              <h2>Connect a device</h2>
+              <p class="form-help">
+                Any phone or tablet on your Wi-Fi can be a second deck — scan the
+                code or open the address. VDock is already a web server; no app
+                install needed.
+              </p>
+              <div class="toggle-row">
+                <div>
+                  <label class="toggle-row-label">Allow LAN access</label>
+                  <p class="form-help">Bind the server to the network so other devices can reach it. Applies on next launch.</p>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    type="checkbox"
+                    :checked="serverConfig?.allow_lan ?? false"
+                    @change="toggleAllowLan"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div v-if="lanUrl" class="qr-box">
+                <canvas ref="qrCanvas" class="qr-canvas" />
+                <div class="qr-meta">
+                  <code class="qr-url">{{ lanUrl }}</code>
+                  <button class="btn btn-secondary btn-sm" @click="copyLanUrl">
+                    <FontAwesomeIcon :icon="['fas', 'copy']" /> Copy
+                  </button>
+                </div>
+              </div>
+              <div v-else class="qr-unavailable">
+                <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+                <p>
+                  LAN address unavailable. Enable <strong>Allow LAN access</strong>
+                  and relaunch — until then VDock only listens on this PC.
+                </p>
+              </div>
+              <p v-if="!serverConfig?.lan_reachable" class="form-help">
+                <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+                Server is bound to localhost right now — the QR will work after
+                enabling LAN access and restarting.
+              </p>
+            </section>
           </div>
         </div>
 
@@ -1284,6 +1352,51 @@ function handleSettingsBack() {
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
+
+// --- Connect a device (QR) ----------------------------------------------------
+// The URL a phone needs is the one serving the app: the backend port, which
+// serves the built frontend in production. In dev, Vite only binds localhost —
+// so the backend port (serving dist/) is still the right target.
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+const lanUrl = computed(() => {
+  const ip = serverConfig.value?.lan_ip
+  const port = serverConfig.value?.port
+  if (!ip || !port) return null
+  return `http://${ip}:${port}`
+})
+
+async function renderQr() {
+  await nextTick()
+  if (!qrCanvas.value || !lanUrl.value) return
+  try {
+    const QRCode = (await import('qrcode')).default
+    await QRCode.toCanvas(qrCanvas.value, lanUrl.value, {
+      width: 180,
+      margin: 1,
+      color: { dark: '#0d0b26', light: '#ffffff' },
+    })
+  } catch { /* QR is best-effort; the URL text remains */ }
+}
+
+watch([lanUrl, () => serverConfig.value?.lan_reachable], renderQr, { immediate: false })
+
+async function toggleAllowLan(event: Event) {
+  const enabled = (event.target as HTMLInputElement).checked
+  const ok = await settingsStore.updateServerConfig({ allow_lan: enabled })
+  notificationsStore[ok ? 'success' : 'error'](
+    ok ? 'LAN access ' + (enabled ? 'enabled' : 'disabled') : 'Could not save',
+    ok ? 'Relaunch VDock to apply — the bind address is chosen at startup.' : 'Server rejected the change.'
+  )
+  await nextTick()
+  renderQr()
+}
+
+function copyLanUrl() {
+  if (!lanUrl.value) return
+  navigator.clipboard?.writeText(lanUrl.value)
+    .then(() => notificationsStore.success('Copied', lanUrl.value ?? ''))
+    .catch(() => notificationsStore.info('Copy failed', lanUrl.value ?? ''))
+}
 
 // Ports are written to the .env files and bind at process start — the UI
 // validates and probes collisions, then tells the user to relaunch.
@@ -2329,7 +2442,7 @@ onMounted(async () => {
   applySettingsRouteQuery()
   await ensureProfileLoaded()
   await syncStartOnBootFromSystem()
-  settingsStore.loadServerConfig()
+  settingsStore.loadServerConfig().then(() => renderQr())
   loadPorts()
   loadAppIntegrations()
   if (activeTab.value === 'integration') { await refreshRunningApps(); void fetchAgentHookStatus() }
@@ -3392,6 +3505,44 @@ onMounted(async () => {
 .info-row:not(:last-child) { border-bottom: 1px solid var(--glass-border, var(--color-border)); }
 .info-label { color: var(--color-text-secondary); }
 .info-value { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* ── Connect a device (QR) ── */
+.qr-box {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+.qr-canvas {
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 6px;
+}
+.qr-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+}
+.qr-url {
+  font-size: clamp(13px, 0.9vw + 8px, 16px);
+  word-break: break-all;
+  color: var(--color-primary);
+}
+.qr-unavailable {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px dashed var(--glass-border, var(--color-border));
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+.qr-unavailable svg { color: #f5a623; margin-top: 2px; }
+.qr-unavailable p { margin: 0; font-size: clamp(11px, 0.6vw + 8px, 13px); }
 
 /* ── Instruction / Security boxes ── */
 .instruction-box {

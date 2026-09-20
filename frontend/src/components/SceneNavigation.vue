@@ -51,6 +51,23 @@
     >
       <FontAwesomeIcon :icon="['fas', 'plus']" />
     </button>
+
+    <!-- Import a shared scene pack -->
+    <button
+      v-if="isEditMode"
+      class="add-scene-btn"
+      @click="importInput?.click()"
+      title="Import scene pack (.json)"
+    >
+      <FontAwesomeIcon :icon="['fas', 'upload']" />
+    </button>
+    <input
+      ref="importInput"
+      type="file"
+      accept=".json,application/json"
+      style="display: none"
+      @change="onImportFile"
+    />
   </div>
 </template>
 
@@ -58,6 +75,8 @@
 import { computed, ref, watch } from 'vue'
 import type { Scene } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { parseScenePack } from '@/utils/scenePack'
+import { useNotificationsStore } from '@/stores/notifications'
 
 interface Props {
   scenes: Scene[]
@@ -68,12 +87,29 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false
 })
+const notificationsStore = useNotificationsStore()
 
 const emit = defineEmits<{
   setScene: [index: number]
   addScene: []
   editScene: [scene: Scene]
+  importScene: [scene: Scene]
 }>()
+
+const importInput = ref<HTMLInputElement | null>(null)
+
+async function onImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // allow re-picking the same file
+  if (!file) return
+  const { scene, error } = parseScenePack(await file.text())
+  if (error || !scene) {
+    notificationsStore.error('Import failed', error ?? 'Unreadable scene file')
+    return
+  }
+  emit('importScene', scene)
+}
 
 // Unique group id to avoid radio name collisions if component is mounted multiple times
 const groupId = Math.random().toString(36).slice(2, 8)

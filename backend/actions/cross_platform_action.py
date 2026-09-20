@@ -38,6 +38,7 @@ class CrossPlatformAction(BaseAction):
         'shutdown', 'restart', 'sleep', 'lock_screen',
         # Volume control
         'volume_up', 'volume_down', 'volume_mute', 'volume_unmute',
+        'volume_set', 'volume_get',
         # Microphone control
         'microphone_mute', 'microphone_unmute',
         # Brightness control
@@ -85,6 +86,10 @@ class CrossPlatformAction(BaseAction):
                 return self._volume_mute()
             elif action == 'volume_unmute':
                 return self._volume_unmute()
+            elif action == 'volume_set':
+                return self._volume_set()
+            elif action == 'volume_get':
+                return self._volume_get()
             elif action == 'brightness_up':
                 return self._brightness_up()
             elif action == 'brightness_down':
@@ -305,6 +310,99 @@ class CrossPlatformAction(BaseAction):
             return self._run_command('amixer set Master unmute')
         else:
             return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
+
+    def _windows_volume_interface(self):
+        """Core Audio IAudioEndpointVolume via pycaw — no external tools needed.
+
+        Returns (interface, error) so callers can fall back cleanly when pycaw
+        is not installed (it is an optional dep; NirCmd covers that case).
+        """
+        try:
+            from ctypes import cast, POINTER
+            from comtypes import CLSCTX_ALL
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            return cast(interface, POINTER(IAudioEndpointVolume)), None
+        except ImportError:
+            return None, 'pycaw not installed (pip install pycaw)'
+        except Exception as e:
+            return None, f'Audio device unavailable: {e}'
+
+    def _volume_set(self) -> ActionResult:
+        """Set absolute output volume 0-100 — the slider action."""
+        try:
+            value = max(0, min(100, int(float(self.config.get('value', 50)))))
+        except (TypeError, ValueError):
+            return ActionResult(False, 'Invalid volume value (0-100 expected)')
+
+        if _SYSTEM == 'Windows':
+            endpoint, err = self._windows_volume_interface()
+            if endpoint is not None:
+                try:
+                    endpoint.SetMasterVolumeLevelScalar(value / 100.0, None)
+                    return ActionResult(
+                        True, f'Volume set to {value}%',
+                        {'value': value, 'badge': f'{value}%'}
+                    )
+                except Exception as e:
+                    err = str(e)
+            if self._check_nircmd():
+                # NirCmd takes 0-65535.
+                result = self._run_command(
+                    f'nircmd.exe setsysvolume {int(value / 100 * 65535)}'
+                )
+                if result.success:
+                    result.data = {**(result.data or {}), 'value': value, 'badge': f'{value}%'}
+                return result
+            return ActionResult(False, err or 'Volume set unavailable on Windows')
+        elif _SYSTEM == 'Darwin':
+            result = self._run_command(f'osascript -e "set volume output volume {value}"')
+            if result.success:
+                result.data = {**(result.data or {}), 'value': value, 'badge': f'{value}%'}
+            return result
+        elif _SYSTEM == 'Linux':
+            result = self._run_command(f'amixer set Master {value}%')
+            if result.success:
+                result.data = {**(result.data or {}), 'value': value, 'badge': f'{value}%'}
+            return result
+        return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
+
+    def _volume_get(self) -> ActionResult:
+        """Current output volume 0-100 — sliders fetch this on mount."""
+        if _SYSTEM == 'Windows':
+            endpoint, err = self._windows_volume_interface()
+            if endpoint is not None:
+                try:
+                    value = round(endpoint.GetMasterVolumeLevelScalar() * 100)
+                    return ActionResult(True, f'Volume {value}%', {'value': value})
+                except Exception as e:
+                    err = str(e)
+            return ActionResult(False, err or 'Volume read unavailable on Windows')
+        elif _SYSTEM == 'Darwin':
+            result = subprocess.run(
+                'osascript -e "output volume of (get volume settings)"',
+                shell=True, capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                return ActionResult(
+                    True, f"Volume {result.stdout.strip()}%",
+                    {'value': int(result.stdout.strip())}
+                )
+            return ActionResult(False, 'Could not read volume (osascript)')
+        elif _SYSTEM == 'Linux':
+            result = subprocess.run(
+                "amixer get Master | grep -oP '\\d+%' | head -1 | tr -d '%'",
+                shell=True, capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                return ActionResult(
+                    True, f"Volume {result.stdout.strip()}%",
+                    {'value': int(result.stdout.strip())}
+                )
+            return ActionResult(False, 'Could not read volume (amixer)')
+        return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
 
     # Brightness Control Actions
     def _brightness_up(self) -> ActionResult:

@@ -65,6 +65,11 @@ export function useButtonActions() {
   function handleButtonClick(button: Button) {
     if (!button.action) return
 
+    // Sliders own their pointer lifecycle — a click is a tap on the track,
+    // already applied by SliderButtonFace; dispatching the bare 'slider' type
+    // would only surface "Unknown action type".
+    if (button.action.type === 'slider') return
+
     // Handle UI control actions locally
     if (button.action.type === 'ui_control') {
       const action = button.action.config.action
@@ -124,6 +129,32 @@ export function useButtonActions() {
       const result = {
         success: false,
         message: error instanceof Error ? error.message : 'Action failed'
+      }
+      buttonStateStore.markFinished(button.id, result)
+      showActionResult(result)
+    })
+  }
+
+  /**
+   * On-press dispatch — pointerdown fired it. Runs button.action early for
+   * trigger:'press' buttons, or the engage half of a push-to-talk pair.
+   */
+  function handleButtonPress(button: Button) {
+    handleButtonClick(button)
+  }
+
+  /** Push-to-talk disengage — runs the button's release_action if configured. */
+  function handleButtonRelease(button: Button) {
+    const release = button.action?.release_action
+    if (!release?.type) return
+    buttonStateStore.markRunning(button.id)
+    dashboardStore.executeAction(release, button.id).then((result) => {
+      buttonStateStore.markFinished(button.id, result)
+      showActionResult(result)
+    }).catch((error) => {
+      const result = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Release action failed'
       }
       buttonStateStore.markFinished(button.id, result)
       showActionResult(result)
@@ -475,6 +506,8 @@ export function useButtonActions() {
     actionResult,
     showActionResult,
     handleButtonClick,
+    handleButtonPress,
+    handleButtonRelease,
     handleButtonEdit,
     handleButtonCopy,
     handleButtonDelete,

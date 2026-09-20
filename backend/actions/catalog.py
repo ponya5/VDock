@@ -563,6 +563,44 @@ _CUSTOM: Tuple[ActionSpec, ...] = (
         ),
     ),
     ActionSpec(
+        id='toggle', label='Toggle Switch', category='custom',
+        icon=('fas', 'toggle-on'), action_type='toggle',
+        description='Two-state button: alternates an On and Off action, '
+                    'with its own look per side.',
+        keywords=('switch', 'mute', 'state', 'on off'),
+        config_fields=(
+            ConfigField('on_action', 'On Action', 'steps', required=True),
+            ConfigField('off_action', 'Off Action', 'steps', required=True),
+            ConfigField('on_label', 'On Label', 'text'),
+            ConfigField('off_label', 'Off Label', 'text'),
+            ConfigField('on_icon', 'On Icon', 'text'),
+            ConfigField('off_icon', 'Off Icon', 'text'),
+            ConfigField('on_color', 'On Colour', 'text'),
+            ConfigField('off_color', 'Off Colour', 'text'),
+        ),
+    ),
+    ActionSpec(
+        id='slider_volume', label='Volume Slider', category='custom',
+        icon=('fas', 'sliders-h'), action_type='slider', runs_on=RUNS_FRONTEND,
+        default_config={'target': 'volume', 'min': 0, 'max': 100, 'step': 1},
+        description='Drag to set the system output volume.',
+        keywords=('slider', 'drag', 'level', 'audio'),
+    ),
+    ActionSpec(
+        id='slider_brightness', label='Brightness Slider', category='custom',
+        icon=('fas', 'sun'), action_type='slider', runs_on=RUNS_FRONTEND,
+        default_config={'target': 'brightness', 'min': 0, 'max': 100, 'step': 5},
+        description='Drag to set the screen brightness.',
+        keywords=('slider', 'drag', 'level', 'display'),
+    ),
+    ActionSpec(
+        id='slider_ui_brightness', label='UI Dimmer Slider', category='custom',
+        icon=('fas', 'adjust'), action_type='slider', runs_on=RUNS_FRONTEND,
+        default_config={'target': 'ui_brightness', 'min': 40, 'max': 160, 'step': 5},
+        description='Drag to dim or brighten the VDock interface.',
+        keywords=('slider', 'drag', 'dim', 'level'),
+    ),
+    ActionSpec(
         id='cross_platform', label='Cross-Platform Action', category='custom',
         icon=('fas', 'globe-americas'), action_type='cross_platform',
         description='Any built-in system action, chosen by name.',
@@ -729,21 +767,6 @@ _OBS: Tuple[ActionSpec, ...] = (
 # --- Composite & navigation extras -------------------------------------------
 
 _COMPOSITE: Tuple[ActionSpec, ...] = (
-    ActionSpec(
-        id='toggle', label='Toggle (Two States)', category='custom',
-        icon=('fas', 'toggle-on'), action_type='toggle',
-        description='One button, two actions, alternating on each press -- '
-                    'mute/unmute, start/stop, on/off.',
-        keywords=('switch', 'on off', 'two state', 'multi action switch'),
-        config_fields=(
-            ConfigField('on_action', 'First action', 'steps', required=True,
-                        help='Runs on the first press.'),
-            ConfigField('off_action', 'Second action', 'steps', required=True,
-                        help='Runs on the next press.'),
-            ConfigField('on_label', 'First label', 'text', default='On'),
-            ConfigField('off_label', 'Second label', 'text', default='Off'),
-        ),
-    ),
     ActionSpec(
         id='random', label='Random Action', category='custom',
         icon=('fas', 'shuffle'), action_type='random',

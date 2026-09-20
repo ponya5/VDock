@@ -535,10 +535,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
       return { success: true, message: `Scene: ${scenes[index].name}` }
     }
     
+    return executeAction(button.action, button.id)
+  }
+
+  /**
+   * Dispatch any action object (a button's release_action, a slider's live
+   * value push) with an owning button id for state/toast attribution.
+   */
+  async function executeAction(action: { type: string; config: Record<string, any> }, buttonId: string) {
     try {
       const response = await apiClient.post('/actions/execute', {
-        action: button.action,
-        button_id: button.id
+        action,
+        button_id: buttonId
       })
 
       // A long action (a Claude Code prompt, a gh command) cannot finish
@@ -546,16 +554,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
       // returns 202 with a job id. Wait for the `action_job` event instead of
       // letting axios time out at 30s while the work carries on invisibly.
       if (response.data?.pending && response.data.job_id) {
-        return await awaitActionJob(response.data.job_id, button.action.type)
+        return await awaitActionJob(response.data.job_id, action.type)
       }
-      
+
       // Handle fullscreen action locally
-      if (button.action.type === 'system_control' && 
-          button.action.config?.action === 'fullscreen' && 
+      if (action.type === 'system_control' &&
+          action.config?.action === 'fullscreen' &&
           response.data.success) {
         toggleFullscreen()
       }
-      
+
       return response.data
     } catch (error) {
       console.error('Failed to execute action:', error)
@@ -675,7 +683,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     applyGlobalButtonStyle,
     toggleEditMode,
     saveProfile,
-    executeButtonAction
+    executeButtonAction,
+    executeAction
   }
 })
 

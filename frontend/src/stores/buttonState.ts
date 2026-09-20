@@ -23,6 +23,8 @@ export interface ButtonState {
   sublabel?: string
   /** Semantic colour for the status ring: normal | warning | critical. */
   tone?: 'normal' | 'warning' | 'critical'
+  /** Toggle buttons: 0 = "off" side, 1 = "on" side (from ToggleAction data.side). */
+  toggleSide?: 0 | 1
   /** Set on failure so the user can see why without hunting for the toast. */
   message?: string
   updatedAt: number
@@ -81,10 +83,20 @@ export const useButtonStateStore = defineStore('buttonState', () => {
       tone: data.status === 'warning' || data.status === 'critical'
         ? data.status
         : 'normal',
+      // Toggle side persists — unlike the flash, it IS the button's state.
+      ...(data.side === 0 || data.side === 1 ? { toggleSide: data.side as 0 | 1 } : {}),
       message: result?.success ? undefined : result?.message
     })
 
     if (hasBadge) return // a live widget keeps its value
+    if (data.side === 0 || data.side === 1) {
+      // Toggle: keep the side + sublabel, only the status ring fades.
+      timers.set(buttonId, setTimeout(() => {
+        set(buttonId, { status: 'idle', message: undefined })
+        timers.delete(buttonId)
+      }, FLASH_MS))
+      return
+    }
 
     timers.set(buttonId, setTimeout(() => {
       set(buttonId, { status: 'idle', message: undefined })

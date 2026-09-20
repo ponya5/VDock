@@ -1,9 +1,36 @@
 """Action execution routes."""
+import logging
+from typing import Any, Callable, Dict, Optional
+
 from flask import Blueprint, request, jsonify
 from auth import require_auth
 from actions.catalog import catalog_to_dict
 
+logger = logging.getLogger('vdock')
+
 actions_bp = Blueprint('actions', __name__)
+
+# Injected by app.py (same pattern as agent_events) — broadcasts toggle
+# side changes so every window/device paints the same switch state.
+_emitter: Optional[Callable[[str, Dict[str, Any]], None]] = None
+
+
+def set_emitter(fn: Callable[[str, Dict[str, Any]], None]) -> None:
+    global _emitter
+    _emitter = fn
+
+
+def _broadcast_toggle(button_id: Optional[str], result_data: Dict[str, Any]) -> None:
+    if not _emitter or 'side' not in result_data:
+        return
+    try:
+        _emitter('toggle_state', {
+            'button_id': button_id,
+            'side': result_data['side'],
+            'sublabel': result_data.get('sublabel'),
+        })
+    except Exception as e:  # pragma: no cover - defensive
+        logger.error('Failed to broadcast toggle state: %s', e)
 
 
 @actions_bp.route('/api/actions/catalog', methods=['GET'])
@@ -41,7 +68,12 @@ def execute_action():
 
     # Long actions cannot finish inside the request. Hand them to the job
     # runner and answer immediately; the result arrives over Socket.IO.
-    if not data.get('wait') and action_executor.is_long_running(action_type):
+    # A multi_action with enough configured delay also goes to the job runner —
+    # axios gives up at 30s while a "launch app, wait 45s, press play" chain is
+    # still sleeping.
+    if not data.get('wait') and (
+        action_executor.is_long_running(action_type) or _looks_long(action_data)
+    ):
         from services.job_runner import get_job_runner
 
         job = get_job_runner().submit(
@@ -58,8 +90,36 @@ def execute_action():
         }), 202
 
     result = action_executor.execute_action(action_data)
-    
+
+    if result.success and isinstance(result.data, dict):
+        _broadcast_toggle(data.get('button_id'), result.data)
+
     return jsonify(result.to_dict())
+
+
+@actions_bp.route('/api/actions/toggles', methods=['GET'])
+@require_auth
+def get_toggle_states():
+    """All toggle sides — clients sync button faces on load/reconnect."""
+    from actions.toggle_action import _sides
+    return jsonify({'success': True, 'sides': dict(_sides)})
+
+
+def _looks_long(action_data: Dict[str, Any]) -> bool:
+    """Estimate a multi_action's sleep budget — over the client's timeout it
+    belongs on the job runner even though every step is fast."""
+    if action_data.get('type') != 'multi_action':
+        return False
+    cfg = action_data.get('config') or {}
+    steps = cfg.get('actions') or []
+    if not isinstance(steps, list):
+        return False
+    default_delay = float(cfg.get('delay', 0.1))
+    total = 0.0
+    for i, step in enumerate(steps[:-1]):
+        ms = step.get('delay') if isinstance(step, dict) else None
+        total += (float(ms) / 1000) if ms else default_delay
+    return total > 20
 
 
 @actions_bp.route('/api/actions/jobs/<job_id>', methods=['GET'])

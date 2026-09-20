@@ -17,6 +17,7 @@
     <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
     <!-- Tour lives above the router so it survives dashboard ↔ settings navigation -->
     <TutorialTour />
+    <QuickDeckOverlay v-if="!isStandaloneSettings" />
     <AgentAlertOverlay />
   </div>
 </template>
@@ -35,8 +36,10 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import UserGuideModal from '@/components/UserGuideModal.vue'
 import TutorialTour from '@/components/TutorialTour.vue'
+import QuickDeckOverlay from '@/components/QuickDeckOverlay.vue'
 import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
 import { useAgentAlerts } from '@/services/agentAlerts'
+import { useToggleSync } from '@/services/toggleSync'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import type { AppIntegration } from '@/types'
@@ -85,6 +88,7 @@ onMounted(async () => {
 
   socketClient.connect()
   useAgentAlerts().init()
+  useToggleSync().init()
   stopLiveSettingsSync = settingsStore.initLiveSync()
 
   // Show welcome notification for first time users
@@ -126,7 +130,22 @@ function handleBeforeUnload() {
   void settingsStore.flushSettingsToServer()
 }
 
+// In-window summon key — backtick toggles the quick-deck overlay. (Browsers
+// can't own OS-global hotkeys; the Electron build adds Ctrl+Shift+D.)
+function handleSummonKey(e: KeyboardEvent) {
+  if (e.key !== '`' || isStandaloneSettings.value) return
+  const target = e.target as HTMLElement | null
+  if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+  e.preventDefault()
+  window.dispatchEvent(new CustomEvent('vdock-quick-deck'))
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleSummonKey)
+})
+
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleSummonKey)
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('resize', updateUiZoom)
   stopLiveSettingsSync?.()

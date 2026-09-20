@@ -64,6 +64,8 @@ export const SETTINGS_DEFAULTS = {
   appScanningEnabled: true,
   agentAlertsEnabled: true,
   tutorialCompleted: false,
+  pressSoundEnabled: true,
+  pressSoundStyle: 'click' as const,
   newsFeeds: '',
   sportsFeeds: '',
   newsRotateSeconds: 8,
@@ -114,6 +116,8 @@ export interface PersistedUserSettings {
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
   tutorialCompleted: boolean
+  pressSoundEnabled: boolean
+  pressSoundStyle: 'click' | 'blip' | 'pop' | 'none'
   screensaverLayout: ScreensaverLayout
 }
 
@@ -220,6 +224,10 @@ export const useSettingsStore = defineStore('settings', () => {
   // Server-backed (not localStorage) so it survives cache clears and is
   // shared by every window/device on this backend.
   const tutorialCompleted = ref(false)
+  // Physical-feel feedback: a WebAudio tick on every button press.
+  // 'none' keeps the toggle semantics (enabled but silent) simple.
+  const pressSoundEnabled = ref(true)
+  const pressSoundStyle = ref<'click' | 'blip' | 'pop' | 'none'>('click')
   // Widget positions/scales in viewport percent (center-anchored). Edited via
   // the live layout editor reached from Settings -> Screensaver.
   const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
@@ -354,6 +362,8 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
       tutorialCompleted: tutorialCompleted.value,
+      pressSoundEnabled: pressSoundEnabled.value,
+      pressSoundStyle: pressSoundStyle.value,
       // Deep copy for the same structured-clone reason as recentActions above.
       screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value)),
     }
@@ -408,6 +418,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
     if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
+    if (settings.pressSoundEnabled !== undefined) pressSoundEnabled.value = settings.pressSoundEnabled
+    if (settings.pressSoundStyle !== undefined) pressSoundStyle.value = settings.pressSoundStyle
     if (settings.screensaverLayout !== undefined) {
       screensaverLayout.value = normalizeScreensaverLayout(settings.screensaverLayout)
     }
@@ -468,6 +480,8 @@ export const useSettingsStore = defineStore('settings', () => {
         appScanningEnabled: settings.appScanningEnabled ?? true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
+        pressSoundEnabled: settings.pressSoundEnabled ?? true,
+        pressSoundStyle: settings.pressSoundStyle ?? 'click',
         screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
       })
     } catch (error) {
@@ -610,6 +624,8 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled,
       agentAlertsEnabled,
       tutorialCompleted,
+      pressSoundEnabled,
+      pressSoundStyle,
     ],
     () => {
       saveSettings()
@@ -817,6 +833,8 @@ export const useSettingsStore = defineStore('settings', () => {
     appScanningEnabled,
     agentAlertsEnabled,
     tutorialCompleted,
+    pressSoundEnabled,
+    pressSoundStyle,
     screensaverLayout,
     showHelpGuide,
     applyTouchModeStyles,

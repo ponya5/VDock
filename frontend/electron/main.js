@@ -469,23 +469,25 @@ async function updateTrayMenu() {
 }
 
 function registerGlobalShortcuts() {
-  // Global shortcut to summon window (Ctrl+Shift+D)
+  // Global shortcut to summon the deck at the cursor (Ctrl+Shift+D). On show it
+  // also opens the quick-deck overlay — press a key, it dismisses itself.
   globalShortcut.register('CommandOrControl+Shift+D', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
-        mainWindow.hide()
+        mainWindow.webContents.send('quick-deck-toggle')
       } else {
         // Show at cursor position
         const cursorPosition = screen.getCursorScreenPoint()
         const bounds = mainWindow.getBounds()
-        
+
         mainWindow.setPosition(
           cursorPosition.x - bounds.width / 2,
           cursorPosition.y - bounds.height / 2
         )
-        
+
         mainWindow.show()
         mainWindow.focus()
+        mainWindow.webContents.send('quick-deck-toggle')
       }
     }
   })
