@@ -712,6 +712,8 @@ function triggerRipple(event: PointerEvent) {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 10px 24px rgba(8, 6, 30, 0.28);
+  /* Lets the label react to the real rendered button height (below). */
+  container-type: size;
 }
 
 /* Hover state */
@@ -988,6 +990,17 @@ function triggerRipple(event: PointerEvent) {
   /* Ensure label is always visible — never hidden */
   opacity: 1 !important;
   visibility: visible !important;
+}
+
+/* Short buttons can't fit an icon capsule plus a wrapped two-line label
+   (tablet touch mode scales labels ~1.4x) — drop to a single ellipsized
+   line instead of clipping the second line mid-glyph at the card edge.
+   Must come after .button-label so equal specificity resolves in order. */
+@container (max-height: 115px) {
+  .button-label {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
 }
 
 .button-secondary-label {

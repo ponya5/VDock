@@ -46,3 +46,13 @@ On the 7" panel (1024×600) `min()` yields exactly 1 — zero visual change.
 | 1920×1080 | 1.8 | Fills window; guide modal 1710×994 centered under cap |
 
 Frontend: 231/231 tests, `vue-tsc` clean.
+
+### Follow-up: label overflow on short buttons (found in final self-test)
+
+Tablet touch mode scales labels ~1.4x; two-word labels wrapped to two
+lines and clipped mid-glyph at the 92px card edge (18px measured
+overflow). Fix: `.deck-button` is now a `container-type: size` container;
+an `@container (max-height: 115px)` rule drops `.button-label` to a
+single ellipsized line. Note: the rule must sit *after* `.button-label`
+in source — equal specificity resolves by order. Verified live: worst
+overflow 18px → 1px at 1024×600 tablet mode.
