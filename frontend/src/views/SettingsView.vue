@@ -525,6 +525,25 @@
                   </div>
                 </section>
 
+                <!-- Location feeds the docked weather card too, so it stays
+                     reachable even when the screensaver widget is disabled. -->
+                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'location-dot']" /> Weather Location</h2>
+                  <div class="form-group">
+                    <label>Location Source</label>
+                    <select v-model="settings.weatherLocationMode" class="select">
+                      <option value="auto">Use my current location</option>
+                      <option value="manual">Set a city manually</option>
+                    </select>
+                  </div>
+                  <div v-if="settings.weatherLocationMode === 'manual'" class="form-group" style="margin-top: var(--spacing-sm)">
+                    <label>City</label>
+                    <input v-model="settings.weatherManualCity" type="text" class="input" placeholder="e.g. Tel Aviv" @keyup.enter="refreshWeatherWidget" />
+                    <p class="form-help">Used to fetch weather for the dashboard widget</p>
+                  </div>
+                  <p v-else class="form-help">Requires location permission in your browser. If denied, falls back to the manual city above if set.</p>
+                </section>
+
                 <section
                   v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.some(w => ['news', 'sports', 'market', 'worldclock'].includes(w))"
                   class="settings-section card"
@@ -683,12 +702,12 @@
 
         <!-- ── Logs ── -->
         <div v-if="activeTab === 'logs'" class="tab-content">
-          <div class="tab-page-header">
+          <div class="tab-page-header tab-page-header-compact">
             <h2>Session Logs</h2>
-            <p>App, launcher, and touchscreen events — for troubleshooting. Logs rotate automatically so this folder stays small ({{ formatBytes(logsTotalBytes) }} used).</p>
+            <p>Rotating session, launcher, and touchscreen events · {{ formatBytes(logsTotalBytes) }} used</p>
           </div>
-          <div class="settings-grid">
-            <section class="settings-section card">
+          <div class="logs-layout">
+            <section class="settings-section card logs-files-card">
               <h2><FontAwesomeIcon :icon="['fas', 'folder-open']" /> Log Files</h2>
               <div class="log-file-list">
                 <button
@@ -704,35 +723,49 @@
                 </button>
                 <p v-if="!logFiles.length" class="form-help">No log files yet — they appear once the app writes events.</p>
               </div>
-              <div class="screensaver-actions">
-                <button class="btn btn-secondary" :disabled="loadingLogs" @click="loadLogs">
-                  <FontAwesomeIcon :icon="['fas', loadingLogs ? 'spinner' : 'arrows-rotate']" :spin="loadingLogs" /> Refresh
-                </button>
-                <button class="btn btn-secondary" :disabled="exportingLogs || !logFiles.length" @click="exportLogs">
-                  <FontAwesomeIcon :icon="['fas', exportingLogs ? 'spinner' : 'download']" :spin="exportingLogs" />
-                  {{ exportingLogs ? 'Exporting...' : 'Export All (.zip)' }}
-                </button>
-                <button class="btn btn-danger" :disabled="!logFiles.length" @click="clearLogs">
-                  <FontAwesomeIcon :icon="['fas', 'trash']" /> Clear All
-                </button>
+              <div class="logs-files-footer">
+                {{ logFiles.length }} file{{ logFiles.length === 1 ? '' : 's' }} · {{ formatBytes(logsTotalBytes) }}
               </div>
             </section>
 
-            <section class="settings-section card">
-              <h2><FontAwesomeIcon :icon="['fas', 'terminal']" /> {{ selectedLog || 'Viewer' }}</h2>
-              <div v-if="selectedLog" class="form-group-header">
-                <label class="small-label">Last {{ logTailCount }} lines</label>
-                <select v-model.number="logTailCount" class="select log-tail-select" @change="refreshTail">
-                  <option :value="100">100</option>
-                  <option :value="300">300</option>
-                  <option :value="1000">1000</option>
-                </select>
+            <section class="settings-section card logs-viewer-card">
+              <div class="log-toolbar">
+                <div class="log-toolbar-file">
+                  <FontAwesomeIcon :icon="['fas', 'terminal']" class="log-toolbar-icon" />
+                  <span class="log-toolbar-name">{{ selectedLog || 'Viewer' }}</span>
+                  <span v-if="selectedLogFileSize !== null" class="log-size-badge">{{ formatBytes(selectedLogFileSize) }}</span>
+                </div>
+                <div class="log-toolbar-actions">
+                  <label class="log-tail-label">
+                    Tail
+                    <select v-model.number="logTailCount" class="select log-tail-select" :disabled="!selectedLog" @change="refreshTail">
+                      <option :value="100">100</option>
+                      <option :value="300">300</option>
+                      <option :value="1000">1000</option>
+                    </select>
+                  </label>
+                  <span class="log-toolbar-divider"></span>
+                  <button class="btn btn-sm btn-secondary" :disabled="loadingLogs" title="Reload log list and tail" @click="refreshAll">
+                    <FontAwesomeIcon :icon="['fas', loadingLogs ? 'spinner' : 'arrows-rotate']" :spin="loadingLogs" /> Refresh
+                  </button>
+                  <button class="btn btn-sm btn-secondary" :disabled="exportingLogs || !logFiles.length" title="Download all logs as a zip" @click="exportLogs">
+                    <FontAwesomeIcon :icon="['fas', exportingLogs ? 'spinner' : 'file-export']" :spin="exportingLogs" />
+                    {{ exportingLogs ? 'Exporting…' : 'Export' }}
+                  </button>
+                  <button class="btn btn-sm btn-danger" :disabled="!logFiles.length" title="Empty every log file" @click="clearLogs">
+                    <FontAwesomeIcon :icon="['fas', 'trash']" /> Clear All
+                  </button>
+                </div>
               </div>
               <div ref="logViewerEl" class="log-viewer">
                 <template v-if="logLines.length">
                   <div v-for="(line, i) in logLines" :key="i" class="log-line" :class="logLineClass(line)">{{ line }}</div>
                 </template>
                 <p v-else class="form-help">{{ selectedLog ? 'This log is empty.' : 'Pick a log file on the left to view its tail.' }}</p>
+              </div>
+              <div class="log-statusbar">
+                <span>{{ selectedLog ? `${logLines.length} lines shown` : 'No file selected' }}</span>
+                <span v-if="logsUpdatedAt">Updated {{ logsUpdatedAt }}</span>
               </div>
             </section>
           </div>
@@ -859,27 +892,10 @@
         <!-- ── Integration ── -->
         <div v-if="activeTab === 'integration'" class="tab-content">
           <div class="tab-page-header">
-            <h2>App Integration</h2>
-            <p>Widget data sources and automatic scene switching for monitored applications.</p>
+            <h2>Integrations</h2>
+            <p>Automatic scene switching and recently used actions for monitored applications.</p>
           </div>
           <div class="settings-grid">
-            <section class="settings-section card">
-              <h2>Weather Widget Location</h2>
-              <div class="form-group">
-                <label>Location Source</label>
-                <select v-model="settings.weatherLocationMode" class="select">
-                  <option value="auto">Use my current location</option>
-                  <option value="manual">Set a city manually</option>
-                </select>
-              </div>
-              <div v-if="settings.weatherLocationMode === 'manual'" class="form-group" style="margin-top: var(--spacing-sm)">
-                <label>City</label>
-                <input v-model="settings.weatherManualCity" type="text" class="input" placeholder="e.g. Tel Aviv" @keyup.enter="refreshWeatherWidget" />
-                <p class="form-help">Used to fetch weather for the dashboard widget</p>
-              </div>
-              <p v-else class="form-help">Requires location permission in your browser. If denied, falls back to the manual city above if set.</p>
-            </section>
-
             <section class="settings-section card">
               <h2>Auto Scene Switching</h2>
               <div class="toggle-row">
@@ -1597,7 +1613,13 @@ const logLines = ref<string[]>([])
 const logTailCount = ref(300)
 const loadingLogs = ref(false)
 const exportingLogs = ref(false)
+const logsUpdatedAt = ref('')
 const logViewerEl = ref<HTMLElement | null>(null)
+
+const selectedLogFileSize = computed(() => {
+  const file = logFiles.value.find(f => f.name === selectedLog.value)
+  return file ? file.size : null
+})
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -1639,11 +1661,17 @@ async function refreshTail() {
       tail: logTailCount.value
     })
     logLines.value = data.lines ?? []
+    logsUpdatedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     await nextTick()
     if (logViewerEl.value) logViewerEl.value.scrollTop = logViewerEl.value.scrollHeight
   } catch {
     logLines.value = []
   }
+}
+
+function refreshAll() {
+  void loadLogs()
+  void refreshTail()
 }
 
 async function exportLogs() {
@@ -1843,7 +1871,7 @@ const tabs = [
   { id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'] },
   { id: 'templates', name: 'Templates', icon: ['fas', 'layer-group'] },
   { id: 'server', name: 'Server', icon: ['fas', 'server'] },
-  { id: 'integration', name: 'Widgets & Integration', icon: ['fas', 'plug'] },
+  { id: 'integration', name: 'Integrations', icon: ['fas', 'plug'] },
   { id: 'logs', name: 'Logs', icon: ['fas', 'file-lines'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
@@ -1874,7 +1902,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
   { label: 'Startup', keywords: 'startup boot autostart launcher terminal close debug', tabId: 'server', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
-  { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'integration', icon: ['fas', 'cloud-sun'] },
+  { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
   { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', tabId: 'integration', icon: ['fas', 'desktop'] },
   { label: 'About VDock', keywords: 'version about info', tabId: 'about', icon: ['fas', 'info-circle'] }
@@ -2645,14 +2673,64 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-/* ── Logs tab (DL-029) ── */
+/* ── Logs tab (DL-029, redesigned DL-036) ── */
+/* Split layout: files column + viewer filling the settings viewport, so the
+   tail is readable on the 7" panel instead of capped at 340px. */
+.logs-layout {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: stretch;
+  /* 100vh − settings header (72) − content padding (40) − compact page
+     header (~33) — fills exactly, no scroll. */
+  height: calc(100vh - 145px);
+  min-height: 380px;
+}
+
+.tab-page-header-compact {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tab-page-header-compact p {
+  margin: 0;
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+}
+
+.logs-files-card {
+  width: clamp(210px, 24vw, 270px);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.logs-viewer-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* Tighter than the default card padding — every px goes to the tail. */
+  padding: 12px 14px;
+}
+
 .log-file-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: var(--spacing-md);
-  max-height: 220px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+
+.logs-files-footer {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .log-file-row {
@@ -2694,18 +2772,107 @@ onMounted(async () => {
   font-size: 0.85em;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+/* Viewer toolbar — actions live beside the content they affect. One row:
+   the file name ellipsizes so Refresh/Export/Clear never wrap onto a
+   second line and steal tail space. */
+.log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  flex-wrap: nowrap;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.log-toolbar-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  /* Never fully collapse — keep at least an icon + a sliver of name. */
+  min-width: 70px;
+}
+
+.log-toolbar-icon { color: var(--color-text-secondary); }
+
+.log-toolbar-name {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: clamp(13px, 0.8vw + 9px, 15px);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-size-badge {
+  font-size: clamp(10px, 0.5vw + 8px, 12px);
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* On the compact viewer the badge is the first thing to yield — the size
+   is still on the file row. (Window width: the settings shell's nav column
+   leaves the toolbar ~490px on the 1024×600 panel.) */
+@media (max-width: 1100px) {
+  .log-size-badge { display: none; }
+}
+
+.log-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.log-toolbar-actions .btn {
+  white-space: nowrap;
+  /* Compact diagnostic controls — don't let touch-mode min-height inflate
+     the toolbar into stealing tail space on the 600px panel. */
+  min-height: 34px;
+  padding: 4px 10px;
+}
+
+.log-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.log-tail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+  color: var(--color-text-secondary);
+}
+
+.log-tail-select {
+  width: auto;
+  min-width: 76px;
+  padding: 4px 8px;
 }
 
 .log-viewer {
-  max-height: 340px;
-  min-height: 160px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 10px 12px;
   font-family: 'Consolas', 'Courier New', monospace;
-  font-size: clamp(10px, 0.55vw + 8px, 12px);
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
   line-height: 1.55;
 }
 
@@ -2718,9 +2885,25 @@ onMounted(async () => {
 .log-line.log-error { color: #ff8a80; }
 .log-line.log-warn { color: #f0c674; }
 
-.log-tail-select {
-  width: auto;
-  min-width: 84px;
+.log-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: clamp(10px, 0.5vw + 8px, 12px);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Narrow windows: stack the files column above the viewer. */
+@media (max-width: 760px) {
+  .logs-layout { flex-direction: column; height: auto; }
+  .logs-files-card { width: 100%; }
+  .log-file-list { max-height: 180px; }
+  .log-viewer { min-height: 320px; }
 }
 
 /* ── Toggle Switch — 60×34 pill rows per the mockup ── */
