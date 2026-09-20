@@ -34,6 +34,39 @@ export function migrateBackground(settings: LegacyBackgroundFields): string {
   return settings.dashboardBackground || DEFAULT_BACKGROUND_ID
 }
 
+/**
+ * Factory defaults for user-adjustable settings. Single source of truth —
+ * reset buttons in Settings → Appearance restore these values (DL-028).
+ */
+export const SETTINGS_DEFAULTS = {
+  buttonSize: 1.0,
+  buttonTransparency: 0,
+  showLabels: true,
+  showTooltips: true,
+  animationsEnabled: true,
+  editModeWiggle: false,
+  tiltEffectEnabled: true,
+  dockedSidebarEnabled: true,
+  dockedSidebarWidth: 190,
+  dockedButtonHeight: 84,
+  background: DEFAULT_BACKGROUND_ID,
+  toastLevel: 'all' as const,
+  touchMode: 'normal' as const,
+  buttonDefaultAnimation: 'none',
+  buttonDefaultIconLoop: 'swing',
+  buttonDefaultEffect: 'none',
+  screensaverTimeout: 120,
+  screensaverWidgets: ['weather', 'news', 'sports', 'market', 'worldclock'],
+  screensaverWeatherSize: 100,
+  screensaverWidgetSize: 100,
+  screensaverBackground: DEFAULT_BACKGROUND_ID,
+  newsFeeds: '',
+  sportsFeeds: '',
+  newsRotateSeconds: 8,
+  marketTickers: '',
+  worldClockTimezones: '',
+} as const
+
 export interface PersistedUserSettings {
   buttonSize: number
   buttonTransparency: number
