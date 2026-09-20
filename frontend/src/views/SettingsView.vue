@@ -229,6 +229,26 @@
 
               <div v-if="appearanceSubTab === 'layout'" class="settings-grid settings-grid-masonry">
             <section class="settings-section card">
+              <h2><FontAwesomeIcon :icon="['fas', 'font']" /> Dashboard Font</h2>
+              <div class="form-group-header">
+                <label>Font Style</label>
+                <SettingResetButton label="Dashboard font" :at-default="settingsStore.dashboardFont === SETTINGS_DEFAULTS.dashboardFont" @reset="settingsStore.dashboardFont = SETTINGS_DEFAULTS.dashboardFont" />
+              </div>
+              <p class="form-help">Typography on the dashboard — button labels, scene pills, sidebar. The screensaver keeps its own fonts either way.</p>
+              <div class="font-style-picker">
+                <button
+                  v-for="opt in dashboardFontOptions"
+                  :key="opt.value"
+                  :class="['font-style-card', { active: settingsStore.dashboardFont === opt.value }]"
+                  @click="settingsStore.dashboardFont = opt.value"
+                >
+                  <span class="font-style-sample" :style="{ fontFamily: opt.family }">{{ opt.sample }}</span>
+                  <span class="font-style-name">{{ opt.name }}</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="settings-section card">
               <h2><FontAwesomeIcon :icon="['fas', 'table-columns']" /> Sidebar</h2>
               <div class="toggle-row">
                 <label class="toggle-row-label">Show docked sidebar</label>
@@ -352,8 +372,19 @@
             </section>
               </div>
 
+              <div v-if="appearanceSubTab === 'screensaver'" class="sub-tab-bar">
+                <button :class="['sub-tab-btn', { active: screensaverSubTab === 'widgets' }]" @click="screensaverSubTab = 'widgets'">
+                  <FontAwesomeIcon :icon="['fas', 'shapes']" /> Widgets
+                </button>
+                <button :class="['sub-tab-btn', { active: screensaverSubTab === 'settings' }]" @click="screensaverSubTab = 'settings'">
+                  <FontAwesomeIcon :icon="['fas', 'moon']" /> Settings
+                </button>
+                <button :class="['sub-tab-btn', { active: screensaverSubTab === 'backgrounds' }]" @click="screensaverSubTab = 'backgrounds'">
+                  <FontAwesomeIcon :icon="['fas', 'image']" /> Backgrounds
+                </button>
+              </div>
               <div v-if="appearanceSubTab === 'screensaver'" class="settings-grid settings-grid-masonry">
-                <section class="settings-section card" id="setting-screensaver">
+                <section v-if="screensaverSubTab === 'settings'" class="settings-section card" id="setting-screensaver">
                   <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver</h2>
                   <div class="form-group">
                     <div class="form-group-header">
@@ -385,7 +416,7 @@
                   <p class="form-help">Test shows the screensaver, even when the delay above is off. Customize Layout opens a live editor right here — drag widgets to move them, drag the corner dot to resize, then Save.</p>
                 </section>
 
-                <section class="settings-section card">
+                <section v-if="screensaverSubTab === 'backgrounds'" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'image']" /> Screensaver Background</h2>
                   <p class="form-help">A background that shows only while the screensaver is on — the dashboard keeps its own.</p>
                   <div class="form-group">
@@ -416,7 +447,7 @@
                   </div>
                 </section>
 
-                <section class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets'" class="settings-section card">
                   <div class="form-group-header">
                     <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
                     <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
@@ -447,7 +478,7 @@
                   </div>
                 </section>
 
-                <section v-if="settingsStore.screensaverWidgets.includes('weather')" class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('weather')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'cloud-sun']" /> Weather Widget</h2>
                   <div class="form-group">
                     <div class="form-group-header">
@@ -471,7 +502,7 @@
                 </section>
 
                 <section
-                  v-if="settingsStore.screensaverWidgets.some(w => ['news', 'sports', 'market', 'worldclock'].includes(w))"
+                  v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.some(w => ['news', 'sports', 'market', 'worldclock'].includes(w))"
                   class="settings-section card"
                 >
                   <h2><FontAwesomeIcon :icon="['fas', 'text-height']" /> Widget Text Size</h2>
@@ -496,7 +527,7 @@
                   </div>
                 </section>
 
-                <section v-if="settingsStore.screensaverWidgets.includes('news')" class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('news')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'newspaper']" /> News Headlines</h2>
                   <p class="form-help">
                     Headlines come from RSS feeds, so no API key is needed. Leave
@@ -543,7 +574,7 @@
                   </p>
                 </section>
 
-                <section v-if="settingsStore.screensaverWidgets.includes('sports')" class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('sports')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'football']" /> Sports Headlines</h2>
                   <p class="form-help">
                     Sports headlines come from RSS feeds, so no API key is
@@ -572,7 +603,7 @@
                   </p>
                 </section>
 
-                <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
                   <div class="form-group">
                     <div class="form-group-header">
@@ -601,7 +632,7 @@
                   </p>
                 </section>
 
-                <section v-if="settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
+                <section v-if="screensaverSubTab === 'widgets' && settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'globe']" /> World Clock</h2>
                   <div class="form-group">
                     <div class="form-group-header">
@@ -1177,6 +1208,15 @@ const toastLevelOptions = [
 
 const activeTab = ref('appearance')
 const appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')
+const screensaverSubTab = ref<'widgets' | 'settings' | 'backgrounds'>('widgets')
+
+// Dashboard font picker — samples render in the real font so the card can't
+// drift from what the dashboard will show.
+const dashboardFontOptions: { value: 'default' | 'editorial' | 'mono'; name: string; sample: string; family: string }[] = [
+  { value: 'default', name: 'Modern Sans', sample: 'Aa 12:34', family: "'Heebo', system-ui, sans-serif" },
+  { value: 'editorial', name: 'Editorial', sample: 'Aa 12:34', family: "'Instrument Serif', Georgia, serif" },
+  { value: 'mono', name: 'Terminal Mono', sample: 'Aa 12:34', family: "'JetBrains Mono', monospace" },
+]
 
 // Sample button for the live preview card — never persisted, just rendered
 // through the real DeckButton component so the preview matches actual
@@ -2522,6 +2562,44 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+/* ── DL-032: Dashboard Font picker ── */
+.font-style-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+.font-style-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--spacing-md) var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 64px;
+}
+.font-style-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.font-style-card.active {
+  border-color: var(--color-primary, #4f8ef7);
+  background: rgba(79, 142, 247, 0.12);
+  box-shadow: 0 0 0 1px var(--color-primary, #4f8ef7) inset;
+}
+.font-style-sample {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.font-style-name {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
 }
 
 /* ── Logs tab (DL-029) ── */

@@ -60,6 +60,7 @@ export const SETTINGS_DEFAULTS = {
   screensaverWeatherSize: 100,
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_BACKGROUND_ID,
+  dashboardFont: 'default' as const,
   newsFeeds: '',
   sportsFeeds: '',
   newsRotateSeconds: 8,
@@ -106,6 +107,7 @@ export interface PersistedUserSettings {
   worldClockTimezones: string
   screensaverWidgetSize: number
   screensaverBackground: string
+  dashboardFont: 'default' | 'editorial' | 'mono'
   screensaverLayout: ScreensaverLayout
 }
 
@@ -205,6 +207,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // 'default' keeps the classic dark look; any other catalog id or uploaded
   // image URL paints behind the screensaver widgets.
   const screensaverBackground = ref<string>(DEFAULT_BACKGROUND_ID)
+  const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   // Widget positions/scales in viewport percent (center-anchored). Edited via
   // the live layout editor reached from Settings -> Screensaver.
   const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
@@ -335,6 +338,7 @@ export const useSettingsStore = defineStore('settings', () => {
       worldClockTimezones: worldClockTimezones.value,
       screensaverWidgetSize: screensaverWidgetSize.value,
       screensaverBackground: screensaverBackground.value,
+      dashboardFont: dashboardFont.value,
       // Deep copy for the same structured-clone reason as recentActions above.
       screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value)),
     }
@@ -385,6 +389,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.worldClockTimezones !== undefined) worldClockTimezones.value = settings.worldClockTimezones
     if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
     if (settings.screensaverBackground !== undefined) screensaverBackground.value = settings.screensaverBackground
+    if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
     if (settings.screensaverLayout !== undefined) {
       screensaverLayout.value = normalizeScreensaverLayout(settings.screensaverLayout)
     }
@@ -441,6 +446,7 @@ export const useSettingsStore = defineStore('settings', () => {
         worldClockTimezones: settings.worldClockTimezones ?? '',
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
         screensaverBackground: settings.screensaverBackground ?? DEFAULT_BACKGROUND_ID,
+        dashboardFont: settings.dashboardFont ?? 'default',
         screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
       })
     } catch (error) {
@@ -578,6 +584,7 @@ export const useSettingsStore = defineStore('settings', () => {
       worldClockTimezones,
       screensaverWidgetSize,
       screensaverBackground,
+      dashboardFont,
       screensaverLayout,
     ],
     () => {
@@ -782,6 +789,7 @@ export const useSettingsStore = defineStore('settings', () => {
     worldClockTimezones,
     screensaverWidgetSize,
     screensaverBackground,
+    dashboardFont,
     screensaverLayout,
     showHelpGuide,
     applyTouchModeStyles,

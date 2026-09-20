@@ -2,6 +2,7 @@
   <div
     id="app"
     class="theme-dark"
+    :data-ui-font="settingsStore.dashboardFont"
     :class="{
       'bg-animated': !isStandaloneSettings && settingsStore.background !== 'default',
       'settings-standalone-mode': isStandaloneSettings,

@@ -2185,3 +2185,41 @@ select option {
   0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
 }
+
+/* ==========================================================================
+   DL-032 — Dashboard font styles (screensaver typography on the dashboard)
+   Applied via [data-ui-font] on #app. 'default' needs no rules — the base
+   Heebo stack is already the default. Editorial = Instrument Serif display
+   text + JetBrains Mono meta labels; Mono = JetBrains Mono throughout.
+   Scoped to dashboard chrome so Settings stays Heebo.
+   ========================================================================== */
+
+/* Editorial — serif for the display values (button labels, profile title),
+   mono small-caps for the meta labels (scene pills, weather meta, hints). */
+#app[data-ui-font='editorial'] .button-label,
+#app[data-ui-font='editorial'] .profile-title-inline,
+#app[data-ui-font='editorial'] .weather-temp {
+  font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.01em;
+}
+#app[data-ui-font='editorial'] .segment-label,
+#app[data-ui-font='editorial'] .weather-desc,
+#app[data-ui-font='editorial'] .weather-loc,
+#app[data-ui-font='editorial'] .edit-hint,
+#app[data-ui-font='editorial'] .reveal-pill {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+#app[data-ui-font='editorial'] .segment-label {
+  font-size: 0.88em; /* mono reads wider — keep pills compact */
+}
+
+/* Mono — everything on the dashboard in JetBrains Mono. */
+#app[data-ui-font='mono'] .deck-button,
+#app[data-ui-font='mono'] .glass-pill-scene-selector,
+#app[data-ui-font='mono'] .docked-sidebar,
+#app[data-ui-font='mono'] .deck-header,
+#app[data-ui-font='mono'] .reveal-pill {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
