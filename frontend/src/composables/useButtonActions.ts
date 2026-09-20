@@ -7,6 +7,7 @@ import { useActionCatalogStore } from '@/stores/actionCatalog'
 import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult, IconLoop } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
+import { confirmDialog } from '@/composables/useConfirm'
 
 export function useButtonActions() {
   const dashboardStore = useDashboardStore()
@@ -135,10 +136,13 @@ export function useButtonActions() {
     })
   }
 
-  function handleButtonDelete(buttonId: string) {
-    if (confirm('Are you sure you want to delete this button?')) {
-      dashboardStore.removeButton(buttonId)
-    }
+  async function handleButtonDelete(buttonId: string) {
+    const ok = await confirmDialog({
+      title: 'Delete button?',
+      message: 'This button will be removed from the grid.',
+      confirmLabel: 'Delete',
+    })
+    if (ok) dashboardStore.removeButton(buttonId)
   }
 
   function handleButtonMove(buttonId: string, newPosition: { row: number; col: number }) {
@@ -247,8 +251,13 @@ export function useButtonActions() {
     }
   }
 
-  function handleDockedButtonDelete(buttonId: string) {
-    if (confirm('Are you sure you want to delete this docked button?')) {
+  async function handleDockedButtonDelete(buttonId: string) {
+    const ok = await confirmDialog({
+      title: 'Delete docked button?',
+      message: 'This button will be removed from the docked sidebar.',
+      confirmLabel: 'Delete',
+    })
+    if (ok) {
       const updatedDockedButtons = currentProfile.value?.dockedButtons?.filter(btn => btn.id !== buttonId) || []
       if (currentProfile.value) {
         const updatedProfile = {
@@ -374,7 +383,7 @@ export function useButtonActions() {
         editingButton.value = { ...newButton }
       }
     } else {
-      alert('No empty slots available on this page.')
+      notificationsStore.error('Page full', 'No empty slots available on this page.')
     }
   }
 

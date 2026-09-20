@@ -187,6 +187,7 @@ import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useButtonActions } from '@/composables/useButtonActions'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
+import { confirmDialog } from '@/composables/useConfirm'
 import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 
 const router = useRouter()
@@ -749,13 +750,18 @@ function handleSceneReset(sceneId: string) {
   notificationsStore.success('Scene Reset', 'Scene restored to its default layout.')
 }
 
-function deleteCurrentPage() {
+async function deleteCurrentPage() {
   if (!currentScene.value || currentScene.value.pages.length <= 1) {
     notificationsStore.error('Cannot Delete', 'A scene must have at least one page.')
     return
   }
   if (!currentPage.value) return
-  if (!confirm(`Delete "${currentPage.value.name}"? This cannot be undone.`)) return
+  const ok = await confirmDialog({
+    title: `Delete "${currentPage.value.name}"?`,
+    message: 'This page and its buttons will be removed. This cannot be undone.',
+    confirmLabel: 'Delete',
+  })
+  if (!ok) return
   dashboardStore.removePage(currentPage.value.id)
   notificationsStore.success('Page Deleted', 'The page has been removed.')
 }

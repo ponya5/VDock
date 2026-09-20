@@ -227,6 +227,8 @@ import IconPicker from './IconPicker.vue'
 import apiClient from '@/api/client'
 import { appForScene } from '@/data/appBackgrounds'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
+import { useNotificationsStore } from '@/stores/notifications'
+import { confirmDialog } from '@/composables/useConfirm'
 
 interface Props {
   scene?: Scene
@@ -245,6 +247,7 @@ const emit = defineEmits<{
 }>()
 
 const showIconPicker = ref(false)
+const notificationsStore = useNotificationsStore()
 const editingPageIndex = ref<number | null>(null)
 const editingPageName = ref('')
 const sceneFileInput = ref<HTMLInputElement | null>(null)
@@ -327,11 +330,11 @@ async function handleSceneBackgroundUpload(event: Event) {
 
   const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
   if (!validTypes.includes(file.type)) {
-    alert('Please upload a valid image file (PNG, JPG, GIF, WebP)')
+    notificationsStore.error('Invalid file', 'Please upload a valid image file (PNG, JPG, GIF, WebP)')
     return
   }
   if (file.size > 10 * 1024 * 1024) {
-    alert('File size must be less than 10MB')
+    notificationsStore.error('File too large', 'File size must be less than 10MB')
     return
   }
 
@@ -346,10 +349,10 @@ async function handleSceneBackgroundUpload(event: Event) {
     if (response.data.success) {
       editedScene.value.background = { type: 'image', image: response.data.url }
     } else {
-      alert('Upload failed: ' + (response.data.error || 'Unknown error'))
+      notificationsStore.error('Upload failed', response.data.error || 'Unknown error')
     }
   } catch (err: any) {
-    alert('Upload failed: ' + (err.message || 'Unknown error'))
+    notificationsStore.error('Upload failed', err.message || 'Unknown error')
   } finally {
     uploading.value = false
     if (target) target.value = ''
@@ -363,23 +366,30 @@ function removeSceneBackground() {
 function handleSave() {
   // Validate scene name
   if (!editedScene.value.name.trim()) {
-    alert('Please enter a scene name')
+    notificationsStore.error('Name required', 'Please enter a scene name')
     return
   }
 
   emit('save', editedScene.value)
 }
 
-function deleteScene() {
-  if (confirm(`Are you sure you want to delete "${editedScene.value.name}"? This action cannot be undone.`)) {
-    emit('delete', editedScene.value.id)
-  }
+async function deleteScene() {
+  const ok = await confirmDialog({
+    title: `Delete "${editedScene.value.name}"?`,
+    message: 'This scene and all its pages will be removed. This action cannot be undone.',
+    confirmLabel: 'Delete',
+  })
+  if (ok) emit('delete', editedScene.value.id)
 }
 
-function resetScene() {
-  if (confirm(`Reset "${editedScene.value.name}" back to its default layout? Your edits to this scene will be lost.`)) {
-    emit('reset', editedScene.value.id)
-  }
+async function resetScene() {
+  const ok = await confirmDialog({
+    title: `Reset "${editedScene.value.name}"?`,
+    message: 'The scene returns to its default layout — your edits will be lost.',
+    confirmLabel: 'Reset',
+    icon: 'rotate-left',
+  })
+  if (ok) emit('reset', editedScene.value.id)
 }
 
 // Page management functions
@@ -411,16 +421,19 @@ function cancelPageEdit() {
   editingPageName.value = ''
 }
 
-function deletePage(index: number) {
+async function deletePage(index: number) {
   if (pages.value.length === 1) {
-    alert('Cannot delete the last page. A scene must have at least one page.')
+    notificationsStore.error('Cannot Delete', 'A scene must have at least one page.')
     return
   }
-  
+
   const pageName = pages.value[index].name
-  if (confirm(`Delete page "${pageName}"? This action cannot be undone.`)) {
-    pages.value.splice(index, 1)
-  }
+  const ok = await confirmDialog({
+    title: `Delete page "${pageName}"?`,
+    message: 'The page and its buttons will be removed. This action cannot be undone.',
+    confirmLabel: 'Delete',
+  })
+  if (ok) pages.value.splice(index, 1)
 }
 </script>
 

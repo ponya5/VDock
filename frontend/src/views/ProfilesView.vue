@@ -218,13 +218,16 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProfilesStore } from '@/stores/profiles'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import AvatarPicker from '@/components/AvatarPicker.vue'
+import { confirmDialog } from '@/composables/useConfirm'
 import type { Avatar } from '@/assets/avatars'
 
 const router = useRouter()
 const profilesStore = useProfilesStore()
 const dashboardStore = useDashboardStore()
+const notificationsStore = useNotificationsStore()
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -365,10 +368,13 @@ async function exportProfile(profileId: string) {
   }
 }
 
-function confirmDelete(profileId: string) {
-  if (confirm('Are you sure you want to delete this profile?')) {
-    profilesStore.deleteProfile(profileId)
-  }
+async function confirmDelete(profileId: string) {
+  const ok = await confirmDialog({
+    title: 'Delete profile?',
+    message: 'This profile and its button layout will be removed. This cannot be undone.',
+    confirmLabel: 'Delete',
+  })
+  if (ok) profilesStore.deleteProfile(profileId)
 }
 
 function triggerImport() {
@@ -385,7 +391,7 @@ async function handleFileImport(event: Event) {
     const profileData = JSON.parse(text)
     await profilesStore.importProfile(profileData)
   } catch (err) {
-    alert('Failed to import profile: Invalid file format')
+    notificationsStore.error('Import failed', 'Invalid profile file format')
   }
 
   // Reset file input

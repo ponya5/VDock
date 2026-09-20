@@ -2327,9 +2327,32 @@ onUnmounted(() => {
 
 <style scoped>
 .button-editor {
-  width: 600px;
+  width: min(600px, 94vw);
   max-height: 80vh;
-  overflow-y: auto;
+  /* Column layout: header + footer stay pinned, only the body scrolls —
+     on the 600px-tall panel Save/Cancel must never scroll out of reach. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-height: 700px) {
+  .button-editor {
+    max-height: 94vh;
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .button-editor .modal-header {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .button-editor .modal-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .button-editor .form-group {
+    margin-bottom: var(--spacing-sm);
+  }
 }
 
 .modal-header {
@@ -2337,6 +2360,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-lg);
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -2384,7 +2408,12 @@ onUnmounted(() => {
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   margin-bottom: var(--spacing-lg);
+  /* Room so the last field clears the footer's top border on short screens */
+  padding-bottom: 2px;
 }
 
 .form-group {
@@ -2423,6 +2452,7 @@ onUnmounted(() => {
   gap: var(--spacing-sm);
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .form-help {

@@ -204,8 +204,11 @@ onUnmounted(() => {
 // Use sidebar width from settings, capped on compact/7" screens (the mockup's
 // column is 132px at 1024x600)
 const effectiveSidebarWidth = computed(() => {
+  // Compact cap raised 132→168: at 132px the weather card text and docked
+  // button labels squeezed to near-unreadable sizes on the 7" panel; 168px
+  // still leaves ~840px for the main grid at 1024x600.
   return isCompactScreen.value
-    ? Math.min(settingsStore.dockedSidebarWidth, 132)
+    ? Math.min(settingsStore.dockedSidebarWidth, 168)
     : settingsStore.dockedSidebarWidth
 })
 
@@ -216,9 +219,9 @@ const sidebarWidth = computed(() => {
 const gridStyle = computed(() => {
   const gap = 8
   // Sidebar chrome above the grid: own padding + header row + weather card
-  // (~104px) + edit hint (~34px) when those are rendered.
+  // (~150px) + edit hint (~34px) when those are rendered.
   let paddingBlock = 32
-  if (!isMobile.value && weather.value) paddingBlock += 104
+  if (!isMobile.value && weather.value) paddingBlock += 150
   if (props.isEditMode && !isMobile.value) paddingBlock += 34
   const rows = Math.max(props.gridRows, 1)
 
@@ -434,7 +437,7 @@ function stopResize() {
 /* Removed clickable-header styles as we now use a proper button */
 
 .sidebar-header h3 {
-  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
+  font-size: clamp(0.70rem, 2vw + 0.42rem, 1.00rem);
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
@@ -443,13 +446,14 @@ function stopResize() {
 }
 
 /* Weather card — the mockup's top-of-column tile. Vertical layout so it
-   still reads on the 100–132px compact column. */
+   still reads on the compact column; sized up for 7" legibility (was ~10px
+   text, unreadable at arm's length). */
 .sidebar-weather-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin: 12px 12px 0;
-  padding: 10px;
+  padding: 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -458,15 +462,15 @@ function stopResize() {
 
 .weather-icon {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(74, 163, 255, 0.18);
   color: #7dbcff;
-  font-size: 1rem;
+  font-size: 1.35rem;
 }
 
 .weather-info {
@@ -478,12 +482,13 @@ function stopResize() {
 
 .weather-temp {
   font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 1.5rem;
+  font-size: 2.1rem;
   color: #eef2fa;
+  line-height: 1.05;
 }
 
 .weather-desc {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -491,8 +496,8 @@ function stopResize() {
 }
 
 .weather-loc {
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -500,7 +505,7 @@ function stopResize() {
 
 .edit-hint {
   margin: 8px 14px 0;
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   line-height: 1.35;
   color: var(--color-text-secondary);
 }
