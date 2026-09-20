@@ -2902,6 +2902,37 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(31, 111, 209, 0.45);
 }
 
+/* Nested sub-tabs (e.g. Button Display / Live Preview / Touch Mode under
+   Button Behaviour) render as quiet underline tabs so they read as a
+   deeper level than the primary pill strip above them. */
+.appearance-main > .sub-tab-bar {
+  display: flex;
+  width: 100%;
+  padding: 0 4px;
+  margin: 2px 0 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0;
+}
+
+.appearance-main > .sub-tab-bar .sub-tab-btn {
+  height: 34px;
+  padding: 0 14px;
+  font-size: clamp(12px, 0.6vw + 9px, 15px);
+  border-radius: 8px 8px 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.appearance-main > .sub-tab-bar .sub-tab-btn.active {
+  background: rgba(31, 111, 209, 0.14);
+  color: #7fb4ff;
+  font-weight: 600;
+  border-bottom-color: #1f6fd1;
+  box-shadow: none;
+}
+
 /* ── Form Groups ── */
 .form-group {
   margin-bottom: var(--spacing-md);
