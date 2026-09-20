@@ -30,6 +30,11 @@ DEFAULT_FEEDS: Sequence[str] = (
     'https://feeds.bbci.co.uk/news/world/rss.xml',
     'https://hnrss.org/frontpage',
     'https://feeds.arstechnica.com/arstechnica/technology-lab',
+    # AI coverage — all verified to serve RSS/Atom with no key (DL-038).
+    'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
+    'https://techcrunch.com/category/artificial-intelligence/feed/',
+    'https://openai.com/news/rss.xml',
+    'https://www.technologyreview.com/topic/artificial-intelligence/feed',
 )
 
 FETCH_TIMEOUT = 10

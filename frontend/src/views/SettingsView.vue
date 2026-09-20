@@ -575,7 +575,8 @@
                   <p class="form-help">
                     Headlines come from RSS feeds, so no API key is needed. Leave
                     this blank to use the built-in sources (BBC World, Hacker
-                    News, Ars Technica).
+                    News, Ars Technica, The Verge AI, TechCrunch AI, OpenAI,
+                    MIT Technology Review).
                   </p>
                   <div class="form-group">
                     <div class="form-group-header">
