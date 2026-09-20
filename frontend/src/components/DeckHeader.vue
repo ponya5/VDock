@@ -10,7 +10,10 @@
       @click="revealHeader"
       title="Swipe down or tap to show header"
     >
-      <div class="reveal-handle"></div>
+      <div class="reveal-pill">
+        <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
+        <span>Show Header</span>
+      </div>
     </div>
 
     <!-- Main Header -->
@@ -351,10 +354,37 @@ onUnmounted(() => {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.header-reveal-trigger:hover .reveal-handle,
-.header-reveal-trigger:active .reveal-handle {
-  background-color: var(--color-primary, #007aff);
-  transform: scaleX(1.08);
+/* Visible tap affordance inside the transparent trigger — a labelled pill
+   reads as a button on touchscreens, where the bare handle bar did not.
+   Height is capped so it always fits inside the 84px trigger strip. */
+.reveal-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 40px;
+  min-height: 40px;
+  min-height: max(var(--min-touch-target, 40px), calc(40px * min(var(--touch-multiplier, 1), 1.5)));
+  padding: 0 calc(18px * min(var(--touch-multiplier, 1), 1.5));
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.5));
+  font-weight: 600;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.header-reveal-trigger:hover .reveal-pill,
+.header-reveal-trigger:active .reveal-pill {
+  background: var(--color-primary, #007aff);
+  border-color: var(--color-primary, #007aff);
+  transform: scale(1.06);
 }
 
 .header-collapse-handle {
@@ -390,7 +420,7 @@ onUnmounted(() => {
   /* Grows with touch mode so the taller icon buttons keep breathing room on
      small panels instead of clipping. */
   min-height: calc(64px * var(--touch-multiplier, 1) + 26px);
-  padding: 0.6rem 1rem;
+  padding: 10px 16px 18px 16px;
   box-sizing: border-box;
   overflow: visible;
   touch-action: pan-x;
@@ -399,10 +429,10 @@ onUnmounted(() => {
 .header-background {
   position: absolute;
   inset: 0;
-  background: rgba(8, 8, 28, 0.92);
+  background: rgba(10, 8, 32, 0.66);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   z-index: 0;
 }
 
@@ -429,12 +459,16 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   flex-shrink: 0;
+  /* Keep the action buttons above the scene pill's positioned segments so
+     they always win hit-testing if the pill ever overflows. */
+  position: relative;
+  z-index: 5;
 }
 
 .header-actions-group {
   display: flex;
   align-items: center;
-  gap: calc(0.6rem * var(--touch-multiplier, 1));
+  gap: calc(0.6rem * min(var(--touch-multiplier, 1), 1.25));
 }
 
 .header-exit-group {
@@ -445,8 +479,8 @@ onUnmounted(() => {
 
 .profile-avatar-container {
   position: relative;
-  width: calc(56px * min(var(--touch-multiplier, 1), 1.4));
-  height: calc(56px * min(var(--touch-multiplier, 1), 1.4));
+  width: calc(56px * min(var(--touch-multiplier, 1), 1.2));
+  height: calc(56px * min(var(--touch-multiplier, 1), 1.2));
   flex-shrink: 0;
 }
 
@@ -480,8 +514,8 @@ onUnmounted(() => {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #2ecc71;
-  border: 2px solid rgba(0, 0, 0, 0.5);
+  background: #3ddc84;
+  border: 2px solid #17133f;
 }
 
 .animate-tap {
@@ -494,14 +528,15 @@ onUnmounted(() => {
   min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
 }
 
-/* Large circular icon buttons — capped below the full multiplier so a row of
-   them still fits a small panel header. */
+/* Large circular icon buttons — 56px base per the mockup, capped hard below
+   the full multiplier so a row of them still leaves room for the scene pill
+   on a 1024px panel at touch-friendly scale. */
 .btn-icon-circle {
-  width: calc(64px * min(var(--touch-multiplier, 1), 1.4));
-  height: calc(64px * min(var(--touch-multiplier, 1), 1.4));
+  width: calc(56px * min(var(--touch-multiplier, 1), 1.25));
+  height: calc(56px * min(var(--touch-multiplier, 1), 1.25));
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: rgba(255, 255, 255, 0.9);
   font-size: calc(clamp(1.2rem, 2vw, 1.5rem) * var(--touch-multiplier, 1));
   display: inline-flex;
@@ -514,11 +549,11 @@ onUnmounted(() => {
 }
 
 .btn-icon-circle:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .btn-icon-circle:active:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .btn-icon-circle:disabled {
@@ -527,14 +562,14 @@ onUnmounted(() => {
 }
 
 .btn-icon-circle.btn-refresh:hover:not(:disabled) {
-  background: rgba(52, 152, 219, 0.22);
-  border-color: rgba(52, 152, 219, 0.55);
+  background: rgba(74, 163, 255, 0.22);
+  border-color: rgba(74, 163, 255, 0.55);
 }
 
 .btn-icon-circle.edit-active {
-  background: linear-gradient(135deg, rgba(52, 152, 219, 0.35), rgba(52, 152, 219, 0.7));
-  border-color: rgba(52, 152, 219, 0.65);
-  box-shadow: 0 0 18px rgba(52, 152, 219, 0.4);
+  background: #1f6fd1;
+  border-color: #1f6fd1;
+  box-shadow: 0 4px 12px rgba(31, 111, 209, 0.45);
 }
 
 .btn-icon-circle.btn-exit {
@@ -570,14 +605,14 @@ onUnmounted(() => {
   --pill-height: calc(56px * var(--touch-multiplier, 1));
 }
 
+/* The 7-inch mockup drops the profile name — the avatar carries the context
+   and the freed width goes to the scene pills. Kept in the DOM for a11y. */
 .profile-title-inline {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
-  max-width: 200px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
 
@@ -585,7 +620,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1 1 auto;
+  /* Sized to content — when there's no page nav it takes zero width instead
+     of claiming an equal flex share and starving the scene pill. */
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* Exit confirmation modal */

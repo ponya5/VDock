@@ -37,6 +37,8 @@ const aiAssistants: AppTemplate[] = [
     { label: "GPT-4o", icon: ["fas","brain"], action: url("https://chat.openai.com/?model=gpt-4o"), tooltip: "Open GPT-4o" },
     { label: "DALL-E", icon: ["fas","image"], action: url("https://chat.openai.com/?model=dall-e-3"), tooltip: "Open image generation" },
     { label: "Browse GPTs", icon: ["fas","puzzle-piece"], action: url("https://chat.openai.com/gpts"), tooltip: "Browse GPTs" },
+    { label: "Sora", icon: ["fas","video"], action: url("https://sora.com"), tooltip: "OpenAI Sora video generation" },
+    { label: "API Platform", icon: ["fas","code"], action: url("https://platform.openai.com"), tooltip: "OpenAI API platform" },
   ]},
   { id: "claude", name: "Claude", description: "Anthropic Claude shortcuts", icon: ["fas","robot"], logo: "/logos/claude-color.png", color: "#d97757", buttons: [
     { label: "New Chat", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "Start a new conversation" },
@@ -44,22 +46,32 @@ const aiAssistants: AppTemplate[] = [
     { label: "Projects", icon: ["fas","folder"], action: url("https://claude.ai/projects"), tooltip: "Open Projects" },
     { label: "Upload File", icon: ["fas","paperclip"], action: hk(["ctrl","u"]), tooltip: "Attach a file" },
     { label: "Copy Last", icon: ["fas","copy"], action: hk(["ctrl","shift","c"]), tooltip: "Copy last response" },
+    { label: "Console", icon: ["fas","gauge-high"], action: url("https://console.anthropic.com"), tooltip: "Anthropic API console" },
+    { label: "Docs", icon: ["fas","book-open"], action: url("https://docs.anthropic.com"), tooltip: "Claude documentation" },
   ]},
   { id: "gemini", name: "Gemini", description: "Google Gemini shortcuts", icon: ["fas","gem"], logo: "/logos/gemini-color.png", color: "#4285f4", buttons: [
     { label: "Open Gemini", icon: ["fas","arrow-up-right-from-square"], action: url("https://gemini.google.com"), tooltip: "Open Gemini" },
-    { label: "New Chat", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "New conversation" },
+    // Real deep link — the web app has no new-chat keyboard shortcut, but
+    // /app always lands on a fresh conversation.
+    { label: "New Chat", icon: ["fas","plus"], action: url("https://gemini.google.com/app"), tooltip: "New conversation" },
+    { label: "Gems", icon: ["fas","gem"], action: url("https://gemini.google.com/gems"), tooltip: "Custom Gem manager" },
     { label: "Gemini Advanced", icon: ["fas","star"], action: url("https://gemini.google.com/advanced"), tooltip: "Open Gemini Advanced" },
     { label: "AI Studio", icon: ["fas","flask"], action: url("https://aistudio.google.com"), tooltip: "Open AI Studio" },
+    { label: "Studio Prompt", icon: ["fas","wand-magic-sparkles"], action: url("https://aistudio.google.com/prompts/new_chat"), tooltip: "New AI Studio prompt" },
+    { label: "API Key", icon: ["fas","key"], action: url("https://aistudio.google.com/apikey"), tooltip: "Get a Gemini API key" },
+    { label: "Activity", icon: ["fas","clock-rotate-left"], action: url("https://myactivity.google.com/product/gemini"), tooltip: "Gemini Apps activity" },
   ]},
   { id: "grok", name: "Grok", description: "xAI Grok shortcuts", icon: ["fas","robot"], logo: "/logos/grok.png", color: "#1da1f2", buttons: [
-    { label: "Open Grok", icon: ["fas","arrow-up-right-from-square"], action: url("https://grok.x.ai"), tooltip: "Open Grok" },
+    { label: "Open Grok", icon: ["fas","arrow-up-right-from-square"], action: url("https://grok.com"), tooltip: "Open Grok" },
     { label: "New Chat", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "New conversation" },
-    { label: "Grok 3", icon: ["fas","brain"], action: url("https://grok.x.ai"), tooltip: "Open Grok 3" },
+    { label: "Grok 3", icon: ["fas","brain"], action: url("https://grok.com"), tooltip: "Open Grok 3" },
+    { label: "Grok on X", icon: ["fab","x-twitter"], action: url("https://x.com/i/grok"), tooltip: "Grok inside X" },
   ]},
   { id: "deepseek", name: "DeepSeek", description: "DeepSeek AI shortcuts", icon: ["fas","robot"], logo: "/logos/deepseek-color.png", color: "#4f6ef7", buttons: [
     { label: "Open DeepSeek", icon: ["fas","arrow-up-right-from-square"], action: url("https://chat.deepseek.com"), tooltip: "Open DeepSeek" },
     { label: "New Chat", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "New conversation" },
     { label: "DeepThink R1", icon: ["fas","brain"], action: url("https://chat.deepseek.com"), tooltip: "DeepThink R1 mode" },
+    { label: "API Platform", icon: ["fas","code"], action: url("https://platform.deepseek.com"), tooltip: "DeepSeek API platform" },
   ]},
   { id: "notebooklm", name: "NotebookLM", description: "Google NotebookLM shortcuts", icon: ["fas","book"], logo: "/logos/notebooklm.png", color: "#1a73e8", buttons: [
     { label: "Open NotebookLM", icon: ["fas","arrow-up-right-from-square"], action: url("https://notebooklm.google.com"), tooltip: "Open NotebookLM" },
@@ -237,11 +249,17 @@ const aiPlatforms: AppTemplate[] = [
     { label: "Copilot", icon: ["fas","robot"], action: url("https://copilot.microsoft.com"), tooltip: "Open Microsoft Copilot" },
     { label: "Azure AI", icon: ["fas","cloud"], action: url("https://ai.azure.com"), tooltip: "Open Azure AI Studio" },
     { label: "Bing AI", icon: ["fas","magnifying-glass"], action: url("https://www.bing.com/chat"), tooltip: "Bing AI Chat" },
+    { label: "Copilot Studio", icon: ["fas","screwdriver-wrench"], action: url("https://copilotstudio.microsoft.com"), tooltip: "Build custom copilots" },
+    { label: "Image Creator", icon: ["fas","image"], action: url("https://www.bing.com/create"), tooltip: "Bing Image Creator" },
   ]},
   { id: "google-ai", name: "Google AI", description: "Google AI platform shortcuts", icon: ["fab","google"], logo: "/logos/google-color.png", color: "#4285f4", buttons: [
     { label: "AI Studio", icon: ["fas","flask"], action: url("https://aistudio.google.com"), tooltip: "Google AI Studio" },
-    { label: "Vertex AI", icon: ["fas","cloud"], action: url("https://console.cloud.google.com/vertex-ai"), tooltip: "Vertex AI" },
+    { label: "New Prompt", icon: ["fas","wand-magic-sparkles"], action: url("https://aistudio.google.com/prompts/new_chat"), tooltip: "New AI Studio prompt" },
+    { label: "API Key", icon: ["fas","key"], action: url("https://aistudio.google.com/apikey"), tooltip: "Get a Gemini API key" },
     { label: "Gemini API", icon: ["fas","code"], action: url("https://ai.google.dev"), tooltip: "Gemini API docs" },
+    { label: "Vertex AI", icon: ["fas","cloud"], action: url("https://console.cloud.google.com/vertex-ai"), tooltip: "Vertex AI" },
+    { label: "Model Garden", icon: ["fas","layer-group"], action: url("https://console.cloud.google.com/vertex-ai/model-garden"), tooltip: "Vertex AI Model Garden" },
+    { label: "Google Labs", icon: ["fas","flask-vial"], action: url("https://labs.google"), tooltip: "Experimental AI tools (ImageFX, VideoFX, Whisk)" },
   ]},
 ]
 export const templateCategories: TemplateCategory[] = [

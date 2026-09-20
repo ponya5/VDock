@@ -1,7 +1,7 @@
 // DL-013: the screensaver layout is a persisted per-widget {x, y, scale}
 // record (viewport-percent centers), the screensaver has its own background
-// setting, and a live drag/resize editor is reached through the
-// 'screensaver_layout_edit' ui_command.
+// setting, and a live drag/resize editor is mounted inside the settings
+// window (the deck-window ui_command path also remains).
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -97,7 +97,12 @@ describe('screensaver layout wiring', () => {
 
   it('exposes the editor + background picker in Screensaver settings', () => {
     expect(settingsView).toContain('handleCustomizeScreensaverLayout')
-    expect(settingsView).toContain("sendUiCommand('screensaver_layout_edit')")
+    // The editor mounts directly inside the settings window — it no longer
+    // depends on a deck window being reachable via ui_command.
+    expect(settingsView).toContain('screensaverLayoutEditOpen')
+    expect(settingsView).toContain("import ScreenSaver from '@/components/ScreenSaver.vue'")
+    expect(settingsView).toContain('@save-layout="onSaveScreensaverLayout"')
+    expect(settingsView).toContain('settingsStore.screensaverLayout = layout')
     expect(settingsView).toContain('settings.screensaverBackground')
     expect(settingsView).toContain('screensaverPickerGroups')
     expect(settingsView).toContain('handleScreensaverBackgroundUpload')

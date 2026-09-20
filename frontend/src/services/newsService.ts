@@ -17,6 +17,16 @@ export interface NewsHeadline {
 }
 
 /**
+ * Built-in sports feeds — used when the user has not configured their own
+ * sports list. Same keyless RSS proxy path as the regular headlines.
+ */
+export const DEFAULT_SPORTS_FEEDS: string[] = [
+  'https://www.espn.com/espn/rss/news',
+  'https://feeds.bbci.co.uk/sport/rss.xml',
+  'https://www.skysports.com/rss/12040',
+]
+
+/**
  * Split a user-entered feed list into URLs.
  *
  * Accepts one URL per line, and tolerates commas, because people paste both.

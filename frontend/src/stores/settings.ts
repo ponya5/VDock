@@ -36,6 +36,7 @@ export function migrateBackground(settings: LegacyBackgroundFields): string {
 
 export interface PersistedUserSettings {
   buttonSize: number
+  buttonTransparency: number
   showLabels: boolean
   showTooltips: boolean
   animationsEnabled: boolean
@@ -65,6 +66,7 @@ export interface PersistedUserSettings {
   screensaverWeatherSize: number
   newsApiKey: string
   newsFeeds: string
+  sportsFeeds: string
   newsRotateSeconds: number
   marketApiKey: string
   marketTickers: string
@@ -84,6 +86,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const alwaysOnTop = ref(false)
   
   const buttonSize = ref(1.0)
+  // Percent the deck buttons are see-through (0 = solid). Lets a background
+  // animation show through the buttons; rendered via --deck-btn-opacity so
+  // per-button opacity still multiplies on top.
+  const buttonTransparency = ref(0)
   const showLabels = ref(true)
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
@@ -141,13 +147,18 @@ export const useSettingsStore = defineStore('settings', () => {
   const buttonDefaultIconLoop = ref('swing')
   const buttonDefaultEffect = ref('none')
 
-  const screensaverWidgets = ref<string[]>(['weather'])
+  // Fresh installs get the full editorial layout from the mockup; persisted
+  // choices always win over this default.
+  const screensaverWidgets = ref<string[]>(['weather', 'news', 'sports', 'market', 'worldclock'])
   // Percentage scale for the screensaver's corner weather pill. 100 keeps the
   // desktop-size rendering; small touch panels push it up for glanceability.
   const screensaverWeatherSize = ref(100)
   const newsApiKey = ref('')
   // RSS/Atom feed URLs, one per line. Blank uses the backend defaults.
   const newsFeeds = ref('')
+  // Sports headlines feeds, one per line. Blank uses the built-in sports
+  // sources (ESPN, BBC Sport, Sky Sports) from the frontend defaults.
+  const sportsFeeds = ref('')
   const newsRotateSeconds = ref(8)
   const marketApiKey = ref('')
   // Comma-separated symbols shown on the screensaver market chip — stocks
@@ -168,21 +179,52 @@ export const useSettingsStore = defineStore('settings', () => {
   const showHelpGuide = ref(false)
 
   let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
-  let serverSyncInFlight = false
+  let serverSyncInFlight: Promise<void> | null = null
+  let serverSyncQueued = false
   let isApplyingRemoteSettings = false
   let liveSyncInitialized = false
   let settingsBroadcastChannel: BroadcastChannel | null = null
 
-  function settingsPayloadEquals(
-    left: Partial<PersistedUserSettings>,
-    right: Partial<PersistedUserSettings>
+  /**
+   * Does applying `remote` actually change anything? Compares field by field
+   * and only over keys the remote sent — a strict whole-payload JSON compare
+   * reported every subset payload (sanitized server file, legacy peers) as
+   * "different", so each delivery re-applied and re-saved every ref even when
+   * no value changed. `background` is compared through migrateBackground so
+   * legacy fields resolve the same way the apply does.
+   */
+  function remoteSettingsDiffer(
+    current: PersistedUserSettings,
+    remote: Partial<PersistedUserSettings> & LegacyBackgroundFields
   ): boolean {
-    return JSON.stringify(left) === JSON.stringify(right)
+    for (const key of Object.keys(remote) as (keyof PersistedUserSettings)[]) {
+      if (
+        key === 'background' ||
+        key === 'backgroundPreference' ||
+        key === 'dashboardBackground'
+      ) {
+        continue
+      }
+      const remoteValue = remote[key]
+      const currentValue = current[key]
+      if (remoteValue === undefined || currentValue === undefined) continue
+      if (JSON.stringify(remoteValue) !== JSON.stringify(currentValue)) return true
+    }
+    if (
+      remote.background !== undefined ||
+      remote.backgroundPreference !== undefined ||
+      remote.dashboardBackground !== undefined
+    ) {
+      if (migrateBackground(remote) !== current.background) return true
+    }
+    return false
   }
 
-  async function applySettingsFromRemote(remoteSettings: Partial<PersistedUserSettings>) {
+  async function applySettingsFromRemote(
+    remoteSettings: Partial<PersistedUserSettings> & LegacyBackgroundFields
+  ) {
     const currentSettings = buildSettingsPayload()
-    if (settingsPayloadEquals(currentSettings, remoteSettings)) {
+    if (!remoteSettingsDiffer(currentSettings, remoteSettings)) {
       return
     }
 
@@ -192,6 +234,7 @@ export const useSettingsStore = defineStore('settings', () => {
       saveSettingsLocalOnly()
       applyTouchModeStyles()
       applyUIBrightnessFilter()
+      applyButtonTransparency()
       // applySettingsObject() mutates every ref in one synchronous pass, but
       // the deep watch([...]) below (which calls saveSettings(), and would
       // re-broadcast) only runs on the NEXT microtask tick — not synchronously
@@ -217,6 +260,7 @@ export const useSettingsStore = defineStore('settings', () => {
   function buildSettingsPayload(): PersistedUserSettings {
     return {
       buttonSize: buttonSize.value,
+      buttonTransparency: buttonTransparency.value,
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
       animationsEnabled: animationsEnabled.value,
@@ -251,6 +295,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverWeatherSize: screensaverWeatherSize.value,
       newsApiKey: newsApiKey.value,
       newsFeeds: newsFeeds.value,
+      sportsFeeds: sportsFeeds.value,
       newsRotateSeconds: newsRotateSeconds.value,
       marketApiKey: marketApiKey.value,
       marketTickers: marketTickers.value,
@@ -264,6 +309,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function applySettingsObject(settings: Partial<PersistedUserSettings> & LegacyBackgroundFields) {
     if (settings.buttonSize !== undefined) buttonSize.value = settings.buttonSize
+    if (settings.buttonTransparency !== undefined) buttonTransparency.value = settings.buttonTransparency
     if (settings.showLabels !== undefined) showLabels.value = settings.showLabels
     if (settings.showTooltips !== undefined) showTooltips.value = settings.showTooltips
     if (settings.animationsEnabled !== undefined) animationsEnabled.value = settings.animationsEnabled
@@ -299,6 +345,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.screensaverWeatherSize !== undefined) screensaverWeatherSize.value = settings.screensaverWeatherSize
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
     if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
+    if (settings.sportsFeeds !== undefined) sportsFeeds.value = settings.sportsFeeds
     if (settings.newsRotateSeconds !== undefined) newsRotateSeconds.value = settings.newsRotateSeconds
     if (settings.marketApiKey !== undefined) marketApiKey.value = settings.marketApiKey
     if (settings.marketTickers !== undefined) marketTickers.value = settings.marketTickers
@@ -324,6 +371,7 @@ export const useSettingsStore = defineStore('settings', () => {
       applySettingsObject({
         ...settings,
         buttonSize: settings.buttonSize ?? 1.0,
+        buttonTransparency: settings.buttonTransparency ?? 0,
         showLabels: settings.showLabels !== false,
         showTooltips: settings.showTooltips !== false,
         animationsEnabled: settings.animationsEnabled !== false,
@@ -349,10 +397,11 @@ export const useSettingsStore = defineStore('settings', () => {
         buttonDefaultAnimation: settings.buttonDefaultAnimation ?? 'none',
         buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'swing',
         buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
-        screensaverWidgets: settings.screensaverWidgets ?? ['weather'],
+        screensaverWidgets: settings.screensaverWidgets ?? ['weather', 'news', 'sports', 'market', 'worldclock'],
         screensaverWeatherSize: settings.screensaverWeatherSize ?? 100,
         newsApiKey: settings.newsApiKey ?? '',
         newsFeeds: settings.newsFeeds ?? '',
+        sportsFeeds: settings.sportsFeeds ?? '',
         newsRotateSeconds: settings.newsRotateSeconds ?? 8,
         marketApiKey: settings.marketApiKey ?? '',
         marketTickers: settings.marketTickers ?? '',
@@ -376,17 +425,29 @@ export const useSettingsStore = defineStore('settings', () => {
     }, SERVER_SYNC_DELAY_MS)
   }
 
-  async function persistSettingsToServer() {
-    if (serverSyncInFlight) return
-
-    serverSyncInFlight = true
-    try {
-      await apiClient.put('/user-settings', { settings: buildSettingsPayload() })
-    } catch (error) {
-      console.warn('Failed to persist settings to server:', error)
-    } finally {
-      serverSyncInFlight = false
+  function persistSettingsToServer(): Promise<void> {
+    // A PUT already on the wire carries an older payload: mark the current
+    // state dirty so the loop below sends it as a trailing write, and return
+    // the same promise so callers can await a fully-drained server.
+    if (serverSyncInFlight) {
+      serverSyncQueued = true
+      return serverSyncInFlight
     }
+
+    serverSyncInFlight = (async () => {
+      try {
+        do {
+          serverSyncQueued = false
+          await apiClient.put('/user-settings', { settings: buildSettingsPayload() })
+        } while (serverSyncQueued)
+      } catch (error) {
+        console.warn('Failed to persist settings to server:', error)
+      } finally {
+        serverSyncInFlight = null
+      }
+    })()
+
+    return serverSyncInFlight
   }
 
   function saveSettings() {
@@ -410,18 +471,35 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function loadSettingsFromServer() {
     try {
+      // A debounced or in-flight PUT still holds newer local values than the
+      // server — drain it before the GET or the stale response below regresses
+      // just-changed settings (e.g. the background reverting right after a
+      // pick). nextTick() first: the watcher that schedules the PUT flushes on
+      // a microtask, so a same-tick change would otherwise slip past the
+      // serverSyncTimer check.
+      await nextTick()
+      if (serverSyncTimer) {
+        await flushSettingsToServer()
+      } else if (serverSyncInFlight) {
+        await serverSyncInFlight
+      }
+
       const response = await apiClient.get('/user-settings')
       const serverSettings = response.data?.settings as Partial<PersistedUserSettings> | undefined
 
       if (serverSettings && Object.keys(serverSettings).length > 0) {
-        applySettingsObject(serverSettings)
-        saveSettingsLocalOnly()
+        // Route through the guarded remote path — applying directly let the
+        // settings watcher rebroadcast server state to every other open
+        // window, so each refresh pushed stale values outward and the
+        // background picker visibly flickered.
+        await applySettingsFromRemote(serverSettings)
       } else if (localStorage.getItem(SETTINGS_STORAGE_KEY)) {
         await persistSettingsToServer()
       }
 
       applyTouchModeStyles()
       applyUIBrightnessFilter()
+      applyButtonTransparency()
     } catch (error) {
       console.warn('Failed to load settings from server, using local cache:', error)
     }
@@ -430,6 +508,7 @@ export const useSettingsStore = defineStore('settings', () => {
   watch(
     [
       buttonSize,
+      buttonTransparency,
       showLabels,
       showTooltips,
       animationsEnabled,
@@ -459,6 +538,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverWeatherSize,
       newsApiKey,
       newsFeeds,
+      sportsFeeds,
       newsRotateSeconds,
       marketApiKey,
       marketTickers,
@@ -471,6 +551,7 @@ export const useSettingsStore = defineStore('settings', () => {
       saveSettings()
       applyTouchModeStyles()
       applyUIBrightnessFilter()
+      applyButtonTransparency()
     },
     { deep: true }
   )
@@ -501,6 +582,15 @@ export const useSettingsStore = defineStore('settings', () => {
     if (appElement) {
       (appElement as HTMLElement).style.filter = `brightness(${brightnessValue})`
     }
+  }
+
+  // Transparency is stored as a percent (0 = solid) but applied as an
+  // opacity factor. Floored at 5% so a stray value can never make every
+  // button invisible.
+  function applyButtonTransparency() {
+    const transparency = Math.min(100, Math.max(0, buttonTransparency.value))
+    const opacity = Math.max(0.05, (100 - transparency) / 100)
+    document.documentElement.style.setProperty('--deck-btn-opacity', opacity.toString())
   }
 
   async function loadServerConfig() {
@@ -547,6 +637,7 @@ export const useSettingsStore = defineStore('settings', () => {
   detectSmallScreenDefaults()
   applyTouchModeStyles()
   applyUIBrightnessFilter()
+  applyButtonTransparency()
 
   function detectSmallScreenDefaults() {
     if (typeof window === 'undefined') return
@@ -619,6 +710,7 @@ export const useSettingsStore = defineStore('settings', () => {
     windowDocked,
     alwaysOnTop,
     buttonSize,
+    buttonTransparency,
     showLabels,
     showTooltips,
     animationsEnabled,
@@ -650,6 +742,7 @@ export const useSettingsStore = defineStore('settings', () => {
     screensaverWeatherSize,
     newsApiKey,
     newsFeeds,
+    sportsFeeds,
     newsRotateSeconds,
     marketApiKey,
     marketTickers,
@@ -660,6 +753,7 @@ export const useSettingsStore = defineStore('settings', () => {
     showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,
+    applyButtonTransparency,
     loadServerConfig,
     updateServerConfig,
     addRecentAction,

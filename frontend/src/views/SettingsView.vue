@@ -35,7 +35,7 @@
         >
           <FontAwesomeIcon :icon="['fas', 'up-right-from-square']" /> Open in browser
         </button>
-        <button class="btn btn-secondary" @click="handleSettingsBack">
+        <button class="btn btn-exit-pill" @click="handleSettingsBack">
           <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
           {{ isStandaloneSettings ? 'Close' : 'Back' }}
         </button>
@@ -75,12 +75,7 @@
           </div>
 
           <div class="appearance-main">
-              <div v-if="appearanceSubTab === 'buttons'" class="settings-grid">
-                <section class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
-                  <TouchModeSelector />
-                </section>
-
+              <div v-if="appearanceSubTab === 'buttons'" class="settings-grid settings-grid-masonry">
                 <section class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'th-large']" /> Button Display</h2>
                   <div class="form-group">
@@ -93,6 +88,17 @@
                     <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
                     <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
                     <p class="form-help">Scales button icons and labels. Combines with Touch Mode above.</p>
+                  </div>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Button Transparency</label>
+                      <button class="btn-reset" @click="settings.buttonTransparency = 0" title="Reset">
+                        <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
+                      </button>
+                    </div>
+                    <input v-model.number="settings.buttonTransparency" type="range" min="0" max="90" step="5" class="slider" />
+                    <span class="slider-value">{{ settings.buttonTransparency }}%</span>
+                    <p class="form-help">Lets the dashboard background animation show through the buttons. 0% keeps buttons solid; capped at 90% so buttons stay findable.</p>
                   </div>
                   <div class="toggle-row">
                     <label class="toggle-row-label">Show button labels</label>
@@ -186,6 +192,10 @@
                         <option value="aurora">Aurora</option>
                         <option value="scanline">Scanline</option>
                         <option value="rain">Rain</option>
+                        <option value="glowglass">Glow Glass</option>
+                        <option value="gem">Gem</option>
+                        <option value="neonrim">Neon Rim</option>
+                        <option value="watermark">Watermark Card</option>
                       </select>
                     </div>
                   </div>
@@ -201,9 +211,14 @@
                     </p>
                   </div>
                 </section>
+
+                <section class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
+                  <TouchModeSelector />
+                </section>
               </div>
 
-              <div v-if="appearanceSubTab === 'layout'" class="settings-grid">
+              <div v-if="appearanceSubTab === 'layout'" class="settings-grid settings-grid-masonry">
             <section class="settings-section card">
               <h2><FontAwesomeIcon :icon="['fas', 'table-columns']" /> Sidebar</h2>
               <div class="toggle-row">
@@ -253,7 +268,7 @@
             </section>
           </div>
 
-          <div v-if="appearanceSubTab === 'background'" class="settings-grid">
+          <div v-if="appearanceSubTab === 'background'" class="settings-grid settings-grid-masonry">
             <section class="settings-section card">
               <h2>Background</h2>
               <div class="form-group">
@@ -313,7 +328,7 @@
             </section>
               </div>
 
-              <div v-if="appearanceSubTab === 'screensaver'" class="settings-grid">
+              <div v-if="appearanceSubTab === 'screensaver'" class="settings-grid settings-grid-masonry">
                 <section class="settings-section card" id="setting-screensaver">
                   <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver</h2>
                   <div class="form-group">
@@ -420,7 +435,7 @@
                 </section>
 
                 <section
-                  v-if="settingsStore.screensaverWidgets.some(w => ['news', 'market', 'worldclock'].includes(w))"
+                  v-if="settingsStore.screensaverWidgets.some(w => ['news', 'sports', 'market', 'worldclock'].includes(w))"
                   class="settings-section card"
                 >
                   <h2><FontAwesomeIcon :icon="['fas', 'text-height']" /> Widget Text Size</h2>
@@ -479,6 +494,28 @@
                   </button>
                 </section>
 
+                <section v-if="settingsStore.screensaverWidgets.includes('sports')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'football']" /> Sports Headlines</h2>
+                  <p class="form-help">
+                    Sports headlines come from RSS feeds, so no API key is
+                    needed. Leave this blank to use the built-in sources
+                    (ESPN, BBC Sport, Sky Sports).
+                  </p>
+                  <div class="form-group">
+                    <label>Feed URLs</label>
+                    <textarea
+                      v-model="settingsStore.sportsFeeds"
+                      class="input"
+                      rows="4"
+                      placeholder="https://www.espn.com/espn/rss/news&#10;https://feeds.bbci.co.uk/sport/rss.xml"
+                    ></textarea>
+                    <p class="form-help">One RSS or Atom URL per line.</p>
+                  </div>
+                  <button class="btn btn-secondary" :disabled="testingSports" @click="handleTestSports">
+                    <FontAwesomeIcon :icon="['fas', testingSports ? 'spinner' : 'plug']" :spin="testingSports" /> Test Feeds
+                  </button>
+                </section>
+
                 <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
                   <div class="form-group">
@@ -492,11 +529,9 @@
                     <p class="form-help">
                       Comma-separated stock tickers and crypto symbols, mixable.
                       Leave blank for the default Bitcoin + Ethereum pair.
+                      Quotes are free — no API key needed. The ticker shows on
+                      the screensaver; press Test Screensaver above to preview it.
                     </p>
-                  </div>
-                  <div class="form-group">
-                    <label>Stock quotes API key (optional)</label>
-                    <input v-model="settingsStore.marketApiKey" type="password" class="input" placeholder="Optional — leave blank for crypto only" />
                   </div>
                   <button class="btn btn-secondary" :disabled="testingMarket" @click="handleTestMarket">
                     <FontAwesomeIcon :icon="['fas', testingMarket ? 'spinner' : 'plug']" :spin="testingMarket" /> Test Connection
@@ -541,9 +576,9 @@
                 <FontAwesomeIcon :icon="category.icon" class="category-icon" />
                 {{ category.name }}
               </span>
-              <FontAwesomeIcon :icon="['fas', expandedCategory === category.id ? 'chevron-up' : 'chevron-down']" class="category-chevron" />
+              <FontAwesomeIcon :icon="['fas', expandedCategories.includes(category.id) ? 'chevron-up' : 'chevron-down']" class="category-chevron" />
             </button>
-            <div v-if="expandedCategory === category.id" class="template-grid">
+            <div v-if="expandedCategories.includes(category.id)" class="template-grid">
               <div v-for="template in category.templates" :key="template.id" class="template-card">
                 <div class="template-card-header" :style="{ borderLeftColor: template.color }">
                   <div class="template-icon-wrap" :style="{ background: template.color + '22' }">
@@ -777,21 +812,22 @@
         <div v-if="activeTab === 'about'" class="tab-content">
           <section class="settings-section card about-card">
             <div class="about-brand">
-              <h2 class="about-title">VDock</h2>
-              <p class="about-version">Virtual Stream Interface v2.0.0</p>
-              <p class="about-desc">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
+              <div class="about-logo-tile"><FontAwesomeIcon :icon="['fas', 'table-cells-large']" /></div>
+              <div>
+                <h2 class="about-title">VDock</h2>
+                <p class="about-version">Virtual Stream Interface <span class="version-chip">v{{ appVersion }}</span></p>
+              </div>
             </div>
+            <p class="about-desc">A powerful virtual stream interface for controlling your computer with customizable buttons, macros, system metrics, and intelligent app integration.</p>
 
             <div class="feature-highlights">
               <h4>Key Features</h4>
-              <ul>
-                <li>✨ Real-time System Metrics Monitoring</li>
-                <li>🎬 Advanced Macro Automation</li>
-                <li>🔗 Smart App Integration</li>
-                <li>🎨 Customizable Buttons &amp; Backgrounds</li>
-                <li>🤖 Automatic Scene Switching</li>
-                <li>📊 Professional Dashboard Interface</li>
-              </ul>
+              <div class="feature-grid">
+                <div v-for="feature in aboutFeatures" :key="feature.label" class="feature-chip">
+                  <span class="feature-chip-icon"><FontAwesomeIcon :icon="feature.icon" /></span>
+                  {{ feature.label }}
+                </div>
+              </div>
             </div>
 
             <div class="about-divider"></div>
@@ -834,6 +870,17 @@
 
       </div>
     </div>
+
+    <!-- Live screensaver layout editor — mounted in THIS window so Customize
+         Layout works whether or not a deck window is reachable. Save writes
+         settings.screensaverLayout, which syncs to every connected window. -->
+    <ScreenSaver
+      v-if="screensaverLayoutEditOpen"
+      :visible="true"
+      :layout-edit="true"
+      @dismiss="screensaverLayoutEditOpen = false"
+      @save-layout="onSaveScreensaverLayout"
+    />
   </div>
 </template>
 
@@ -845,7 +892,10 @@ import { useProfilesStore } from '@/stores/profiles'
 import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { version as appVersion } from '../../package.json'
 import TouchModeSelector from '@/components/TouchModeSelector.vue'
+import ScreenSaver from '@/components/ScreenSaver.vue'
+import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 import BackgroundPicker, { type BackgroundPickerGroup } from '@/components/BackgroundPicker.vue'
 import DeckButton from '@/components/DeckButton.vue'
 import apiClient from '@/api/client'
@@ -858,7 +908,7 @@ import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { sendUiCommand } from '@/composables/useUiCommands'
-import { testNewsConnection, parseFeedList } from '@/services/newsService'
+import { testNewsConnection, parseFeedList, DEFAULT_SPORTS_FEEDS } from '@/services/newsService'
 import { testMarketConnection, parseTickers } from '@/services/marketService'
 import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
 import { appForScene, appIdForExe } from '@/data/appBackgrounds'
@@ -896,19 +946,35 @@ function openSettingsInBrowserTab() {
 
 function handleTestScreensaver() {
   sendUiCommand('show_screensaver')
+  if (!isStandaloneSettings.value) {
+    // Same-tab settings: the dashboard is unmounted right now, so the queued
+    // command only fires once it remounts. Navigate back so the preview is
+    // actually seen instead of looking like nothing happened.
+    router.push('/')
+    return
+  }
   notificationsStore.success(
     'Screensaver triggered',
     'It is now showing on the deck window — tap it to dismiss.'
   )
 }
 
-// Opens the real screensaver in drag/resize edit mode on the deck window.
+// Opens the real screensaver in drag/resize edit mode — mounted inside this
+// window so it always works: the previous design sent a ui_command to the
+// deck window, which silently did nothing when no deck window was mounted or
+// reachable (e.g. settings opened standalone on the panel itself).
+const screensaverLayoutEditOpen = ref(false)
+
 function handleCustomizeScreensaverLayout() {
-  sendUiCommand('screensaver_layout_edit')
-  notificationsStore.success(
-    'Layout editor opened',
-    'Drag widgets on the deck window — Save keeps the arrangement.'
-  )
+  screensaverLayoutEditOpen.value = true
+}
+
+function onSaveScreensaverLayout(layout: ScreensaverLayout) {
+  // Assigning the store ref persists through the settings watch → local +
+  // server sync, so the deck window picks the arrangement up live.
+  settingsStore.screensaverLayout = layout
+  screensaverLayoutEditOpen.value = false
+  notificationsStore.success('Layout saved', 'The new widget arrangement is applied on the deck.')
 }
 
 function handleSettingsBack() {
@@ -1043,11 +1109,29 @@ const previewBackgroundStyle = computed(() => {
   return backgroundStyleFor(settingsStore.background)
 })
 
-const expandedCategory = ref<string | null>(null)
+const expandedCategories = ref<string[]>([])
 const addingTemplate = ref<string | null>(null)
 
+const aboutFeatures = [
+  { icon: ['fas', 'table-cells-large'], label: 'Customizable touch button grid' },
+  { icon: ['fas', 'wand-magic-sparkles'], label: 'Advanced macro automation' },
+  { icon: ['fas', 'gauge-high'], label: 'Real-time system metrics' },
+  { icon: ['fas', 'plug'], label: 'Smart app integration & templates' },
+  { icon: ['fas', 'chart-line'], label: 'Free stock & crypto tickers' },
+  { icon: ['fas', 'newspaper'], label: 'News & sports widgets' },
+  { icon: ['fas', 'cloud-sun'], label: 'Live weather, no API key' },
+  { icon: ['fas', 'image'], label: 'Animated backgrounds & transparency' },
+  { icon: ['fas', 'display'], label: 'Customizable screensaver' },
+  { icon: ['fas', 'hand-pointer'], label: 'Touch-optimized 7-inch interface' },
+]
+
 function toggleCategory(id: string) {
-  expandedCategory.value = expandedCategory.value === id ? null : id
+  const index = expandedCategories.value.indexOf(id)
+  if (index === -1) {
+    expandedCategories.value.push(id)
+  } else {
+    expandedCategories.value.splice(index, 1)
+  }
 }
 
 async function addTemplateAsScene(template: AppTemplate) {
@@ -1265,11 +1349,13 @@ const WEATHER_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2
 const NEWS_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><rect x="8" y="10" width="48" height="6" rx="2" fill="#e5e5ea"/><rect x="8" y="20" width="34" height="4" rx="2" fill="#777"/><rect x="8" y="27" width="24" height="4" rx="2" fill="#555"/></svg>`
 const MARKET_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><polyline points="8,28 18,22 26,25 36,14 46,17 56,9" fill="none" stroke="#34c759" stroke-width="2"/><rect x="8" y="31" width="20" height="4" rx="2" fill="#999"/></svg>`
 const WORLDCLOCK_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><rect x="8" y="8" width="48" height="10" rx="5" fill="#2c2c3a"/><text x="32" y="16" font-size="7" fill="#e5e5ea" text-anchor="middle">10:24</text><rect x="8" y="22" width="48" height="10" rx="5" fill="#2c2c3a"/><text x="32" y="30" font-size="7" fill="#e5e5ea" text-anchor="middle">03:24</text></svg>`
+const SPORTS_PREVIEW_SVG = `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="40" rx="8" fill="#1c1c28"/><circle cx="16" cy="20" r="8" fill="none" stroke="#f2b040" stroke-width="2"/><path d="M9 17h14M10 24c4-3 8-3 12 0" fill="none" stroke="#f2b040" stroke-width="1.5"/><rect x="30" y="13" width="26" height="5" rx="2" fill="#e5e5ea"/><rect x="30" y="22" width="18" height="4" rx="2" fill="#777"/></svg>`
 
 const screensaverWidgetOptions = [
   { id: 'weather', label: 'Weather', description: 'Current temperature and conditions', previewSvg: WEATHER_PREVIEW_SVG },
-  { id: 'news', label: 'News', description: 'Latest headline (requires free API key)', previewSvg: NEWS_PREVIEW_SVG },
-  { id: 'market', label: 'Stocks / Crypto', description: 'Live crypto prices; stocks optional', previewSvg: MARKET_PREVIEW_SVG },
+  { id: 'news', label: 'News', description: 'Rotating headlines from free RSS feeds', previewSvg: NEWS_PREVIEW_SVG },
+  { id: 'sports', label: 'Sports News', description: 'Sports headlines from free RSS feeds', previewSvg: SPORTS_PREVIEW_SVG },
+  { id: 'market', label: 'Stocks / Crypto', description: 'Free stock & crypto quotes — no key', previewSvg: MARKET_PREVIEW_SVG },
   { id: 'worldclock', label: 'World Clock', description: 'Time in a few other cities', previewSvg: WORLDCLOCK_PREVIEW_SVG },
 ]
 
@@ -1281,10 +1367,10 @@ function toggleScreensaverWidget(id: string) {
 }
 
 const testingNews = ref(false)
-async function handleTestNews() {
-  testingNews.value = true
+const testingSports = ref(false)
+async function testFeeds(feeds: string[], testing: typeof testingNews) {
+  testing.value = true
   try {
-    const feeds = parseFeedList(settingsStore.newsFeeds)
     const count = await testNewsConnection(feeds)
     notificationsStore.success(
       'Feeds working',
@@ -1293,8 +1379,15 @@ async function handleTestNews() {
   } catch (err: any) {
     notificationsStore.error('Feed test failed', err?.message || 'Could not read those feeds.')
   } finally {
-    testingNews.value = false
+    testing.value = false
   }
+}
+async function handleTestNews() {
+  await testFeeds(parseFeedList(settingsStore.newsFeeds), testingNews)
+}
+async function handleTestSports() {
+  const feeds = parseFeedList(settingsStore.sportsFeeds)
+  await testFeeds(feeds.length ? feeds : DEFAULT_SPORTS_FEEDS, testingSports)
 }
 
 const testingMarket = ref(false)
@@ -1701,7 +1794,7 @@ onMounted(async () => {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-background);
+  background: #0f1726;
   color: var(--color-text);
 }
 
@@ -1709,15 +1802,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--glass-border, var(--color-border));
-  background: var(--glass-bg, var(--color-surface));
-  backdrop-filter: blur(var(--glass-blur, 14px));
+  height: 72px;
+  padding: 0 var(--spacing-lg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  background: #121d31;
   flex-shrink: 0;
 }
 
 .settings-header h1 {
-  font-size: clamp(16px, 1.2vw + 12px, 24px);
+  font-size: 1.75rem;
   font-weight: 600;
   margin: 0;
 }
@@ -1729,37 +1822,54 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+/* White exit pill per the mockup. */
+.btn-exit-pill {
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 24px;
+  background: #eef2fa;
+  border-color: #eef2fa;
+  color: #0f1726;
+  font-size: 1rem;
+}
+
+.btn-exit-pill:hover:not(:disabled) {
+  background: #fff;
+  border-color: #fff;
+}
+
 .settings-search {
   position: relative;
   flex: 1;
-  max-width: 320px;
+  max-width: 400px;
   margin: 0 var(--spacing-lg);
 }
 
 .settings-search-icon {
   position: absolute;
-  left: 12px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   pointer-events: none;
 }
 
 .settings-search-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 12px 8px 34px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border, var(--color-border));
+  height: 48px;
+  padding: 8px 16px 8px 42px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 
 .settings-search-input:focus {
   outline: none;
-  border-color: var(--color-primary, #3498db);
+  border-color: #4aa3ff;
 }
 
 .settings-search-results {
@@ -1768,11 +1878,10 @@ onMounted(async () => {
   left: 0;
   right: 0;
   z-index: 50;
-  background: var(--glass-bg, rgba(20, 20, 25, 0.95));
-  backdrop-filter: blur(var(--glass-blur, 14px));
-  border: 1px solid var(--glass-border, var(--color-border));
-  border-radius: var(--radius-md);
-  box-shadow: var(--glass-shadow, var(--shadow-md));
+  background: #17233a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   max-height: 320px;
   overflow-y: auto;
   padding: 4px;
@@ -1811,49 +1920,48 @@ onMounted(async () => {
 
 /* ── Nav Rail ── */
 .settings-nav-rail {
-  width: 220px;
+  width: 216px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--spacing-md) var(--spacing-sm);
-  background: var(--glass-bg, var(--color-surface));
-  backdrop-filter: blur(var(--glass-blur, 14px));
-  border-right: 1px solid var(--glass-border, var(--color-border));
+  gap: 4px;
+  padding: 12px;
+  background: transparent;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
   overflow-y: auto;
 }
 
 .nav-rail-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: 10px var(--spacing-md);
-  border-radius: var(--radius-md);
-  border: none;
+  gap: 12px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: clamp(12px, 0.8vw + 9px, 15px);
+  font-size: clamp(14px, 0.8vw + 10px, 19px);
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   text-align: left;
-  min-height: 44px;
+  min-height: 56px;
   width: 100%;
 }
 
 .nav-rail-item:hover {
-  background: var(--color-surface-hover, rgba(255,255,255,0.08));
+  background: rgba(255, 255, 255, 0.06);
   color: var(--color-text);
 }
 
 .nav-rail-item.active {
-  background: rgba(52, 152, 219, 0.18);
-  color: var(--color-primary, #3498db);
-  border-left: 3px solid var(--color-primary, #3498db);
+  background: rgba(74, 163, 255, 0.16);
+  border-color: rgba(74, 163, 255, 0.45);
+  color: #7dbcff;
 }
 
 .nav-rail-item svg {
-  width: 16px;
+  width: 18px;
   flex-shrink: 0;
 }
 
@@ -1861,7 +1969,7 @@ onMounted(async () => {
 .settings-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-lg);
+  padding: 20px 24px;
 }
 
 .tab-content {
@@ -1876,6 +1984,20 @@ onMounted(async () => {
   align-items: start;
 }
 
+/* Many uneven cards (Screen Saver tab): implicit grid rows leave dead space
+   under short cards. CSS columns pack them masonry-style — each card lands
+   directly under the previous one in its column. column-width collapses to
+   a single column on narrow panels with no extra media query. */
+.settings-grid-masonry {
+  display: block;
+  column-width: 340px;
+  column-gap: var(--spacing-lg);
+}
+.settings-grid-masonry > section {
+  break-inside: avoid;
+  margin-bottom: var(--spacing-lg);
+}
+
 .appearance-main {
   min-width: 0;
 }
@@ -1885,9 +2007,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   min-height: 160px;
   overflow: hidden;
+  /* Checkerboard so the transparency slider's effect is legible at a glance. */
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.07) 0% 25%, rgba(255, 255, 255, 0.02) 0% 50%) 0 0 / 24px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .preview-demo-controls {
@@ -1959,23 +2084,20 @@ onMounted(async () => {
 
 /* ── Section Cards ── */
 .settings-section.card {
-  background: var(--glass-bg, var(--color-surface));
-  backdrop-filter: blur(var(--glass-blur, 14px));
-  border: 1px solid var(--glass-border, var(--color-border));
-  box-shadow: var(--glass-shadow, var(--shadow-md));
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  background: #17233a;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 20px;
 }
 
 .settings-section h2 {
-  font-size: clamp(10px, 0.6vw + 8px, 13px);
+  font-size: clamp(13px, 0.6vw + 10px, 16px);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   color: var(--color-text-secondary);
   margin: 0 0 var(--spacing-md) 0;
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--glass-border, var(--color-border));
 }
 
 /* ── Tab Page Header ── */
@@ -1984,7 +2106,7 @@ onMounted(async () => {
 }
 
 .tab-page-header h2 {
-  font-size: clamp(16px, 1.2vw + 12px, 22px);
+  font-size: clamp(20px, 1.2vw + 14px, 26px);
   font-weight: 600;
   margin: 0 0 var(--spacing-xs) 0;
   color: var(--color-text);
@@ -2000,36 +2122,39 @@ onMounted(async () => {
   margin: 0;
 }
 
-/* ── Sub-tab Bar ── */
+/* ── Sub-tab Bar — pill strip per the mockup ── */
 .sub-tab-bar {
-  display: flex;
-  gap: var(--spacing-xs);
+  display: inline-flex;
+  gap: 4px;
   margin-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--glass-border, var(--color-border));
-  padding-bottom: 0;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
 }
 
 .sub-tab-btn {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
+  height: 48px;
+  padding: 0 18px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  font-size: clamp(14px, 0.7vw + 10px, 18px);
   font-weight: 500;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
-  min-height: 44px;
+  border-radius: 14px;
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .sub-tab-btn:hover { color: var(--color-text); }
 .sub-tab-btn.active {
-  color: var(--color-primary, #3498db);
-  border-bottom-color: var(--color-primary, #3498db);
+  background: #1f6fd1;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(31, 111, 209, 0.45);
 }
 
 /* ── Form Groups ── */
@@ -2058,14 +2183,36 @@ onMounted(async () => {
   margin: var(--spacing-xs) 0 0 0;
 }
 
-/* ── Slider ── */
+/* ── Slider — big touch thumb per the mockup. accent-color keeps the
+   progress fill for free; the thumb pseudo overrides just the knob. ── */
 .slider {
   width: 100%;
-  height: 6px;
-  accent-color: var(--color-primary, #3498db);
+  height: 32px;
+  accent-color: #4aa3ff;
   cursor: pointer;
   min-height: 44px;
   display: block;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
 }
 
 .slider-value {
@@ -2088,22 +2235,25 @@ onMounted(async () => {
 
 .btn-reset:hover { color: var(--color-text); border-color: var(--color-text-secondary); }
 
-/* ── Toggle Switch ── */
+/* ── Toggle Switch — 60×34 pill rows per the mockup ── */
 .toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-md);
-  min-height: 44px;
-  padding: var(--spacing-xs) 0;
+  min-height: 56px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
 }
 
 .toggle-row + .toggle-row {
-  border-top: 1px solid var(--glass-border, var(--color-border));
+  margin-top: 8px;
 }
 
 .toggle-row-label {
-  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  font-size: clamp(14px, 0.7vw + 10px, 17px);
   font-weight: 500;
   color: var(--color-text);
   cursor: default;
@@ -2113,8 +2263,8 @@ onMounted(async () => {
 .toggle-switch-inline {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 60px;
+  height: 34px;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -2130,32 +2280,32 @@ onMounted(async () => {
 .toggle-slider {
   position: absolute;
   inset: 0;
-  background: var(--color-border);
-  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 17px;
   transition: background var(--transition-fast);
 }
 
 .toggle-slider::before {
   content: '';
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: 28px;
+  height: 28px;
   left: 3px;
   top: 3px;
   background: white;
   border-radius: 50%;
   transition: transform var(--transition-fast);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 .toggle-switch input:checked + .toggle-slider,
 .toggle-switch-inline input:checked + .toggle-slider {
-  background: var(--color-primary, #3498db);
+  background: #1f6fd1;
 }
 
 .toggle-switch input:checked + .toggle-slider::before,
 .toggle-switch-inline input:checked + .toggle-slider::before {
-  transform: translateX(20px);
+  transform: translateX(26px);
 }
 
 /* ── Status Messages ── */
@@ -2372,7 +2522,7 @@ onMounted(async () => {
   margin-left: var(--spacing-xs);
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 0.62rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2615,7 +2765,36 @@ onMounted(async () => {
 }
 
 .about-brand {
-  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.about-logo-tile {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-primary), #4aa3ff);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 6px 12px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.version-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  margin-left: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(74, 163, 255, 0.16);
+  border: 1px solid rgba(74, 163, 255, 0.45);
+  color: #7dbcff;
+  font-size: 0.85em;
 }
 
 .about-title {
@@ -2666,16 +2845,38 @@ onMounted(async () => {
 .feature-highlights h4 {
   font-size: clamp(12px, 0.7vw + 9px, 14px);
   font-weight: 600;
-  margin: 0 0 var(--spacing-xs) 0;
+  margin: 0 0 var(--spacing-sm) 0;
 }
 
-.feature-highlights ul {
-  margin: 0;
-  padding-left: var(--spacing-lg);
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.feature-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   font-size: clamp(12px, 0.7vw + 9px, 14px);
+  min-height: 44px;
 }
 
-.feature-highlights li { margin-bottom: 4px; }
+.feature-chip-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(74, 163, 255, 0.14);
+  color: var(--color-accent, #4aa3ff);
+}
 
 .about-links {
   display: flex;
@@ -2697,7 +2898,8 @@ onMounted(async () => {
   text-decoration: none;
   cursor: pointer;
   transition: background var(--transition-fast);
-  min-height: 36px;
+  min-height: 44px;
+  border-radius: 14px;
 }
 
 .about-link-btn:hover { background: var(--color-surface-hover); }
@@ -2765,7 +2967,7 @@ onMounted(async () => {
 
   .nav-rail-item.active {
     border-left: none;
-    background: rgba(52, 152, 219, 0.25);
+    background: rgba(74, 163, 255, 0.2);
   }
 
   .settings-grid {
@@ -2848,9 +3050,8 @@ onMounted(async () => {
 }
 
 .toast-level-btn.active {
-  background: linear-gradient(135deg, rgba(52, 152, 219, 0.45), rgba(52, 152, 219, 0.75));
+  background: #1f6fd1;
   color: #fff;
-  box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.1);
 }
 
 @media (hover: hover) {

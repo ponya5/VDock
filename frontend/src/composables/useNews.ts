@@ -22,7 +22,7 @@ export const NEWS_WINDOW_SIZE = 4
 /** Rotation pauses this long after any touch so a tap hits what you saw. */
 const TOUCH_PAUSE_MS = 20 * 1000
 
-export function useNews() {
+export function useNews(feedsSource?: () => string[]) {
   const settingsStore = useSettingsStore()
 
   const headlines = ref<NewsHeadline[]>([])
@@ -64,6 +64,9 @@ export function useNews() {
   })
 
   function configuredFeeds(): string[] {
+    // A caller-supplied source (e.g. the sports widget's sportsFeeds list)
+    // wins; otherwise fall back to the regular headlines setting.
+    if (feedsSource) return feedsSource()
     return parseFeedList((settingsStore as Record<string, unknown>).newsFeeds)
   }
 

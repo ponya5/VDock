@@ -639,6 +639,16 @@
               <option value="holographic">Holographic</option>
               <option value="shadow">Deep Shadow</option>
               <option value="emissive">Emissive</option>
+              <option value="fire">Fire</option>
+              <option value="plasma">Plasma</option>
+              <option value="particles">Particles</option>
+              <option value="aurora">Aurora</option>
+              <option value="scanline">Scanline</option>
+              <option value="rain">Rain</option>
+              <option value="glowglass">Glow Glass</option>
+              <option value="gem">Gem</option>
+              <option value="neonrim">Neon Rim</option>
+              <option value="watermark">Watermark Card</option>
             </select>
             <button 
               class="btn btn-secondary" 
@@ -665,7 +675,11 @@
                 'deck-button-liquid': editedButton.style?.effect === 'liquid',
                 'deck-button-holographic': editedButton.style?.effect === 'holographic',
                 'deck-button-shadow': editedButton.style?.effect === 'shadow',
-                'deck-button-emissive': editedButton.style?.effect === 'emissive'
+                'deck-button-emissive': editedButton.style?.effect === 'emissive',
+                'deck-button-glowglass': editedButton.style?.effect === 'glowglass',
+                'deck-button-gem': editedButton.style?.effect === 'gem',
+                'deck-button-neonrim': editedButton.style?.effect === 'neonrim',
+                'deck-button-watermark': editedButton.style?.effect === 'watermark'
               }"
               :style="editedButton.style?.effect === 'gradient' && editedButton.style?.gradient ? { background: editedButton.style.gradient } : {}"
             >

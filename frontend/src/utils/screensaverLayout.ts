@@ -1,4 +1,4 @@
-export type ScreensaverWidgetId = 'clock' | 'weather' | 'news' | 'market' | 'worldclock'
+export type ScreensaverWidgetId = 'clock' | 'weather' | 'news' | 'market' | 'worldclock' | 'sports'
 
 export interface ScreensaverWidgetLayout {
   /** Widget center as a percentage of viewport width. */
@@ -17,6 +17,7 @@ export const SCREENSAVER_WIDGET_IDS: ScreensaverWidgetId[] = [
   'news',
   'market',
   'worldclock',
+  'sports',
 ]
 
 export const SCREENSAVER_WIDGET_LABELS: Record<ScreensaverWidgetId, string> = {
@@ -25,20 +26,22 @@ export const SCREENSAVER_WIDGET_LABELS: Record<ScreensaverWidgetId, string> = {
   news: 'News',
   market: 'Market',
   worldclock: 'World Clock',
+  sports: 'Sports',
 }
 
 /**
- * Side-by-side default: clock centered a bit above the middle, weather pinned
- * top-right, and the three info widgets in a row across the lower half.
- * Positions are widget centers in viewport percent; clamped to 6..94 so a
- * center-anchored widget can never be pushed fully off-screen.
+ * Editorial default: weather top-left, ticker top-right, big clock centered,
+ * and the reading sections (headlines, sports, world time) in a row across
+ * the lower half. Positions are widget centers in viewport percent; clamped
+ * to 6..94 so a center-anchored widget can never be pushed fully off-screen.
  */
 export const DEFAULT_SCREENSAVER_LAYOUT: ScreensaverLayout = {
-  clock: { x: 50, y: 20, scale: 1 },
-  weather: { x: 82, y: 9, scale: 1 },
-  news: { x: 20, y: 71, scale: 1 },
-  market: { x: 53, y: 79, scale: 1 },
-  worldclock: { x: 80, y: 71, scale: 1 },
+  clock: { x: 50, y: 36, scale: 1 },
+  weather: { x: 13, y: 9, scale: 1 },
+  market: { x: 87, y: 9, scale: 1 },
+  news: { x: 26, y: 78, scale: 1 },
+  sports: { x: 60, y: 78, scale: 1 },
+  worldclock: { x: 86, y: 76, scale: 1 },
 }
 
 function clampNum(v: unknown, min: number, max: number, fallback: number): number {

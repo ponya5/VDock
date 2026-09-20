@@ -70,6 +70,28 @@ export function useGridTransition() {
     const staggerOrder = computeStaggerOrder(rows, cols, order)
     const staggerDelay = 50 // ms delay between cells
 
+    // Hold incoming cells hidden until their staggered beat fires. Vue
+    // flushes the page swap on the next microtask — before any of the
+    // timeouts below (macrotasks) run — so every new cell mounts with this
+    // class already applied. Clearing to '' here mounted the new page with
+    // no class, so all buttons popped in instantly and the wave replayed
+    // over already-visible cells.
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        cellClasses.value[`${r}-${c}`] = 'grid-transition-pre'
+      }
+    }
+
+    // Light-bar fires its streak and the fade together on the same beat —
+    // the shine passes over the button while it materializes.
+    const inClass =
+      style === 'light-bar' ? 'grid-transition-sweep grid-transition-in'
+      : style === 'flip' ? 'grid-transition-flip'
+      : style === 'iris' ? 'grid-transition-iris'
+      : style === 'cascade' ? 'grid-transition-cascade'
+      : style === 'glitch' ? 'grid-transition-glitch'
+      : 'grid-transition-dissolve'
+
     const promises: Promise<void>[] = []
 
     staggerOrder.forEach((cellIdx, seqIdx) => {
@@ -77,41 +99,20 @@ export function useGridTransition() {
       const c = cellIdx % cols
       const key = `${r}-${c}`
 
-      cellClasses.value[key] = ''
-
-      // Sweep effect
-      const sweepPromise = new Promise<void>(resolve => {
+      const p = new Promise<void>(resolve => {
         setTimeout(() => {
-          if (style === 'light-bar') {
-            cellClasses.value[key] = 'grid-transition-sweep'
-          }
-          resolve()
-        }, seqIdx * staggerDelay)
-      })
-      promises.push(sweepPromise)
-
-      // In transition (180ms after sweep)
-      const inPromise = new Promise<void>(resolve => {
-        setTimeout(() => {
-          let inClass = 'grid-transition-in'
-          if (style === 'flip') inClass = 'grid-transition-flip'
-          else if (style === 'iris') inClass = 'grid-transition-iris'
-          else if (style === 'cascade') inClass = 'grid-transition-cascade'
-          else if (style === 'glitch') inClass = 'grid-transition-glitch'
-          else if (style === 'dissolve') inClass = 'grid-transition-dissolve'
-
           cellClasses.value[key] = inClass
 
           setTimeout(() => {
             if (cellClasses.value[key] === inClass) {
               delete cellClasses.value[key]
             }
-          }, 650)
+          }, 900)
 
           resolve()
-        }, seqIdx * staggerDelay + 180)
+        }, seqIdx * staggerDelay)
       })
-      promises.push(inPromise)
+      promises.push(p)
     })
 
     await Promise.all(promises)

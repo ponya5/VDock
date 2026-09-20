@@ -129,22 +129,25 @@ watch(() => props.scenes.length, () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Let the flex item shrink below its content width so the pill scrolls
+     internally instead of overflowing across the header's right-side
+     buttons when many scenes are present. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pill-container {
   position: relative;
   display: flex;
   align-items: center;
-  background: var(--glass-bg, rgba(0,0,0,0.25));
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(var(--glass-blur, 14px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
-  border: 1px solid var(--glass-border, rgba(255,255,255,0.12));
-  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
   overflow-x: auto;
   scrollbar-width: none;
   padding: 4px;
-  /* fallback for non-dark themes */
-  --fallback-bg: var(--color-surface, rgba(255,255,255,0.1));
 }
 
 .pill-container::-webkit-scrollbar { display: none; }
@@ -154,9 +157,9 @@ watch(() => props.scenes.length, () => {
   top: 4px;
   bottom: 4px;
   left: 4px;
-  background: linear-gradient(135deg, rgba(52,152,219,0.35), rgba(52,152,219,0.7));
-  box-shadow: 0 0 18px rgba(52,152,219,0.45), inset 0 0 10px rgba(255,255,255,0.15);
-  border-radius: calc(1rem - 4px);
+  background: #1f6fd1;
+  box-shadow: 0 4px 12px rgba(31, 111, 209, 0.45);
+  border-radius: 14px;
   z-index: 1;
   will-change: transform;
   pointer-events: none;
@@ -169,18 +172,17 @@ watch(() => props.scenes.length, () => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  /* Bigger touch target than a typical tab bar — these are tapped often on
-     touch panels, so err on the side of generous rather than compact. */
-  min-height: 56px;
+  /* Generous touch target — these are tapped often on touch panels. */
+  min-height: 48px;
   min-width: 96px;
-  padding: 10px 18px;
+  padding: 10px 14px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary, rgba(255,255,255,0.7));
-  font-size: clamp(0.78rem, 0.9vw + 0.5rem, 1rem);
-  font-weight: 600;
+  font-size: clamp(14px, 1vw + 8px, 18px);
+  font-weight: 500;
   cursor: pointer;
-  border-radius: calc(1rem - 4px);
+  border-radius: 14px;
   transition: color 0.2s ease;
   white-space: nowrap;
 }
@@ -230,13 +232,13 @@ watch(() => props.scenes.length, () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 2px solid rgba(0, 0, 0, 0.35);
-  background: var(--color-primary, #007aff);
+  border: 2px solid #fff;
+  background: #1f6fd1;
   color: #fff;
   font-size: calc(0.75rem * min(var(--touch-multiplier, 1), 1.25));
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 8px rgba(8, 6, 30, 0.4);
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
@@ -256,17 +258,18 @@ watch(() => props.scenes.length, () => {
   min-width: 48px;
   min-height: 48px;
   flex-shrink: 0;
-  border: 1px solid var(--glass-border, rgba(255,255,255,0.12));
-  background: var(--glass-bg, rgba(0,0,0,0.15));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--color-text-secondary);
-  border-radius: 0.75rem;
+  border-radius: 14px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .edit-btn.add-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: #4aa3ff;
+  color: #7dbcff;
+  background: rgba(74, 163, 255, 0.16);
 }
 
 @media (max-width: 768px) {

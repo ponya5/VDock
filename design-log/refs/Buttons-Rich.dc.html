@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rich button styles</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#3a2f78;}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 940px; box-sizing: border-box; padding: 48px; overflow: hidden; font-family: Heebo, system-ui, sans-serif; color: #ffffff; background-color: #4a3f9a; background-image: radial-gradient(60% 22% at 0% 52%, rgba(232, 53, 140, 0.85), rgba(232, 53, 140, 0)), radial-gradient(70% 60% at 85% 100%, rgba(120, 70, 190, 0.9), rgba(120, 70, 190, 0) 70%), linear-gradient(160deg, #6f7be6 0%, #5b4fb5 45%, #3a2f78 100%);">
+
+<div style="position: absolute; left: 0; top: 0; width: 1200px; height: 940px; background-color: rgba(10, 8, 30, 0.3);"></div>
+
+<div style="position: relative; z-index: 1; display: flex; flex-direction: column; gap: 40px;">
+
+<div style="display: flex; gap: 24px; align-items: flex-end;">
+<div style="width: 200px; flex-shrink: 0;"></div>
+<div style="width: 864px; display: grid; grid-template-columns: repeat(5, 160px); gap: 16px; font-size: 16px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85);">
+<div style="grid-column: 1 / span 4; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.3);">Default</div>
+<div style="padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.3);">Pressed</div>
+</div>
+</div>
+
+<div style="display: flex; gap: 24px; align-items: center;">
+<div style="width: 200px; flex-shrink: 0; font-size: 24px; font-weight: 600; line-height: 1.2;">F. Glow glass</div>
+<div style="width: 864px; display: grid; grid-template-columns: repeat(5, 160px); gap: 16px;">
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.5); background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -28px 40px -24px rgba(255, 60, 66, 0.5), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; left: 20px; top: 8px; width: 120px; height: 120px; background-image: radial-gradient(closest-side, rgba(255, 60, 66, 0.5), rgba(255, 60, 66, 0));"></span>
+<span aria-hidden="true" style="position: absolute; right: 12px; top: 12px; color: rgba(255, 255, 255, 0.6);"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+<span style="position: relative; width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ff5a5f, #c9151c); color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(255, 60, 66, 0.45);">y</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Ynet</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.5); background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -28px 40px -24px rgba(52, 226, 138, 0.45), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; left: 20px; top: 8px; width: 120px; height: 120px; background-image: radial-gradient(closest-side, rgba(52, 226, 138, 0.45), rgba(52, 226, 138, 0));"></span>
+<span aria-hidden="true" style="position: absolute; right: 12px; top: 12px; color: rgba(255, 255, 255, 0.6);"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+<span style="position: relative; width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #24402f, #0b140e); color: #34e28a; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 0 10px rgba(52, 226, 138, 0.6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -3px 6px rgba(0, 0, 0, 0.35), 0 8px 16px rgba(52, 226, 138, 0.35);">S1</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Sport1</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.5); background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -28px 40px -24px rgba(66, 133, 244, 0.5), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; left: 20px; top: 8px; width: 120px; height: 120px; background-image: radial-gradient(closest-side, rgba(66, 133, 244, 0.5), rgba(66, 133, 244, 0));"></span>
+<span aria-hidden="true" style="position: absolute; right: 12px; top: 12px; color: rgba(255, 255, 255, 0.6);"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+<span style="position: relative; width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ffffff, #dfe6f5); color: #4285f4; font-size: 28px; font-weight: 700; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -3px 6px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(66, 133, 244, 0.4);">G</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Google</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.5); background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -28px 40px -24px rgba(255, 60, 170, 0.5), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; left: 20px; top: 8px; width: 120px; height: 120px; background-image: radial-gradient(closest-side, rgba(255, 60, 170, 0.5), rgba(255, 60, 170, 0));"></span>
+<span aria-hidden="true" style="position: absolute; right: 12px; top: 12px; color: rgba(255, 255, 255, 0.6);"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+<span style="position: relative; width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ff4db2, #c81278); color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(255, 60, 170, 0.45);">R+</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Ronit Plus</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; transform: scale(0.96); background-color: rgba(20, 16, 50, 0.62); background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%); border: 1px solid rgba(255, 255, 255, 0.32); box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.4), inset 0 -28px 40px -20px rgba(255, 60, 66, 0.75);">
+<span aria-hidden="true" style="position: absolute; left: 10px; top: 0; width: 140px; height: 140px; background-image: radial-gradient(closest-side, rgba(255, 60, 66, 0.7), rgba(255, 60, 66, 0));"></span>
+<span aria-hidden="true" style="position: absolute; right: 12px; top: 12px; color: rgba(255, 255, 255, 0.6);"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+<span style="position: relative; width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; transform: scale(0.94); background-image: linear-gradient(145deg, #ff5a5f, #c9151c); color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.25), 0 4px 10px rgba(255, 60, 66, 0.5);">y</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Ynet</span>
+</button>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 24px; align-items: center;">
+<div style="width: 200px; flex-shrink: 0; font-size: 24px; font-weight: 600; line-height: 1.2;">G. Gem</div>
+<div style="width: 864px; display: grid; grid-template-columns: repeat(5, 160px); gap: 16px;">
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: #c9151c; background-image: linear-gradient(160deg, #ee4046 0%, #c9151c 55%, #8f0d13 100%); border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -8px 16px rgba(0, 0, 0, 0.25), 0 12px 24px rgba(201, 21, 28, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3);">
+<span aria-hidden="true" style="position: absolute; left: 6px; right: 6px; top: 6px; height: 58px; border-radius: 20px 20px 50% 50% / 20px 20px 100% 100%; background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.04));"></span>
+<span aria-hidden="true" style="position: absolute; right: -8px; bottom: -34px; font-size: 130px; font-weight: 800; line-height: 1; color: rgba(255, 255, 255, 0.1);">y</span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.22); color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 -4px 8px rgba(0, 0, 0, 0.15);">y</span>
+<span style="position: relative; font-size: 20px; font-weight: 600; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);">Ynet</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: #14231a; background-image: linear-gradient(160deg, #2d4a39 0%, #14231a 55%, #08100b 100%); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -8px 16px rgba(0, 0, 0, 0.3), 0 12px 24px rgba(52, 226, 138, 0.25), 0 4px 8px rgba(0, 0, 0, 0.3);">
+<span aria-hidden="true" style="position: absolute; left: 6px; right: 6px; top: 6px; height: 58px; border-radius: 20px 20px 50% 50% / 20px 20px 100% 100%; background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.03));"></span>
+<span aria-hidden="true" style="position: absolute; right: -8px; bottom: -34px; font-size: 130px; font-weight: 800; line-height: 1; color: rgba(52, 226, 138, 0.12);">S1</span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; background-color: rgba(52, 226, 138, 0.16); color: #34e28a; font-size: 26px; font-weight: 700; line-height: 1; box-shadow: inset 0 0 0 1px rgba(52, 226, 138, 0.55), inset 0 -4px 8px rgba(0, 0, 0, 0.2);">S1</span>
+<span style="position: relative; font-size: 20px; font-weight: 600; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);">Sport1</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #1b1f2a; font-family: inherit; background-color: #eef1f8; background-image: linear-gradient(160deg, #ffffff 0%, #eef1f8 55%, #c9d2e6 100%); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -8px 16px rgba(60, 80, 130, 0.18), 0 12px 24px rgba(66, 133, 244, 0.3), 0 4px 8px rgba(0, 0, 0, 0.25);">
+<span aria-hidden="true" style="position: absolute; left: 6px; right: 6px; top: 6px; height: 58px; border-radius: 20px 20px 50% 50% / 20px 20px 100% 100%; background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.1));"></span>
+<span aria-hidden="true" style="position: absolute; right: -8px; bottom: -34px; font-size: 130px; font-weight: 800; line-height: 1; color: rgba(66, 133, 244, 0.1);">G</span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; background-color: rgba(66, 133, 244, 0.12); color: #2f6fe0; font-size: 28px; font-weight: 700; line-height: 1; box-shadow: inset 0 0 0 1px rgba(66, 133, 244, 0.4), inset 0 -4px 8px rgba(66, 133, 244, 0.1);">G</span>
+<span style="position: relative; font-size: 20px; font-weight: 600; line-height: 1;">Google</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: #c81278; background-image: linear-gradient(160deg, #e8409f 0%, #c81278 55%, #8a0b53 100%); border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -8px 16px rgba(0, 0, 0, 0.25), 0 12px 24px rgba(200, 18, 120, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3);">
+<span aria-hidden="true" style="position: absolute; left: 6px; right: 6px; top: 6px; height: 58px; border-radius: 20px 20px 50% 50% / 20px 20px 100% 100%; background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.04));"></span>
+<span aria-hidden="true" style="position: absolute; right: -8px; bottom: -34px; font-size: 130px; font-weight: 800; line-height: 1; color: rgba(255, 255, 255, 0.1);">R+</span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.22); color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 -4px 8px rgba(0, 0, 0, 0.15);">R+</span>
+<span style="position: relative; font-size: 20px; font-weight: 600; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);">Ronit Plus</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; transform: scale(0.96); background-color: #a91218; background-image: linear-gradient(160deg, #c9151c 0%, #a91218 55%, #7c0d12 100%); border: 1px solid rgba(255, 255, 255, 0.25); box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(201, 21, 28, 0.35);">
+<span aria-hidden="true" style="position: absolute; left: 6px; right: 6px; top: 6px; height: 58px; border-radius: 20px 20px 50% 50% / 20px 20px 100% 100%; background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02));"></span>
+<span aria-hidden="true" style="position: absolute; right: -8px; bottom: -34px; font-size: 130px; font-weight: 800; line-height: 1; color: rgba(255, 255, 255, 0.08);">y</span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.18); color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);">y</span>
+<span style="position: relative; font-size: 20px; font-weight: 600; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);">Ynet</span>
+</button>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 24px; align-items: center;">
+<div style="width: 200px; flex-shrink: 0; font-size: 24px; font-weight: 600; line-height: 1.2;">H. Neon rim</div>
+<div style="width: 864px; display: grid; grid-template-columns: repeat(5, 160px); gap: 16px;">
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(12, 10, 30, 0.74); background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, rgba(255, 255, 255, 0) 1px, rgba(255, 255, 255, 0) 5px); border: 2px solid #ff4d55; box-shadow: inset 0 0 22px rgba(255, 77, 85, 0.35), 0 0 24px rgba(255, 77, 85, 0.45);">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background-image: linear-gradient(0deg, rgba(255, 77, 85, 0.28), rgba(255, 77, 85, 0));"></span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 77, 85, 0.12); color: #ff6a70; font-size: 28px; font-weight: 700; line-height: 1; text-shadow: 0 0 12px rgba(255, 77, 85, 0.9); box-shadow: inset 0 0 0 2px #ff4d55, 0 0 14px rgba(255, 77, 85, 0.5);">y</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Ynet</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(12, 10, 30, 0.74); background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, rgba(255, 255, 255, 0) 1px, rgba(255, 255, 255, 0) 5px); border: 2px solid #34e28a; box-shadow: inset 0 0 22px rgba(52, 226, 138, 0.3), 0 0 24px rgba(52, 226, 138, 0.4);">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background-image: linear-gradient(0deg, rgba(52, 226, 138, 0.24), rgba(52, 226, 138, 0));"></span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-color: rgba(52, 226, 138, 0.12); color: #34e28a; font-size: 28px; font-weight: 700; line-height: 1; text-shadow: 0 0 12px rgba(52, 226, 138, 0.9); box-shadow: inset 0 0 0 2px #34e28a, 0 0 14px rgba(52, 226, 138, 0.5);">S1</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Sport1</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(12, 10, 30, 0.74); background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, rgba(255, 255, 255, 0) 1px, rgba(255, 255, 255, 0) 5px); border: 2px solid #6ea8ff; box-shadow: inset 0 0 22px rgba(110, 168, 255, 0.35), 0 0 24px rgba(110, 168, 255, 0.45);">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background-image: linear-gradient(0deg, rgba(110, 168, 255, 0.28), rgba(110, 168, 255, 0));"></span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-color: rgba(110, 168, 255, 0.12); color: #8dbaff; font-size: 28px; font-weight: 700; line-height: 1; text-shadow: 0 0 12px rgba(110, 168, 255, 0.9); box-shadow: inset 0 0 0 2px #6ea8ff, 0 0 14px rgba(110, 168, 255, 0.5);">G</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Google</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; background-color: rgba(12, 10, 30, 0.74); background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, rgba(255, 255, 255, 0) 1px, rgba(255, 255, 255, 0) 5px); border: 2px solid #ff4db2; box-shadow: inset 0 0 22px rgba(255, 77, 178, 0.35), 0 0 24px rgba(255, 77, 178, 0.45);">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background-image: linear-gradient(0deg, rgba(255, 77, 178, 0.28), rgba(255, 77, 178, 0));"></span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 77, 178, 0.12); color: #ff7cc6; font-size: 28px; font-weight: 700; line-height: 1; text-shadow: 0 0 12px rgba(255, 77, 178, 0.9); box-shadow: inset 0 0 0 2px #ff4db2, 0 0 14px rgba(255, 77, 178, 0.5);">R+</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Ronit Plus</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #ffffff; font-family: inherit; transform: scale(0.97); background-color: rgba(255, 77, 85, 0.3); background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, rgba(255, 255, 255, 0) 1px, rgba(255, 255, 255, 0) 5px); border: 2px solid #ff8a8f; box-shadow: inset 0 0 32px rgba(255, 77, 85, 0.6), 0 0 34px rgba(255, 77, 85, 0.7);">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 90px; background-image: linear-gradient(0deg, rgba(255, 77, 85, 0.4), rgba(255, 77, 85, 0));"></span>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 77, 85, 0.3); color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1; text-shadow: 0 0 14px rgba(255, 120, 125, 1); box-shadow: inset 0 0 0 2px #ff8a8f, 0 0 18px rgba(255, 77, 85, 0.7);">y</span>
+<span style="position: relative; font-size: 20px; font-weight: 500; line-height: 1;">Ynet</span>
+</button>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 24px; align-items: center;">
+<div style="width: 200px; flex-shrink: 0; font-size: 24px; font-weight: 600; line-height: 1.2;">I. Watermark card</div>
+<div style="width: 864px; display: grid; grid-template-columns: repeat(5, 160px); gap: 16px;">
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 14px; border-radius: 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.55); background-image: radial-gradient(120% 90% at 0% 100%, rgba(255, 60, 66, 0.55), rgba(255, 60, 66, 0) 65%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; right: -14px; top: -34px; font-size: 150px; font-weight: 800; line-height: 1; color: rgba(255, 90, 95, 0.22);">y</span>
+<span style="position: relative; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ff5a5f, #c9151c); color: #ffffff; font-size: 24px; font-weight: 700; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 12px rgba(0, 0, 0, 0.3);">y</span>
+<span style="position: relative; width: 100%; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 22px; font-weight: 600; line-height: 1;">Ynet</span>
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.16);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 14px; border-radius: 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.55); background-image: radial-gradient(120% 90% at 0% 100%, rgba(52, 226, 138, 0.45), rgba(52, 226, 138, 0) 65%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; right: -14px; top: -34px; font-size: 150px; font-weight: 800; line-height: 1; color: rgba(52, 226, 138, 0.2);">S1</span>
+<span style="position: relative; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #24402f, #0b140e); color: #34e28a; font-size: 24px; font-weight: 700; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 12px rgba(0, 0, 0, 0.3);">S1</span>
+<span style="position: relative; width: 100%; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 22px; font-weight: 600; line-height: 1;">Sport1</span>
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.16);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 14px; border-radius: 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.55); background-image: radial-gradient(120% 90% at 0% 100%, rgba(66, 133, 244, 0.55), rgba(66, 133, 244, 0) 65%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; right: -14px; top: -34px; font-size: 150px; font-weight: 800; line-height: 1; color: rgba(110, 168, 255, 0.22);">G</span>
+<span style="position: relative; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ffffff, #dfe6f5); color: #4285f4; font-size: 26px; font-weight: 700; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 12px rgba(0, 0, 0, 0.3);">G</span>
+<span style="position: relative; width: 100%; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 22px; font-weight: 600; line-height: 1;">Google</span>
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.16);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 14px; border-radius: 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; color: #ffffff; font-family: inherit; background-color: rgba(20, 16, 50, 0.55); background-image: radial-gradient(120% 90% at 0% 100%, rgba(255, 60, 170, 0.55), rgba(255, 60, 170, 0) 65%); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 12px 28px rgba(8, 6, 30, 0.35);">
+<span aria-hidden="true" style="position: absolute; right: -14px; top: -34px; font-size: 150px; font-weight: 800; line-height: 1; color: rgba(255, 90, 190, 0.22);">R+</span>
+<span style="position: relative; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ff4db2, #c81278); color: #ffffff; font-size: 24px; font-weight: 700; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 12px rgba(0, 0, 0, 0.3);">R+</span>
+<span style="position: relative; width: 100%; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 22px; font-weight: 600; line-height: 1;">Ronit Plus</span>
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.16);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+</span>
+</button>
+
+<button type="button" style="position: relative; overflow: hidden; width: 160px; height: 156px; box-sizing: border-box; padding: 14px; border-radius: 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; color: #ffffff; font-family: inherit; transform: scale(0.96); background-color: rgba(20, 16, 50, 0.65); background-image: radial-gradient(130% 100% at 0% 100%, rgba(255, 60, 66, 0.8), rgba(255, 60, 66, 0) 70%); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.4);">
+<span aria-hidden="true" style="position: absolute; right: -14px; top: -34px; font-size: 150px; font-weight: 800; line-height: 1; color: rgba(255, 90, 95, 0.3);">y</span>
+<span style="position: relative; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(145deg, #ff5a5f, #c9151c); color: #ffffff; font-size: 24px; font-weight: 700; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 3px 6px rgba(0, 0, 0, 0.3);">y</span>
+<span style="position: relative; width: 100%; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 22px; font-weight: 600; line-height: 1;">Ynet</span>
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.28);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></svg></span>
+</span>
+</button>
+
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":940}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

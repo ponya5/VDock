@@ -10,10 +10,17 @@
       class="sidebar-header"
       @click="!props.showHeader && emit('toggleHeader')"
     >
-      <div v-if="!props.showHeader" class="header-toggle-button">
-        <FontAwesomeIcon :icon="['fas', 'chevron-up']" />
-        <span>Docked Buttons</span>
-      </div>
+      <button
+        v-if="!props.showHeader"
+        type="button"
+        class="header-toggle-button"
+        @click.stop="emit('toggleHeader')"
+        title="Show header"
+        aria-label="Show header"
+      >
+        <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
+        <span>Show Header</span>
+      </button>
       <h3 v-else>Docked Buttons</h3>
       <button
         v-if="isEditMode"
@@ -28,6 +35,22 @@
     <button v-if="isNarrow" class="sidebar-close-btn" @click="toggleSidebar">
       <FontAwesomeIcon :icon="['fas', 'times']" />
     </button>
+
+    <!-- Weather card at the top of the docked column (per the 7-inch mockup).
+         Hidden on the mobile bottom-bar layout and when weather hasn't
+         resolved yet so an empty card never eats button space. -->
+    <div v-if="!isMobile && weather" class="sidebar-weather-card">
+      <FontAwesomeIcon :icon="weather.icon" class="weather-icon" />
+      <div class="weather-info">
+        <span class="weather-temp">{{ Math.round(weather.temperature) }}°</span>
+        <span class="weather-desc">{{ weather.description }}</span>
+        <span class="weather-loc">{{ weather.location }}</span>
+      </div>
+    </div>
+
+    <p v-if="isEditMode && !isMobile" class="edit-hint">
+      Drag to reorder. Tap the red minus to remove.
+    </p>
 
     <div
       class="sidebar-grid"
@@ -84,6 +107,7 @@ import type { Button } from '@/types'
 import DeckButton from './DeckButton.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useSettingsStore } from '@/stores/settings'
+import { useWeather } from '@/composables/useWeather'
 
 interface Props {
   dockedButtons: Button[]
@@ -130,6 +154,9 @@ const isCompactScreen = ref(
 )
 const sidebarOpen = ref(false)
 
+// Free Open-Meteo weather for the mockup's top-of-sidebar card.
+const { weather, start: startWeather, stop: stopWeather } = useWeather()
+
 // Available vertical space for the button column itself (sidebar height minus
 // its own padding), tracked so cell height can respond to the window/panel
 // actually shrinking or growing instead of only reacting to width.
@@ -162,6 +189,7 @@ onMounted(() => {
     resizeObserver.observe(sidebarEl.value)
   }
   handleAvailableHeightResize()
+  startWeather()
 })
 
 onUnmounted(() => {
@@ -170,12 +198,14 @@ onUnmounted(() => {
   }
   resizeObserver?.disconnect()
   resizeObserver = null
+  stopWeather()
 })
 
-// Use sidebar width from settings, capped on compact/7" screens
+// Use sidebar width from settings, capped on compact/7" screens (the mockup's
+// column is 132px at 1024x600)
 const effectiveSidebarWidth = computed(() => {
   return isCompactScreen.value
-    ? Math.min(settingsStore.dockedSidebarWidth, 100)
+    ? Math.min(settingsStore.dockedSidebarWidth, 132)
     : settingsStore.dockedSidebarWidth
 })
 
@@ -185,7 +215,11 @@ const sidebarWidth = computed(() => {
 
 const gridStyle = computed(() => {
   const gap = 8
-  const paddingBlock = 32 // 16px top + 16px bottom
+  // Sidebar chrome above the grid: own padding + header row + weather card
+  // (~104px) + edit hint (~34px) when those are rendered.
+  let paddingBlock = 32
+  if (!isMobile.value && weather.value) paddingBlock += 104
+  if (props.isEditMode && !isMobile.value) paddingBlock += 34
   const rows = Math.max(props.gridRows, 1)
 
   // User-configured height, scaled by the global button-size setting, but
@@ -316,11 +350,15 @@ function stopResize() {
 <style scoped>
 .docked-sidebar {
   height: 100%;
-  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
-  backdrop-filter: var(--glass-blur, blur(10px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(10px));
-  border-right: 2px solid var(--color-primary);
-  box-shadow: var(--glass-shadow);
+  /* Faint glass tint keeps the background continuous while grounding the
+     column on bright wallpapers; the divider is a two-tone seam — a dark
+     edge plus an inner light line — so it reads on light AND dark
+     backgrounds (a plain white hairline vanished on light ones). */
+  background: rgba(10, 8, 32, 0.16);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-right: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.16);
   display: flex;
   flex-direction: column;
   transition: none; /* Disable transition during resize */
@@ -336,7 +374,11 @@ function stopResize() {
   height: 80px;
   width: 100vw !important;
   border-right: none;
-  border-top: 2px solid var(--color-primary);
+  box-shadow: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.35);
+  background: rgba(10, 8, 32, 0.66);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   flex-direction: row;
   z-index: 999;
 }
@@ -384,9 +426,8 @@ function stopResize() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface);
+  padding: var(--spacing-touch-sm, var(--spacing-sm));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   transition: background-color var(--transition-fast), cursor var(--transition-fast);
 }
 
@@ -395,72 +436,130 @@ function stopResize() {
 .sidebar-header h3 {
   font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin: 0;
+}
+
+/* Weather card — the mockup's top-of-column tile. Vertical layout so it
+   still reads on the 100–132px compact column. */
+.sidebar-weather-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 12px 0;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.weather-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.18);
+  color: #7dbcff;
+  font-size: 1rem;
+}
+
+.weather-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.weather-temp {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 1.5rem;
+  color: #eef2fa;
+}
+
+.weather-desc {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weather-loc {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edit-hint {
+  margin: 8px 14px 0;
+  font-size: 0.66rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
 }
 
 .header-toggle-button {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
+  justify-content: center;
+  gap: var(--spacing-touch-xs, var(--spacing-xs));
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
+  padding: var(--spacing-touch-sm, var(--spacing-sm));
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: calc(clamp(0.60rem, 2vw + 0.38rem, 0.90rem) * min(var(--touch-multiplier, 1), 1.25));
   font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  animation: button-pulse 2s ease-in-out infinite;
+  touch-action: manipulation;
 }
 
 .header-toggle-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  animation: button-pulse-hover 1s ease-in-out infinite;
+  background: #1f6fd1;
+  border-color: #1f6fd1;
 }
 
 .header-toggle-button svg {
-  font-size: clamp(0.64rem, 2vw + 0.40rem, 0.96rem);
-}
-
-@keyframes button-pulse {
-  0%, 100% {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(102, 126, 234, 0.4);
-  }
-  50% {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 8px rgba(102, 126, 234, 0.1);
-  }
-}
-
-@keyframes button-pulse-hover {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(102, 126, 234, 0.6);
-  }
-  50% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 12px rgba(102, 126, 234, 0.2);
-  }
+  font-size: calc(clamp(0.64rem, 2vw + 0.40rem, 0.96rem) * min(var(--touch-multiplier, 1), 1.4));
+  flex-shrink: 0;
 }
 
 .add-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  background-color: var(--color-primary);
+  min-width: 44px;
+  min-height: 44px;
+  min-width: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
+  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
+  background-color: #1f6fd1;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 14px;
   cursor: pointer;
   transition: all var(--transition-fast);
   color: white;
-  font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
+  font-size: calc(clamp(0.60rem, 2vw + 0.38rem, 0.90rem) * min(var(--touch-multiplier, 1), 1.4));
+  touch-action: manipulation;
+  flex-shrink: 0;
 }
 
 .add-btn:hover {
-  opacity: 0.8;
+  background: #2a80e0;
   transform: scale(1.05);
 }
 
@@ -473,9 +572,9 @@ function stopResize() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-surface);
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(255, 255, 255, 0.34);
+  border-radius: 18px;
   cursor: pointer;
   transition: all var(--transition-fast);
   min-height: 60px;
@@ -514,7 +613,11 @@ function stopResize() {
     width: 200px !important;
     z-index: 999;
     transition: left 0.2s ease;
-    border-right: 2px solid var(--color-primary);
+    background: rgba(10, 8, 32, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(0, 0, 0, 0.35);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.16);
     border-top: none;
     flex-direction: column;
   }
