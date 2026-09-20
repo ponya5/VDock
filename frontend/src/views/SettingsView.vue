@@ -1006,7 +1006,7 @@
         <div v-if="activeTab === 'about'" class="tab-content">
           <section class="settings-section card about-card">
             <div class="about-brand">
-              <div class="about-logo-tile"><FontAwesomeIcon :icon="['fas', 'table-cells-large']" /></div>
+              <div class="about-logo-tile"><img :src="'/assets/branding/vdock-logo.jpg'" alt="VDock logo" class="about-logo-img" /></div>
               <div>
                 <h2 class="about-title">VDock</h2>
                 <p class="about-version">Virtual Stream Interface <span class="version-chip">v{{ appVersion }}</span></p>
@@ -3473,9 +3473,19 @@ onMounted(async () => {
   justify-content: center;
   font-size: 1.6rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--color-primary), #4aa3ff);
+  /* Light badge: the DS artwork is black ink on white — the tile shows it
+     as a clean badge on the dark card. */
+  background: #f5f3ec;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 6px 12px rgba(0, 0, 0, 0.25);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.about-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .version-chip {
