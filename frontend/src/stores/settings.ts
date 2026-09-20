@@ -4,6 +4,11 @@ import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
 import { DEFAULT_BACKGROUND_ID } from '@/data/backgrounds'
+import {
+  defaultScreensaverLayout,
+  normalizeScreensaverLayout,
+  type ScreensaverLayout,
+} from '@/utils/screensaverLayout'
 
 const SETTINGS_STORAGE_KEY = 'vdock_settings'
 const SETTINGS_BROADCAST_CHANNEL = 'vdock-settings-sync'
@@ -34,6 +39,7 @@ export interface PersistedUserSettings {
   showLabels: boolean
   showTooltips: boolean
   animationsEnabled: boolean
+  editModeWiggle: boolean
   tiltEffectEnabled: boolean
   dockedSidebarEnabled: boolean
   dockedSidebarWidth: number
@@ -64,6 +70,8 @@ export interface PersistedUserSettings {
   marketTickers: string
   worldClockTimezones: string
   screensaverWidgetSize: number
+  screensaverBackground: string
+  screensaverLayout: ScreensaverLayout
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -79,6 +87,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const showLabels = ref(true)
   const showTooltips = ref(true)
   const animationsEnabled = ref(true)
+  // Off by default — the iOS-style jiggle annoyed on the small touch panel;
+  // the drag-handle dot already marks edit mode. Opt-in via Settings.
+  const editModeWiggle = ref(false)
   const tiltEffectEnabled = ref(true)
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(190)
@@ -147,6 +158,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const worldClockTimezones = ref('')
   // Percentage scale for the screensaver news/market/clock widget text.
   const screensaverWidgetSize = ref(100)
+  // 'default' keeps the classic dark look; any other catalog id or uploaded
+  // image URL paints behind the screensaver widgets.
+  const screensaverBackground = ref<string>(DEFAULT_BACKGROUND_ID)
+  // Widget positions/scales in viewport percent (center-anchored). Edited via
+  // the live layout editor reached from Settings -> Screensaver.
+  const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
 
   const showHelpGuide = ref(false)
 
@@ -203,6 +220,7 @@ export const useSettingsStore = defineStore('settings', () => {
       showLabels: showLabels.value,
       showTooltips: showTooltips.value,
       animationsEnabled: animationsEnabled.value,
+      editModeWiggle: editModeWiggle.value,
       tiltEffectEnabled: tiltEffectEnabled.value,
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
@@ -238,6 +256,9 @@ export const useSettingsStore = defineStore('settings', () => {
       marketTickers: marketTickers.value,
       worldClockTimezones: worldClockTimezones.value,
       screensaverWidgetSize: screensaverWidgetSize.value,
+      screensaverBackground: screensaverBackground.value,
+      // Deep copy for the same structured-clone reason as recentActions above.
+      screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value)),
     }
   }
 
@@ -246,6 +267,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.showLabels !== undefined) showLabels.value = settings.showLabels
     if (settings.showTooltips !== undefined) showTooltips.value = settings.showTooltips
     if (settings.animationsEnabled !== undefined) animationsEnabled.value = settings.animationsEnabled
+    if (settings.editModeWiggle !== undefined) editModeWiggle.value = settings.editModeWiggle
     if (settings.tiltEffectEnabled !== undefined) tiltEffectEnabled.value = settings.tiltEffectEnabled
     if (settings.dockedSidebarEnabled !== undefined) dockedSidebarEnabled.value = settings.dockedSidebarEnabled
     if (settings.dockedSidebarWidth !== undefined) dockedSidebarWidth.value = settings.dockedSidebarWidth
@@ -282,6 +304,10 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.marketTickers !== undefined) marketTickers.value = settings.marketTickers
     if (settings.worldClockTimezones !== undefined) worldClockTimezones.value = settings.worldClockTimezones
     if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
+    if (settings.screensaverBackground !== undefined) screensaverBackground.value = settings.screensaverBackground
+    if (settings.screensaverLayout !== undefined) {
+      screensaverLayout.value = normalizeScreensaverLayout(settings.screensaverLayout)
+    }
   }
 
   function saveSettingsLocalOnly() {
@@ -301,6 +327,7 @@ export const useSettingsStore = defineStore('settings', () => {
         showLabels: settings.showLabels !== false,
         showTooltips: settings.showTooltips !== false,
         animationsEnabled: settings.animationsEnabled !== false,
+        editModeWiggle: settings.editModeWiggle === true,
         tiltEffectEnabled: settings.tiltEffectEnabled !== false,
         dockedSidebarEnabled: settings.dockedSidebarEnabled !== false,
         dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
@@ -331,6 +358,8 @@ export const useSettingsStore = defineStore('settings', () => {
         marketTickers: settings.marketTickers ?? '',
         worldClockTimezones: settings.worldClockTimezones ?? '',
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
+        screensaverBackground: settings.screensaverBackground ?? DEFAULT_BACKGROUND_ID,
+        screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
       })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -404,6 +433,7 @@ export const useSettingsStore = defineStore('settings', () => {
       showLabels,
       showTooltips,
       animationsEnabled,
+      editModeWiggle,
       tiltEffectEnabled,
       dockedSidebarEnabled,
       dockedSidebarWidth,
@@ -434,6 +464,8 @@ export const useSettingsStore = defineStore('settings', () => {
       marketTickers,
       worldClockTimezones,
       screensaverWidgetSize,
+      screensaverBackground,
+      screensaverLayout,
     ],
     () => {
       saveSettings()
@@ -590,6 +622,7 @@ export const useSettingsStore = defineStore('settings', () => {
     showLabels,
     showTooltips,
     animationsEnabled,
+    editModeWiggle,
     tiltEffectEnabled,
     dockedSidebarEnabled,
     dockedSidebarWidth,
@@ -622,6 +655,8 @@ export const useSettingsStore = defineStore('settings', () => {
     marketTickers,
     worldClockTimezones,
     screensaverWidgetSize,
+    screensaverBackground,
+    screensaverLayout,
     showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,

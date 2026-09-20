@@ -106,7 +106,13 @@
     />
 
     <!-- Screen Saver overlay -->
-    <ScreenSaver v-if="screensaverVisible" :visible="screensaverVisible" @dismiss="dismissScreensaver" />
+    <ScreenSaver
+      v-if="screensaverVisible"
+      :visible="screensaverVisible"
+      :layout-edit="screensaverLayoutEdit"
+      @dismiss="dismissScreensaver"
+      @save-layout="saveScreensaverLayout"
+    />
 
     <!-- Quick Add Picker Modal -->
     <QuickAddPicker
@@ -176,9 +182,12 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
+import { appBackgroundForScene } from '@/data/appBackgrounds'
+import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useButtonActions } from '@/composables/useButtonActions'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
+import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -226,6 +235,9 @@ const quickAddTarget = ref<'page' | 'docked'>('page')
 
 // Screensaver / idle-timer state
 const screensaverVisible = ref(false)
+// True while the screensaver is showing its drag/resize layout editor —
+// reached via the 'screensaver_layout_edit' ui_command from Settings.
+const screensaverLayoutEdit = ref(false)
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 
 const IDLE_EVENTS = ['pointermove', 'pointerdown', 'keydown'] as const
@@ -241,7 +253,14 @@ function resetIdleTimer() {
 
 function dismissScreensaver() {
   screensaverVisible.value = false
+  screensaverLayoutEdit.value = false
   resetIdleTimer()
+}
+
+function saveScreensaverLayout(layout: ScreensaverLayout) {
+  // Assigning the store ref persists through the settings watch → local +
+  // server sync.
+  settingsStore.screensaverLayout = layout
 }
 
 function onPlaceholderClick(position: { row: number; col: number }) {
@@ -615,11 +634,21 @@ function closeSidebar() {
 }
 
 // Background preferences
+const appIntegrations = useAppIntegrations()
+// The scene slot resolves to the user's explicit override first; absent that,
+// an app-associated scene falls back to its bundled app wallpaper.
+const effectiveSceneBackground = computed(() => {
+  const scene = currentScene.value
+  if (!scene) return undefined
+  if (scene.background) return scene.background
+  const appDefault = appBackgroundForScene(scene, appIntegrations.value)
+  return appDefault ? { type: 'image' as const, image: appDefault.image } : undefined
+})
 const dashboardBackgroundClass = computed(() =>
-  backgroundClassFor(settingsStore.background, currentScene.value?.background, currentPage.value?.background)
+  backgroundClassFor(settingsStore.background, effectiveSceneBackground.value, currentPage.value?.background)
 )
 const dashboardBackgroundStyle = computed(() =>
-  backgroundStyleFor(settingsStore.background, currentScene.value?.background)
+  backgroundStyleFor(settingsStore.background, effectiveSceneBackground.value)
 )
 // `mainStyle` exists only to paint a page-level background on <main>. It must
 // never fall through to backgroundStyleFor's global-image branch — that
@@ -852,6 +881,10 @@ onMounted(async () => {
   // screensaverTimeout is 0 (screensaver disabled).
   stopUiCommandListener = listenForUiCommands((command) => {
     if (command === 'show_screensaver') {
+      screensaverVisible.value = true
+    }
+    if (command === 'screensaver_layout_edit') {
+      screensaverLayoutEdit.value = true
       screensaverVisible.value = true
     }
   })

@@ -64,7 +64,7 @@ Edit `.env` file to configure:
 - `GET /api/plugins/<id>/actions` - Get plugin actions
 
 ### File Upload
-- `POST /api/upload/icon` - Upload custom icon
+- `POST /api/upload` - Upload file (form field `type`: `dashboard_background`, `button_background`, `avatar`; accepts PNG/JPEG/GIF/MP4/WebM)
 - `GET /api/uploads/<filename>` - Serve uploaded file
 
 ### Configuration

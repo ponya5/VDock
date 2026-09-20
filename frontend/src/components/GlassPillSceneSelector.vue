@@ -215,11 +215,17 @@ watch(() => props.scenes.length, () => {
 
 .scene-edit-badge {
   position: absolute;
-  top: -8px;
+  /* Kept inside the pill: overflow-x:auto on .pill-container also clips
+     vertically, so a negative top cut the badge in half. */
+  top: 2px;
   transform: translateX(-100%);
-  width: 30px;
-  height: 30px;
-  margin-left: -6px;
+  width: 34px;
+  height: 34px;
+  margin-left: -4px;
+  /* Real touch target in edit mode; capped so it can't swallow the whole
+     segment on tablet mode. */
+  width: max(34px, calc(44px * min(var(--touch-multiplier, 1), 1.25)));
+  height: max(34px, calc(44px * min(var(--touch-multiplier, 1), 1.25)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,7 +233,7 @@ watch(() => props.scenes.length, () => {
   border: 2px solid rgba(0, 0, 0, 0.35);
   background: var(--color-primary, #007aff);
   color: #fff;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * min(var(--touch-multiplier, 1), 1.25));
   cursor: pointer;
   pointer-events: auto;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);

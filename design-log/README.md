@@ -14,13 +14,17 @@ believed at decision time rather than a tidied-up version of it.
 |---|---|---|
 | [DL-001](DL-001-unified-background.md) | Unified background setting | In progress — merged to `feat/unified-background`; manual browser verification outstanding |
 | [DL-002](DL-002-integrations-config.md) | Integrations configuration surface | Planned |
-| [DL-003](DL-003-screensaver.md) | Screensaver rework | In progress — Tasks 1–5 done (news feeds+rotation, market tickers, world-clock cities, widget text size, Test Screensaver); Task 6 manual verification pending |
+| [DL-003](DL-003-screensaver.md) | Screensaver rework | In progress — Tasks 1–5 done (tappable headlines, touch-mode auto-scale); Task 6 manual verification pending |
 | [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | In progress — session-host window resolution + VS Code/JetBrains/Visual Studio/Devin packs shipped; Phase 3 hooks & context scene pending |
 | [DL-005](DL-005-screensaver-weather-size.md) | Screensaver weather widget size | Complete |
 | [DL-006](DL-006-dev-first-app-list.md) | Dev-first running-apps list + smart filter | Complete |
 | [DL-007](DL-007-port-configuration.md) | Port selection in Server settings | Complete |
 | [DL-008](DL-008-reactbits-backgrounds.md) | React Bits background import + scrollable picker | In progress — WebGPU pair needs hardware verification |
-| [DL-009](DL-009-small-panel-touch-chrome.md) | Touch-mode scaling for header & action sidebar | Complete |
+| [DL-009](DL-009-small-panel-touch-chrome.md) | Touch-mode scaling for header & action sidebars | In progress — EditSidebar coverage added; manual 800×480 verification pending |
+| [DL-010](DL-010-app-scene-backgrounds.md) | Per-app default scene backgrounds | In progress |
+| [DL-011](DL-011-animated-avatars.md) | Animated GIF avatars | Implemented — tests green, manual upload check pending |
+| [DL-012](DL-012-edit-mode-wiggle.md) | Edit-mode wiggle opt-in | Implemented — default off, tests green |
+| [DL-013](DL-013-screensaver-layout.md) | Screensaver layout, background & editor | Implemented — side-by-side default, drag/resize editor, own background; backend restart needed for server sync |
 
 **Status values:** Planned → In progress → Complete.
 

@@ -17,10 +17,12 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 # Absolute paths for upload folders
 BACKGROUNDS_DIR = Config.UPLOADS_DIR / 'backgrounds'
 BUTTON_BG_DIR = Config.UPLOADS_DIR / 'button_backgrounds'
+AVATARS_DIR = Config.UPLOADS_DIR / 'avatars'
 
 # Ensure folders exist on import
 BACKGROUNDS_DIR.mkdir(parents=True, exist_ok=True)
 BUTTON_BG_DIR.mkdir(parents=True, exist_ok=True)
+AVATARS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def allowed_file(filename: str) -> bool:
@@ -35,6 +37,8 @@ def get_target_dir(file_type: str):
     """Return the absolute Path for the given upload type."""
     if file_type == 'button_background':
         return BUTTON_BG_DIR
+    if file_type in ('avatar', 'avatars'):
+        return AVATARS_DIR
     return BACKGROUNDS_DIR
 
 

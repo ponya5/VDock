@@ -133,8 +133,8 @@ be previewed.
 
 ## Implementation Plan
 
-- [ ] Task 1: Windowed rotation + touch pause in `useNews`
-- [ ] Task 2: Tappable headline rows + `openArticle`
+- [x] Task 1: Windowed rotation + touch pause in `useNews`
+- [x] Task 2: Tappable headline rows + `openArticle`
 - [ ] Task 3: Curated timezone catalog + three city pickers
 - [ ] Task 4: Finnhub proxy route + merged `useMarket` + ticker editor
 - [x] Task 5: `ui_command` relay + Test Screensaver button
@@ -236,3 +236,44 @@ configurable.
   added along with `marketTickers`, `worldClockTimezones`,
   `screensaverWidgetSize`.
 - **Tests:** `vue-tsc` clean; vitest 45 files / 138 tests; pytest 734.
+
+### Batch 3 (2026-09-20): touch-mode auto-scale for widgets
+
+User report: feeds, stocks and world clock still too small on the 7" panel —
+the `screensaverWidgetSize`/`screensaverWeatherSize` sliders existed but
+defaulted to 100%, so nothing helped unless the user found them.
+
+- `touchScale = min(touchModeMultiplier, 1.5)` is now folded into both scale
+  computeds (`--ss-widget-scale`, `--ss-weather-scale`), so the user
+  percentage becomes an adjustment on top of an automatic base. Cap 1.5:
+  the full 2.0 tablet multiplier would push the widget column past a
+  480px-tall screen (centered flex column would clip the clock).
+- `.ss-date` gains `min(--touch-multiplier, 1.3)` — a modest bump; the clock
+  itself (`clamp(4.5rem, 15vw, 10rem)`) was already large enough.
+- Both Settings sliders' help text now says touch mode scales automatically
+  and the slider adjusts on top.
+- **Tests:** vitest 46 files / 148 tests; `vue-tsc` clean. Manual 800×480
+  check outstanding.
+
+### Batch 4 (2026-09-20): tappable headlines (Tasks 1+2)
+
+User request: "clicking a news feed should open a separate browser tab with
+the article" — the tap must not dismiss the screensaver.
+
+- `useNews`: `NEWS_WINDOW_SIZE = 4`, `windowed` computed (4 items starting
+  at `index`, wrapping), `next`/`previous` step by the window, `pause()`
+  freezes rotation for 20s after a touch (cleared in `stop()`).
+- `ScreenSaver.vue`: carousel viewport/track/dots replaced by
+  `.ss-news-rows` — four `<button>` rows, each `@click.stop="openArticle"`,
+  hover/active/focus-visible states, `min-height: 44px` + touch-multiplier
+  dual declaration. `.ss-news` card carries
+  `@click.stop`/`@touchstart.stop="pauseRotation()"` so taps on the card
+  never reach the root dismiss handler.
+- `openArticle`: `window.electronAPI.openExternal(url)` (preload bridge →
+  `shell.openExternal`) with `window.open(url, '_blank', 'noopener,noreferrer')`
+  fallback.
+- **Tests:** `news-carousel.test.ts` rewritten — window stepping + wrap,
+  fewer-than-window lists, pause/resume under fake timers, and source
+  assertions for the tappable rows (the old transform tests guarded a
+  carousel that no longer exists). vitest 46 files / 153 tests; `vue-tsc`
+  clean.

@@ -88,9 +88,12 @@ const emit = defineEmits<{
   justify-content: space-between;
   width: 100%;
   min-height: 44px;
+  /* Grows with touch mode so the edit controls keep finger room on small
+     panels. The plain 44px above stays as the baseline/fallback. */
+  min-height: max(44px, calc(56px * var(--touch-multiplier, 1)));
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border);
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--spacing-touch-md, var(--spacing-md));
   box-sizing: border-box;
   z-index: 90;
 }
@@ -104,17 +107,20 @@ const emit = defineEmits<{
 .page-dots {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-touch-sm, var(--spacing-sm));
 }
 
 .page-dot {
   width: 10px;
   height: 10px;
+  width: calc(10px * var(--touch-multiplier, 1));
+  height: calc(10px * var(--touch-multiplier, 1));
   border-radius: 50%;
   background-color: var(--color-border);
   border: none;
   cursor: pointer;
   padding: 17px; /* Makes it 44x44px touch target */
+  padding: calc(17px * var(--touch-multiplier, 1));
   background-clip: content-box;
   box-sizing: content-box;
   transition: all 0.2s var(--ease-out);
@@ -128,33 +134,42 @@ const emit = defineEmits<{
 .footer-edit-section {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-touch-md, var(--spacing-md));
   flex: 2;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .grid-size-controls {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-touch-xs, var(--spacing-xs));
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--touch-multiplier, 1));
 }
 
 .grid-input {
   width: 44px;
+  width: calc(56px * var(--touch-multiplier, 1));
   height: 32px;
+  height: calc(44px * var(--touch-multiplier, 1));
+  min-height: 44px;
+  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
   text-align: center;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--touch-multiplier, 1));
 }
 
 .btn-sm {
-  min-height: 36px;
+  min-height: 44px;
+  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
+  padding: var(--spacing-touch-xs, var(--spacing-xs)) var(--spacing-touch-md, var(--spacing-md));
+  gap: var(--spacing-touch-xs, var(--spacing-xs));
+  font-size: calc(0.9rem * var(--touch-multiplier, 1));
   display: inline-flex;
   align-items: center;
   justify-content: center;

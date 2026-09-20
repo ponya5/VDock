@@ -108,6 +108,13 @@
                   </div>
                   <div class="toggle-row">
                     <div>
+                      <label class="toggle-row-label">Wiggle buttons in edit mode</label>
+                      <p class="form-help">Buttons shake to show they can be dragged</p>
+                    </div>
+                    <label class="toggle-switch"><input v-model="settings.editModeWiggle" type="checkbox" /><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="toggle-row">
+                    <div>
                       <label class="toggle-row-label">3D tilt effect</label>
                       <p class="form-help">Tilts the button grid as your mouse moves over it</p>
                     </div>
@@ -289,8 +296,19 @@
                   <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
                 </button>
               </div>
-              <div v-if="hasSceneBackground" class="background-preview">
-                <img :src="currentScene!.background!.image" alt="Scene Background" />
+              <div v-if="effectiveSceneBackgroundImage" class="background-preview">
+                <img :src="effectiveSceneBackgroundImage" alt="Scene Background" />
+              </div>
+              <p v-if="effectiveSceneBackgroundImage" class="form-help" style="margin-top:var(--spacing-xs)">{{ sceneBackgroundSource }}</p>
+              <div v-if="sceneAppEntry" class="toggle-row" style="margin-top:var(--spacing-sm)">
+                <div>
+                  <label class="toggle-row-label">Use {{ sceneAppEntry.label }} background</label>
+                  <p class="form-help">Bundled default shown when this scene has no custom image</p>
+                </div>
+                <label class="toggle-switch-inline">
+                  <input type="checkbox" :checked="!currentScene?.disableAppBackground" @change="toggleAppDefaultBackground" />
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
             </section>
               </div>
@@ -314,10 +332,43 @@
                     />
                     <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
                   </div>
-                  <button class="btn btn-secondary" @click="handleTestScreensaver">
-                    <FontAwesomeIcon :icon="['fas', 'display']" /> Test Screensaver
-                  </button>
-                  <p class="form-help">Shows the screensaver on the deck window, even when the delay above is off.</p>
+                  <div class="screensaver-actions">
+                    <button class="btn btn-secondary" @click="handleTestScreensaver">
+                      <FontAwesomeIcon :icon="['fas', 'display']" /> Test Screensaver
+                    </button>
+                    <button class="btn btn-secondary" @click="handleCustomizeScreensaverLayout">
+                      <FontAwesomeIcon :icon="['fas', 'up-down-left-right']" /> Customize Layout
+                    </button>
+                  </div>
+                  <p class="form-help">Test shows the screensaver on the deck window, even when the delay above is off. Customize Layout opens a live editor — drag widgets to move them, drag the corner dot to resize, then Save.</p>
+                </section>
+
+                <section class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'image']" /> Screensaver Background</h2>
+                  <p class="form-help">A background that shows only while the screensaver is on — the dashboard keeps its own.</p>
+                  <div class="form-group">
+                    <label>Background Style</label>
+                    <BackgroundPicker
+                      v-model="settings.screensaverBackground"
+                      :groups="screensaverPickerGroups"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>Custom Upload</label>
+                    <div class="upload-section">
+                      <input ref="screensaverBgFileInput" type="file" accept="image/*,.gif" @change="handleScreensaverBackgroundUpload" style="display:none" />
+                      <button class="btn btn-secondary upload-btn" :disabled="uploadingScreensaverBackground" @click="($refs.screensaverBgFileInput as HTMLInputElement).click()">
+                        <FontAwesomeIcon :icon="uploadingScreensaverBackground ? ['fas', 'spinner'] : ['fas', 'upload']" :spin="uploadingScreensaverBackground" />
+                        {{ uploadingScreensaverBackground ? 'Uploading...' : 'Choose Image or GIF' }}
+                      </button>
+                      <button v-if="isCustomScreensaverBackground" class="btn btn-danger" @click="removeScreensaverBackground">
+                        <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
+                      </button>
+                    </div>
+                    <div v-if="isCustomScreensaverBackground" class="background-preview">
+                      <img :src="settings.screensaverBackground" alt="Screensaver Background" />
+                    </div>
+                  </div>
                 </section>
 
                 <section class="settings-section card">
@@ -364,7 +415,7 @@
                       @input="settingsStore.screensaverWeatherSize = Number(($event.target as HTMLInputElement).value)"
                       class="slider"
                     />
-                    <p class="form-help">Scale the corner weather pill. Larger values help on small touch panels.</p>
+                    <p class="form-help">Scale the corner weather pill. Touch mode already enlarges it automatically; this adjusts on top of that.</p>
                   </div>
                 </section>
 
@@ -387,7 +438,7 @@
                       @input="settingsStore.screensaverWidgetSize = Number(($event.target as HTMLInputElement).value)"
                       class="slider"
                     />
-                    <p class="form-help">Scale the news, market, and world-clock text. Push it up on small touch panels.</p>
+                    <p class="form-help">Scale the news, market, and world-clock text. Touch mode already enlarges them automatically; this adjusts on top of that.</p>
                   </div>
                 </section>
 
@@ -802,7 +853,7 @@ import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
 import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppShortcut, type AppProfileDto } from '@/api/appProfiles'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
-import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
+import type { RunningApp, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
@@ -810,6 +861,8 @@ import { sendUiCommand } from '@/composables/useUiCommands'
 import { testNewsConnection, parseFeedList } from '@/services/newsService'
 import { testMarketConnection, parseTickers } from '@/services/marketService'
 import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
+import { appForScene, appIdForExe } from '@/data/appBackgrounds'
+import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 
 const router = useRouter()
@@ -846,6 +899,15 @@ function handleTestScreensaver() {
   notificationsStore.success(
     'Screensaver triggered',
     'It is now showing on the deck window — tap it to dismiss.'
+  )
+}
+
+// Opens the real screensaver in drag/resize edit mode on the deck window.
+function handleCustomizeScreensaverLayout() {
+  sendUiCommand('screensaver_layout_edit')
+  notificationsStore.success(
+    'Layout editor opened',
+    'Drag widgets on the deck window — Save keeps the arrangement.'
   )
 }
 
@@ -1002,7 +1064,8 @@ async function addTemplateAsScene(template: AppTemplate) {
     }))
     const newScene: Scene = {
       id: `scene-${Date.now()}`, name: template.name, icon: template.icon[1] ?? 'layer-group',
-      color: template.color, pages: [{ id: `page-${Date.now()}`, name: 'Page 1', buttons, grid_config: { rows: 4, cols: 5 } }], autoCreated: false
+      color: template.color, pages: [{ id: `page-${Date.now()}`, name: 'Page 1', buttons, grid_config: { rows: 4, cols: 5 } }],
+      appId: template.id, autoCreated: false
     }
     dashboardStore.addScene(newScene)
     notificationsStore.success('Scene added', `"${template.name}" scene added to your dashboard.`)
@@ -1013,6 +1076,7 @@ const backgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingBackground = ref(false)
 const sceneBackgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingSceneBackground = ref(false)
+const uploadingScreensaverBackground = ref(false)
 
 const backgroundsByGroup = computed(() => ({
   default: BACKGROUNDS.filter(b => b.group === 'default'),
@@ -1038,8 +1102,52 @@ const backgroundPickerGroups = computed<BackgroundPickerGroup[]>(() => {
 })
 
 const isCustomBackground = computed(() => isImageBackground(settings.value.background))
+
+// Screensaver gets its own background picker: 'default' means the classic
+// dark screensaver look, not the dashboard's gradient, so the option is
+// relabeled here instead of reusing backgroundPickerGroups.
+const screensaverPickerGroups = computed<BackgroundPickerGroup[]>(() => [
+  { label: 'Default', options: [{ id: 'default', label: 'Default (Dark)' }] },
+  ...(isCustomScreensaverBackground.value
+    ? [
+        {
+          label: 'Custom Background',
+          options: [{ id: settingsStore.screensaverBackground, label: 'Custom Uploaded Image' }]
+        }
+      ]
+    : []),
+  { label: 'Gradients', options: backgroundsByGroup.value.gradient },
+  { label: 'Animated', options: backgroundsByGroup.value.animated }
+])
+
+const isCustomScreensaverBackground = computed(() =>
+  isImageBackground(settingsStore.screensaverBackground)
+)
 const currentScene = computed(() => dashboardStore.currentScene)
 const hasSceneBackground = computed(() => !!currentScene.value?.background?.image)
+// The app this scene belongs to (registry entry with bundled artwork), and
+// the image actually showing: the explicit override, else the app default.
+const sceneAppEntry = computed(() =>
+  currentScene.value ? appForScene(currentScene.value, appIntegrations.value) : undefined
+)
+const effectiveSceneBackgroundImage = computed(() => {
+  const scene = currentScene.value
+  if (!scene) return undefined
+  if (scene.background?.image) return scene.background.image
+  return scene.disableAppBackground ? undefined : sceneAppEntry.value?.image
+})
+const sceneBackgroundSource = computed(() =>
+  currentScene.value?.background?.image
+    ? 'Custom override'
+    : `${sceneAppEntry.value?.label ?? 'App'} default`
+)
+
+function toggleAppDefaultBackground(event: Event) {
+  const scene = currentScene.value
+  if (!scene) return
+  const enabled = (event.target as HTMLInputElement).checked
+  dashboardStore.updateScene(scene.id, { disableAppBackground: !enabled })
+}
 
 const handleBackgroundUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -1083,6 +1191,31 @@ const handleSceneBackgroundUpload = async (event: Event) => {
 
 const removeCustomBackground = () => { settingsStore.background = 'default'; notificationsStore.success('Background removed', 'Reverted to default background.') }
 
+const handleScreensaverBackgroundUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  if (!['image/png','image/jpeg','image/jpg','image/gif'].includes(file.type)) { notificationsStore.error('Invalid file', 'Please upload a PNG, JPG, or GIF image.'); return }
+  if (file.size > 10 * 1024 * 1024) { notificationsStore.error('File too large', 'Maximum file size is 10MB.'); return }
+  uploadingScreensaverBackground.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file); formData.append('type', 'dashboard_background')
+    const response = await apiClient.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (response.data.success) {
+      const url = response.data.url.startsWith('/api') ? response.data.url : '/api' + response.data.url
+      settingsStore.screensaverBackground = url
+      notificationsStore.success('Screensaver background updated', 'Custom background applied successfully.')
+    } else { notificationsStore.error('Upload failed', response.data.error || 'Unknown error') }
+  } catch (error: any) { notificationsStore.error('Upload failed', error.message || 'Unknown error') }
+  finally { uploadingScreensaverBackground.value = false; if (target) target.value = '' }
+}
+
+const removeScreensaverBackground = () => {
+  settingsStore.screensaverBackground = 'default'
+  notificationsStore.success('Screensaver background removed', 'Reverted to the default dark look.')
+}
+
 const applyingButtonBehaviour = ref(false)
 
 async function applyButtonBehaviourToAll() {
@@ -1116,7 +1249,12 @@ async function applyButtonBehaviourToAll() {
 const removeSceneBackground = () => {
   if (!currentScene.value) return
   dashboardStore.updateScene(currentScene.value.id, { background: undefined })
-  notificationsStore.success('Scene background removed', `Background cleared for "${currentScene.value.name}".`)
+  notificationsStore.success(
+    'Scene background removed',
+    sceneAppEntry.value
+      ? `Reverted to the ${sceneAppEntry.value.label} default.`
+      : `Background cleared for "${currentScene.value.name}".`
+  )
 }
 
 // Static mockup SVGs for the screensaver widget picker — never data-bound or
@@ -1180,7 +1318,7 @@ async function handleTestMarket() {
 
 const runningApps = ref<RunningApp[]>([])
 const loadingApps = ref(false)
-const appIntegrations = ref<AppIntegration[]>([])
+const appIntegrations = useAppIntegrations()
 const autoSwitchingEnabled = ref(false)
 const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
@@ -1424,7 +1562,7 @@ async function createSceneForApp(app: RunningApp) {
     const newScene: Scene = {
       id: `scene-${Date.now()}`, name: sceneName, icon: 'window-maximize', color: '#3498db',
       pages: [{ id: `page-${Date.now()}`, name: 'Page 1', buttons, grid_config: { rows: 4, cols: 5 } }],
-      triggeredByApp: app.exe, autoCreated: true
+      triggeredByApp: app.exe, appId: appIdForExe(app.exe), autoCreated: true
     }
     dashboardStore.addScene(newScene)
     updateAppScene(app.exe, newScene.id)
@@ -1468,15 +1606,13 @@ function handleAddShortcut(shortcut: AppShortcut) {
 }
 
 function saveAppIntegrations() {
-  localStorage.setItem('appIntegrations', JSON.stringify(appIntegrations.value))
+  setAppIntegrations(appIntegrations.value)
   autoSceneSwitcher.updateIntegrations(appIntegrations.value)
 }
 
 function loadAppIntegrations() {
-  const stored = localStorage.getItem('appIntegrations')
-  if (stored) {
-    try { appIntegrations.value = JSON.parse(stored); autoSceneSwitcher.updateIntegrations(appIntegrations.value) } catch {}
-  }
+  reloadAppIntegrations()
+  autoSceneSwitcher.updateIntegrations(appIntegrations.value)
   const autoSwitchStored = localStorage.getItem('autoSceneSwitching')
   if (autoSwitchStored) autoSwitchingEnabled.value = autoSwitchStored === 'true'
 }
@@ -2087,6 +2223,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+}
+
+/* ── Screensaver actions ── */
+.screensaver-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 /* ── Upload ── */

@@ -18,7 +18,7 @@
  */
 import socketClient from '@/api/socket'
 
-export type UiCommand = 'show_screensaver'
+export type UiCommand = 'show_screensaver' | 'screensaver_layout_edit'
 
 const UI_COMMAND_CHANNEL = 'vdock-ui-command'
 const UI_COMMAND_STORAGE_KEY = 'vdock_ui_command'

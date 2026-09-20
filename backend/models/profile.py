@@ -58,6 +58,8 @@ class Scene:
     color: Optional[str] = None
     pages: List[Page] = field(default_factory=list)
     background: Optional[Dict[str, Any]] = None
+    appId: Optional[str] = None
+    disableAppBackground: Optional[bool] = None
     isActive: bool = False
     buttonSize: Optional[float] = None
     triggeredByApp: Optional[str] = None
@@ -86,6 +88,10 @@ class Scene:
             result['color'] = self.color
         if self.background is not None:
             result['background'] = self.background
+        if self.appId is not None:
+            result['appId'] = self.appId
+        if self.disableAppBackground is not None:
+            result['disableAppBackground'] = self.disableAppBackground
         if self.buttonSize is not None:
             result['buttonSize'] = self.buttonSize
         if self.triggeredByApp is not None:
@@ -121,6 +127,8 @@ class Scene:
             color=data.get('color'),
             pages=pages,
             background=data.get('background'),
+            appId=data.get('appId'),
+            disableAppBackground=data.get('disableAppBackground'),
             isActive=data.get('isActive', False),
             buttonSize=data.get('buttonSize'),
             triggeredByApp=data.get('triggeredByApp'),

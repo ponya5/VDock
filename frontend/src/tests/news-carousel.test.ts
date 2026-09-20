@@ -5,11 +5,11 @@
 // without one it showed nothing. It now pulls a merged RSS list from the
 // backend and steps through it.
 //
-// One of these pins down a bug that only a running browser revealed: the track
-// was translated by `index * 100%`, but a percentage translate resolves against
-// the *track's own height* -- every slide stacked -- not one slide. At index 5
-// of 15 that scrolled 45 slides down instead of 5, so the widget showed blanks.
-// The transform now multiplies a single-slide custom property instead.
+// The display is a stack of four tappable rows (DL-003): a tap opens the
+// article's URL through the Electron shell / a new tab without dismissing
+// the screensaver, and rotation advances a whole window of four so the row
+// under the finger can't rotate out mid-tap. A touch pauses rotation for
+// 20s.
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { readFileSync } from 'node:fs'
@@ -38,7 +38,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('news carousel', () => {
+describe('news rotation', () => {
   it('loads headlines from the backend, needing no API key', async () => {
     const news = useNews()
     await news.refresh()
@@ -49,14 +49,72 @@ describe('news carousel', () => {
     expect(news.source.value).toBe('BBC News')
   })
 
-  it('advances one headline at a time', async () => {
+  it('advances the rotation index', async () => {
     const news = useNews()
     await news.refresh()
 
+    // Window size is 4; on a 3-item list a step lands on index 1 either way.
     news.next()
     expect(news.headline.value).toBe('Second story')
     news.next()
     expect(news.headline.value).toBe('Third story')
+  })
+
+  it('shows a window of four headlines and steps by the window', async () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({
+      title: `Story ${i}`,
+      source: 'S',
+      url: `https://e/${i}`
+    }))
+    get.mockResolvedValue({ data: { headlines: many } })
+    const news = useNews()
+    await news.refresh()
+
+    expect(news.windowed.value.map((h: any) => h.title)).toEqual([
+      'Story 0', 'Story 1', 'Story 2', 'Story 3'
+    ])
+
+    news.next()
+    expect(news.windowed.value.map((h: any) => h.title)).toEqual([
+      'Story 4', 'Story 5', 'Story 6', 'Story 7'
+    ])
+
+    // Wraps correctly when the count is not a multiple of the window size.
+    news.next()
+    expect(news.windowed.value[0].title).toBe('Story 8')
+    expect(news.windowed.value).toHaveLength(4)
+  })
+
+  it('shows every headline when fewer than a full window', async () => {
+    const news = useNews()
+    await news.refresh()
+    expect(news.windowed.value.map((h: any) => h.title)).toEqual([
+      'First story', 'Second story', 'Third story'
+    ])
+  })
+
+  it('pauses rotation after a touch and resumes on its own', async () => {
+    vi.useFakeTimers()
+    const many = Array.from({ length: 9 }, (_, i) => ({
+      title: `Story ${i}`,
+      source: 'S',
+      url: `https://e/${i}`
+    }))
+    get.mockResolvedValue({ data: { headlines: many } })
+    const news = useNews()
+    await news.refresh()
+    news.start()
+
+    vi.advanceTimersByTime(8_000) // one tick at the default 8s interval
+    expect(news.index.value).toBe(4)
+
+    news.pause()
+    vi.advanceTimersByTime(19_000)
+    expect(news.index.value).toBe(4) // frozen while paused
+
+    vi.advanceTimersByTime(9_000) // resume at +20s, first tick at +28s
+    expect(news.index.value).toBe(8)
+    news.stop()
   })
 
   it('wraps around at both ends', async () => {
@@ -138,25 +196,31 @@ describe('news carousel', () => {
   })
 })
 
-describe('carousel transform', () => {
+describe('tappable news rows', () => {
   const source = readFileSync(
     resolve(__dirname, '../components/ScreenSaver.vue'),
     'utf-8'
   )
 
-  it('translates by one slide height, not a percentage', () => {
-    // `translateY(-${index * 100}%)` resolves against the track's own height
-    // (all slides stacked), so each step moved by the whole list.
-    expect(source).not.toMatch(/translateY\(-\$\{newsIndex \* 100\}%\)/)
-    expect(source).toContain('var(--ss-news-slide-h)')
+  it('renders each visible headline as a button that opens its article', () => {
+    expect(source).toContain('class="ss-news-row"')
+    expect(source).toContain('@click.stop="openArticle(item)"')
   })
 
-  it('defines the slide height once and reuses it', () => {
-    const declarations = source.match(/--ss-news-slide-h:\s*[\d.]+em/g) ?? []
-    expect(declarations).toHaveLength(1)
-    // Viewport height, slide height and slide flex-basis all reference it.
-    const uses = source.match(/var\(--ss-news-slide-h\)/g) ?? []
-    expect(uses.length).toBeGreaterThanOrEqual(4)
+  it('keeps taps on the news card from reaching the dismiss handler', () => {
+    // The root dismisses on click/touchstart; the news card must stop both.
+    expect(source).toMatch(/class="ss-news"[\s\S]*?@touchstart\.stop/)
+    expect(source).toMatch(/@click\.stop="pauseRotation\(\)"/)
+  })
+
+  it('keeps every row at least a finger tall', () => {
+    const block = source.match(/\.ss-news-row\s*\{[\s\S]*?\}/)?.[0] ?? ''
+    expect(block).toContain('min-height: 44px')
+  })
+
+  it('opens through the Electron shell when available, else a new tab', () => {
+    expect(source).toContain('openExternal')
+    expect(source).toMatch(/window\.open\(item\.url, '_blank'/)
   })
 
   it('pauses rotation when the system prefers reduced motion', () => {
@@ -169,13 +233,25 @@ describe('screensaver layout', () => {
     resolve(__dirname, '../components/ScreenSaver.vue'),
     'utf-8'
   )
+  const layoutUtil = readFileSync(
+    resolve(__dirname, '../utils/screensaverLayout.ts'),
+    'utf-8'
+  )
 
-  it('pins weather to its own corner, separate from the widgets column', () => {
+  it('positions every widget in its own absolutely-placed wrapper', () => {
+    // Widgets live in .ss-pos wrappers whose left/top come from the saved
+    // layout as viewport-percent widget centers (DL-013).
+    expect(source).toContain('ss-pos')
+    expect(source).toMatch(/\.ss-pos\s*\{[^}]*position:\s*absolute/)
+    expect(source).toContain("left: `${l.x}%`")
+    expect(source).toContain("top: `${l.y}%`")
+  })
+
+  it('pins weather to its own corner, separate from the other widgets', () => {
     // Weather is a glance value, not something to read -- it must not sit
-    // inside the same reading column as news/market/world clock, where it
+    // inside the same visual group as news/market/world clock, where it
     // would compete with the headline for space on a small touch screen.
-    expect(source).toContain('ss-weather-corner')
-    expect(source).toMatch(/\.ss-weather-corner\s*\{[^}]*position:\s*absolute/)
+    expect(source).toContain('ss-pos ss-weather-corner')
   })
 
   it('gives the news headline more visual weight than the secondary chips', () => {
@@ -187,12 +263,37 @@ describe('screensaver layout', () => {
     expect(parseFloat(titleSize![1])).toBeGreaterThanOrEqual(parseFloat(chipSize![1]))
   })
 
-  it('stacks market and world clock as compact chips, not full-width cards', () => {
-    expect(source).toContain('ss-chip-row')
-    expect(source).toContain('ss-chip-line')
+  it('places news, market and world clock side by side in the default layout', () => {
+    // DL-013: the three info widgets get distinct x centers so they render
+    // as a row across the lower half instead of stacking.
+    const newsX = layoutUtil.match(/news:\s*\{[^}]*x:\s*([\d.]+)/)
+    const marketX = layoutUtil.match(/market:\s*\{[^}]*x:\s*([\d.]+)/)
+    const worldclockX = layoutUtil.match(/worldclock:\s*\{[^}]*x:\s*([\d.]+)/)
+    expect(newsX).toBeTruthy()
+    expect(marketX).toBeTruthy()
+    expect(worldclockX).toBeTruthy()
+    const xs = [newsX, marketX, worldclockX].map(m => parseFloat(m![1]))
+    expect(new Set(xs).size).toBe(3)
+    expect(Math.min(...xs)).toBeLessThan(35)
+    expect(Math.max(...xs)).toBeGreaterThan(65)
+    // The clock stays centered and a bit above the middle.
+    const clock = layoutUtil.match(/clock:\s*\{[^}]*x:\s*([\d.]+)[^}]*y:\s*([\d.]+)/)
+    expect(parseFloat(clock![1])).toBe(50)
+    expect(parseFloat(clock![2])).toBeLessThan(40)
   })
 
-  it('stacks the chips on a narrow touch panel instead of squeezing them side by side', () => {
-    expect(source).toMatch(/max-width:\s*480px[\s\S]*?ss-chip-row[\s\S]*?flex-direction:\s*column/)
+  it('falls back to a stacked column on narrow portrait panels', () => {
+    expect(source).toMatch(/max-width:\s*620px[\s\S]*?\.ss-pos[\s\S]*?position:\s*relative/)
+    expect(source).toMatch(/max-width:\s*620px[\s\S]*?transform:\s*none/)
+  })
+
+  it('supports a drag/resize edit mode that emits the saved layout', () => {
+    expect(source).toContain('layoutEdit')
+    expect(source).toContain('ss-editing')
+    expect(source).toContain('ss-resize')
+    expect(source).toContain("'save-layout'")
+    // Children must not receive pointer events while editing or a drag
+    // would trigger a news row's click.
+    expect(source).toMatch(/\.ss-editing\s*>\s*\*:not\(\.ss-resize\)\s*\{[^}]*pointer-events:\s*none/)
   })
 })

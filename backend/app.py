@@ -276,7 +276,7 @@ def handle_user_settings_changed(data):
 
 # This event reaches every connected client, so it is an allowlist, not a
 # passthrough — a generic relay would be a remote-command channel.
-ALLOWED_UI_COMMANDS = {'show_screensaver'}
+ALLOWED_UI_COMMANDS = {'show_screensaver', 'screensaver_layout_edit'}
 
 
 @socketio.on('ui_command')
