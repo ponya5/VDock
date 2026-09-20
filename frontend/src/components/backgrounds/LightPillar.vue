@@ -79,6 +79,15 @@ const float STEP_MULT = ${settings.stepMult};
 const int   MAX_ITER  = ${settings.iterations};
 const int   WAVE_ITER = ${settings.waveIterations};
 
+// Some WebGL1/ANGLE driver combinations reject the built-in tanh() genType
+// overload for vec3 ("no matching overloaded function found") even though
+// GLSL ES 1.00 specifies it. Computed manually via the exp(-2|x|) form so it
+// can't overflow for the large pre-glow values col reaches here.
+vec3 tanh3(vec3 x) {
+  vec3 e = exp(-2.0 * abs(x));
+  return sign(x) * (1.0 - e) / (1.0 + e);
+}
+
 void main() {
   vec2 uv = (vUv * 2.0 - 1.0) * vec2(uResolution.x / uResolution.y, 1.0);
   // pillar rotation
@@ -127,7 +136,7 @@ void main() {
   }
 
   float widthNorm = uPillarWidth / 3.0;
-  col = tanh(col * uGlowAmount / widthNorm);
+  col = tanh3(col * uGlowAmount / widthNorm);
 
   // dither noise
   float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);

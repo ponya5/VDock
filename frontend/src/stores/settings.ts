@@ -3,10 +3,31 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
+import { DEFAULT_BACKGROUND_ID } from '@/data/backgrounds'
 
 const SETTINGS_STORAGE_KEY = 'vdock_settings'
 const SETTINGS_BROADCAST_CHANNEL = 'vdock-settings-sync'
 const SERVER_SYNC_DELAY_MS = 400
+
+export interface LegacyBackgroundFields {
+  background?: string
+  backgroundPreference?: string
+  dashboardBackground?: string
+}
+
+/**
+ * Resolve the single `background` value from stored settings.
+ *
+ * `backgroundPreference` and `dashboardBackground` were mutually exclusive —
+ * SettingsView reset one whenever the other changed — so at most one of them
+ * can hold a real selection and the migration is lossless.
+ */
+export function migrateBackground(settings: LegacyBackgroundFields): string {
+  if (settings.background) return settings.background
+  const pref = settings.backgroundPreference
+  if (pref && pref !== 'none') return pref
+  return settings.dashboardBackground || DEFAULT_BACKGROUND_ID
+}
 
 export interface PersistedUserSettings {
   buttonSize: number
@@ -17,8 +38,7 @@ export interface PersistedUserSettings {
   dockedSidebarEnabled: boolean
   dockedSidebarWidth: number
   dockedButtonHeight: number
-  dashboardBackground: string
-  backgroundPreference: string
+  background: string
   uiBrightness: number
   toastLevel: 'all' | 'errors-only' | 'off'
   touchMode: 'normal' | 'touch-friendly' | 'tablet'
@@ -36,10 +56,14 @@ export interface PersistedUserSettings {
   buttonDefaultIconLoop: string
   buttonDefaultEffect: string
   screensaverWidgets: string[]
+  screensaverWeatherSize: number
   newsApiKey: string
   newsFeeds: string
   newsRotateSeconds: number
   marketApiKey: string
+  marketTickers: string
+  worldClockTimezones: string
+  screensaverWidgetSize: number
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -61,8 +85,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Independent of width so docked buttons don't have to be square — a tall
   // sidebar of wide-but-short buttons is far easier to hit on small touch panels.
   const dockedButtonHeight = ref(84)
-  const dashboardBackground = ref('default')
-  const backgroundPreference = ref<'none' | 'particles' | 'waves' | 'lightning' | 'light-pillar' | 'floating-lines-wave' | 'prismatic-burst' | 'iridescence' | 'silk' | 'light-rays' | 'aurora'>('none')
+  const background = ref<string>(DEFAULT_BACKGROUND_ID)
   const uiBrightness = ref(100)
   // Ephemeral UI state (not persisted/synced): whether the auto-hiding header
   // is currently shown. Each window/tab manages its own header visibility
@@ -108,11 +131,22 @@ export const useSettingsStore = defineStore('settings', () => {
   const buttonDefaultEffect = ref('none')
 
   const screensaverWidgets = ref<string[]>(['weather'])
+  // Percentage scale for the screensaver's corner weather pill. 100 keeps the
+  // desktop-size rendering; small touch panels push it up for glanceability.
+  const screensaverWeatherSize = ref(100)
   const newsApiKey = ref('')
   // RSS/Atom feed URLs, one per line. Blank uses the backend defaults.
   const newsFeeds = ref('')
   const newsRotateSeconds = ref(8)
   const marketApiKey = ref('')
+  // Comma-separated symbols shown on the screensaver market chip — stocks
+  // (AAPL, MSFT) and crypto tickers (BTC, ETH) can be mixed freely.
+  const marketTickers = ref('')
+  // World clock entries, comma- or newline-separated: "Label=IANA/Zone" or a
+  // bare IANA zone or common city name. Blank uses the built-in defaults.
+  const worldClockTimezones = ref('')
+  // Percentage scale for the screensaver news/market/clock widget text.
+  const screensaverWidgetSize = ref(100)
 
   const showHelpGuide = ref(false)
 
@@ -173,8 +207,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled: dockedSidebarEnabled.value,
       dockedSidebarWidth: dockedSidebarWidth.value,
       dockedButtonHeight: dockedButtonHeight.value,
-      dashboardBackground: dashboardBackground.value,
-      backgroundPreference: backgroundPreference.value,
+      background: background.value,
       uiBrightness: uiBrightness.value,
       toastLevel: toastLevel.value,
       touchMode: touchMode.value,
@@ -197,14 +230,18 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultEffect: buttonDefaultEffect.value,
       // Spread for the same structured-clone reason as recentActions above.
       screensaverWidgets: [...screensaverWidgets.value],
+      screensaverWeatherSize: screensaverWeatherSize.value,
       newsApiKey: newsApiKey.value,
       newsFeeds: newsFeeds.value,
       newsRotateSeconds: newsRotateSeconds.value,
       marketApiKey: marketApiKey.value,
+      marketTickers: marketTickers.value,
+      worldClockTimezones: worldClockTimezones.value,
+      screensaverWidgetSize: screensaverWidgetSize.value,
     }
   }
 
-  function applySettingsObject(settings: Partial<PersistedUserSettings>) {
+  function applySettingsObject(settings: Partial<PersistedUserSettings> & LegacyBackgroundFields) {
     if (settings.buttonSize !== undefined) buttonSize.value = settings.buttonSize
     if (settings.showLabels !== undefined) showLabels.value = settings.showLabels
     if (settings.showTooltips !== undefined) showTooltips.value = settings.showTooltips
@@ -213,9 +250,12 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.dockedSidebarEnabled !== undefined) dockedSidebarEnabled.value = settings.dockedSidebarEnabled
     if (settings.dockedSidebarWidth !== undefined) dockedSidebarWidth.value = settings.dockedSidebarWidth
     if (settings.dockedButtonHeight !== undefined) dockedButtonHeight.value = settings.dockedButtonHeight
-    if (settings.dashboardBackground !== undefined) dashboardBackground.value = settings.dashboardBackground
-    if (settings.backgroundPreference !== undefined) {
-      backgroundPreference.value = settings.backgroundPreference as typeof backgroundPreference.value
+    if (
+      settings.background !== undefined ||
+      settings.backgroundPreference !== undefined ||
+      settings.dashboardBackground !== undefined
+    ) {
+      background.value = migrateBackground(settings)
     }
     if (settings.uiBrightness !== undefined) uiBrightness.value = settings.uiBrightness
     if (settings.toastLevel !== undefined) toastLevel.value = settings.toastLevel
@@ -234,10 +274,14 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.buttonDefaultIconLoop !== undefined) buttonDefaultIconLoop.value = settings.buttonDefaultIconLoop
     if (settings.buttonDefaultEffect !== undefined) buttonDefaultEffect.value = settings.buttonDefaultEffect
     if (settings.screensaverWidgets !== undefined) screensaverWidgets.value = settings.screensaverWidgets
+    if (settings.screensaverWeatherSize !== undefined) screensaverWeatherSize.value = settings.screensaverWeatherSize
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
     if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
     if (settings.newsRotateSeconds !== undefined) newsRotateSeconds.value = settings.newsRotateSeconds
     if (settings.marketApiKey !== undefined) marketApiKey.value = settings.marketApiKey
+    if (settings.marketTickers !== undefined) marketTickers.value = settings.marketTickers
+    if (settings.worldClockTimezones !== undefined) worldClockTimezones.value = settings.worldClockTimezones
+    if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
   }
 
   function saveSettingsLocalOnly() {
@@ -249,7 +293,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (!stored) return
 
     try {
-      const settings = JSON.parse(stored) as Partial<PersistedUserSettings> & { showRegularToasts?: boolean }
+      const settings = JSON.parse(stored) as Partial<PersistedUserSettings> &
+        LegacyBackgroundFields & { showRegularToasts?: boolean }
       applySettingsObject({
         ...settings,
         buttonSize: settings.buttonSize ?? 1.0,
@@ -260,8 +305,6 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarEnabled: settings.dockedSidebarEnabled !== false,
         dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
         dockedButtonHeight: settings.dockedButtonHeight ?? 84,
-        dashboardBackground: settings.dashboardBackground ?? 'default',
-        backgroundPreference: settings.backgroundPreference ?? 'none',
         uiBrightness: settings.uiBrightness ?? 100,
         toastLevel: settings.toastLevel
           ?? (settings.showRegularToasts === false ? 'errors-only' : 'all'),
@@ -280,10 +323,14 @@ export const useSettingsStore = defineStore('settings', () => {
         buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'swing',
         buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
         screensaverWidgets: settings.screensaverWidgets ?? ['weather'],
+        screensaverWeatherSize: settings.screensaverWeatherSize ?? 100,
         newsApiKey: settings.newsApiKey ?? '',
         newsFeeds: settings.newsFeeds ?? '',
         newsRotateSeconds: settings.newsRotateSeconds ?? 8,
         marketApiKey: settings.marketApiKey ?? '',
+        marketTickers: settings.marketTickers ?? '',
+        worldClockTimezones: settings.worldClockTimezones ?? '',
+        screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
       })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -361,8 +408,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dockedSidebarEnabled,
       dockedSidebarWidth,
       dockedButtonHeight,
-      dashboardBackground,
-      backgroundPreference,
+      background,
       uiBrightness,
       toastLevel,
       touchMode,
@@ -380,10 +426,14 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultIconLoop,
       buttonDefaultEffect,
       screensaverWidgets,
+      screensaverWeatherSize,
       newsApiKey,
       newsFeeds,
       newsRotateSeconds,
       marketApiKey,
+      marketTickers,
+      worldClockTimezones,
+      screensaverWidgetSize,
     ],
     () => {
       saveSettings()
@@ -544,8 +594,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dockedSidebarEnabled,
     dockedSidebarWidth,
     dockedButtonHeight,
-    dashboardBackground,
-    backgroundPreference,
+    background,
     uiBrightness,
     showHeader,
     toastLevel,
@@ -565,10 +614,14 @@ export const useSettingsStore = defineStore('settings', () => {
     buttonDefaultIconLoop,
     buttonDefaultEffect,
     screensaverWidgets,
+    screensaverWeatherSize,
     newsApiKey,
     newsFeeds,
     newsRotateSeconds,
     marketApiKey,
+    marketTickers,
+    worldClockTimezones,
+    screensaverWidgetSize,
     showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,

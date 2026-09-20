@@ -9,7 +9,11 @@
 
     <!-- Weather pinned to its own corner so it never competes for reading
          space with the clock or the widgets below it. -->
-    <div v-if="showWeatherWidget" class="ss-weather-corner">
+    <div
+      v-if="showWeatherWidget"
+      class="ss-weather-corner"
+      :style="{ '--ss-weather-scale': String(weatherScale) }"
+    >
       <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-corner-icon" />
       <div class="ss-weather-corner-info">
         <span class="ss-weather-corner-temp">{{ tempStr }}</span>
@@ -30,6 +34,7 @@
     <div
       v-if="showNewsWidget || showMarketWidget || showWorldClockWidget"
       class="ss-widgets"
+      :style="{ '--ss-widget-scale': widgetScale }"
     >
       <div v-if="showNewsWidget" class="ss-news">
         <FontAwesomeIcon :icon="['fas', 'newspaper']" class="ss-news-icon" />
@@ -129,21 +134,83 @@ const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C`
 const location = computed(() => weather.value?.location || '—')
 
 const showWeatherWidget = computed(() => settingsStore.screensaverWidgets.includes('weather'))
+// User-set percentage (default 100) that enlarges the corner pill for small
+// touch panels, where the vw-clamped sizes end up too small to glance at.
+const weatherScale = computed(() => settingsStore.screensaverWeatherSize / 100)
 const showNewsWidget = computed(() => settingsStore.screensaverWidgets.includes('news'))
 const showMarketWidget = computed(() => settingsStore.screensaverWidgets.includes('market'))
 const showWorldClockWidget = computed(() => settingsStore.screensaverWidgets.includes('worldclock'))
 
-const WORLD_CLOCK_ZONES = [
+// User-tunable text scale for the widget column (Settings → Screensaver →
+// Widget size). 100 keeps the desktop rendering; small touch panels push it
+// up so headlines and chip values stay readable at arm's length.
+const widgetScale = computed(() => `${(settingsStore.screensaverWidgetSize || 100) / 100}`)
+
+const WORLD_CLOCK_DEFAULTS = [
   { label: 'New York', tz: 'America/New_York' },
   { label: 'London', tz: 'Europe/London' },
   { label: 'Tokyo', tz: 'Asia/Tokyo' },
 ]
 
+// Common city names → IANA zones so users can type "Berlin" instead of
+// "Europe/Berlin". Explicit "Label=Zone" entries always win.
+const CITY_TIMEZONES: Record<string, string> = {
+  'new york': 'America/New_York', nyc: 'America/New_York', 'los angeles': 'America/Los_Angeles',
+  la: 'America/Los_Angeles', chicago: 'America/Chicago', denver: 'America/Denver',
+  toronto: 'America/Toronto', vancouver: 'America/Vancouver', 'mexico city': 'America/Mexico_City',
+  'sao paulo': 'America/Sao_Paulo', 'buenos aires': 'America/Argentina/Buenos_Aires',
+  london: 'Europe/London', dublin: 'Europe/Dublin', paris: 'Europe/Paris',
+  berlin: 'Europe/Berlin', amsterdam: 'Europe/Amsterdam', madrid: 'Europe/Madrid',
+  rome: 'Europe/Rome', zurich: 'Europe/Zurich', stockholm: 'Europe/Stockholm',
+  oslo: 'Europe/Oslo', copenhagen: 'Europe/Copenhagen', helsinki: 'Europe/Helsinki',
+  warsaw: 'Europe/Warsaw', prague: 'Europe/Prague', vienna: 'Europe/Vienna',
+  athens: 'Europe/Athens', istanbul: 'Europe/Istanbul', moscow: 'Europe/Moscow',
+  'tel aviv': 'Asia/Jerusalem', jerusalem: 'Asia/Jerusalem', dubai: 'Asia/Dubai',
+  mumbai: 'Asia/Kolkata', delhi: 'Asia/Kolkata', bangalore: 'Asia/Kolkata',
+  bangkok: 'Asia/Bangkok', singapore: 'Asia/Singapore', 'hong kong': 'Asia/Hong_Kong',
+  shanghai: 'Asia/Shanghai', beijing: 'Asia/Shanghai', tokyo: 'Asia/Tokyo',
+  seoul: 'Asia/Seoul', sydney: 'Australia/Sydney', melbourne: 'Australia/Melbourne',
+  auckland: 'Pacific/Auckland', cairo: 'Africa/Cairo', johannesburg: 'Africa/Johannesburg',
+  lagos: 'Africa/Lagos', nairobi: 'Africa/Nairobi',
+}
+
+function parseClockEntry(raw: string): { label: string; tz: string } | null {
+  const entry = raw.trim()
+  if (!entry) return null
+  const eq = entry.indexOf('=')
+  if (eq > 0) {
+    const label = entry.slice(0, eq).trim()
+    const tz = entry.slice(eq + 1).trim()
+    return label && tz ? { label, tz } : null
+  }
+  const mapped = CITY_TIMEZONES[entry.toLowerCase()]
+  if (mapped) return { label: entry, tz: mapped }
+  // Bare IANA zone like "Europe/Berlin" — label from the last path segment.
+  if (entry.includes('/')) return { label: entry.split('/').pop()!.replace(/_/g, ' '), tz: entry }
+  return null
+}
+
+const worldClockZones = computed(() => {
+  const configured = (settingsStore.worldClockTimezones || '')
+    .split(/[\n,]+/)
+    .map(parseClockEntry)
+    .filter((z): z is { label: string; tz: string } => z !== null)
+  return configured.length ? configured : WORLD_CLOCK_DEFAULTS
+})
+
 const worldClocks = computed(() =>
-  WORLD_CLOCK_ZONES.map(z => ({
-    label: z.label,
-    time: new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: z.tz }).format(time.value)
-  }))
+  worldClockZones.value
+    .map(z => {
+      try {
+        return {
+          label: z.label,
+          time: new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: z.tz }).format(time.value),
+        }
+      } catch {
+        return null // invalid zone entry — drop it rather than break the widget
+      }
+    })
+    .filter((z): z is { label: string; time: string } => z !== null)
 )
 
 // Drift: ±20 px on X and Y on a 30-second sine cycle
@@ -235,13 +302,14 @@ onUnmounted(() => {
    something you read, so it never has to fight the news carousel for space
    on a small touch panel. */
 .ss-weather-corner {
+  --ss-weather-scale: 1;
   position: absolute;
   top: clamp(1rem, 3vw, 2rem);
   right: clamp(1rem, 3vw, 2rem);
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.9rem;
+  gap: calc(0.6rem * var(--ss-weather-scale));
+  padding: calc(0.5rem * var(--ss-weather-scale)) calc(0.9rem * var(--ss-weather-scale));
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
@@ -249,7 +317,7 @@ onUnmounted(() => {
 }
 
 .ss-weather-corner-icon {
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+  font-size: calc(clamp(1.3rem, 2.4vw, 1.8rem) * var(--ss-weather-scale));
   color: #ff9f0a;
   flex-shrink: 0;
 }
@@ -261,13 +329,13 @@ onUnmounted(() => {
 }
 
 .ss-weather-corner-temp {
-  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  font-size: calc(clamp(1rem, 1.8vw, 1.3rem) * var(--ss-weather-scale));
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .ss-weather-corner-loc {
-  font-size: clamp(0.65rem, 1vw, 0.78rem);
+  font-size: calc(clamp(0.65rem, 1vw, 0.78rem) * var(--ss-weather-scale));
   color: rgba(255, 255, 255, 0.45);
 }
 
@@ -277,7 +345,11 @@ onUnmounted(() => {
    every widget use the full width for its own content instead. */
 .ss-widgets {
   margin-top: clamp(1.75rem, 5vh, 3.25rem);
-  width: min(92vw, 640px);
+  /* zoom scales text, padding and the slide height together so bigger text
+     never overflows its slide. Width is divided back out so the column keeps
+     the same on-screen footprint at any scale. */
+  zoom: var(--ss-widget-scale, 1);
+  width: min(calc(92vw / var(--ss-widget-scale, 1)), calc(640px / var(--ss-widget-scale, 1)));
   display: flex;
   flex-direction: column;
   align-items: stretch;

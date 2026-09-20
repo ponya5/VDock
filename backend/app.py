@@ -33,7 +33,9 @@ from routes.system import system_bp
 from routes.templates import templates_bp
 from routes.weather import weather_bp
 from routes.news import news_bp
+from routes.market import market_bp
 from routes.user_settings import user_settings_bp
+from routes.app_profiles import app_profiles_bp
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -100,7 +102,9 @@ app.register_blueprint(system_bp)
 app.register_blueprint(templates_bp, url_prefix='/api/templates')
 app.register_blueprint(weather_bp, url_prefix='/api')
 app.register_blueprint(news_bp)
+app.register_blueprint(market_bp)
 app.register_blueprint(user_settings_bp)
+app.register_blueprint(app_profiles_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
@@ -268,6 +272,24 @@ def handle_user_settings_changed(data):
     # replying only to the requesting client's own session, so combined
     # with `include_self=False` the message was silently going nowhere.
     emit('user_settings_updated', {'settings': settings}, broadcast=True, include_self=False)
+
+
+# This event reaches every connected client, so it is an allowlist, not a
+# passthrough — a generic relay would be a remote-command channel.
+ALLOWED_UI_COMMANDS = {'show_screensaver'}
+
+
+@socketio.on('ui_command')
+def handle_ui_command(data):
+    """Relay allowlisted UI commands (e.g. 'show_screensaver') to all windows."""
+    if not isinstance(data, dict):
+        return
+
+    command = data.get('command')
+    if command not in ALLOWED_UI_COMMANDS:
+        return
+
+    emit('ui_command', {'command': command}, broadcast=True, include_self=False)
 
 
 # ============================================================================

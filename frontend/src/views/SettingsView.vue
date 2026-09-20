@@ -248,55 +248,15 @@
 
           <div v-if="appearanceSubTab === 'background'" class="settings-grid">
             <section class="settings-section card">
-              <h2>Animated Effect</h2>
-              <div class="form-group">
-                <label>Background Effect</label>
-                <select v-model="settings.backgroundPreference" class="select" @change="onAnimatedEffectChange">
-                  <option value="none">None</option>
-                  <option value="particles">Dark Veil (Particles)</option>
-                  <option value="waves">Floating Lines (Waves)</option>
-                  <option value="lightning">Lightning</option>
-                  <option value="light-pillar">Light Pillar</option>
-                  <option value="floating-lines-wave">Floating Lines Wave</option>
-                  <option value="prismatic-burst">Prismatic Burst</option>
-                  <option value="iridescence">Iridescence</option>
-                  <option value="silk">Silk</option>
-                  <option value="light-rays">Light Rays</option>
-                  <option value="aurora">Aurora</option>
-                </select>
-                <p class="form-help">Animated overlay on your dashboard</p>
-              </div>
-            </section>
-
-            <section class="settings-section card">
-              <h2>Dashboard Background</h2>
+              <h2>Background</h2>
               <div class="form-group">
                 <label>Background Style</label>
-                <select v-model="settings.dashboardBackground" class="select" @change="onDashboardBackgroundChange">
-                  <option value="default">Default (Gradient)</option>
-                  <optgroup label="Custom Background" v-if="isCustomBackground">
-                    <option :value="settings.dashboardBackground">Custom Uploaded Image</option>
-                  </optgroup>
-                  <optgroup label="Static Gradients">
-                    <option value="ocean-breeze">Ocean Breeze</option>
-                    <option value="sunset-glow">Sunset Glow</option>
-                    <option value="forest-mist">Forest Mist</option>
-                    <option value="royal-purple">Royal Purple</option>
-                    <option value="golden-hour">Golden Hour</option>
-                  </optgroup>
-                  <optgroup label="Animated Backgrounds">
-                    <option value="floating-particles">Floating Particles</option>
-                    <option value="gradient-waves">Gradient Waves</option>
-                    <option value="geometric-patterns">Geometric Patterns</option>
-                    <option value="aurora-borealis">Aurora Borealis</option>
-                    <option value="starfield">Starfield</option>
-                    <option value="bubble-float">Floating Bubbles</option>
-                    <option value="neon-grid">Neon Grid</option>
-                    <option value="floating-paths">Floating Paths</option>
-                    <option value="floating-paths-v2">Floating Paths V2</option>
-                    <option value="beams-background">Beams Background</option>
-                  </optgroup>
-                </select>
+                <BackgroundPicker
+                  v-model="settings.background"
+                  :groups="backgroundPickerGroups"
+                  @change="settingsStore.saveSettings()"
+                />
+                <p class="form-help">One background for the dashboard — animated effects included.</p>
               </div>
               <div class="form-group">
                 <label>Custom Upload</label>
@@ -311,7 +271,7 @@
                   </button>
                 </div>
                 <div v-if="isCustomBackground" class="background-preview">
-                  <img :src="settings.dashboardBackground" alt="Custom Background" />
+                  <img :src="settings.background" alt="Custom Background" />
                 </div>
               </div>
             </section>
@@ -354,6 +314,10 @@
                     />
                     <p class="form-help">Time before screensaver appears. 0 = disabled.</p>
                   </div>
+                  <button class="btn btn-secondary" @click="handleTestScreensaver">
+                    <FontAwesomeIcon :icon="['fas', 'display']" /> Test Screensaver
+                  </button>
+                  <p class="form-help">Shows the screensaver on the deck window, even when the delay above is off.</p>
                 </section>
 
                 <section class="settings-section card">
@@ -381,6 +345,49 @@
                         <span class="toggle-slider"></span>
                       </label>
                     </div>
+                  </div>
+                </section>
+
+                <section v-if="settingsStore.screensaverWidgets.includes('weather')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'cloud-sun']" /> Weather Widget</h2>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Widget Size</label>
+                      <span class="slider-value">{{ settingsStore.screensaverWeatherSize }}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="300"
+                      step="10"
+                      :value="settingsStore.screensaverWeatherSize"
+                      @input="settingsStore.screensaverWeatherSize = Number(($event.target as HTMLInputElement).value)"
+                      class="slider"
+                    />
+                    <p class="form-help">Scale the corner weather pill. Larger values help on small touch panels.</p>
+                  </div>
+                </section>
+
+                <section
+                  v-if="settingsStore.screensaverWidgets.some(w => ['news', 'market', 'worldclock'].includes(w))"
+                  class="settings-section card"
+                >
+                  <h2><FontAwesomeIcon :icon="['fas', 'text-height']" /> Widget Text Size</h2>
+                  <div class="form-group">
+                    <div class="form-group-header">
+                      <label>Text Size</label>
+                      <span class="slider-value">{{ settingsStore.screensaverWidgetSize }}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="80"
+                      max="250"
+                      step="10"
+                      :value="settingsStore.screensaverWidgetSize"
+                      @input="settingsStore.screensaverWidgetSize = Number(($event.target as HTMLInputElement).value)"
+                      class="slider"
+                    />
+                    <p class="form-help">Scale the news, market, and world-clock text. Push it up on small touch panels.</p>
                   </div>
                 </section>
 
@@ -423,7 +430,19 @@
 
                 <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
-                  <p class="form-help">Crypto prices (Bitcoin, Ethereum) work automatically via CoinGecko — no key needed.</p>
+                  <div class="form-group">
+                    <label>Symbols</label>
+                    <input
+                      v-model="settingsStore.marketTickers"
+                      type="text"
+                      class="input"
+                      placeholder="BTC, ETH, AAPL, MSFT, NVDA"
+                    />
+                    <p class="form-help">
+                      Comma-separated stock tickers and crypto symbols, mixable.
+                      Leave blank for the default Bitcoin + Ethereum pair.
+                    </p>
+                  </div>
                   <div class="form-group">
                     <label>Stock quotes API key (optional)</label>
                     <input v-model="settingsStore.marketApiKey" type="password" class="input" placeholder="Optional — leave blank for crypto only" />
@@ -431,6 +450,25 @@
                   <button class="btn btn-secondary" :disabled="testingMarket" @click="handleTestMarket">
                     <FontAwesomeIcon :icon="['fas', testingMarket ? 'spinner' : 'plug']" :spin="testingMarket" /> Test Connection
                   </button>
+                </section>
+
+                <section v-if="settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
+                  <h2><FontAwesomeIcon :icon="['fas', 'globe']" /> World Clock</h2>
+                  <div class="form-group">
+                    <label>Cities</label>
+                    <textarea
+                      v-model="settingsStore.worldClockTimezones"
+                      class="input"
+                      rows="4"
+                      :placeholder="'Tel Aviv\nLondon\nHome Office=America/New_York\nAsia/Tokyo'"
+                    ></textarea>
+                    <p class="form-help">
+                      One city per line — a common city name (<code>Tokyo</code>,
+                      <code>Berlin</code>), an IANA zone (<code>Asia/Jerusalem</code>),
+                      or <code>Label=Zone</code> for a custom name. Blank shows
+                      New York, London, and Tokyo.
+                    </p>
+                  </div>
                 </section>
               </div>
           </div>
@@ -524,11 +562,31 @@
               <h2>Connection</h2>
               <div v-if="serverConfig" class="server-info">
                 <div class="info-row"><span class="info-label">Host</span><span class="info-value">{{ serverConfig.host }}</span></div>
-                <div class="info-row"><span class="info-label">Port</span><span class="info-value">{{ serverConfig.port }}</span></div>
                 <div class="info-row"><span class="info-label">Auth</span><span class="info-value">{{ serverConfig.require_auth ? 'Enabled' : 'Disabled' }}</span></div>
               </div>
+              <div class="form-group">
+                <label>Frontend Port</label>
+                <input v-model.number="serverPorts.frontend" type="number" class="input" min="1024" max="65535" placeholder="3000" />
+                <p class="form-help">The port you open in the browser. 3000 is a common dev-server port — pick another if another app uses it.</p>
+                <p v-if="portErrors.frontend" class="status-msg status-error">{{ portErrors.frontend }}</p>
+              </div>
+              <div class="form-group">
+                <label>Backend Port</label>
+                <input v-model.number="serverPorts.backend" type="number" class="input" min="1024" max="65535" placeholder="5000" />
+                <p class="form-help">The API server port the frontend proxies to.</p>
+                <p v-if="portErrors.backend" class="status-msg status-error">{{ portErrors.backend }}</p>
+              </div>
+              <div class="button-row">
+                <button class="btn btn-secondary" :disabled="portsBusy" @click="checkPorts">
+                  <FontAwesomeIcon :icon="['fas', 'plug']" /> Check availability
+                </button>
+                <button class="btn btn-primary" :disabled="portsBusy" @click="savePorts">
+                  <FontAwesomeIcon :icon="['fas', 'save']" /> Save Ports
+                </button>
+              </div>
+              <p v-if="portsStatus" class="status-msg" :class="portsStatus.success ? 'status-success' : 'status-error'">{{ portsStatus.message }}</p>
               <p class="form-help mt-md">
-                Host and port are set via <code>HOST</code>/<code>PORT</code> environment variables in <code>backend/.env</code> and require restarting VDock to change &mdash; they can't be changed live from here.
+                Ports are written to <code>backend/.env</code> and <code>frontend/.env</code> and take effect on the next launch — restarting VDock via <code>launch.bat</code> is required.
               </p>
             </section>
           </div>
@@ -593,6 +651,21 @@
                 <FontAwesomeIcon :icon="['fas', 'sync']" :spin="loadingApps" /> Refresh
               </button>
             </div>
+            <div v-if="runningApps.length > 0" class="app-toolbar">
+              <div class="app-search">
+                <FontAwesomeIcon :icon="['fas', 'search']" class="app-search-icon" />
+                <input
+                  v-model="appSearch"
+                  type="text"
+                  class="app-search-input"
+                  placeholder="Filter apps — try 'terminal', 'vscode', 'git'"
+                />
+                <button v-if="appSearch" class="app-search-clear" title="Clear filter" @click="appSearch = ''">
+                  <FontAwesomeIcon :icon="['fas', 'times']" />
+                </button>
+              </div>
+              <span v-if="appSearch" class="app-count">{{ filteredApps.length }} of {{ runningApps.length }}</span>
+            </div>
             <div v-if="loadingApps" class="loading-state">
               <FontAwesomeIcon :icon="['fas', 'spinner']" spin /><span>Loading applications...</span>
             </div>
@@ -604,13 +677,17 @@
               <div class="list-header">
                 <span>Application</span><span>Status</span><span>Scene</span><span>Actions</span>
               </div>
-              <div v-for="app in runningApps" :key="app.exe" class="app-item">
+              <div v-if="filteredApps.length === 0" class="empty-state app-filter-empty">
+                <FontAwesomeIcon :icon="['fas', 'search']" /><p>No apps match "{{ appSearch }}"</p>
+              </div>
+              <div v-for="app in filteredApps" :key="app.exe" class="app-item" :class="{ 'app-item--dev': appTier(app) < 2 }">
                 <div class="app-info">
                   <FontAwesomeIcon :icon="['fas', 'window-maximize']" class="app-icon" />
                   <div class="app-details">
                     <span class="app-name">{{ app.name }}</span>
                     <span class="app-exe">{{ app.exe }}</span>
                   </div>
+                  <span v-if="appBadge(app)" class="app-badge" :class="{ 'app-badge--profile': appTier(app) === 0 }">{{ appBadge(app) }}</span>
                 </div>
                 <div class="app-status">
                   <label class="toggle-switch"><input type="checkbox" :checked="isAppIntegrationEnabled(app.exe)" @change="toggleAppIntegration(app)" /><span class="toggle-slider"></span></label>
@@ -718,18 +795,22 @@ import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import TouchModeSelector from '@/components/TouchModeSelector.vue'
+import BackgroundPicker, { type BackgroundPickerGroup } from '@/components/BackgroundPicker.vue'
 import DeckButton from '@/components/DeckButton.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
-import { hasShortcuts, getTopShortcutsForApp, type AppShortcut } from '@/data/appShortcuts'
+import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppShortcut, type AppProfileDto } from '@/api/appProfiles'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
 import type { RunningApp, AppIntegration, Scene, Button } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
+import { sendUiCommand } from '@/composables/useUiCommands'
 import { testNewsConnection, parseFeedList } from '@/services/newsService'
-import { testMarketConnection } from '@/services/marketService'
+import { testMarketConnection, parseTickers } from '@/services/marketService'
+import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
+import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 
 const router = useRouter()
 const route = useRoute()
@@ -760,6 +841,14 @@ function openSettingsInBrowserTab() {
   }
 }
 
+function handleTestScreensaver() {
+  sendUiCommand('show_screensaver')
+  notificationsStore.success(
+    'Screensaver triggered',
+    'It is now showing on the deck window — tap it to dismiss.'
+  )
+}
+
 function handleSettingsBack() {
   if (isStandaloneSettings.value) {
     // The main dashboard runs in a different tab/window here, so ask it to
@@ -778,6 +867,53 @@ function handleSettingsBack() {
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
+
+// Ports are written to the .env files and bind at process start — the UI
+// validates and probes collisions, then tells the user to relaunch.
+const serverPorts = ref({ frontend: 0, backend: 0 })
+const portErrors = ref<{ frontend: string; backend: string }>({ frontend: '', backend: '' })
+const portsStatus = ref<{ success: boolean; message: string } | null>(null)
+const portsBusy = ref(false)
+
+async function loadPorts() {
+  try {
+    const { data } = await apiClient.get('/system/ports')
+    if (data.success) {
+      serverPorts.value = { frontend: data.frontend_port, backend: data.backend_port }
+    }
+  } catch { /* informational — fields stay editable */ }
+}
+
+async function submitPorts(checkOnly: boolean) {
+  portsBusy.value = true
+  portErrors.value = { frontend: '', backend: '' }
+  portsStatus.value = null
+  try {
+    const { data } = await apiClient.put('/system/ports', {
+      frontend_port: serverPorts.value.frontend,
+      backend_port: serverPorts.value.backend,
+      check_only: checkOnly,
+    })
+    portsStatus.value = { success: true, message: data.message }
+    if (!checkOnly) notificationsStore.success('Ports saved', data.message)
+  } catch (err: any) {
+    const errors = err?.response?.data?.errors
+    if (errors) {
+      portErrors.value = {
+        frontend: errors.frontend_port ?? '',
+        backend: errors.backend_port ?? '',
+      }
+      portsStatus.value = { success: false, message: 'Fix the highlighted ports and try again.' }
+    } else {
+      portsStatus.value = { success: false, message: err?.message || 'Could not save ports.' }
+    }
+  } finally {
+    portsBusy.value = false
+  }
+}
+
+const checkPorts = () => submitPorts(true)
+const savePorts = () => submitPorts(false)
 
 const toastLevelOptions = [
   { value: 'all', label: 'All' },
@@ -826,13 +962,7 @@ const previewButton = computed<Button>(() => ({
 // Mirrors DashboardView's own background class/style resolution (minus the
 // scene/page-background overrides, which aren't relevant to a settings
 // preview) so the preview pane shows exactly what the dashboard would.
-const previewBackgroundClass = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') return ''
-  const bg = settingsStore.dashboardBackground
-  if (bg === 'default') return ''
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) return ''
-  return `dashboard-bg-${bg}`
-})
+const previewBackgroundClass = computed(() => backgroundClassFor(settingsStore.background))
 
 // Inline styles always win over the (global, unscoped) dashboard-bg-* classes
 // regardless of CSS specificity, so every branch here sets an explicit
@@ -841,22 +971,14 @@ const previewBackgroundClass = computed(() => {
 const PREVIEW_CHECKERBOARD = 'repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%) 50% / 20px 20px'
 
 const previewBackgroundStyle = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') {
+  const option = resolveBackground(settingsStore.background)
+  if (option.kind === 'component') {
     return { background: PREVIEW_CHECKERBOARD }
   }
-  const bg = settingsStore.dashboardBackground
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
-    return {
-      backgroundImage: `url(${bg})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-  if (bg === 'default') {
+  if (option.id === 'default') {
     return { background: 'var(--color-background)' }
   }
-  return {}
+  return backgroundStyleFor(settingsStore.background)
 })
 
 const expandedCategory = ref<string | null>(null)
@@ -891,12 +1013,31 @@ const backgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingBackground = ref(false)
 const sceneBackgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingSceneBackground = ref(false)
-const NAMED_BACKGROUNDS = ['ocean-breeze','sunset-glow','forest-mist','royal-purple','golden-hour','floating-particles','gradient-waves','geometric-patterns','aurora-borealis','starfield','bubble-float','neon-grid','floating-paths','floating-paths-v2','beams-background','default']
 
-const isCustomBackground = computed(() => {
-  const bg = settings.value.dashboardBackground
-  return bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || (bg.startsWith('http') && !NAMED_BACKGROUNDS.includes(bg))
+const backgroundsByGroup = computed(() => ({
+  default: BACKGROUNDS.filter(b => b.group === 'default'),
+  gradient: BACKGROUNDS.filter(b => b.group === 'gradient'),
+  animated: BACKGROUNDS.filter(b => b.group === 'animated'),
+}))
+
+const backgroundPickerGroups = computed<BackgroundPickerGroup[]>(() => {
+  const groups: BackgroundPickerGroup[] = [
+    { label: 'Default', options: backgroundsByGroup.value.default },
+    ...(isCustomBackground.value
+      ? [
+          {
+            label: 'Custom Background',
+            options: [{ id: settings.value.background, label: 'Custom Uploaded Image' }]
+          }
+        ]
+      : []),
+    { label: 'Gradients', options: backgroundsByGroup.value.gradient },
+    { label: 'Animated', options: backgroundsByGroup.value.animated }
+  ]
+  return groups
 })
+
+const isCustomBackground = computed(() => isImageBackground(settings.value.background))
 const currentScene = computed(() => dashboardStore.currentScene)
 const hasSceneBackground = computed(() => !!currentScene.value?.background?.image)
 
@@ -913,7 +1054,7 @@ const handleBackgroundUpload = async (event: Event) => {
     const response = await apiClient.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     if (response.data.success) {
       const url = response.data.url.startsWith('/api') ? response.data.url : '/api' + response.data.url
-      settingsStore.dashboardBackground = url
+      settingsStore.background = url
       notificationsStore.success('Background updated', 'Custom background applied successfully.')
     } else { notificationsStore.error('Upload failed', response.data.error || 'Unknown error') }
   } catch (error: any) { notificationsStore.error('Upload failed', error.message || 'Unknown error') }
@@ -940,21 +1081,7 @@ const handleSceneBackgroundUpload = async (event: Event) => {
   finally { uploadingSceneBackground.value = false; if (target) target.value = '' }
 }
 
-const removeCustomBackground = () => { settingsStore.dashboardBackground = 'default'; notificationsStore.success('Background removed', 'Reverted to default background.') }
-
-function onAnimatedEffectChange() {
-  if (settingsStore.backgroundPreference !== 'none') {
-    settingsStore.dashboardBackground = 'default'
-  }
-  settingsStore.saveSettings()
-}
-
-function onDashboardBackgroundChange() {
-  if (settingsStore.dashboardBackground !== 'default' && settingsStore.backgroundPreference !== 'none') {
-    settingsStore.backgroundPreference = 'none'
-  }
-  settingsStore.saveSettings()
-}
+const removeCustomBackground = () => { settingsStore.background = 'default'; notificationsStore.success('Background removed', 'Reverted to default background.') }
 
 const applyingButtonBehaviour = ref(false)
 
@@ -1036,8 +1163,14 @@ const testingMarket = ref(false)
 async function handleTestMarket() {
   testingMarket.value = true
   try {
-    await testMarketConnection()
-    notificationsStore.success('Market data connected', 'Successfully fetched crypto prices from CoinGecko.')
+    const tickers = parseTickers(settingsStore.marketTickers)
+    await testMarketConnection(tickers)
+    notificationsStore.success(
+      'Market data connected',
+      tickers.length
+        ? `Fetched quotes for ${tickers.join(', ')}.`
+        : 'Successfully fetched crypto prices from CoinGecko.'
+    )
   } catch (err: any) {
     notificationsStore.error('Market connection failed', err?.message || 'Could not reach the price API.')
   } finally {
@@ -1051,6 +1184,83 @@ const appIntegrations = ref<AppIntegration[]>([])
 const autoSwitchingEnabled = ref(false)
 const showShortcutManager = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
+const appSearch = ref('')
+const appProfiles = ref<AppProfileDto[]>([])
+const appProfilesLoaded = ref(false)
+
+// VDock is a development companion: dev tools sort above everything else.
+// Tier 0 is stronger still — an exe with a backend app profile means VDock
+// actually has keystroke actions for it.
+const DEV_APP_EXES = new Set([
+  'code.exe', 'code - insiders.exe', 'cursor.exe', 'devenv.exe', 'zed.exe',
+  'rider64.exe', 'idea64.exe', 'webstorm64.exe', 'pycharm64.exe',
+  'clion64.exe', 'goland64.exe', 'phpstorm64.exe', 'rubymine64.exe',
+  'datagrip64.exe', 'rustrover64.exe', 'fleet64.exe', 'studio64.exe',
+  'sublime_text.exe', 'notepad++.exe', 'neovide.exe',
+  'windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe',
+  'bash.exe', 'wsl.exe', 'wezterm-gui.exe', 'alacritty.exe', 'tabby.exe',
+  'termius.exe', 'putty.exe',
+  'gitkraken.exe', 'githubdesktop.exe', 'sourcetree.exe', 'fork.exe',
+  'postman.exe', 'insomnia.exe', 'bruno.exe',
+  'docker desktop.exe', 'com.docker.backend.exe', 'rancher desktop.exe',
+  'podman.exe', 'dbeaver.exe', 'mongodbcompass.exe',
+  'node.exe', 'python.exe', 'pythonw.exe', 'devtunnel.exe',
+])
+
+// Friendly queries -> exes, so "terminal" finds Windows Terminal, etc.
+const APP_ALIASES: Record<string, string[]> = {
+  vscode: ['code.exe', 'code - insiders.exe'],
+  'vs code': ['code.exe', 'code - insiders.exe'],
+  'visual studio code': ['code.exe'],
+  'visual studio': ['devenv.exe'],
+  terminal: ['windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe', 'wezterm-gui.exe', 'alacritty.exe', 'tabby.exe'],
+  claude: ['windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe'],
+  browser: ['chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'opera.exe'],
+  git: ['gitkraken.exe', 'githubdesktop.exe', 'sourcetree.exe', 'fork.exe'],
+  github: ['githubdesktop.exe'],
+  docker: ['docker desktop.exe', 'com.docker.backend.exe', 'rancher desktop.exe'],
+  jetbrains: ['idea64.exe', 'webstorm64.exe', 'pycharm64.exe', 'rider64.exe', 'clion64.exe', 'goland64.exe', 'phpstorm64.exe'],
+  editor: ['code.exe', 'cursor.exe', 'sublime_text.exe', 'notepad++.exe', 'devenv.exe', 'zed.exe'],
+}
+
+const appProfileByExe = computed(() => {
+  const map = new Map<string, AppProfileDto>()
+  for (const profile of appProfiles.value) {
+    for (const exe of profile.exes) {
+      const key = exe.toLowerCase()
+      if (!map.has(key)) map.set(key, profile)
+    }
+  }
+  return map
+})
+
+function appTier(app: RunningApp): number {
+  const exe = app.exe.toLowerCase()
+  if (appProfileByExe.value.has(exe)) return 0
+  if (DEV_APP_EXES.has(exe)) return 1
+  return 2
+}
+
+function appBadge(app: RunningApp): string | null {
+  const exe = app.exe.toLowerCase()
+  return appProfileByExe.value.get(exe)?.label ?? (DEV_APP_EXES.has(exe) ? 'Dev' : null)
+}
+
+const filteredApps = computed(() => {
+  const query = appSearch.value.trim().toLowerCase()
+  let list = runningApps.value
+  if (query) {
+    const aliases = APP_ALIASES[query] ?? []
+    list = list.filter((app) => {
+      const name = app.name.toLowerCase()
+      const exe = app.exe.toLowerCase()
+      return name.includes(query) || exe.includes(query) || aliases.includes(exe)
+    })
+  }
+  return [...list].sort(
+    (a, b) => appTier(a) - appTier(b) || a.name.localeCompare(b.name)
+  )
+})
 const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
 
 const availableScenes = computed(() => {
@@ -1083,8 +1293,8 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
   { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'moon'] },
   { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'grip'] },
-  { label: 'Animated Effect', keywords: 'background animation particles waves aurora', tabId: 'appearance', subTab: 'background', icon: ['fas', 'wand-magic-sparkles'] },
-  { label: 'Dashboard Background', keywords: 'background image wallpaper', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
+  { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', icon: ['fas', 'cloud-sun'] },
+  { label: 'Background', keywords: 'background animation particles waves aurora image wallpaper gradient', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
   { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
@@ -1092,7 +1302,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'integration', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
-  { label: 'Running Applications', keywords: 'running apps processes', tabId: 'integration', icon: ['fas', 'desktop'] },
+  { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', tabId: 'integration', icon: ['fas', 'desktop'] },
   { label: 'About VDock', keywords: 'version about info', tabId: 'about', icon: ['fas', 'info-circle'] }
 ]
 
@@ -1168,6 +1378,12 @@ function contactEmail() { window.location.href = 'mailto:ponya81@gmail.com?subje
 
 async function refreshRunningApps() {
   loadingApps.value = true
+  if (!appProfilesLoaded.value) {
+    appProfilesLoaded.value = true
+    fetchAppProfiles()
+      .then((profiles) => { appProfiles.value = profiles })
+      .catch(() => { appProfilesLoaded.value = false })
+  }
   try {
     const response = await apiClient.get('/metrics/running-apps')
     runningApps.value = response.data.success ? (response.data.data ?? []) : []
@@ -1202,7 +1418,8 @@ async function createSceneForApp(app: RunningApp) {
   if (!profile) { alert('No profile loaded.'); return }
   const sceneName = app.name.replace('.exe', '')
   try {
-    const topShortcuts = hasShortcuts(app.exe) ? getTopShortcutsForApp(app.exe, 8) : []
+    const profiles = await fetchAppProfiles()
+    const topShortcuts = hasAppShortcuts(profiles, app.exe) ? topAppShortcuts(profiles, app.exe, 8) : []
     const buttons: Button[] = topShortcuts.map((shortcut, index) => createButtonFromShortcut(shortcut, index))
     const newScene: Scene = {
       id: `scene-${Date.now()}`, name: sceneName, icon: 'window-maximize', color: '#3498db',
@@ -1335,6 +1552,7 @@ onMounted(async () => {
   await ensureProfileLoaded()
   await syncStartOnBootFromSystem()
   settingsStore.loadServerConfig()
+  loadPorts()
   loadAppIntegrations()
   if (activeTab.value === 'integration') await refreshRunningApps()
 })
@@ -1949,6 +2167,83 @@ onMounted(async () => {
 }
 
 .app-item:hover { background: var(--color-surface-hover, rgba(255,255,255,0.04)); }
+
+.app-item--dev { border-left: 2px solid var(--color-primary, #3498db); }
+
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.app-search { position: relative; flex: 1; }
+
+.app-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.app-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 30px 8px 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border, var(--color-border));
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.app-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #3498db);
+}
+
+.app-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.app-search-clear:hover { color: var(--color-text); }
+
+.app-count {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.app-badge {
+  margin-left: var(--spacing-xs);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.app-badge--profile {
+  background: color-mix(in srgb, var(--color-primary, #3498db) 22%, transparent);
+  color: var(--color-primary, #3498db);
+}
+
+.app-filter-empty { padding: var(--spacing-md); }
 
 .app-info {
   display: flex;

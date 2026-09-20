@@ -3,7 +3,7 @@
     id="app"
     class="theme-dark"
     :class="{
-      'bg-animated': !isStandaloneSettings && settingsStore.backgroundPreference !== 'none',
+      'bg-animated': !isStandaloneSettings && settingsStore.background !== 'default',
       'settings-standalone-mode': isStandaloneSettings,
     }"
   >

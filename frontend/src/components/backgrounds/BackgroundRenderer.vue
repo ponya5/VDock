@@ -1,65 +1,64 @@
 <template>
   <div class="background-renderer">
-    <DarkVeil v-if="preference === 'particles'" />
-    <FloatingLines v-if="preference === 'waves'" />
-    <Lightning v-if="preference === 'lightning'" />
-    <LightPillar v-if="preference === 'light-pillar'" />
-    <FloatingLinesWave v-if="preference === 'floating-lines-wave'" />
-    <PrismaticBurst v-if="preference === 'prismatic-burst'" />
-    <Iridescence v-if="preference === 'iridescence'" />
-    <Silk v-if="preference === 'silk'" />
-    <LightRays v-if="preference === 'light-rays'" />
-    <Aurora v-if="preference === 'aurora'" />
+    <div v-if="failedId === current.id" class="background-renderer__fallback" />
+    <component
+      :is="current.component"
+      v-else-if="current.kind === 'component'"
+      :key="current.id"
+      :on-error="onBackgroundError"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
-import DarkVeil from './DarkVeil.vue'
-import FloatingLines from './FloatingLines.vue'
-import Lightning from './Lightning.vue'
-import LightPillar from './LightPillar.vue'
-import FloatingLinesWave from './FloatingLinesWave.vue'
-import PrismaticBurst from './PrismaticBurst.vue'
-import Iridescence from './Iridescence.vue'
-import Silk from './Silk.vue'
-import LightRays from './LightRays.vue'
-import Aurora from './Aurora.vue'
+import { resolveBackground } from '@/data/backgrounds'
 
+// Every component-kind background renders here, including the three that used
+// to live in DashboardView. One value, one owner: that is what stops the two
+// background settings from fighting.
+//
+// This deliberately uses plain reactivity. A previous version polled the store
+// every 400ms and called $forceUpdate(), which left the dashboard transparent
+// for up to 400ms before the replacement effect mounted -- the flicker.
 const store = useSettingsStore()
-const instance = getCurrentInstance()
+const current = computed(() => resolveBackground(store.background))
 
-// This component is mounted once at the App.vue root and lives for the
-// entire app session. In practice, changes to `backgroundPreference` applied
-// from an external source (a remote settings-sync update relayed over
-// WebSocket/BroadcastChannel from another browser tab/window) do not
-// reliably re-trigger this component's render via normal computed/watch
-// dependency tracking for such a long-lived, root-level singleton. Rather
-// than depend on that tracking, a cheap interval compares the store's
-// current value against what's currently rendered and forces an update the
-// moment they diverge — this is a plain string comparison a couple of times
-// per second, negligible cost, and guarantees the visible background always
-// matches the setting regardless of where the change originated.
-const preference = ref(store.backgroundPreference)
-let syncIntervalId: ReturnType<typeof setInterval> | null = null
+// Components that can't initialize (e.g. WebGPU backgrounds on a browser with
+// no adapter) report through their onError prop. Show a quiet gradient rather
+// than leaving the dashboard a silent black screen. Components that don't
+// declare the prop just ignore it.
+const failedId = ref<string | null>(null)
 
-onMounted(() => {
-  syncIntervalId = setInterval(() => {
-    if (preference.value !== store.backgroundPreference) {
-      preference.value = store.backgroundPreference
-      instance?.proxy?.$forceUpdate()
-    }
-  }, 400)
-})
-
-onBeforeUnmount(() => {
-  if (syncIntervalId !== null) {
-    clearInterval(syncIntervalId)
-    syncIntervalId = null
+const onBackgroundError = (err: unknown) => {
+  if (failedId.value !== current.value.id) {
+    console.warn('[background] fell back to gradient:', current.value.id, err)
+    failedId.value = current.value.id
   }
-})
+}
 </script>
+
+<style scoped>
+.background-renderer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -10;
+  pointer-events: none;
+}
+
+.background-renderer__fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(52, 152, 219, 0.15), transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(155, 89, 182, 0.12), transparent 55%),
+    var(--color-background, #0f1419);
+}
+</style>
 
 <style scoped>
 .background-renderer {

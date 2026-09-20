@@ -1,10 +1,5 @@
 <template>
   <div class="dashboard-view" :class="dashboardBackgroundClass" :style="dashboardBackgroundStyle">
-    <!-- Component-based animated backgrounds -->
-    <FloatingPathsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths'" />
-    <FloatingPathsBackgroundV2 v-if="dashboardBackgroundClass === 'dashboard-bg-floating-paths-v2'" />
-    <BeamsBackground v-if="dashboardBackgroundClass === 'dashboard-bg-beams-background'" />
-    
     <!-- Decomposed Header component -->
     <DeckHeader
       :current-profile="currentProfile"
@@ -177,14 +172,13 @@ import ScreenSaver from '@/components/ScreenSaver.vue'
 import EditSidebar from '@/components/EditSidebar.vue'
 import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
-import FloatingPathsBackground from '@/components/backgrounds/FloatingPathsBackground.vue'
-import FloatingPathsBackgroundV2 from '@/components/backgrounds/FloatingPathsBackgroundV2.vue'
-import BeamsBackground from '@/components/backgrounds/BeamsBackground.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
+import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import { useButtonActions } from '@/composables/useButtonActions'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
+import { listenForUiCommands } from '@/composables/useUiCommands'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -195,6 +189,7 @@ const notificationsStore = useNotificationsStore()
 
 const editingScene = ref<Scene | null>(null)
 let stopVdockRefreshListener: (() => void) | null = null
+let stopUiCommandListener: (() => void) | null = null
 
 // Composables logic
 const {
@@ -620,65 +615,22 @@ function closeSidebar() {
 }
 
 // Background preferences
-const dashboardBackgroundClass = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') {
-    return 'dashboard-bg-transparent'
-  }
-  if (currentPage.value?.background) {
-    return ''
-  }
-  if (currentScene.value?.background?.image) {
-    return 'dashboard-bg-custom'
-  }
-  const bg = settingsStore.dashboardBackground
-  if (bg === 'default') return ''
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
-    return 'dashboard-bg-custom'
-  }
-  return `dashboard-bg-${bg}`
-})
-
-const dashboardBackgroundStyle = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') return {}
-  if (currentScene.value?.background?.image) {
-    return {
-      backgroundImage: `url(${currentScene.value.background.image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-  const bg = settingsStore.dashboardBackground
-  if (bg.startsWith('/api/uploads/') || bg.startsWith('/uploads/') || bg.startsWith('http')) {
-    return {
-      backgroundImage: `url(${bg})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-  return {}
-})
-
-const mainStyle = computed(() => {
-  if (settingsStore.backgroundPreference !== 'none') return {}
-  if (!currentPage.value?.background) return {}
-  const bg = currentPage.value.background
-  if (bg.type === 'solid') {
-    return { backgroundColor: bg.color }
-  } else if (bg.type === 'gradient' && bg.gradient) {
-    return {
-      background: `linear-gradient(${bg.gradient.direction || '135deg'}, ${bg.gradient.from}, ${bg.gradient.to})`
-    }
-  } else if (bg.type === 'image' && bg.image) {
-    return {
-      backgroundImage: `url(${bg.image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center'
-    }
-  }
-  return {}
-})
+const dashboardBackgroundClass = computed(() =>
+  backgroundClassFor(settingsStore.background, currentScene.value?.background, currentPage.value?.background)
+)
+const dashboardBackgroundStyle = computed(() =>
+  backgroundStyleFor(settingsStore.background, currentScene.value?.background)
+)
+// `mainStyle` exists only to paint a page-level background on <main>. It must
+// never fall through to backgroundStyleFor's global-image branch — that
+// backdrop is already painted on .dashboard-view via dashboardBackgroundStyle,
+// and painting it again here double-paints the image with a different
+// cover-cropped rect, producing a visible seam at the header boundary.
+const mainStyle = computed(() =>
+  currentPage.value?.background
+    ? backgroundStyleFor(settingsStore.background, undefined, currentPage.value.background)
+    : {}
+)
 
 const shouldUseCompactMode = computed(() => {
   if (!currentPage.value) return false
@@ -894,6 +846,15 @@ onMounted(async () => {
   // Picks up settings/profile changes made in a separate Settings tab as
   // soon as that tab is closed, without waiting for a manual refresh.
   stopVdockRefreshListener = listenForVdockRefreshRequests()
+
+  // UI commands from other windows (e.g. "Test Screensaver" in Settings).
+  // Setting the flag directly means the preview also works when
+  // screensaverTimeout is 0 (screensaver disabled).
+  stopUiCommandListener = listenForUiCommands((command) => {
+    if (command === 'show_screensaver') {
+      screensaverVisible.value = true
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -905,6 +866,7 @@ onUnmounted(() => {
   if (idleTimer) clearTimeout(idleTimer)
 
   stopVdockRefreshListener?.()
+  stopUiCommandListener?.()
 })
 </script>
 
@@ -916,10 +878,6 @@ onUnmounted(() => {
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.dashboard-bg-transparent {
-  background: transparent !important;
 }
 
 .deck-main {
