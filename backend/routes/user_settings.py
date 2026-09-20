@@ -13,6 +13,7 @@ USER_SETTINGS_FILE: Path = Config.DATA_DIR / 'user_settings.json'
 
 ALLOWED_USER_SETTING_KEYS = {
     'buttonSize',
+    'buttonTransparency',
     'showLabels',
     'showTooltips',
     'animationsEnabled',
@@ -20,6 +21,10 @@ ALLOWED_USER_SETTING_KEYS = {
     'tiltEffectEnabled',
     'dockedSidebarEnabled',
     'dockedSidebarWidth',
+    'dockedButtonHeight',
+    'buttonDefaultAnimation',
+    'buttonDefaultIconLoop',
+    'buttonDefaultEffect',
     'background',
     'uiBrightness',
     'toastLevel',
@@ -39,6 +44,7 @@ ALLOWED_USER_SETTING_KEYS = {
     'screensaverWidgets',
     'screensaverWeatherSize',
     'newsFeeds',
+    'sportsFeeds',
     'newsRotateSeconds',
     'newsApiKey',
     'worldClockTimezones',

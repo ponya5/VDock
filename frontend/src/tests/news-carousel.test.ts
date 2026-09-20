@@ -5,11 +5,11 @@
 // without one it showed nothing. It now pulls a merged RSS list from the
 // backend and steps through it.
 //
-// The display is a stack of four tappable rows (DL-003): a tap opens the
-// article's URL through the Electron shell / a new tab without dismissing
-// the screensaver, and rotation advances a whole window of four so the row
-// under the finger can't rotate out mid-tap. A touch pauses rotation for
-// 20s.
+// The display is a block of four tappable, numbered articles (DL-003, styled
+// to the DL-015 editorial mockup): a tap opens the article's URL through the
+// Electron shell / a new tab without dismissing the screensaver, and rotation
+// advances a whole window of four so the row under the finger can't rotate
+// out mid-tap. A touch pauses rotation for 20s.
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { readFileSync } from 'node:fs'
@@ -196,25 +196,25 @@ describe('news rotation', () => {
   })
 })
 
-describe('tappable news rows', () => {
+describe('tappable news articles', () => {
   const source = readFileSync(
     resolve(__dirname, '../components/ScreenSaver.vue'),
     'utf-8'
   )
 
-  it('renders each visible headline as a button that opens its article', () => {
-    expect(source).toContain('class="ss-news-row"')
-    expect(source).toContain('@click.stop="openArticle(item)"')
+  it('renders each visible headline as a tappable article that opens it', () => {
+    expect(source).toContain('class="ss-article"')
+    expect(source).toMatch(/@click\.stop="openArticle\(item, pauseRotation\)"/)
   })
 
-  it('keeps taps on the news card from reaching the dismiss handler', () => {
-    // The root dismisses on click/touchstart; the news card must stop both.
-    expect(source).toMatch(/class="ss-news"[\s\S]*?@touchstart\.stop/)
+  it('keeps taps on the news section from reaching the dismiss handler', () => {
+    // The root dismisses on click/touchstart; the news section must stop both.
+    expect(source).toMatch(/class="ss-section ss-news"[\s\S]*?@touchstart\.stop/)
     expect(source).toMatch(/@click\.stop="pauseRotation\(\)"/)
   })
 
-  it('keeps every row at least a finger tall', () => {
-    const block = source.match(/\.ss-news-row\s*\{[\s\S]*?\}/)?.[0] ?? ''
+  it('keeps every article at least a finger tall', () => {
+    const block = source.match(/\.ss-article\s*\{[\s\S]*?\}/)?.[0] ?? ''
     expect(block).toContain('min-height: 44px')
   })
 
@@ -240,27 +240,39 @@ describe('screensaver layout', () => {
 
   it('positions every widget in its own absolutely-placed wrapper', () => {
     // Widgets live in .ss-pos wrappers whose left/top come from the saved
-    // layout as viewport-percent widget centers (DL-013).
+    // layout as viewport-percent widget centers (DL-013), clamped through
+    // clampCenter so the measured box can never leave the viewport (DL-020).
     expect(source).toContain('ss-pos')
     expect(source).toMatch(/\.ss-pos\s*\{[^}]*position:\s*absolute/)
-    expect(source).toContain("left: `${l.x}%`")
-    expect(source).toContain("top: `${l.y}%`")
+    expect(source).toContain('clampCenter(id, l.x, l.y')
+    expect(source).toContain("left: `${c.x}%`")
+    expect(source).toContain("top: `${c.y}%`")
+  })
+
+  it('clamps widget centers using measured sizes so nothing renders off-screen', () => {
+    // Center-anchored positions overflow whenever a widget's half-size beats
+    // its distance to the edge — measure real boxes and clamp the center so
+    // every widget keeps a margin inside the viewport on a 7" panel.
+    expect(source).toContain('ResizeObserver')
+    expect(source).toContain('offsetWidth')
+    expect(source).toContain('SS_EDGE_MARGIN_PX')
+    expect(source).toMatch(/halfW.*size\.w \* scale/)
   })
 
   it('pins weather to its own corner, separate from the other widgets', () => {
     // Weather is a glance value, not something to read -- it must not sit
     // inside the same visual group as news/market/world clock, where it
     // would compete with the headline for space on a small touch screen.
-    expect(source).toContain('ss-pos ss-weather-corner')
+    expect(source).toContain('ss-pos ss-weather')
   })
 
-  it('gives the news headline more visual weight than the secondary chips', () => {
-    const titleSize = source.match(/\.ss-news-title\s*\{[^}]*font-size:\s*clamp\(([^,]+)/)
-    const chipSize = source.match(/\.ss-chip-value\s*\{[^}]*font-size:\s*clamp\(([^,]+)/)
+  it('gives the news headline more visual weight than the secondary labels', () => {
+    const titleSize = source.match(/\.ss-article-title\s*\{[^}]*font-size:\s*clamp\(([^,]+)/)
+    const labelSize = source.match(/\.ss-market-symbol\s*\{[^}]*font-size:\s*clamp\(([^,]+)/)
     expect(titleSize).toBeTruthy()
-    expect(chipSize).toBeTruthy()
+    expect(labelSize).toBeTruthy()
     // Compare the clamp() minimums: the headline should never be the small one.
-    expect(parseFloat(titleSize![1])).toBeGreaterThanOrEqual(parseFloat(chipSize![1]))
+    expect(parseFloat(titleSize![1])).toBeGreaterThanOrEqual(parseFloat(labelSize![1]))
   })
 
   it('places news, market and world clock side by side in the default layout', () => {

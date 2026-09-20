@@ -167,10 +167,10 @@ const gridStyle = computed(() => {
     display: 'grid',
     gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
     gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-    gap: 'var(--spacing-xs)', // Always show small spacing between buttons
+    gap: '12px',
     width: '100%',
     height: '100%',
-    padding: 'var(--spacing-md)',
+    padding: '12px',
     // buttonSize scales each button's icon/label internally (see DeckButton) rather
     // than transforming the whole grid — a whole-grid transform doesn't reflow, so
     // at buttonSize > 1 it overflowed the container and got clipped by its
@@ -590,8 +590,8 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
 }
 
 /* Edit mode: wiggle all buttons — opt-in via Settings ("Wiggle buttons in
-   edit mode", default off). The ::after drag-handle dot below still marks
-   edit mode when the wiggle is off. */
+   edit mode", default off). The always-visible edit overlay (minus badge +
+   edit/copy) marks edit mode when the wiggle is off. */
 .deck-grid.wiggle-buttons .deck-button:not(.dragging-source) {
   animation: btn-wiggle 0.3s ease-in-out infinite alternate;
 }
@@ -605,20 +605,6 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
 .deck-grid.dragging-active .deck-button:not(.dragging-source) {
   filter: brightness(0.6);
   transition: filter 0.15s ease;
-}
-
-/* Drag handle indicator on buttons in edit mode */
-.deck-grid.is-edit-mode .deck-button::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.4);
-  pointer-events: none;
-  z-index: 10;
 }
 
 /* Drop target highlight */
@@ -645,7 +631,7 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
   justify-content: center;
   background-color: transparent;
   border: 2px dashed transparent;
-  border-radius: var(--radius-md);
+  border-radius: 24px;
   cursor: pointer;
   transition: all var(--transition-fast);
   color: transparent;
@@ -654,38 +640,42 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
   aspect-ratio: 1 / 1;
 }
 
+/* "+" sits inside its own translucent circle, matching the mockup's
+   dedicated Add tile. */
+.button-placeholder > svg {
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .button-placeholder.is-edit-mode {
-  border-color: var(--color-primary-light);
-  background-color: rgba(var(--color-primary-rgb, 74, 144, 226), 0.05);
-  color: var(--color-text-secondary);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .button-placeholder:hover {
-  background-color: var(--color-surface-hover);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(74, 163, 255, 0.7);
+  color: #fff;
   transform: scale(1.05);
   box-shadow:
-    0 4px 15px rgba(0, 0, 0, 0.12),
-    0 2px 5px rgba(0, 0, 0, 0.08),
-    0 0 15px rgba(var(--color-primary-rgb, 74, 144, 226), 0.2),
+    0 0 15px rgba(74, 163, 255, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .button-placeholder.is-highlighted {
-  background-color: rgba(var(--color-primary-rgb, 74, 144, 226), 0.2);
-  border-color: var(--color-primary);
+  background-color: rgba(74, 163, 255, 0.2);
+  border-color: #4aa3ff;
   border-style: solid;
-  color: var(--color-primary);
+  color: #fff;
   transform: scale(1.08);
   box-shadow:
-    0 0 20px rgba(var(--color-primary-rgb, 74, 144, 226), 0.5),
-    0 6px 20px rgba(0, 0, 0, 0.15),
-    0 3px 8px rgba(0, 0, 0, 0.1),
+    0 0 20px rgba(74, 163, 255, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 

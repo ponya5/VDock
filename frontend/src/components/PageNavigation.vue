@@ -78,23 +78,20 @@ const gliderStyle = computed(() => {
   align-items: center;
 }
 
-/* ── chase2k25 glass pill ── */
+/* ── glass pill ── */
 .glass-radio-group {
-  --bg: rgba(255, 255, 255, 0.06);
-  --text: #e5e5e5;
+  --bg: rgba(255, 255, 255, 0.08);
+  --text: #a9b6cc;
   display: flex;
   position: relative;
   background: var(--bg);
-  border-radius: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    inset 1px 1px 4px rgba(255, 255, 255, 0.2),
-    inset -1px -1px 6px rgba(0, 0, 0, 0.3),
-    0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   width: fit-content;
-  min-height: 44px;
+  min-height: 48px;
 }
 
 .glass-radio-group input {
@@ -106,18 +103,18 @@ const gliderStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 52px;
-  font-size: clamp(0.65rem, 0.7vw + 0.45rem, 0.85rem);
-  padding: 0.8rem 1.2rem;
+  min-width: 48px;
+  font-size: clamp(15px, 0.7vw + 11px, 20px);
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
   font-weight: 600;
-  letter-spacing: 0.3px;
   color: var(--text);
   position: relative;
   z-index: 2;
   transition: color 0.3s ease-in-out;
   white-space: nowrap;
-  min-height: 44px;
+  min-height: 48px;
+  border-radius: 14px;
 }
 
 .glass-radio-group label:hover {
@@ -128,17 +125,15 @@ const gliderStyle = computed(() => {
   color: #fff;
 }
 
-/* ── animated glider — VDock blue ── */
+/* ── animated glider ── */
 .glass-glider {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 1rem;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 14px;
   z-index: 1;
-  background: linear-gradient(135deg, rgba(52, 152, 219, 0.45), rgba(52, 152, 219, 0.85));
-  box-shadow:
-    0 0 18px rgba(52, 152, 219, 0.5),
-    inset 0 0 10px rgba(255, 255, 255, 0.15);
+  background: #1f6fd1;
+  box-shadow: 0 4px 12px rgba(31, 111, 209, 0.45);
   pointer-events: none;
 }
 

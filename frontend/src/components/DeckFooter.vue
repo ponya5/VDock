@@ -91,8 +91,10 @@ const emit = defineEmits<{
   /* Grows with touch mode so the edit controls keep finger room on small
      panels. The plain 44px above stays as the baseline/fallback. */
   min-height: max(44px, calc(56px * var(--touch-multiplier, 1)));
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  background: rgba(10, 8, 32, 0.66);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0 var(--spacing-touch-md, var(--spacing-md));
   box-sizing: border-box;
   z-index: 90;
@@ -116,7 +118,7 @@ const emit = defineEmits<{
   width: calc(10px * var(--touch-multiplier, 1));
   height: calc(10px * var(--touch-multiplier, 1));
   border-radius: 50%;
-  background-color: var(--color-border);
+  background-color: rgba(255, 255, 255, 0.3);
   border: none;
   cursor: pointer;
   padding: 17px; /* Makes it 44x44px touch target */
@@ -127,7 +129,7 @@ const emit = defineEmits<{
 }
 
 .page-dot.active {
-  background-color: var(--color-primary);
+  background-color: #4aa3ff;
   transform: scale(1.2);
 }
 
@@ -155,9 +157,9 @@ const emit = defineEmits<{
   height: calc(44px * var(--touch-multiplier, 1));
   min-height: 44px;
   min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
   color: var(--color-text);
   text-align: center;
   font-family: inherit;

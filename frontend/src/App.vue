@@ -125,7 +125,8 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: var(--color-background);
+  background: var(--color-background);
+  background-image: var(--app-backdrop);
   color: var(--color-text);
 }
 

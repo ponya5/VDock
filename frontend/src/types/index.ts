@@ -71,7 +71,7 @@ export type IconLoop = 'squash' | 'bob' | 'spin' | 'pulse' | 'swing' | 'flip' | 
 
 export type BehaviourType = 'none' | 'pulse' | 'float' | 'breathe' | 'tilt'
 
-export type EffectType = ButtonEffect | 'fire' | 'plasma' | 'particles' | 'aurora' | 'scanline' | 'rain'
+export type EffectType = ButtonEffect | 'fire' | 'plasma' | 'particles' | 'aurora' | 'scanline' | 'rain' | 'glowglass' | 'gem' | 'neonrim' | 'watermark'
 
 export interface ButtonLayers {
   fill?: { type: 'none' | 'solid' | 'gradient' | 'tint' | 'image' | 'video'; value?: string }
@@ -137,7 +137,7 @@ export interface ButtonStyle {
   iconSize?: number
   opacity?: number
   enhanced?: boolean
-  effect?: ButtonEffect
+  effect?: EffectType
   animation?: ButtonAnimation
   gradient?: string
   glowColor?: string

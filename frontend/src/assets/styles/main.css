@@ -58,6 +58,7 @@
 
 /* Light Theme */
 .theme-light {
+  color-scheme: light;
   --color-background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   --color-surface: rgba(255, 255, 255, 0.95);
   --color-surface-solid: #ffffff;
@@ -77,40 +78,55 @@
   --color-primary-dark: #0056b3;
 }
 
-/* Dark Theme */
+/* Dark Theme — 7-inch editorial palette (DL-017) */
 .theme-dark {
-  --color-background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-  --color-surface: rgba(0, 0, 0, 0.3);
-  --color-surface-solid: #2c3e50;
-  --color-primary: #3498db;
-  --color-primary-light: rgba(52, 152, 219, 0.2);
-  --color-secondary: #95a5a6;
-  --color-text: #ecf0f1;
-  --color-text-secondary: #bdc3c7;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-accent: #e67e22;
+  /* UA-native controls (select popups, scrollbars, form widgets) follow the
+     dark palette — without this the OS renders them light on a dark app. */
+  color-scheme: dark;
+  /* Flat navy for surfaces (cards, inputs, option rows); the violet gradient
+     lives in --app-backdrop so it only paints page-level backdrops. */
+  --color-background: #0f1726;
+  --app-backdrop:
+    radial-gradient(120% 140% at 12% 38%, rgba(236, 72, 153, 0.30) 0%, transparent 55%),
+    radial-gradient(130% 150% at 88% 95%, rgba(139, 92, 246, 0.42) 0%, transparent 58%),
+    linear-gradient(135deg, #6f7be6 0%, #5b4fb5 45%, #3a2f78 100%);
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-surface-solid: #17233a;
+  --color-primary: #1f6fd1;
+  --color-primary-light: rgba(74, 163, 255, 0.16);
+  --color-secondary: #a9b6cc;
+  --color-text: #eef2fa;
+  --color-text-secondary: #a9b6cc;
+  --color-border: rgba(255, 255, 255, 0.14);
+  --color-accent: #4aa3ff;
   --color-success: #27ae60;
   --color-error: #e74c3c;
   --color-warning: #f39c12;
-  --color-info: #3498db;
-  --color-primary-rgb: 52, 152, 219;
-  --color-surface-hover: rgba(255, 255, 255, 0.05);
-  --color-primary-dark: #2980b9;
+  --color-info: #4aa3ff;
+  --color-primary-rgb: 74, 163, 255;
+  --color-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-primary-dark: #1a5cb0;
 
   /* Glassmorphism tokens */
-  --glass-bg: rgba(0, 0, 0, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-bg: rgba(20, 16, 50, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.14);
   --glass-blur: 14px;
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --glass-glow: 0 0 20px rgba(52, 152, 219, 0.25);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 24px rgba(8, 6, 30, 0.28);
+  --glass-glow: 0 0 20px rgba(74, 163, 255, 0.25);
 }
 
 /* Base Styles */
 body {
   background: var(--color-background);
+  /* Dark theme layers the violet backdrop image over its flat navy
+     --color-background; in light theme --app-backdrop is undefined so this
+     declaration is dropped and the shorthand gradient above wins. */
+  background-image: var(--app-backdrop);
+  background-attachment: fixed;
   color: var(--color-text);
   min-height: 100vh;
   font-size: clamp(13px, 1vw + 10px, 18px);
+  font-family: 'Heebo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
 }
 
@@ -118,7 +134,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Button Styles — Uiverse pill style */
+/* Button Styles — flat dark-glass (DL-017) */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -128,24 +144,24 @@ body {
   cursor: pointer;
   padding: var(--spacing-sm) var(--spacing-lg);
   min-height: 44px;
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
-  border-radius: 30px;
-  border: 1px solid #8F9092;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   transition: all 0.2s ease;
   font-size: clamp(11px, 0.8vw + 8px, 16px);
   font-weight: 600;
-  color: #606060;
-  text-shadow: 0 1px #fff;
+  color: var(--color-text, #eef2fa);
   white-space: nowrap;
   text-decoration: none;
 }
 
 .btn:hover:not(:disabled) {
-  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 3px 3px #CECFD1;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .btn:active:not(:disabled) {
-  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
+  transform: translateY(1px);
 }
 
 .btn:disabled {
@@ -153,58 +169,56 @@ body {
   cursor: not-allowed;
 }
 
-/* Variant overrides — keep pill shape, change color */
+/* Variant overrides */
 .btn-primary {
-  background-image: linear-gradient(to top, #2980b9 0%, #3498db 80%, #5dade2 100%);
-  border-color: #1a6fa0;
+  background: #1f6fd1;
+  border-color: #1f6fd1;
   color: #fff;
-  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 3px 1px rgba(52,152,219,0.3), 0 6px 8px rgba(41,128,185,0.4), 0 -4px 4px rgba(93,173,226,0.2), inset 0 0 3px 3px rgba(41,128,185,0.3);
+  background: #2a80e0;
+  border-color: #2a80e0;
+  box-shadow: 0 4px 12px rgba(31, 111, 209, 0.45);
 }
 
 .btn-primary:active:not(:disabled) {
-  box-shadow: 0 4px 3px 1px rgba(52,152,219,0.2), 0 6px 8px rgba(41,128,185,0.3), inset 0 0 5px 3px rgba(26,111,160,0.5), inset 0 0 20px rgba(26,111,160,0.3);
+  background: #1a5cb0;
 }
 
 .btn-secondary {
-  background-image: linear-gradient(to top, #c8cacc 0%, #f0f1f2 80%, #f8f9fa 100%);
-  border-color: #9fa2a5;
-  color: #505050;
-  text-shadow: 0 1px #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-text, #eef2fa);
 }
 
 .btn-accent {
-  background-image: linear-gradient(to top, #d97706 0%, #f59e0b 80%, #fbbf24 100%);
-  border-color: #b45309;
+  background: #4aa3ff;
+  border-color: #4aa3ff;
   color: #fff;
-  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-accent:hover:not(:disabled) {
-  box-shadow: 0 4px 3px 1px rgba(251,191,36,0.3), 0 6px 8px rgba(245,158,11,0.4), inset 0 0 3px 3px rgba(180,83,9,0.2);
+  background: #63b2ff;
+  border-color: #63b2ff;
 }
 
 .btn-accent:disabled {
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
-  color: #aaa;
-  text-shadow: 0 1px #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .btn-success {
-  background-image: linear-gradient(to top, #1e8449 0%, #27ae60 80%, #52be80 100%);
-  border-color: #196f3d;
+  background: #27ae60;
+  border-color: #27ae60;
   color: #fff;
-  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-danger {
-  background-image: linear-gradient(to top, #c0392b 0%, #e74c3c 80%, #ec7063 100%);
-  border-color: #a93226;
+  background: #e74c3c;
+  border-color: #e74c3c;
   color: #fff;
-  text-shadow: 0 1px rgba(0,0,0,0.3);
 }
 
 .btn-sm {
@@ -228,6 +242,15 @@ body {
 .input:focus, .textarea:focus, .select:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+/* Native dropdown popup: an unstyled <option> list renders the OS light
+   popup (white bg, washed-out text) even on the dark theme. Vars keep it
+   correct on both themes; color-scheme above covers engines that ignore
+   option styling. */
+select option {
+  background-color: var(--color-surface-solid);
+  color: var(--color-text);
 }
 
 .textarea {
@@ -862,6 +885,143 @@ body {
 @keyframes rain-fall {
   0% { top: -100%; }
   100% { top: 100%; }
+}
+
+/* ── Rich card styles (Buttons-Rich mockup) ──
+   Brand-parametric via var(--btn-brand), same convention as the effects
+   above: !important beats the scoped base card and the inline defaults. */
+
+/* Glow Glass: dark glass card with a brand glow pooling along the bottom
+   edge and a soft brand blob behind the icon tile. */
+.deck-button-glowglass {
+  background:
+    radial-gradient(closest-side at 42% 12%, color-mix(in srgb, var(--btn-brand, #ff5a5f) 32%, transparent), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%),
+    rgba(20, 16, 50, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -28px 40px -24px color-mix(in srgb, var(--btn-brand, #ff5a5f) 55%, transparent),
+    0 12px 28px rgba(8, 6, 30, 0.35) !important;
+}
+
+.deck-button-glowglass:hover:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -30px 44px -22px color-mix(in srgb, var(--btn-brand, #ff5a5f) 68%, transparent),
+    0 12px 28px rgba(8, 6, 30, 0.35),
+    0 0 22px color-mix(in srgb, var(--btn-brand, #ff5a5f) 35%, transparent) !important;
+}
+
+.deck-button-glowglass:active:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 3px 10px rgba(0, 0, 0, 0.4),
+    inset 0 -28px 40px -20px color-mix(in srgb, var(--btn-brand, #ff5a5f) 75%, transparent) !important;
+}
+
+/* Gem: saturated brand-gradient jewel card — domed top sheen folded into
+   the background, ghost watermark glyph bleeding off the bottom-right. */
+.deck-button-gem {
+  background:
+    radial-gradient(120% 55% at 50% -8%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 72%),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--btn-brand, #ee4046) 82%, #ffffff) 0%,
+      var(--btn-brand, #c9151c) 55%,
+      color-mix(in srgb, var(--btn-brand, #c9151c) 68%, #000000) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.25),
+    0 12px 24px color-mix(in srgb, var(--btn-brand, #c9151c) 40%, transparent),
+    0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.deck-button-gem::before {
+  content: attr(data-mark);
+  position: absolute;
+  right: -4px;
+  bottom: -24%;
+  font-size: 7rem;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.11);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.deck-button-gem:active:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 4px 12px rgba(0, 0, 0, 0.45),
+    0 4px 10px color-mix(in srgb, var(--btn-brand, #c9151c) 35%, transparent) !important;
+}
+
+/* Neon Rim: dark scanline card, glowing brand outline, brand wash rising
+   from the bottom edge, neon-ringed icon tile. */
+.deck-button-neonrim {
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--btn-brand, #ff4d55) 26%, transparent), transparent 45%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 5px),
+    rgba(12, 10, 30, 0.74) !important;
+  border: 2px solid color-mix(in srgb, var(--btn-brand, #ff4d55) 100%, transparent) !important;
+  box-shadow:
+    inset 0 0 22px color-mix(in srgb, var(--btn-brand, #ff4d55) 35%, transparent),
+    0 0 24px color-mix(in srgb, var(--btn-brand, #ff4d55) 45%, transparent) !important;
+}
+
+.deck-button-neonrim .button-icon {
+  background: color-mix(in srgb, var(--btn-brand, #ff4d55) 12%, transparent) !important;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--btn-brand, #ff4d55) 100%, transparent),
+    0 0 14px color-mix(in srgb, var(--btn-brand, #ff4d55) 50%, transparent) !important;
+  color: color-mix(in srgb, var(--btn-brand, #ff4d55) 80%, #ffffff) !important;
+}
+
+.deck-button-neonrim:hover:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 0 28px color-mix(in srgb, var(--btn-brand, #ff4d55) 50%, transparent),
+    0 0 34px color-mix(in srgb, var(--btn-brand, #ff4d55) 60%, transparent) !important;
+}
+
+/* Watermark Card: dark glass with the brand light source low-left, giant
+   ghost glyph top-right, left-aligned editorial layout. */
+.deck-button-watermark {
+  background:
+    radial-gradient(120% 90% at 0% 100%, color-mix(in srgb, var(--btn-brand, #ff5a5f) 55%, transparent), transparent 65%),
+    rgba(20, 16, 50, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 28px rgba(8, 6, 30, 0.35) !important;
+}
+
+.deck-button-watermark::before {
+  content: attr(data-mark);
+  position: absolute;
+  right: -10px;
+  top: -24%;
+  font-size: 8rem;
+  font-weight: 800;
+  line-height: 1;
+  color: color-mix(in srgb, var(--btn-brand, #ff5a5f) 24%, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.deck-button-watermark .button-content {
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  text-align: left !important;
+}
+
+.deck-button-watermark .button-label {
+  width: 100%;
+  text-align: left !important;
+}
+
+.deck-button-watermark:active:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 3px 10px rgba(0, 0, 0, 0.4),
+    0 12px 28px rgba(8, 6, 30, 0.35) !important;
 }
 
 /* Button Shape Variants */
@@ -1600,6 +1760,14 @@ body {
 /* Scale out and fade current buttons */
 .grid-transition-out {
   animation: grid-out 220ms var(--ease-out) forwards;
+}
+
+/* Holds incoming cells hidden between the page swap and their staggered
+   in-animation — without it the new page pops in instantly and the wave
+   replays over already-visible buttons. */
+.grid-transition-pre {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Sweep effect keyframes and styles */

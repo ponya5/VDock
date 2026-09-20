@@ -31,6 +31,9 @@ export function useMarket() {
           symbol: q.symbol,
           price: q.price,
         }))
+        // An empty result used to leave the chip blank with no hint why —
+        // say which symbols produced nothing so a typo is visible.
+        if (!quotes.length) error.value = `No quotes for ${tickers.join(', ')}`
       } else {
         prices.value = await fetchCryptoPrices()
       }

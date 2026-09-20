@@ -4,6 +4,7 @@
     class="deck-button"
     :class="buttonClasses"
     :style="buttonStyle"
+    :data-mark="watermarkGlyph"
     :draggable="isEditMode"
     @click="handleClick"
     @contextmenu.prevent="handleRightClick"
@@ -22,15 +23,17 @@
       playsinline
     />
     <div v-if="isEditMode" class="edit-overlay">
-      <button class="edit-btn" @click.stop="emit('edit', button)" title="Edit">
-        <FontAwesomeIcon :icon="['fas', 'edit']" />
-      </button>
-      <button class="copy-btn" @click.stop="emit('copy', button)" title="Copy">
-        <FontAwesomeIcon :icon="['fas', 'copy']" />
-      </button>
       <button class="delete-btn" @click.stop="emit('delete', button.id)" title="Delete">
-        <FontAwesomeIcon :icon="['fas', 'trash']" />
+        <FontAwesomeIcon :icon="['fas', 'minus']" />
       </button>
+      <div class="edit-overlay-actions">
+        <button class="edit-btn" @click.stop="emit('edit', button)" title="Edit">
+          <FontAwesomeIcon :icon="['fas', 'edit']" />
+        </button>
+        <button class="copy-btn" @click.stop="emit('copy', button)" title="Copy">
+          <FontAwesomeIcon :icon="['fas', 'copy']" />
+        </button>
+      </div>
     </div>
 
     <div class="button-content" :style="buttonContentStyle">
@@ -312,6 +315,10 @@ const buttonClasses = computed(() => {
     'deck-button-aurora': vis.effect.type === 'aurora',
     'deck-button-scanline': vis.effect.type === 'scanline',
     'deck-button-rain': vis.effect.type === 'rain',
+    'deck-button-glowglass': vis.effect.type === 'glowglass',
+    'deck-button-gem': vis.effect.type === 'gem',
+    'deck-button-neonrim': vis.effect.type === 'neonrim',
+    'deck-button-watermark': vis.effect.type === 'watermark',
 
     // Animations (mapped from behaviour layer or legacy style.animation)
     'btn-pulse': anim === 'pulse',
@@ -334,7 +341,10 @@ const buttonStyle = computed(() => {
   const baseStyle: Record<string, string | number | undefined> = {
     gridRow: `${position.row + 1} / span ${size.rows}`,
     gridColumn: `${position.col + 1} / span ${size.cols}`,
-    opacity: style?.opacity || 1,
+    // --deck-btn-opacity comes from Settings -> Button transparency and lets
+    // a dashboard background animation show through; the per-button opacity
+    // set in the Button Editor multiplies on top.
+    opacity: `calc(var(--deck-btn-opacity, 1) * ${style?.opacity || 1})`,
     fontSize: style?.fontSize ? `${style.fontSize}px` : '0.875rem',
     // Background image for visual image fill
     backgroundImage: (vis.fill.type === 'image' && vis.fill.value)
@@ -402,6 +412,18 @@ const buttonStyle = computed(() => {
       color: style?.textColor || '#ffffff',
       borderColor: 'transparent'
     }
+  } else if (
+    vis.effect.type === 'glowglass' ||
+    vis.effect.type === 'gem' ||
+    vis.effect.type === 'neonrim' ||
+    vis.effect.type === 'watermark'
+  ) {
+    // Rich card styles: the CSS classes own background/border/shadow so the
+    // brand-parametric gradients stay intact.
+    return {
+      ...baseStyle,
+      color: style?.textColor || '#eef2fa'
+    }
   } else {
     // Default styling
     return {
@@ -414,14 +436,29 @@ const buttonStyle = computed(() => {
   }
 })
 
+// Ghost watermark glyph behind gem/watermark cards — the label's initial, or
+// a middot when the button shows no text at all.
+const watermarkGlyph = computed(() => {
+  const vis = resolvedVisual.value
+  const src = vis.label.text || ''
+  return src ? src.charAt(0).toUpperCase() : '•'
+})
+
 const iconStyle = computed(() => {
   const vis = resolvedVisual.value
   // Scale icon size with buttonSize prop so label always has room
   const baseSize = vis.icon.size || 32
   const scale = props.buttonSize || 1.0
+  // Image icons (website favicons, preset logos) read much smaller than a
+  // glyph at the same px size — most ship as 32px sources with transparent
+  // padding. Clamp them to the 64px icon tile's interior: 44px floor so they
+  // read as a proper logo, 56px cap so they never burst out of the tile.
+  const isImageIcon = vis.icon.type === 'custom' || vis.icon.type === 'logo'
   // When label is shown, cap icon at 75% of scaled size to leave room for label
   const hasLabel = !!(vis.label.text && props.showLabels)
-  const size = hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale)
+  const size = isImageIcon
+    ? Math.min(Math.max(Math.round(baseSize * scale), 44), 56)
+    : (hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale))
 
   const styleObj: Record<string, string | number | undefined> = {
     width: `${size}px`,
@@ -545,15 +582,15 @@ function triggerRipple(event: PointerEvent) {
 
 <style scoped>
 .deck-button {
-  --btn-bg: #080808;
-  --btn-radius: var(--radius-md);
+  --btn-bg: rgba(20, 16, 50, 0.4);
+  --btn-radius: 24px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--btn-radius);
   background-color: var(--btn-bg);
   cursor: pointer;
@@ -564,32 +601,24 @@ function triggerRipple(event: PointerEvent) {
   min-height: 60px;
   outline: none;
   box-shadow:
-    inset 0 0.3rem 0.9rem rgba(255, 255, 255, 0.3),
-    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.7),
-    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.5),
-    0 3rem 3rem rgba(0, 0, 0, 0.3),
-    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(8, 6, 30, 0.28);
 }
 
-/* Uiverse hover state */
+/* Hover state */
 .deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover {
+  border-color: rgba(255, 255, 255, 0.3);
   box-shadow:
-    inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.4),
-    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.7),
-    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.7),
-    0 3rem 3rem rgba(0, 0, 0, 0.3),
-    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 14px 30px rgba(8, 6, 30, 0.36);
 }
 
-/* Uiverse active/press state */
+/* Press state */
 .deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):active {
-  transform: scale(0.94);
+  transform: scale(0.96);
   box-shadow:
-    inset 0 0.3rem 0.5rem rgba(255, 255, 255, 0.5),
-    inset 0 -0.1rem 0.3rem rgba(0, 0, 0, 0.8),
-    inset 0 -0.4rem 0.9rem rgba(255, 255, 255, 0.4),
-    0 3rem 3rem rgba(0, 0, 0, 0.3),
-    0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 6px 16px rgba(8, 6, 30, 0.3);
 }
 
 .deck-button[draggable="true"] {
@@ -601,11 +630,11 @@ function triggerRipple(event: PointerEvent) {
 }
 
 .deck-button.shape-rectangle {
-  border-radius: var(--radius-sm);
+  border-radius: 14px;
 }
 
 .deck-button.shape-rounded {
-  border-radius: var(--radius-lg);
+  border-radius: 24px;
 }
 
 .deck-button.shape-circle {
@@ -613,8 +642,8 @@ function triggerRipple(event: PointerEvent) {
 }
 
 .deck-button.is-placeholder {
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.1) !important;
+  border: 2px dashed rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.05) !important;
   cursor: default;
   box-shadow: none;
 }
@@ -642,55 +671,75 @@ function triggerRipple(event: PointerEvent) {
   box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)), var(--glass-glow, 0 0 15px rgba(255, 255, 255, 0.3));
 }
 
+/* Rich card styles (glowglass / gem / neonrim / watermark) live in
+   assets/styles/main.css with the other deck-button-* effect classes. */
+
+/* Edit affordances — always visible in edit mode (touchscreens have no
+   hover): a red minus badge top-left deletes, two glass circles top-right
+   edit and copy. The overlay itself is click-through so dragging the card
+   still works. */
 .edit-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
+  inset: 0;
+  background: rgba(10, 8, 30, 0.12);
+  pointer-events: none;
   z-index: 10;
 }
 
-.deck-button.edit-mode:hover .edit-overlay {
-  opacity: 1;
+.edit-overlay-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 8px;
 }
 
 .edit-btn,
 .copy-btn,
 .delete-btn {
-  padding: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: clamp(1.00rem, 2vw + 0.62rem, 1.50rem);
-  transition: all var(--transition-fast);
+  pointer-events: auto;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+  touch-action: manipulation;
 }
 
-.edit-btn {
-  background-color: var(--color-primary);
-  color: white;
-}
-
+.edit-btn,
 .copy-btn {
-  background-color: var(--color-accent);
-  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 0.95rem;
 }
 
 .delete-btn {
-  background-color: var(--color-error);
-  color: white;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e5484d;
+  border: 3px solid #fff;
+  color: #fff;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(8, 6, 30, 0.4);
 }
 
 .edit-btn:hover,
-.copy-btn:hover,
+.copy-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.1);
+}
+
 .delete-btn:hover {
+  background: #f2575c;
   transform: scale(1.1);
 }
 
@@ -712,67 +761,21 @@ function triggerRipple(event: PointerEvent) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   text-align: center;
   width: 100%;
   height: 100%;
   border-radius: inherit;
   overflow: hidden;
-  padding: 8px 6px;
+  padding: 12px 8px;
   box-sizing: border-box;
-  color: rgba(255, 255, 255, 0.7);
+  color: #eef2fa;
   font-weight: 500;
   transition: transform 0.2s ease;
-  /* Uiverse label mask — fades bottom edge for depth */
-  mask-image: linear-gradient(to bottom, white 60%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, white 60%, transparent);
-}
-
-/* Uiverse top-dome highlight */
-.button-content::before {
-  content: '';
-  position: absolute;
-  left: -15%;
-  right: -15%;
-  bottom: 25%;
-  top: -100%;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.12);
-  transition: transform 0.3s ease;
-  pointer-events: none;
-}
-
-/* Uiverse inner gloss strip */
-.button-content::after {
-  content: '';
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  top: 12%;
-  bottom: 40%;
-  border-radius: 22px 22px 0 0;
-  box-shadow: inset 0 10px 8px -10px rgba(255, 255, 255, 0.8);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(0, 0, 0, 0) 50%,
-    rgba(0, 0, 0, 0) 100%
-  );
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none;
 }
 
 .deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content {
-  transform: translateY(-4%);
-}
-
-.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content::before {
-  transform: translateY(-5%);
-}
-
-.deck-button:not(.edit-mode):not(.is-placeholder):not(.disabled):hover .button-content::after {
-  opacity: 0.4;
-  transform: translateY(5%);
+  transform: translateY(-2%);
 }
 
 /* Special action types that render full content */
@@ -790,6 +793,20 @@ function triggerRipple(event: PointerEvent) {
   justify-content: center;
   flex-direction: column;
   gap: var(--spacing-xs);
+}
+
+/* Icon tile — the mockup wraps glyph icons in a 64px rounded tile tinted by
+   the button's brand color. Media fills skip the tile so images/videos can
+   use their full size. */
+.button-icon:has(.fontawesome-icon):not(:has(.media-container)),
+.button-icon:has(.custom-icon):not(:has(.media-container)) {
+  min-width: 64px;
+  min-height: 64px;
+  padding: 8px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--btn-brand, #4aa3ff) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--btn-brand, #4aa3ff) 32%, rgba(255, 255, 255, 0.1));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 4px 10px rgba(8, 6, 30, 0.2);
 }
 
 .button-icon img,
@@ -842,7 +859,7 @@ function triggerRipple(event: PointerEvent) {
 }
 
 .button-label {
-  font-weight: 600;
+  font-weight: 500;
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
@@ -853,6 +870,12 @@ function triggerRipple(event: PointerEvent) {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   line-height: 1.2;
   flex-shrink: 0;
+  /* Clamp at two lines so long labels end with an ellipsis instead of
+     clipping mid-glyph against the card edge. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   /* Ensure label is always visible — never hidden */
   opacity: 1 !important;
   visibility: visible !important;
@@ -889,19 +912,13 @@ function triggerRipple(event: PointerEvent) {
   opacity: 1;
 }
 
-/* Enhanced shadows for different button states */
+/* Edit mode keeps the same card; the border brightens slightly. */
 .deck-button.edit-mode {
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.26);
 }
 
 .deck-button.edit-mode:hover {
-  box-shadow:
-    0 4px 15px rgba(0, 0, 0, 0.15),
-    0 2px 5px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: rgba(74, 163, 255, 0.6);
 }
 
 /* Ripple animation */

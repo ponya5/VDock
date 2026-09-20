@@ -181,8 +181,10 @@ watch(
      small panels. The multiplier is capped (unlike rows/fonts) because this
      sidebar shares the row with the deck grid rather than overlaying it. */
   width: min(92vw, calc(280px * min(var(--touch-multiplier, 1), 1.5)));
-  background-color: var(--color-surface);
-  border-left: 1px solid var(--color-border);
+  background: rgba(10, 8, 32, 0.66);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -370,7 +372,7 @@ watch(
 }
 
 .action-icon {
-  color: var(--color-primary);
+  color: #4aa3ff;
   font-size: calc(0.9rem * var(--touch-multiplier, 1));
 }
 </style>
