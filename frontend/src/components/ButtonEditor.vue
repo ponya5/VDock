@@ -624,40 +624,16 @@
         </div>
 
         <div class="form-group">
-          <label>Visual Effects</label>
-          <div class="flex gap-sm">
-            <select v-model="editedButton.style.effect" class="select" style="flex: 1">
-              <option value="none">None</option>
-              <option value="glass">Glass Morphism</option>
-              <option value="neumorphism">Neumorphism</option>
-              <option value="gradient">Gradient</option>
-              <option value="glow">Glow Effect</option>
-              <option value="3d">3D Effect</option>
-              <option value="neon">Neon</option>
-              <option value="metallic">Metallic</option>
-              <option value="liquid">Liquid</option>
-              <option value="holographic">Holographic</option>
-              <option value="shadow">Deep Shadow</option>
-              <option value="emissive">Emissive</option>
-              <option value="fire">Fire</option>
-              <option value="plasma">Plasma</option>
-              <option value="particles">Particles</option>
-              <option value="aurora">Aurora</option>
-              <option value="scanline">Scanline</option>
-              <option value="rain">Rain</option>
-              <option value="glowglass">Glow Glass</option>
-              <option value="gem">Gem</option>
-              <option value="neonrim">Neon Rim</option>
-              <option value="watermark">Watermark Card</option>
-            </select>
-            <button 
-              class="btn btn-secondary" 
-              @click="showAssetPicker = 'background'"
-              title="Browse Background Assets"
-            >
-              <FontAwesomeIcon :icon="['fas', 'palette']" /> Backgrounds
-            </button>
-          </div>
+          <label>Button Design</label>
+          <ButtonDesignPicker v-model="buttonDesign" />
+          <button
+            class="btn btn-secondary"
+            style="align-self: flex-start; margin-top: var(--spacing-xs)"
+            @click="showAssetPicker = 'background'"
+            title="Browse Background Assets"
+          >
+            <FontAwesomeIcon :icon="['fas', 'palette']" /> Backgrounds
+          </button>
           
           <!-- Visual Effect Preview Box -->
           <div class="animation-preview-container">
@@ -665,23 +641,27 @@
             <div 
               class="animation-preview-box"
               :class="{
-                'deck-button-glass': editedButton.style?.effect === 'glass',
-                'deck-button-neumorphism': editedButton.style?.effect === 'neumorphism',
-                'deck-button-gradient': editedButton.style?.effect === 'gradient',
-                'deck-button-glow': editedButton.style?.effect === 'glow',
-                'deck-button-3d': editedButton.style?.effect === '3d',
-                'deck-button-neon': editedButton.style?.effect === 'neon',
-                'deck-button-metallic': editedButton.style?.effect === 'metallic',
-                'deck-button-liquid': editedButton.style?.effect === 'liquid',
-                'deck-button-holographic': editedButton.style?.effect === 'holographic',
-                'deck-button-shadow': editedButton.style?.effect === 'shadow',
-                'deck-button-emissive': editedButton.style?.effect === 'emissive',
-                'deck-button-glowglass': editedButton.style?.effect === 'glowglass',
-                'deck-button-gem': editedButton.style?.effect === 'gem',
-                'deck-button-neonrim': editedButton.style?.effect === 'neonrim',
-                'deck-button-watermark': editedButton.style?.effect === 'watermark'
+                'deck-button-glass': buttonDesign === 'glass',
+                'deck-button-neumorphism': buttonDesign === 'neumorphism',
+                'deck-button-gradient': buttonDesign === 'gradient',
+                'deck-button-glow': buttonDesign === 'glow',
+                'deck-button-3d': buttonDesign === '3d',
+                'deck-button-neon': buttonDesign === 'neon',
+                'deck-button-metallic': buttonDesign === 'metallic',
+                'deck-button-liquid': buttonDesign === 'liquid',
+                'deck-button-holographic': buttonDesign === 'holographic',
+                'deck-button-shadow': buttonDesign === 'shadow',
+                'deck-button-emissive': buttonDesign === 'emissive',
+                'deck-button-glowglass': buttonDesign === 'glowglass',
+                'deck-button-gem': buttonDesign === 'gem',
+                'deck-button-neonrim': buttonDesign === 'neonrim',
+                'deck-button-watermark': buttonDesign === 'watermark',
+                'deck-button-deckkey': buttonDesign === 'deckkey',
+                'deck-button-statuskey': buttonDesign === 'statuskey',
+                'deck-button-fullart': buttonDesign === 'fullart',
+                'deck-button-folder': buttonDesign === 'folder'
               }"
-              :style="editedButton.style?.effect === 'gradient' && editedButton.style?.gradient ? { background: editedButton.style.gradient } : {}"
+              :style="buttonDesign === 'gradient' && editedButton.style?.gradient ? { background: editedButton.style.gradient } : {}"
             >
               <FontAwesomeIcon 
                 v-if="editedButton.icon" 
@@ -693,7 +673,7 @@
           </div>
         </div>
 
-        <div v-if="editedButton.style?.effect === 'gradient'" class="form-group">
+        <div v-if="buttonDesign === 'gradient'" class="form-group">
           <label>Custom Gradient</label>
           <input 
             v-model="editedButton.style.gradient" 
@@ -1444,13 +1424,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
-import type { Button, ButtonAction, ActionType } from '@/types'
+import type { Button, ButtonAction, ActionType, EffectType } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDashboardStore } from '@/stores/dashboard'
 import IconPicker from './IconPicker.vue'
 import MediaPicker from './MediaPicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
+import ButtonDesignPicker from './ButtonDesignPicker.vue'
 import type { ActionSpec } from '@/stores/actionCatalog'
 import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
@@ -1471,6 +1452,22 @@ const emit = defineEmits<{
 }>()
 
 const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
+
+// The design picker binds the EFFECT layer. layers.effect is what DeckButton
+// renders first (resolveButtonVisual precedence), so it must be written here —
+// a stale layers.effect would otherwise silently shadow the picker's choice.
+// style.effect is cleared to keep a single source of truth.
+const buttonDesign = computed<string>({
+  get: () =>
+    (editedButton.value.layers?.effect?.type as string | undefined) ??
+    (editedButton.value.style?.effect as string | undefined) ??
+    'none',
+  set: (v) => {
+    const fx = v && v !== 'none' ? { type: v as EffectType, tint: 'brand' as const } : undefined
+    editedButton.value.layers = { ...(editedButton.value.layers || {}), effect: fx }
+    if (editedButton.value.style) delete editedButton.value.style.effect
+  }
+})
 const showIconPicker = ref(false)
 const showAssetPicker = ref<'icon' | 'animation' | 'background' | null>(null)
 const showActionsSidebar = ref(false)
@@ -1918,7 +1915,7 @@ function handleAssetSelect(asset: AssetMetadata) {
     case 'background':
       if (asset.format === 'css') {
         editedButton.value.style = editedButton.value.style || {}
-        editedButton.value.style.effect = 'gradient'
+        buttonDesign.value = 'gradient'
         editedButton.value.style.gradient = asset.css
       } else {
         // Handle image backgrounds

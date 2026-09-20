@@ -93,7 +93,20 @@
         v-else-if="button.action?.type === 'calendar'"
       />
 
-      <div v-else-if="resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
+      <div v-else-if="isFolderStyle || resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
+        <!-- Folder style: 2×2 mini-icon capsule peeking at the target page -->
+        <template v-if="isFolderStyle">
+          <span
+            v-for="(cell, i) in folderCells"
+            :key="i"
+            class="folder-cell"
+            :style="{ backgroundColor: cell.tint }"
+          >
+            <FontAwesomeIcon v-if="cell.fa" :icon="cell.fa" />
+            <img v-else-if="cell.img" :src="cell.img" alt="" />
+          </span>
+        </template>
+        <template v-else>
         <!-- Media (Video/GIF/Image) - Priority over icons -->
         <div v-if="resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value" class="media-container">
           <img
@@ -120,6 +133,7 @@
           alt="Button icon"
           :class="['custom-icon', resolvedVisual.icon.loop !== 'none' ? `loop-${resolvedVisual.icon.loop}` : '']"
         />
+        </template>
       </div>
 
       <div v-if="resolvedVisual.label.text && showLabels && !isSpecialActionType" class="button-label" :style="labelStyle">
@@ -168,6 +182,11 @@
       {{ liveState.badge }}
     </div>
 
+    <!-- Folder style: accent count badge — how many buttons the target page holds -->
+    <span v-if="folderBadgeCount !== null && !isEditMode" class="folder-badge">
+      {{ folderBadgeCount }}
+    </span>
+
     <div v-if="button.tooltip && !isEditMode && showTooltips" class="button-tooltip">
       {{ button.tooltip }}
     </div>
@@ -190,6 +209,8 @@ import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
 import CalendarButton from './CalendarButton.vue'
 import { useButtonStateStore } from '@/stores/buttonState'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useSettingsStore } from '@/stores/settings'
 
 interface Props {
   button: Button
@@ -213,6 +234,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const buttonStateStore = useButtonStateStore()
+const dashboardStore = useDashboardStore()
+const settingsStore = useSettingsStore()
 const liveState = computed(() => buttonStateStore.states[props.button.id])
 
 const emit = defineEmits<{
@@ -319,6 +342,10 @@ const buttonClasses = computed(() => {
     'deck-button-gem': vis.effect.type === 'gem',
     'deck-button-neonrim': vis.effect.type === 'neonrim',
     'deck-button-watermark': vis.effect.type === 'watermark',
+    'deck-button-deckkey': vis.effect.type === 'deckkey',
+    'deck-button-statuskey': vis.effect.type === 'statuskey',
+    'deck-button-fullart': vis.effect.type === 'fullart',
+    'deck-button-folder': vis.effect.type === 'folder',
 
     // Animations (mapped from behaviour layer or legacy style.animation)
     'btn-pulse': anim === 'pulse',
@@ -352,6 +379,25 @@ const buttonStyle = computed(() => {
     backgroundSize: vis.fill.type === 'image' ? 'cover' : undefined,
     backgroundPosition: vis.fill.type === 'image' ? 'center' : undefined,
     backgroundRepeat: vis.fill.type === 'image' ? 'no-repeat' : undefined
+  }
+
+  // Button Size resizes the button BOX itself, not just its contents: below
+  // 1x the box shrinks inside its grid area (place-self keeps it centred);
+  // above 1x it may grow up to +10% — absorbed by the 12px grid gap. Icon and
+  // label keep scaling by the combined `buttonSize` prop (slider × touch-mode
+  // multiplier) in iconStyle/labelStyle, so their net size is unchanged. The
+  // box deliberately tracks the RAW slider (settingsStore.buttonSize): the
+  // touch-mode multiplier is meant for content, and at ×2 would otherwise
+  // overflow every button into its neighbours permanently. width/height % on
+  // a grid item resolve against its grid area; the 60px min-w/h still floors
+  // the result. A transform was avoided — it would fight the :active press
+  // scale and the wiggle/pulse keyframe animations.
+  const sizeScale = settingsStore.buttonSize || 1
+  const boxScale = sizeScale <= 1 ? Math.max(sizeScale, 0.5) : Math.min(sizeScale, 1.1)
+  if (boxScale !== 1) {
+    baseStyle.width = `${Math.round(boxScale * 1000) / 10}%`
+    baseStyle.height = `${Math.round(boxScale * 1000) / 10}%`
+    baseStyle.placeSelf = 'center'
   }
 
   // Resolve and set --btn-brand custom property
@@ -416,7 +462,11 @@ const buttonStyle = computed(() => {
     vis.effect.type === 'glowglass' ||
     vis.effect.type === 'gem' ||
     vis.effect.type === 'neonrim' ||
-    vis.effect.type === 'watermark'
+    vis.effect.type === 'watermark' ||
+    vis.effect.type === 'deckkey' ||
+    vis.effect.type === 'statuskey' ||
+    vis.effect.type === 'fullart' ||
+    vis.effect.type === 'folder'
   ) {
     // Rich card styles: the CSS classes own background/border/shadow so the
     // brand-parametric gradients stay intact.
@@ -446,16 +496,18 @@ const watermarkGlyph = computed(() => {
 
 const iconStyle = computed(() => {
   const vis = resolvedVisual.value
-  // Scale icon size with buttonSize prop so label always has room
-  const baseSize = vis.icon.size || 32
+  // Scale icon size with buttonSize prop so label always has room.
+  // Full-art keys (Buttons-Deck mockup) show a giant bare glyph — ~2.1x.
+  const baseSize = (vis.icon.size || 32) * (vis.effect.type === 'fullart' ? 2.1 : 1)
   const scale = props.buttonSize || 1.0
   // Image icons (website favicons, preset logos) read much smaller than a
   // glyph at the same px size — most ship as 32px sources with transparent
   // padding. Clamp them to the 64px icon tile's interior: 44px floor so they
   // read as a proper logo, 56px cap so they never burst out of the tile.
   const isImageIcon = vis.icon.type === 'custom' || vis.icon.type === 'logo'
-  // When label is shown, cap icon at 75% of scaled size to leave room for label
-  const hasLabel = !!(vis.label.text && props.showLabels)
+  // When label is shown, cap icon at 75% of scaled size to leave room for it —
+  // except fullart, whose label is a bottom overlay that takes no flow space.
+  const hasLabel = !!(vis.label.text && props.showLabels) && vis.effect.type !== 'fullart'
   const size = isImageIcon
     ? Math.min(Math.max(Math.round(baseSize * scale), 44), 56)
     : (hasLabel ? Math.round(baseSize * scale * 0.75) : Math.round(baseSize * scale))
@@ -508,6 +560,63 @@ const secondaryLabelStyle = computed(() => {
   return {
     fontSize: `${size}px`
   }
+})
+
+// Folder style (M. Folder key): the icon capsule becomes a 2×2 "peek" grid.
+// For goto_page buttons the cells show the target page's first enabled
+// buttons (real folder contents, Stream-Deck-style); other actions fall back
+// to the button's own icon in the first cell. Remaining cells render empty.
+const isFolderStyle = computed(() => resolvedVisual.value.effect.type === 'folder')
+
+const folderTargetPage = computed(() => {
+  if (props.button.action?.type !== 'goto_page') return null
+  const requested = Number(props.button.action.config?.page ?? 0)
+  const pages = dashboardStore.currentScene?.pages ?? []
+  return pages[Math.round(requested) - 1] ?? null
+})
+
+interface FolderCell {
+  fa?: string[]
+  img?: string
+  tint?: string
+}
+
+const folderCells = computed<FolderCell[]>(() => {
+  const kids = (folderTargetPage.value?.buttons ?? [])
+    .filter(b => b.enabled && b.id !== props.button.id)
+
+  const cells: FolderCell[] = kids.slice(0, 4).map(kid => {
+    const v = resolveButtonVisual(kid)
+    const cell: FolderCell = {
+      tint: resolveButtonBrandTint(kid) || kid.style?.backgroundColor || undefined
+    }
+    if (v.icon.type === 'fontawesome' && v.icon.value) {
+      cell.fa = Array.isArray(v.icon.value) ? v.icon.value : parseIcon(v.icon.value as string)
+    } else if (v.icon.value) {
+      cell.img = (Array.isArray(v.icon.value) ? v.icon.value[0] : v.icon.value) as string
+    }
+    return cell
+  })
+
+  if (cells.length === 0) {
+    const vis = resolvedVisual.value
+    const own: FolderCell = { tint: resolveButtonBrandTint(props.button) }
+    if (vis.icon.type === 'fontawesome' && vis.icon.value) {
+      own.fa = Array.isArray(vis.icon.value) ? vis.icon.value : parseIcon(vis.icon.value as string)
+    } else if ((vis.icon.type === 'custom' || vis.icon.type === 'logo' || vis.icon.type === 'gif') && vis.icon.value) {
+      own.img = (Array.isArray(vis.icon.value) ? vis.icon.value[0] : vis.icon.value) as string
+    }
+    cells.push(own)
+  }
+
+  while (cells.length < 4) cells.push({})
+  return cells.slice(0, 4)
+})
+
+// Count badge (top-right accent circle) — the target page's enabled buttons.
+const folderBadgeCount = computed(() => {
+  if (!isFolderStyle.value || !folderTargetPage.value) return null
+  return (folderTargetPage.value.buttons ?? []).filter(b => b.enabled).length
 })
 
 const buttonContentStyle = computed(() => {

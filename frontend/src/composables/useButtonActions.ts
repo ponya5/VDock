@@ -5,7 +5,7 @@ import { useProfilesStore } from '@/stores/profiles'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useActionCatalogStore } from '@/stores/actionCatalog'
 import { useButtonStateStore } from '@/stores/buttonState'
-import type { Button, ActionResult, IconLoop } from '@/types'
+import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
 
@@ -32,6 +32,12 @@ export function useButtonActions() {
   function resolveDefaultIconLoop(): IconLoop | undefined {
     const loop = settingsStore.buttonDefaultIconLoop
     return loop && loop !== 'none' ? (loop as IconLoop) : undefined
+  }
+
+  /** The app-wide default button design for newly created buttons, or undefined for Classic. */
+  function resolveDefaultEffect(): { type: EffectType; tint: 'brand' } | undefined {
+    const fx = settingsStore.buttonDefaultEffect
+    return fx && fx !== 'none' ? { type: fx as EffectType, tint: 'brand' } : undefined
   }
 
   function showActionResult(result: ActionResult) {
@@ -184,7 +190,8 @@ export function useButtonActions() {
           textColor: '#ffffff'
         },
         layers: {
-          icon: { type: 'fontawesome', value: ['fas', 'home'], loop: resolveDefaultIconLoop() }
+          icon: { type: 'fontawesome', value: ['fas', 'home'], loop: resolveDefaultIconLoop() },
+          ...(resolveDefaultEffect() ? { effect: resolveDefaultEffect() } : {})
         },
         enabled: true
       }
@@ -230,7 +237,8 @@ export function useButtonActions() {
         textColor: '#ffffff'
       },
       layers: {
-        icon: { type: 'fontawesome', value: ['fas', 'star'], loop: resolveDefaultIconLoop() }
+        icon: { type: 'fontawesome', value: ['fas', 'star'], loop: resolveDefaultIconLoop() },
+        ...(resolveDefaultEffect() ? { effect: resolveDefaultEffect() } : {})
       },
       tooltip: '',
       enabled: true

@@ -1024,6 +1024,226 @@ select option {
     0 12px 28px rgba(8, 6, 30, 0.35) !important;
 }
 
+/* ── Deck-style keys (Buttons-Deck mockup) ─────────────────────────────── */
+
+/* Deck Key: a physical keycap — dark bezel frame around a recessed "screen"
+   that pools brand light from the top edge. The bezel is the button itself
+   (padding + bezel gradient); .button-content is the screen. */
+.deck-button-deckkey {
+  padding: 7px !important;
+  background: linear-gradient(145deg, #34343e, #0a0a0e) !important;
+  border: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.6) !important;
+}
+
+.deck-button-deckkey .button-content {
+  border-radius: 17px !important;
+  background:
+    radial-gradient(90% 75% at 50% 26%, color-mix(in srgb, var(--btn-brand, #4aa3ff) 38%, transparent), transparent 72%),
+    linear-gradient(130deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0) 38%),
+    #050507 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07) !important;
+}
+
+.deck-button-deckkey .button-icon {
+  border-radius: 16px !important;
+}
+
+.deck-button-deckkey:active:not(.edit-mode):not(.is-placeholder) {
+  background: linear-gradient(145deg, #1f1f27, #050507) !important;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 0, 0, 0.7) !important;
+}
+
+.deck-button-deckkey:active:not(.edit-mode):not(.is-placeholder) .button-content {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--btn-brand, #4aa3ff) 80%, transparent) !important;
+}
+
+/* Status Key: dark card with a glowing brand LED bar along the bottom —
+   reads like a Stream Deck key with a status light underneath. */
+.deck-button-statuskey {
+  background: linear-gradient(180deg, #1b1b24, #0b0b10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 12px 24px rgba(0, 0, 0, 0.45),
+    0 0 28px color-mix(in srgb, var(--btn-brand, #4aa3ff) 26%, transparent) !important;
+}
+
+.deck-button-statuskey .button-content {
+  padding-bottom: 22px !important;
+}
+
+.deck-button-statuskey .button-content::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 9px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--btn-brand, #4aa3ff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--btn-brand, #4aa3ff) 90%, transparent);
+  pointer-events: none;
+}
+
+.deck-button-statuskey:hover:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 24px rgba(0, 0, 0, 0.45),
+    0 0 36px color-mix(in srgb, var(--btn-brand, #4aa3ff) 38%, transparent) !important;
+}
+
+.deck-button-statuskey:active:not(.edit-mode):not(.is-placeholder) {
+  background: linear-gradient(180deg, #262632, #1d1d26) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.5),
+    0 0 34px color-mix(in srgb, var(--btn-brand, #4aa3ff) 40%, transparent) !important;
+}
+
+/* Full-art Key: saturated brand art fills the whole key. Two concentric
+   rings radiate behind a giant bare glyph; the label sits on a bottom scrim. */
+.deck-button-fullart {
+  background:
+    radial-gradient(closest-side circle at 50% 34%, transparent 62%, rgba(255, 255, 255, 0.22) 63%, transparent 65%),
+    radial-gradient(closest-side circle at 50% 34%, transparent 88%, rgba(255, 255, 255, 0.26) 89%, transparent 91%),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--btn-brand, #4285f4) 82%, #ffffff) 0%,
+      var(--btn-brand, #4285f4) 55%,
+      color-mix(in srgb, var(--btn-brand, #4285f4) 66%, #000000) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 12px 24px color-mix(in srgb, var(--btn-brand, #4285f4) 38%, transparent),
+    0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Giant bare glyph — the capsule tile chrome is stripped. */
+.deck-button-fullart .button-icon {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Icon size is boosted ~2.1x in iconStyle (JS) for fullart; here we only add
+   the drop shadow and cap image icons so they can't burst the key. */
+.deck-button-fullart .button-icon .fontawesome-icon,
+.deck-button-fullart .button-icon .custom-icon {
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.35));
+}
+
+.deck-button-fullart .button-icon .custom-icon,
+.deck-button-fullart .button-icon .media-element {
+  object-fit: contain;
+}
+
+/* Label pinned to a bottom scrim band so art stays visible behind it. */
+.deck-button-fullart .button-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 8px 9px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0));
+  font-weight: 700 !important;
+  -webkit-line-clamp: 1;
+}
+
+.deck-button-fullart:active:not(.edit-mode):not(.is-placeholder) {
+  box-shadow:
+    inset 0 4px 12px rgba(0, 0, 0, 0.45),
+    0 4px 10px color-mix(in srgb, var(--btn-brand, #4285f4) 35%, transparent) !important;
+}
+
+/* Folder Key: glass card holding a 2×2 "peek" grid of mini icons — for
+   goto_page buttons these are the target page's first buttons, with a count
+   badge top-right. .button-icon becomes the capsule grid itself. */
+.deck-button-folder {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 45%),
+    rgba(20, 16, 50, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 12px 28px rgba(8, 6, 30, 0.35) !important;
+}
+
+.deck-button-folder .button-icon {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 6px;
+  padding: 7px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 58%;
+  max-width: 96px;
+  aspect-ratio: 1;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+}
+
+.deck-button-folder .folder-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  font-size: 0.95em;
+  color: #fff;
+}
+
+.deck-button-folder .folder-cell svg {
+  width: 62%;
+  height: 62%;
+}
+
+.deck-button-folder .folder-cell img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.folder-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent, #4aa3ff);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(8, 6, 30, 0.4);
+  pointer-events: none;
+}
+
+.deck-button-folder:active:not(.edit-mode):not(.is-placeholder) {
+  background: rgba(20, 16, 50, 0.66) !important;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+}
+
 /* Button Shape Variants */
 .deck-button.shape-hexagon {
   clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%);

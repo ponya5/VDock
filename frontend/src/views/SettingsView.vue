@@ -87,7 +87,7 @@
                     </div>
                     <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
                     <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
-                    <p class="form-help">Scales button icons and labels. Combines with Touch Mode above.</p>
+                    <p class="form-help">Resizes the button box itself (and its icon/label). Below 1x buttons shrink inside their cells; above 1x they grow slightly into the gaps. Combines with Touch Mode above.</p>
                   </div>
                   <div class="form-group">
                     <div class="form-group-header">
@@ -173,30 +173,8 @@
                       </select>
                     </div>
                     <div class="form-group">
-                      <label class="small-label">Visual effect</label>
-                      <select v-model="previewEffect" class="select">
-                        <option value="none">None</option>
-                        <option value="glass">Glass</option>
-                        <option value="neumorphism">Neumorphism</option>
-                        <option value="gradient">Gradient</option>
-                        <option value="glow">Glow</option>
-                        <option value="neon">Neon</option>
-                        <option value="metallic">Metallic</option>
-                        <option value="liquid">Liquid</option>
-                        <option value="holographic">Holographic</option>
-                        <option value="shadow">Shadow</option>
-                        <option value="emissive">Emissive</option>
-                        <option value="fire">Fire</option>
-                        <option value="plasma">Plasma</option>
-                        <option value="particles">Particles</option>
-                        <option value="aurora">Aurora</option>
-                        <option value="scanline">Scanline</option>
-                        <option value="rain">Rain</option>
-                        <option value="glowglass">Glow Glass</option>
-                        <option value="gem">Gem</option>
-                        <option value="neonrim">Neon Rim</option>
-                        <option value="watermark">Watermark Card</option>
-                      </select>
+                      <label class="small-label">Button design</label>
+                      <ButtonDesignPicker v-model="previewEffect" />
                     </div>
                   </div>
 
@@ -910,6 +888,7 @@ import ScreenSaver from '@/components/ScreenSaver.vue'
 import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 import BackgroundPicker, { type BackgroundPickerGroup } from '@/components/BackgroundPicker.vue'
 import DeckButton from '@/components/DeckButton.vue'
+import ButtonDesignPicker from '@/components/ButtonDesignPicker.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
