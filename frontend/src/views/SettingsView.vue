@@ -81,9 +81,11 @@
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Button Size</label>
-                      <button class="btn-reset" @click="settings.buttonSize = 1.0" title="Reset">
-                        <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
-                      </button>
+                      <SettingResetButton
+                        label="Button Size"
+                        :at-default="settings.buttonSize === SETTINGS_DEFAULTS.buttonSize"
+                        @reset="settings.buttonSize = SETTINGS_DEFAULTS.buttonSize"
+                      />
                     </div>
                     <input v-model.number="settings.buttonSize" type="range" min="0.5" max="2" step="0.1" class="slider" />
                     <span class="slider-value">{{ settings.buttonSize.toFixed(1) }}x</span>
@@ -92,9 +94,11 @@
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Button Transparency</label>
-                      <button class="btn-reset" @click="settings.buttonTransparency = 0" title="Reset">
-                        <FontAwesomeIcon :icon="['fas', 'undo']" /> Reset
-                      </button>
+                      <SettingResetButton
+                        label="Button Transparency"
+                        :at-default="settings.buttonTransparency === SETTINGS_DEFAULTS.buttonTransparency"
+                        @reset="settings.buttonTransparency = SETTINGS_DEFAULTS.buttonTransparency"
+                      />
                     </div>
                     <input v-model.number="settings.buttonTransparency" type="range" min="0" max="90" step="5" class="slider" />
                     <span class="slider-value">{{ settings.buttonTransparency }}%</span>
@@ -102,29 +106,44 @@
                   </div>
                   <div class="toggle-row">
                     <label class="toggle-row-label">Show button labels</label>
-                    <label class="toggle-switch"><input v-model="settings.showLabels" type="checkbox" /><span class="toggle-slider"></span></label>
+                    <div class="toggle-row-end">
+                      <SettingResetButton label="Show button labels" :at-default="settings.showLabels === SETTINGS_DEFAULTS.showLabels" @reset="settings.showLabels = SETTINGS_DEFAULTS.showLabels" />
+                      <label class="toggle-switch"><input v-model="settings.showLabels" type="checkbox" /><span class="toggle-slider"></span></label>
+                    </div>
                   </div>
                   <div class="toggle-row">
                     <label class="toggle-row-label">Show tooltips</label>
-                    <label class="toggle-switch"><input v-model="settings.showTooltips" type="checkbox" /><span class="toggle-slider"></span></label>
+                    <div class="toggle-row-end">
+                      <SettingResetButton label="Show tooltips" :at-default="settings.showTooltips === SETTINGS_DEFAULTS.showTooltips" @reset="settings.showTooltips = SETTINGS_DEFAULTS.showTooltips" />
+                      <label class="toggle-switch"><input v-model="settings.showTooltips" type="checkbox" /><span class="toggle-slider"></span></label>
+                    </div>
                   </div>
                   <div class="toggle-row">
                     <label class="toggle-row-label">Enable animations</label>
-                    <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                    <div class="toggle-row-end">
+                      <SettingResetButton label="Enable animations" :at-default="settings.animationsEnabled === SETTINGS_DEFAULTS.animationsEnabled" @reset="settings.animationsEnabled = SETTINGS_DEFAULTS.animationsEnabled" />
+                      <label class="toggle-switch"><input v-model="settings.animationsEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                    </div>
                   </div>
                   <div class="toggle-row">
                     <div>
                       <label class="toggle-row-label">Wiggle buttons in edit mode</label>
                       <p class="form-help">Buttons shake to show they can be dragged</p>
                     </div>
-                    <label class="toggle-switch"><input v-model="settings.editModeWiggle" type="checkbox" /><span class="toggle-slider"></span></label>
+                    <div class="toggle-row-end">
+                      <SettingResetButton label="Wiggle buttons in edit mode" :at-default="settings.editModeWiggle === SETTINGS_DEFAULTS.editModeWiggle" @reset="settings.editModeWiggle = SETTINGS_DEFAULTS.editModeWiggle" />
+                      <label class="toggle-switch"><input v-model="settings.editModeWiggle" type="checkbox" /><span class="toggle-slider"></span></label>
+                    </div>
                   </div>
                   <div class="toggle-row">
                     <div>
                       <label class="toggle-row-label">3D tilt effect</label>
                       <p class="form-help">Tilts the button grid as your mouse moves over it</p>
                     </div>
-                    <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                    <div class="toggle-row-end">
+                      <SettingResetButton label="3D tilt effect" :at-default="settings.tiltEffectEnabled === SETTINGS_DEFAULTS.tiltEffectEnabled" @reset="settings.tiltEffectEnabled = SETTINGS_DEFAULTS.tiltEffectEnabled" />
+                      <label class="toggle-switch"><input v-model="settings.tiltEffectEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                    </div>
                   </div>
                 </section>
 
@@ -144,7 +163,10 @@
                   <div class="preview-demo-controls">
                     <p class="preview-demo-label">Choose the animation, icon motion, and visual effect to apply to ALL buttons:</p>
                     <div class="form-group">
-                      <label class="small-label">Button animation</label>
+                      <div class="form-group-header">
+                        <label class="small-label">Button animation</label>
+                        <SettingResetButton label="Button animation" :at-default="previewAnimation === SETTINGS_DEFAULTS.buttonDefaultAnimation" @reset="resetButtonDefault('buttonDefaultAnimation')" />
+                      </div>
                       <select v-model="previewAnimation" class="select">
                         <option value="none">None</option>
                         <option value="pulse">Pulse</option>
@@ -160,7 +182,10 @@
                       </select>
                     </div>
                     <div class="form-group">
-                      <label class="small-label">Icon animation</label>
+                      <div class="form-group-header">
+                        <label class="small-label">Icon animation</label>
+                        <SettingResetButton label="Icon animation" :at-default="previewIconLoop === SETTINGS_DEFAULTS.buttonDefaultIconLoop" @reset="resetButtonDefault('buttonDefaultIconLoop')" />
+                      </div>
                       <select v-model="previewIconLoop" class="select">
                         <option value="none">None</option>
                         <option value="squash">Squash</option>
@@ -173,7 +198,10 @@
                       </select>
                     </div>
                     <div class="form-group">
-                      <label class="small-label">Button design</label>
+                      <div class="form-group-header">
+                        <label class="small-label">Button design</label>
+                        <SettingResetButton label="Button design" :at-default="previewEffect === SETTINGS_DEFAULTS.buttonDefaultEffect" @reset="resetButtonDefault('buttonDefaultEffect')" />
+                      </div>
                       <ButtonDesignPicker v-model="previewEffect" />
                     </div>
                   </div>
@@ -191,7 +219,10 @@
                 </section>
 
                 <section class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
+                  <div class="form-group-header">
+                    <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'hand-pointer']" /> Touch Mode</h2>
+                    <SettingResetButton label="Touch Mode" :at-default="settings.touchMode === SETTINGS_DEFAULTS.touchMode" @reset="settings.touchMode = SETTINGS_DEFAULTS.touchMode" />
+                  </div>
                   <TouchModeSelector />
                 </section>
               </div>
@@ -201,12 +232,18 @@
               <h2><FontAwesomeIcon :icon="['fas', 'table-columns']" /> Sidebar</h2>
               <div class="toggle-row">
                 <label class="toggle-row-label">Show docked sidebar</label>
-                <label class="toggle-switch"><input v-model="settings.dockedSidebarEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                <div class="toggle-row-end">
+                  <SettingResetButton label="Show docked sidebar" :at-default="settings.dockedSidebarEnabled === SETTINGS_DEFAULTS.dockedSidebarEnabled" @reset="settings.dockedSidebarEnabled = SETTINGS_DEFAULTS.dockedSidebarEnabled" />
+                  <label class="toggle-switch"><input v-model="settings.dockedSidebarEnabled" type="checkbox" /><span class="toggle-slider"></span></label>
+                </div>
               </div>
               <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
                 <div class="form-group-header">
                   <label>Sidebar Width</label>
-                  <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
+                  <div class="header-end-group">
+                    <span class="slider-value">{{ settings.dockedSidebarWidth }}px</span>
+                    <SettingResetButton label="Sidebar Width" :at-default="settings.dockedSidebarWidth === SETTINGS_DEFAULTS.dockedSidebarWidth" @reset="settings.dockedSidebarWidth = SETTINGS_DEFAULTS.dockedSidebarWidth" />
+                  </div>
                 </div>
                 <input v-model.number="settings.dockedSidebarWidth" type="range" min="80" max="360" step="10" class="slider" />
                 <p class="form-help">How much horizontal space the docked buttons column takes up.</p>
@@ -214,7 +251,10 @@
               <div v-if="settings.dockedSidebarEnabled" class="form-group" style="margin-top: var(--spacing-md)">
                 <div class="form-group-header">
                   <label>Button Height</label>
-                  <span class="slider-value">{{ settings.dockedButtonHeight }}px</span>
+                  <div class="header-end-group">
+                    <span class="slider-value">{{ settings.dockedButtonHeight }}px</span>
+                    <SettingResetButton label="Button Height" :at-default="settings.dockedButtonHeight === SETTINGS_DEFAULTS.dockedButtonHeight" @reset="settings.dockedButtonHeight = SETTINGS_DEFAULTS.dockedButtonHeight" />
+                  </div>
                 </div>
                 <input v-model.number="settings.dockedButtonHeight" type="range" min="48" max="160" step="4" class="slider" />
                 <p class="form-help">How tall each docked button is. Automatically shrinks to fit if the sidebar doesn't have room for it.</p>
@@ -228,19 +268,22 @@
                   <label class="toggle-row-label">Toast notifications</label>
                   <p class="form-help">Controls which action results appear as pop-up toasts.</p>
                 </div>
-                <div class="toast-level-group" role="radiogroup" aria-label="Toast level">
-                  <label
-                    v-for="opt in toastLevelOptions"
-                    :key="opt.value"
-                    :class="['toast-level-btn', { active: settings.toastLevel === opt.value }]"
-                  >
-                    <input
-                      type="radio"
-                      :value="opt.value"
-                      v-model="settings.toastLevel"
-                    />
-                    {{ opt.label }}
-                  </label>
+                <div class="toggle-row-end">
+                  <SettingResetButton label="Toast notifications" :at-default="settings.toastLevel === SETTINGS_DEFAULTS.toastLevel" @reset="settings.toastLevel = SETTINGS_DEFAULTS.toastLevel" />
+                  <div class="toast-level-group" role="radiogroup" aria-label="Toast level">
+                    <label
+                      v-for="opt in toastLevelOptions"
+                      :key="opt.value"
+                      :class="['toast-level-btn', { active: settings.toastLevel === opt.value }]"
+                    >
+                      <input
+                        type="radio"
+                        :value="opt.value"
+                        v-model="settings.toastLevel"
+                      />
+                      {{ opt.label }}
+                    </label>
+                  </div>
                 </div>
               </div>
             </section>
@@ -250,7 +293,10 @@
             <section class="settings-section card">
               <h2>Background</h2>
               <div class="form-group">
-                <label>Background Style</label>
+                <div class="form-group-header">
+                  <label>Background Style</label>
+                  <SettingResetButton label="Background Style" :at-default="settings.background === SETTINGS_DEFAULTS.background" @reset="settings.background = SETTINGS_DEFAULTS.background" />
+                </div>
                 <BackgroundPicker
                   v-model="settings.background"
                   :groups="backgroundPickerGroups"
@@ -312,7 +358,10 @@
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Screensaver Delay</label>
-                      <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
+                      <div class="header-end-group">
+                        <span class="slider-value">{{ settingsStore.screensaverTimeout === 0 ? 'Off' : formatScreensaverTimeout(settingsStore.screensaverTimeout) }}</span>
+                        <SettingResetButton label="Screensaver Delay" :at-default="settingsStore.screensaverTimeout === SETTINGS_DEFAULTS.screensaverTimeout" @reset="settingsStore.screensaverTimeout = SETTINGS_DEFAULTS.screensaverTimeout" />
+                      </div>
                     </div>
                     <input
                       type="range"
@@ -340,7 +389,10 @@
                   <h2><FontAwesomeIcon :icon="['fas', 'image']" /> Screensaver Background</h2>
                   <p class="form-help">A background that shows only while the screensaver is on — the dashboard keeps its own.</p>
                   <div class="form-group">
-                    <label>Background Style</label>
+                    <div class="form-group-header">
+                      <label>Background Style</label>
+                      <SettingResetButton label="Screensaver Background" :at-default="settings.screensaverBackground === SETTINGS_DEFAULTS.screensaverBackground" @reset="settings.screensaverBackground = SETTINGS_DEFAULTS.screensaverBackground" />
+                    </div>
                     <BackgroundPicker
                       v-model="settings.screensaverBackground"
                       :groups="screensaverPickerGroups"
@@ -365,7 +417,10 @@
                 </section>
 
                 <section class="settings-section card">
-                  <h2><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
+                  <div class="form-group-header">
+                    <h2 style="margin-bottom: 0"><FontAwesomeIcon :icon="['fas', 'grip']" /> Screensaver Widgets</h2>
+                    <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
+                  </div>
                   <p class="form-help">Choose what shows on the screensaver besides the clock.</p>
 
                   <div class="widget-toggle-list">
@@ -397,7 +452,10 @@
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Widget Size</label>
-                      <span class="slider-value">{{ settingsStore.screensaverWeatherSize }}%</span>
+                      <div class="header-end-group">
+                        <span class="slider-value">{{ settingsStore.screensaverWeatherSize }}%</span>
+                        <SettingResetButton label="Weather widget size" :at-default="settingsStore.screensaverWeatherSize === SETTINGS_DEFAULTS.screensaverWeatherSize" @reset="settingsStore.screensaverWeatherSize = SETTINGS_DEFAULTS.screensaverWeatherSize" />
+                      </div>
                     </div>
                     <input
                       type="range"
@@ -420,7 +478,10 @@
                   <div class="form-group">
                     <div class="form-group-header">
                       <label>Text Size</label>
-                      <span class="slider-value">{{ settingsStore.screensaverWidgetSize }}%</span>
+                      <div class="header-end-group">
+                        <span class="slider-value">{{ settingsStore.screensaverWidgetSize }}%</span>
+                        <SettingResetButton label="Widget text size" :at-default="settingsStore.screensaverWidgetSize === SETTINGS_DEFAULTS.screensaverWidgetSize" @reset="settingsStore.screensaverWidgetSize = SETTINGS_DEFAULTS.screensaverWidgetSize" />
+                      </div>
                     </div>
                     <input
                       type="range"
@@ -443,7 +504,10 @@
                     News, Ars Technica).
                   </p>
                   <div class="form-group">
-                    <label>Feed URLs</label>
+                    <div class="form-group-header">
+                      <label>Feed URLs</label>
+                      <SettingResetButton label="News feed URLs" :at-default="settingsStore.newsFeeds === SETTINGS_DEFAULTS.newsFeeds" @reset="settingsStore.newsFeeds = SETTINGS_DEFAULTS.newsFeeds" />
+                    </div>
                     <textarea
                       v-model="settingsStore.newsFeeds"
                       class="input"
@@ -453,7 +517,10 @@
                     <p class="form-help">One RSS or Atom URL per line.</p>
                   </div>
                   <div class="form-group">
-                    <label>Seconds per headline</label>
+                    <div class="form-group-header">
+                      <label>Seconds per headline</label>
+                      <SettingResetButton label="Seconds per headline" :at-default="settingsStore.newsRotateSeconds === SETTINGS_DEFAULTS.newsRotateSeconds" @reset="settingsStore.newsRotateSeconds = SETTINGS_DEFAULTS.newsRotateSeconds" />
+                    </div>
                     <input
                       v-model.number="settingsStore.newsRotateSeconds"
                       type="number"
@@ -484,7 +551,10 @@
                     (ESPN, BBC Sport, Sky Sports).
                   </p>
                   <div class="form-group">
-                    <label>Feed URLs</label>
+                    <div class="form-group-header">
+                      <label>Feed URLs</label>
+                      <SettingResetButton label="Sports feed URLs" :at-default="settingsStore.sportsFeeds === SETTINGS_DEFAULTS.sportsFeeds" @reset="settingsStore.sportsFeeds = SETTINGS_DEFAULTS.sportsFeeds" />
+                    </div>
                     <textarea
                       v-model="settingsStore.sportsFeeds"
                       class="input"
@@ -505,7 +575,10 @@
                 <section v-if="settingsStore.screensaverWidgets.includes('market')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'chart-line']" /> Stocks / Crypto Ticker</h2>
                   <div class="form-group">
-                    <label>Symbols</label>
+                    <div class="form-group-header">
+                      <label>Symbols</label>
+                      <SettingResetButton label="Market symbols" :at-default="settingsStore.marketTickers === SETTINGS_DEFAULTS.marketTickers" @reset="settingsStore.marketTickers = SETTINGS_DEFAULTS.marketTickers" />
+                    </div>
                     <input
                       v-model="settingsStore.marketTickers"
                       type="text"
@@ -531,7 +604,10 @@
                 <section v-if="settingsStore.screensaverWidgets.includes('worldclock')" class="settings-section card">
                   <h2><FontAwesomeIcon :icon="['fas', 'globe']" /> World Clock</h2>
                   <div class="form-group">
-                    <label>Cities</label>
+                    <div class="form-group-header">
+                      <label>Cities</label>
+                      <SettingResetButton label="World clock cities" :at-default="settingsStore.worldClockTimezones === SETTINGS_DEFAULTS.worldClockTimezones" @reset="settingsStore.worldClockTimezones = SETTINGS_DEFAULTS.worldClockTimezones" />
+                    </div>
                     <textarea
                       v-model="settingsStore.worldClockTimezones"
                       class="input"
@@ -877,7 +953,7 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useSettingsStore } from '@/stores/settings'
+import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -889,6 +965,7 @@ import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 import BackgroundPicker, { type BackgroundPickerGroup } from '@/components/BackgroundPicker.vue'
 import DeckButton from '@/components/DeckButton.vue'
 import ButtonDesignPicker from '@/components/ButtonDesignPicker.vue'
+import SettingResetButton from '@/components/SettingResetButton.vue'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
@@ -1051,6 +1128,19 @@ const appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'
 const previewAnimation = ref(settingsStore.buttonDefaultAnimation)
 const previewIconLoop = ref(settingsStore.buttonDefaultIconLoop)
 const previewEffect = ref(settingsStore.buttonDefaultEffect)
+
+// DL-028: resetting a demo control restores the factory default AND the
+// persisted new-button default; applying to existing buttons stays behind
+// the explicit "Save & Apply to All Buttons" action.
+const previewDefaults = {
+  buttonDefaultAnimation: previewAnimation,
+  buttonDefaultIconLoop: previewIconLoop,
+  buttonDefaultEffect: previewEffect
+} as const
+function resetButtonDefault(key: keyof typeof previewDefaults) {
+  previewDefaults[key].value = SETTINGS_DEFAULTS[key]
+  settingsStore[key] = SETTINGS_DEFAULTS[key]
+}
 
 const previewButton = computed<Button>(() => ({
   id: 'preview-button',
@@ -1356,6 +1446,15 @@ function toggleScreensaverWidget(id: string) {
   const idx = list.indexOf(id)
   if (idx === -1) settingsStore.screensaverWidgets = [...list, id]
   else settingsStore.screensaverWidgets = list.filter(w => w !== id)
+}
+
+// DL-028: section-level reset restores the default five-widget set.
+const screensaverWidgetsAtDefault = computed(() =>
+  settingsStore.screensaverWidgets.length === SETTINGS_DEFAULTS.screensaverWidgets.length &&
+  SETTINGS_DEFAULTS.screensaverWidgets.every(w => settingsStore.screensaverWidgets.includes(w))
+)
+function resetScreensaverWidgets() {
+  settingsStore.screensaverWidgets = [...SETTINGS_DEFAULTS.screensaverWidgets]
 }
 
 type TestResult = { ok: boolean; text: string }
@@ -2255,6 +2354,16 @@ onMounted(async () => {
 }
 
 .btn-reset:hover { color: var(--color-text); border-color: var(--color-text-secondary); }
+
+/* DL-028: groups the reset icon with the control at the end of a row so
+   label stays left, value+reset+control stay together on the right. */
+.toggle-row-end,
+.header-end-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
 
 /* ── Toggle Switch — 60×34 pill rows per the mockup ── */
 .toggle-row {
