@@ -63,10 +63,11 @@
 
         <div class="header-right" @pointerdown="resetAutohide">
           <div class="header-actions-group">
-            <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
+            <button v-if="!isMobileViewport" class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
               <FontAwesomeIcon :icon="['fas', 'users']" />
             </button>
             <button
+              v-if="!isMobileViewport"
               :class="['btn-icon-circle animate-tap', { 'edit-active': isEditMode }]"
               @click="emit('toggleEdit')"
               title="Toggle Edit Mode"
@@ -82,7 +83,7 @@
             >
               <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
             </button>
-            <button class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
+            <button v-if="!isMobileViewport" class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
               <FontAwesomeIcon :icon="['fas', 'cog']" />
             </button>
             <button
@@ -148,6 +149,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useElectron } from '@/composables/useElectron'
 import { useSwipe } from '@/composables/useGestures'
 import { refreshVdock } from '@/composables/useVdockRefresh'
+import { useMobileViewport } from '@/utils/mobileViewport'
 import type { Profile, Scene } from '@/types'
 
 interface Props {
@@ -172,6 +174,9 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
+// Phones hide the config entries (profiles / edit mode / settings) — the
+// deck is a pure control surface on small screens.
+const { isMobileViewport } = useMobileViewport()
 const { quitApp, isElectron, toggleFullscreen: toggleElectronFullscreen, isFullscreen: getElectronFullscreen } = useElectron()
 const triggerRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)

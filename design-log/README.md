@@ -34,6 +34,7 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-058](DL-058-backend-crash-com-apartment.md) | Backend silent crash — COM apartment violation + 500 toast spam | Implemented — dedicated COM thread for Core Audio, 5xx toast throttle, 400 guard |
 | [DL-059](DL-059-settings-polish-slider-flex-mobile-fit.md) | Settings previews, smaller design picker, slider flex, mobile fit | Implemented — mock-dash CSS, real component bg preview, app_volume slider target, expand/shrink chips, fit-to-screen grid + short-viewport header auto-hide |
 | [DL-060](DL-060-landscape-only-mobile.md) | Landscape-only mobile gate | Implemented — portrait phones get a rotate-prompt overlay on the dashboard; tablets/desktops unaffected |
+| [DL-061](DL-061-mobile-control-surface.md) | Mobile = control surface only | Implemented — edit mode blocked, config buttons hidden, long-press edit gestures gated on phone viewports |
 
 **Status values:** Planned → In progress → Complete.
 

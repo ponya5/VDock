@@ -17,35 +17,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useMobileViewport } from '@/utils/mobileViewport'
 
 // The deck is landscape-only on phones: a 5-6 column grid can never be
-// comfortable in portrait. Tablets are excluded (width > 700px — the deck
-// fits there) and non-touch devices are excluded (a resized desktop window
-// keeps the compact layout instead of an impossible "rotate" request).
-const portraitPhone = ref(false)
+// comfortable in portrait. The phone detection itself is shared
+// (useMobileViewport) so the same flag also strips config affordances.
+const { isMobileViewport, isPortrait } = useMobileViewport()
 const dismissed = ref(false)
 
-const blocked = computed(() => portraitPhone.value && !dismissed.value)
-
-function update() {
-  portraitPhone.value =
-    window.innerHeight > window.innerWidth &&
-    window.innerWidth <= 700 &&
-    (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0)
-}
-
-onMounted(() => {
-  update()
-  window.addEventListener('resize', update)
-  window.addEventListener('orientationchange', update)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', update)
-  window.removeEventListener('orientationchange', update)
-})
+const blocked = computed(() => isMobileViewport.value && isPortrait.value && !dismissed.value)
 </script>
 
 <style scoped>

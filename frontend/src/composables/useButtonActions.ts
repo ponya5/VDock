@@ -8,6 +8,7 @@ import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
+import { useMobileViewport } from '@/utils/mobileViewport'
 
 export function useButtonActions() {
   const dashboardStore = useDashboardStore()
@@ -251,6 +252,7 @@ export function useButtonActions() {
   }
 
   function handlePlaceholderLongPress(position: { row: number; col: number }) {
+    if (useMobileViewport().isMobileViewport.value) return
     if (!dashboardStore.isEditMode) {
       dashboardStore.toggleEditMode()
     }
@@ -269,6 +271,8 @@ export function useButtonActions() {
     // it into a touch reorder. Opening the editor here would pop a modal
     // under the user's finger mid-drag.
     if (dashboardStore.isEditMode) return
+    // Phones don't edit — long-press does nothing on a button there.
+    if (useMobileViewport().isMobileViewport.value) return
     dashboardStore.toggleEditMode()
     editingButton.value = { ...button }
   }

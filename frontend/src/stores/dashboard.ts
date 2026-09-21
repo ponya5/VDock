@@ -5,6 +5,7 @@ import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
 import { useSettingsStore } from './settings'
 import { createDefaultScene } from '@/utils/defaultProfile'
+import { useMobileViewport } from '@/utils/mobileViewport'
 
 export const LAST_PROFILE_STORAGE_KEY = 'vdock_last_profile'
 
@@ -400,6 +401,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   function toggleEditMode() {
+    // Phones are a control surface only — every edit-mode affordance routes
+    // through this function, so blocking entry here covers the header
+    // button, long-press gestures, and any future caller. Toggling OFF is
+    // always allowed in case a session was already in edit mode.
+    if (!isEditMode.value && useMobileViewport().isMobileViewport.value) return
     isEditMode.value = !isEditMode.value
   }
 
