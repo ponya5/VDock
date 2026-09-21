@@ -79,3 +79,16 @@ action ids the profile owns — serialised via `to_dict` into
 only pack with plugin actions today; other packs' action types already
 are keymap command ids). `loadProfileMaps` folds `action_types` into the
 same vote map, so the existing resolution order is untouched.
+
+**Verified live (2026-09-21):** backend restarted on the fix; Playwright
+against `localhost:5000` shows the Claude Code pill with
+`.app-live-dot` while a `claude` session runs — Media/Cursor/Websites
+correctly dark. Tests: backend 54 pass (new structural test asserts the
+five action types ship and editor profiles declare none), vitest 10/10
+incl. a plugin-action-vote case, `vue-tsc` clean, `vite build` clean.
+
+**Branch note:** cherry-picked to `.worktrees/unified-background` was
+aborted — that branch lacks the DL-033 machinery entirely
+(`appDetection.ts`, `/detected-profiles`, the dot template don't exist in
+its HEAD), so the commit would land as orphaned fragments. It lives on
+`update2` (`72c51b1`) and arrives on the worktree branch via merge.
