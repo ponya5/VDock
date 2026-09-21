@@ -43,6 +43,8 @@ class ApiClient {
 
   private lastErrorTime = 0
   private errorThrottleMs = 1000
+  private last5xxTime = 0
+  private error5xxThrottleMs = 8000
 
   private handleError(error: AxiosError) {
     if (!this.notificationsStore) return
@@ -146,24 +148,34 @@ class ApiClient {
         break
 
       case 500:
-        this.notificationsStore.error(
-          'Server Error',
-          'An internal server error occurred.',
-          response.data?.error || 'Please try again later or contact support.',
-          { duration: 8000 }
-        )
-        break
-
       case 502:
       case 503:
-      case 504:
-        this.notificationsStore.error(
-          'Service Unavailable',
-          'The server is temporarily unavailable.',
-          'Please try again in a few moments.',
-          { duration: 6000 }
-        )
+      case 504: {
+        // One toast per window — a dead/failing backend otherwise stacks a
+        // toast per failed request (e.g. via the Vite proxy when the
+        // backend is down).
+        if (currentTime - this.last5xxTime < this.error5xxThrottleMs) {
+          console.warn(`${response.status} error throttled:`, config?.url)
+          return
+        }
+        this.last5xxTime = currentTime
+        if (response.status === 500) {
+          this.notificationsStore.error(
+            'Server Error',
+            'An internal server error occurred.',
+            response.data?.error || 'Please try again later or contact support.',
+            { duration: 8000 }
+          )
+        } else {
+          this.notificationsStore.error(
+            'Service Unavailable',
+            'The server is temporarily unavailable.',
+            'Please try again in a few moments.',
+            { duration: 6000 }
+          )
+        }
         break
+      }
 
       case 405:
         if (config?.url?.includes('/user-settings')) {

@@ -1,8 +1,10 @@
 """Cross-platform system actions for shutdown, restart, sleep, lock, volume, brightness, and media control."""
 import platform
+import queue
 import subprocess
 import os
 import sys
+import threading
 from typing import Dict, Any, Optional
 from .base_action import BaseAction, ActionResult
 
@@ -28,6 +30,71 @@ if _SYSTEM == 'Windows':
         WINDOWS_API_AVAILABLE = False
 else:
     WINDOWS_API_AVAILABLE = False
+
+
+# Dedicated COM apartment thread for Core Audio (pycaw). IAudioEndpointVolume
+# pointers must be created AND released on the same initialized thread —
+# creating them on Flask workers left __del__→Release() to GC on arbitrary
+# threads, which raised access violations and could kill the process silently.
+_audio_worker_lock = threading.Lock()
+_audio_worker_thread = None
+_audio_worker_queue = None
+
+
+def _audio_worker_loop(work_q):
+    """Single-tenant COM thread: CoInitialize once, own the endpoint forever."""
+    import comtypes
+    comtypes.CoInitialize()
+    endpoint_box = {'endpoint': None, 'err': None}
+
+    def get_endpoint():
+        if endpoint_box['endpoint'] is None and endpoint_box['err'] is None:
+            try:
+                from ctypes import cast, POINTER
+                from comtypes import CLSCTX_ALL
+                from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+                devices = AudioUtilities.GetSpeakers()
+                interface = devices.Activate(
+                    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                endpoint_box['endpoint'] = cast(
+                    interface, POINTER(IAudioEndpointVolume))
+            except ImportError:
+                endpoint_box['err'] = 'pycaw not installed (pip install pycaw)'
+            except Exception as e:
+                endpoint_box['err'] = f'Audio device unavailable: {e}'
+        return endpoint_box['endpoint'], endpoint_box['err']
+
+    while True:
+        job = work_q.get()
+        if job is None:
+            break
+        fn, done, box = job
+        try:
+            box['result'] = fn(get_endpoint)
+        except Exception as e:
+            box['error'] = e
+        done.set()
+    comtypes.CoUninitialize()
+
+
+def _run_on_audio_thread(fn, timeout=5):
+    """Run fn(get_endpoint) on the COM worker; returns fn's result."""
+    global _audio_worker_thread, _audio_worker_queue
+    with _audio_worker_lock:
+        if _audio_worker_thread is None or not _audio_worker_thread.is_alive():
+            _audio_worker_queue = queue.Queue()
+            _audio_worker_thread = threading.Thread(
+                target=_audio_worker_loop, args=(_audio_worker_queue,),
+                name='vdock-audio', daemon=True)
+            _audio_worker_thread.start()
+    done = threading.Event()
+    box = {}
+    _audio_worker_queue.put((fn, done, box))
+    if not done.wait(timeout):
+        raise TimeoutError('Audio worker did not respond')
+    if 'error' in box:
+        raise box['error']
+    return box.get('result')
 
 
 class CrossPlatformAction(BaseAction):
@@ -311,33 +378,29 @@ class CrossPlatformAction(BaseAction):
         else:
             return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
 
-    def _windows_volume_interface(self):
-        """Core Audio IAudioEndpointVolume via pycaw — no external tools needed.
+    def _volume_scalar(self, set_value=None):
+        """Read (set_value=None) or write (0.0-1.0) the master volume scalar.
 
-        Returns (interface, error) so callers can fall back cleanly when pycaw
-        is not installed (it is an optional dep; NirCmd covers that case).
+        Runs on the dedicated COM apartment thread via _run_on_audio_thread —
+        Core Audio objects must never be created or released on Flask workers.
+        Returns (level_percent | True, None) or (None, error).
         """
-        try:
-            from ctypes import cast, POINTER
-            import comtypes
-            from comtypes import CLSCTX_ALL
-            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-
-            # COM initializes per-thread; Flask request workers start without
-            # it, so every pycaw call on a fresh thread failed with
-            # "CoInitialize has not been called".
+        def job(get_endpoint):
+            endpoint, err = get_endpoint()
+            if endpoint is None:
+                return None, err
             try:
-                comtypes.CoInitialize()
-            except OSError:
-                pass  # already initialized under another model — still usable
+                if set_value is None:
+                    return round(endpoint.GetMasterVolumeLevelScalar() * 100), None
+                endpoint.SetMasterVolumeLevelScalar(set_value, None)
+                return True, None
+            except Exception as e:
+                return None, str(e)
 
-            devices = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-            return cast(interface, POINTER(IAudioEndpointVolume)), None
-        except ImportError:
-            return None, 'pycaw not installed (pip install pycaw)'
+        try:
+            return _run_on_audio_thread(job)
         except Exception as e:
-            return None, f'Audio device unavailable: {e}'
+            return None, str(e)
 
     def _volume_set(self) -> ActionResult:
         """Set absolute output volume 0-100 — the slider action."""
@@ -347,16 +410,12 @@ class CrossPlatformAction(BaseAction):
             return ActionResult(False, 'Invalid volume value (0-100 expected)')
 
         if _SYSTEM == 'Windows':
-            endpoint, err = self._windows_volume_interface()
-            if endpoint is not None:
-                try:
-                    endpoint.SetMasterVolumeLevelScalar(value / 100.0, None)
-                    return ActionResult(
-                        True, f'Volume set to {value}%',
-                        {'value': value, 'badge': f'{value}%'}
-                    )
-                except Exception as e:
-                    err = str(e)
+            result, err = self._volume_scalar(value / 100.0)
+            if result is not None:
+                return ActionResult(
+                    True, f'Volume set to {value}%',
+                    {'value': value, 'badge': f'{value}%'}
+                )
             if self._check_nircmd():
                 # NirCmd takes 0-65535.
                 result = self._run_command(
@@ -381,13 +440,9 @@ class CrossPlatformAction(BaseAction):
     def _volume_get(self) -> ActionResult:
         """Current output volume 0-100 — sliders fetch this on mount."""
         if _SYSTEM == 'Windows':
-            endpoint, err = self._windows_volume_interface()
-            if endpoint is not None:
-                try:
-                    value = round(endpoint.GetMasterVolumeLevelScalar() * 100)
-                    return ActionResult(True, f'Volume {value}%', {'value': value})
-                except Exception as e:
-                    err = str(e)
+            value, err = self._volume_scalar()
+            if value is not None:
+                return ActionResult(True, f'Volume {value}%', {'value': value})
             return ActionResult(False, err or 'Volume read unavailable on Windows')
         elif _SYSTEM == 'Darwin':
             result = subprocess.run(

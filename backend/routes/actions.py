@@ -57,7 +57,10 @@ def execute_action():
         return jsonify({'error': 'No action provided', 'success': False}), 400
     
     action_data = data['action']
-    
+
+    if not isinstance(action_data, dict):
+        return jsonify({'error': 'Action must be an object', 'success': False}), 400
+
     # Import singleton to avoid circular imports
     from app import action_executor
     
