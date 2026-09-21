@@ -45,7 +45,7 @@ export const SETTINGS_DEFAULTS = {
   showTooltips: true,
   animationsEnabled: true,
   editModeWiggle: false,
-  tiltEffectEnabled: true,
+  tiltEffectEnabled: false,
   dockedSidebarEnabled: true,
   dockedSidebarWidth: 190,
   dockedButtonHeight: 84,
@@ -141,7 +141,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Off by default — the iOS-style jiggle annoyed on the small touch panel;
   // the drag-handle dot already marks edit mode. Opt-in via Settings.
   const editModeWiggle = ref(false)
-  const tiltEffectEnabled = ref(true)
+  const tiltEffectEnabled = ref(false)
   const dockedSidebarEnabled = ref(true)
   const dockedSidebarWidth = ref(190)
   // Independent of width so docked buttons don't have to be square — a tall
@@ -444,7 +444,7 @@ export const useSettingsStore = defineStore('settings', () => {
         showTooltips: settings.showTooltips !== false,
         animationsEnabled: settings.animationsEnabled !== false,
         editModeWiggle: settings.editModeWiggle === true,
-        tiltEffectEnabled: settings.tiltEffectEnabled !== false,
+        tiltEffectEnabled: settings.tiltEffectEnabled === true,
         dockedSidebarEnabled: settings.dockedSidebarEnabled !== false,
         dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
         dockedButtonHeight: settings.dockedButtonHeight ?? 84,

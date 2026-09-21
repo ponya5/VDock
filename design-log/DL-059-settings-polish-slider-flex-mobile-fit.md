@@ -96,3 +96,8 @@ vertical space.
 Verification: `vue-tsc --noEmit` clean, `npm run build` clean, 239/239
 frontend tests, 787/787 backend tests.
 
+**Follow-up:** `tiltEffectEnabled` (the 3D button tilt) is now off by
+default — `ref(false)`, `SETTINGS_DEFAULTS.tiltEffectEnabled = false`,
+normalization `=== true`. User-facing toggle unchanged (Appearance → 3D
+tilt effect); existing users keep an explicit `true` if they opted in.
+
