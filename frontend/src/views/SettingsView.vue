@@ -3663,7 +3663,11 @@ onMounted(async () => {
 
 /* --- main column ---------------------------------------------------------- */
 
-.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; }
+/* .main is the fixed-height column; .content is the scroller. The savebar
+   used to be a sticky bottom:0 child INSIDE .main — but a sticky element is
+   clamped to its containing block, and a scroll container's box is only the
+   scrollport, so the bar scrolled off upward the moment you moved. */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
 .topbar {
   position: sticky;
@@ -3685,6 +3689,7 @@ onMounted(async () => {
 .content {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
   padding: 20px var(--gutter) 32px;
   display: grid;
   gap: var(--gutter);
@@ -4191,9 +4196,7 @@ onMounted(async () => {
    ========================================================================== */
 
 .savebar {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
+  position: static;
   flex: none;
   display: flex;
   align-items: center;
@@ -4242,7 +4245,7 @@ onMounted(async () => {
 
 @media (max-width: 880px) {
   .settings-app { grid-template-columns: 1fr; height: auto; min-height: 100vh; overflow: visible; }
-  .main { overflow: visible; }
+  .main, .content { overflow: visible; }
   .topbar { position: static; }
   .nav {
     border-right: 0;
@@ -4256,7 +4259,6 @@ onMounted(async () => {
   }
   .row { flex-direction: column; align-items: flex-start; gap: 10px; }
   .row-control { width: 100%; justify-content: flex-start; }
-  .savebar { position: static; }
   .list-header, .app-item { grid-template-columns: 1fr 60px; }
   .list-header span:nth-child(3), .list-header span:nth-child(4),
   .app-item .app-scene, .app-item .app-actions { display: none; }
