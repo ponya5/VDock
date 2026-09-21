@@ -22,6 +22,7 @@ The other jobs this does:
 """
 import logging
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -61,13 +62,55 @@ class CommandResult:
         return text if len(text) <= limit else text[: limit - 1] + '…'
 
 
+def _unwrap_cmd_shim(binary: str) -> str:
+    """Resolve an npm-style .cmd/.bat shim to the binary it forwards to.
+
+    CreateProcess runs batch files through cmd.exe, so an argv list routed
+    to a shim is re-parsed by the shell: quotes, carets, pipes, percent
+    signs and newlines are mangled or interpreted. That silently breaks the
+    no-shell guarantee this module exists for. npm shims all end with the
+    same idiom -- ``"<real path>" %*`` -- so the true binary is recoverable.
+
+    Only unwraps to a real executable target. A shim that forwards to a
+    script (e.g. ``node cli.js``) is left alone: its interpreter pair can't
+    be expressed as a single resolved path.
+
+    Returns the inner executable when the pattern matches and the target
+    exists; otherwise the original path unchanged.
+    """
+    if os.name != 'nt' or not binary.lower().endswith(('.cmd', '.bat')):
+        return binary
+    try:
+        text = Path(binary).read_text(encoding='utf-8', errors='replace')
+    except OSError:
+        return binary
+    match = re.search(r'"([^"]+)"\s+%\*', text)
+    if not match:
+        return binary
+    # Shims express the target relative to their own directory via the
+    # dp0 idiom (``%~dp0`` inline or ``%dp0%`` after a SETLOCAL helper).
+    target = re.sub(r'%~?dp0%?', lambda _m: str(Path(binary).parent),
+                    match.group(1), flags=re.IGNORECASE)
+    target = os.path.normpath(target.replace('/', os.sep))
+    if target.lower().endswith('.exe') and Path(target).is_file():
+        return target
+    return binary
+
+
 def find_binary(name: str) -> Optional[str]:
     """Absolute path to ``name`` on PATH, or None.
 
+    On Windows an npm ``.cmd``/``.bat`` shim is unwrapped to the binary it
+    forwards to, so callers get the real executable rather than a batch
+    file whose arguments would transit cmd.exe.
+
     Packs call this at init so they can mark themselves unavailable with a
-    useful reason instead of failing at press time.
+    useful reason instead of failing when a button is pressed.
     """
-    return shutil.which(name)
+    binary = shutil.which(name)
+    if binary is None:
+        return None
+    return _unwrap_cmd_shim(binary)
 
 
 def _truncate(text: str) -> str:

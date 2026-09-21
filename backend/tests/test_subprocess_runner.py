@@ -98,6 +98,33 @@ def test_spawn_gives_windows_children_their_own_console(monkeypatch):
         assert flags == 0
 
 
+# --- npm .cmd shims -----------------------------------------------------------
+
+@pytest.mark.skipif(os.name != 'nt', reason='.cmd shims are a Windows/npm thing')
+def test_cmd_shim_is_unwrapped_and_args_arrive_verbatim(tmp_path, monkeypatch):
+    """A `.cmd` shim re-parses argv through cmd.exe -- metacharacters and
+    newlines get eaten (a prompt containing code never arrives). The npm
+    `"<path>" %*` idiom is unwrapped to the real binary instead."""
+    shim = tmp_path / 'shimtool.cmd'
+    shim.write_text(
+        f'@echo off\n"{PY}" %*\n', encoding='ascii'
+    )
+    monkeypatch.setenv('PATH', str(tmp_path) + os.pathsep + os.environ['PATH'])
+
+    payload = 'def f(x):\n    return "a|b" ^ x & "c%"\n'
+    result = sr.run(['shimtool', '-c',
+                     'import sys; print(sys.argv[1], end="")', payload])
+
+    assert result.ok, result.stderr
+    assert result.stdout == payload
+
+
+def test_non_shim_binary_is_returned_unchanged():
+    binary = sr.find_binary(os.path.basename(PY))
+    assert binary is not None
+    assert binary.lower().endswith('.exe')
+
+
 # --- resolution and failure reporting ----------------------------------------
 
 def test_missing_binary_raises_a_named_error():
