@@ -68,7 +68,6 @@ What makes it different from every other deck is the last part: **VDock was buil
 | **Agent-waiting alerts** | **Yes** | — | — | — |
 | **Ambient dashboard when idle** | **Yes** — clock, weather, news, markets | — | — | — |
 | **Account required** | No | Yes | Yes | No |
-| **Telemetry** | None | — | — | None |
 | **Plugin marketplace** | Templates + scene packs | Large | **Largest** | Small |
 
 **In one line:** free, agent-native, ambient, and yours — with an honest gap on ecosystem size that [we're upfront about below](#what-vdock-isnt-yet).
