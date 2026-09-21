@@ -461,6 +461,33 @@ not something `list2cmdline` quoting can fully close. The docstring's
   returns cleanly and the interactive terminal window opens.
 - `claude_open` (`target=web`) exercised through `execute_action` —
   returns success (`start "" "https://claude.ai"` path unaffected).
-- New regression test `test_spawn_never_combines_new_console_and_detached`
-  monkeypatches `Popen` and asserts the two flags are never OR'd together.
-- `test_subprocess_runner.py` 40/40, `test_integrations.py` 51/51 pass.
+- New regression test `test_spawn_gives_windows_children_their_own_console`
+  monkeypatches `Popen` and asserts `CREATE_NEW_CONSOLE` present +
+  `DETACHED_PROCESS` absent on Windows, no flags elsewhere (tightened
+  after the first `/code-review` job flagged the one-sided original).
+- `test_subprocess_runner.py` 42/42, `test_integrations.py` 51/51 pass.
+
+**Same-session finding — the `.cmd` shim eats argv (fixed).** The
+button-matrix test surfaced a second defect: Explain/Write Tests ran but
+Claude reported "the snippet didn't come through" — `{clipboard}` had
+expanded fine, but `claude` resolves to the npm `claude.cmd` shim which
+forwards `%*` through `cmd.exe`, so the quoted multi-line snippet was
+truncated at the first newline. Proven with a local echo shim: a payload
+of `Explain this:\n\ndef f(x): return "a|b" ^ x` arrived as
+`-p "Explain this:`. Fix: `find_binary` now unwraps the npm
+`"<path>" %*` idiom to the real executable
+(`...\node_modules\@anthropic-ai\claude-code\bin\claude.exe`), so argv
+reaches it via `CreateProcess` verbatim — the "never through a shell"
+guarantee actually holds now. Shims forwarding to scripts (`node cli.js`)
+are left alone. Regression test runs a fabricated shim on PATH with a
+metachar+newline payload and asserts verbatim delivery.
+
+**Live verification of the full Claude Code scene (8 buttons):**
+`claude_open` → claude.ai/new opened; `claude_continue` → interactive
+`claude --continue` console spawned (PID confirmed, host window resolved
+via `find_session_host_window`); `/code-review`, `/commit`, `Explain`,
+`Write Tests`, `Fix Tests`, `Continue` (`--continue -p`) all returned
+`success` through the job runner — including a real commit `e226343`
+produced by `/commit` and a correct failing-test diagnosis from Fix Tests.
+Caveat surfaced: `-p` runs take 30s–4min, so buttons "feel" dead while
+the job is in flight — a UX gap worth a progress indicator later.
