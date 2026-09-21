@@ -491,3 +491,21 @@ via `find_session_host_window`); `/code-review`, `/commit`, `Explain`,
 produced by `/commit` and a correct failing-test diagnosis from Fix Tests.
 Caveat surfaced: `-p` runs take 30s–4min, so buttons "feel" dead while
 the job is in flight — a UX gap worth a progress indicator later.
+
+**Follow-up 3 (2026-09-22) — flash-close on `claude_continue` when nothing
+resumable.** With the `.cmd` shim unwrapped, `sr.spawn` now starts the real
+`claude.exe` directly in its own console — which exposed a latent failure:
+`claude --continue` exits 1 immediately when the cwd's last session is not
+resumable (e.g. it ended on a deferred tool marker), so the button reported
+success while the console flashed an error and died. `spawn` is
+fire-and-forget and cannot observe the child exit. Fix: on Windows,
+`_continue` launches `cmd.exe /c claude --continue || claude` — resume when
+possible, else a fresh interactive session, so the button always opens a
+window. Tokens are passed bare (`claude`, not the resolved quoted path)
+because `list2cmdline` backslash-escapes embedded quotes and `cmd /c` takes
+the remainder verbatim — quoting the path produces `'\"C:\...\"' is not
+recognized`. Bare tokens avoid escaping entirely; `cmd` does its own PATH
+resolution and `--continue` is the only argument, so there is nothing for
+the `.cmd` shim's `%*` to mangle. Verified live: POST `claude_continue`
+(`resume: true`) → new `cmd.exe` + `claude.exe` processes stay alive, window
+persists instead of flash-closing.

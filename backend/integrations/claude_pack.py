@@ -13,6 +13,7 @@ through ``utils.subprocess_runner``, never through a shell. A prompt containing
 ``;`` or backticks is a prompt, not a command.
 """
 import logging
+import os
 from typing import Any, Dict, List, Optional, Sequence
 
 from actions.catalog import ActionSpec, ConfigField, RUNS_BACKEND
@@ -352,9 +353,22 @@ class Plugin(BasePlugin):
             return missing
 
         cwd = context.resolve_cwd(config.get('cwd'))
-        argv = [CLAUDE_BINARY]
-        if config.get('resume', True):
-            argv.append('--continue')
+
+        argv: List[str]
+        if os.name == 'nt':
+            # `claude --continue` exits instantly when the directory has no
+            # resumable session (or the last one ended on a deferred tool) —
+            # the new console flashes the error and dies. `|| claude` falls
+            # back to a fresh session so the button always opens a window.
+            # Bare `claude` tokens: cmd resolves PATH itself, and quoting a
+            # resolved path would be mangled by list2cmdline+`cmd /c` rules.
+            argv = ['cmd.exe', '/c', CLAUDE_BINARY]
+            if config.get('resume', True):
+                argv += ['--continue', '||', CLAUDE_BINARY]
+        else:
+            argv = [CLAUDE_BINARY]
+            if config.get('resume', True):
+                argv.append('--continue')
 
         try:
             sr.spawn(argv, cwd=cwd)
