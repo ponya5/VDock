@@ -75,9 +75,12 @@ def test_spawn_also_refuses_a_string_argv():
         sr.spawn('notepad')
 
 
-def test_spawn_never_combines_new_console_and_detached(monkeypatch):
-    """WinError 87 regression: those two flags are mutually exclusive and
-    CreateProcess rejects the combination with ERROR_INVALID_PARAMETER."""
+def test_spawn_gives_windows_children_their_own_console(monkeypatch):
+    """WinError 87 regression: CREATE_NEW_CONSOLE and DETACHED_PROCESS are
+    mutually exclusive and CreateProcess rejects the pair with
+    ERROR_INVALID_PARAMETER. The console flag must be *present* — dropping
+    it entirely would open the terminal invisibly and still pass a purely
+    negative assertion."""
     calls = []
 
     class FakePopen:
@@ -88,9 +91,11 @@ def test_spawn_never_combines_new_console_and_detached(monkeypatch):
     sr.spawn([PY, '--version'])
 
     flags = calls[0].get('creationflags', 0)
-    new_console = getattr(sr.subprocess, 'CREATE_NEW_CONSOLE', 0x10)
-    detached = getattr(sr.subprocess, 'DETACHED_PROCESS', 0x08)
-    assert not (flags & new_console and flags & detached)
+    if os.name == 'nt':
+        assert flags & sr.subprocess.CREATE_NEW_CONSOLE
+        assert not flags & sr.subprocess.DETACHED_PROCESS
+    else:
+        assert flags == 0
 
 
 # --- resolution and failure reporting ----------------------------------------
