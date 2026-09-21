@@ -1,7 +1,21 @@
 <template>
   <div class="dashboard-view" :class="[dashboardBackgroundClass, { mobile: isMobileViewport }]" :style="dashboardBackgroundStyle">
+    <!-- Dedicated slim chrome on phones: scene rail + page steppers only.
+         The desktop header/footer don't mount on mobile at all (DL-063). -->
+    <MobileDeckChrome
+      v-if="isMobileViewport"
+      :scenes="currentProfile?.scenes || []"
+      :current-scene-index="currentSceneIndex"
+      :total-pages="currentScene?.pages.length || 1"
+      :current-page-index="currentPageIndex"
+      @set-scene="setScene"
+      @previous-page="previousPage"
+      @next-page="nextPage"
+    />
+
     <!-- Decomposed Header component -->
     <DeckHeader
+      v-else
       :current-profile="currentProfile"
       :current-scene="currentScene"
       :current-scene-index="currentSceneIndex"
@@ -96,8 +110,10 @@
       />
     </main>
 
-    <!-- Decomposed Footer component -->
+    <!-- Decomposed Footer component — replaced by the page steppers in
+         MobileDeckChrome on phones. -->
     <DeckFooter
+      v-if="!isMobileViewport"
       :is-edit-mode="isEditMode"
       :total-pages="currentScene?.pages.length || 1"
       :current-page-index="currentPageIndex"
@@ -183,6 +199,7 @@ import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
 import DeckHeader from '@/components/DeckHeader.vue'
 import DeckFooter from '@/components/DeckFooter.vue'
+import MobileDeckChrome from '@/components/MobileDeckChrome.vue'
 import ScreenSaver from '@/components/ScreenSaver.vue'
 import EditSidebar from '@/components/EditSidebar.vue'
 import QuickAddPicker from '@/components/QuickAddPicker.vue'
@@ -996,13 +1013,6 @@ onUnmounted(() => {
 
 .main-content.with-docked-sidebar {
   margin-left: 0;
-}
-
-/* Mobile: reserve a slim strip at the top so the header-reveal pill sits
-   in dead padding instead of covering the first row of buttons. */
-.dashboard-view.mobile .main-content {
-  padding-top: 34px;
-  box-sizing: border-box;
 }
 
 .no-profile {

@@ -2,7 +2,7 @@
   <div
     v-if="visible"
     class="screensaver"
-    :class="{ 'ss-edit-mode': layoutEdit }"
+    :class="{ 'ss-edit-mode': layoutEdit, 'ss-mobile': isMobileViewport }"
     @click="onRootTap"
     @touchstart.passive="onRootTap"
   >
@@ -287,11 +287,13 @@ import {
   type ScreensaverLayout,
   type ScreensaverWidgetId,
 } from '@/utils/screensaverLayout'
+import { useMobileViewport } from '@/utils/mobileViewport'
 
 const props = defineProps<{ visible: boolean; layoutEdit?: boolean }>()
 const emit = defineEmits<{ dismiss: []; 'save-layout': [layout: ScreensaverLayout] }>()
 
 const settingsStore = useSettingsStore()
+const { isMobileViewport } = useMobileViewport()
 
 const time = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval> | null = null
@@ -363,7 +365,11 @@ const weatherIcon = computed(() => weather.value?.icon || ['fas', 'cloud-sun'])
 const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C` : '--°C')
 const location = computed(() => weather.value?.location || '—')
 
-const showWeatherWidget = computed(() => settingsStore.screensaverWidgets.includes('weather'))
+// On phones the screensaver is deliberately sparse: clock + world clock
+// only — feeds/weather/markets would be unreadable density on a small
+// screen (DL-063). World clock is always on for mobile regardless of the
+// desktop widget picks.
+const showWeatherWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('weather'))
 // Touch mode feeds the same scale as the user sliders: a small panel running
 // tablet mode gets readable widgets without finding the sliders, and the
 // percentage still adjusts on top. Capped at 1.5 — the full tablet
@@ -376,10 +382,10 @@ const touchScale = computed(() => Math.min(settingsStore.touchModeMultiplier, 1.
 const weatherScale = computed(() =>
   Math.min((settingsStore.screensaverWeatherSize / 100) * touchScale.value, 2)
 )
-const showNewsWidget = computed(() => settingsStore.screensaverWidgets.includes('news'))
-const showMarketWidget = computed(() => settingsStore.screensaverWidgets.includes('market'))
-const showWorldClockWidget = computed(() => settingsStore.screensaverWidgets.includes('worldclock'))
-const showSportsWidget = computed(() => settingsStore.screensaverWidgets.includes('sports'))
+const showNewsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('news'))
+const showMarketWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('market'))
+const showWorldClockWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('worldclock'))
+const showSportsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('sports'))
 
 // User-tunable text scale for the info widgets (Settings → Screensaver →
 // Widget size), amplified in touch modes. Capped at 1.35 so the three-across
@@ -892,7 +898,7 @@ onMounted(() => {
     })
     for (const el of widgetEls.values()) widgetObserver.observe(el)
   }
-  startWeather()
+  if (showWeatherWidget.value) startWeather()
   if (showNewsWidget.value) startNews()
   if (showSportsWidget.value) startSports()
   if (showMarketWidget.value) startMarket()
@@ -1457,5 +1463,83 @@ onUnmounted(() => {
     justify-content: flex-start;
     padding: 2rem 0;
   }
+}
+
+/* ── Mobile screensaver (DL-063) ─────────────────────────────────────────
+   Phones get a dedicated sparse layout: clock + world clock, centered in a
+   flow column — the saved desktop positions/drift would scatter widgets
+   off a small screen, so .ss-pos is flattened (inline styles need
+   !important). Landscape-first sizing: height is the scarce dimension. */
+.screensaver.ss-mobile {
+  gap: clamp(10px, 4vh, 22px);
+  padding: 0 5vw;
+}
+
+.screensaver.ss-mobile .ss-pos {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+}
+
+.screensaver.ss-mobile .ss-time {
+  font-size: clamp(3rem, 26vh, 9rem);
+}
+
+.screensaver.ss-mobile .ss-date-line {
+  margin-top: clamp(4px, 1.5vh, 10px);
+  gap: 0.7rem;
+}
+
+.screensaver.ss-mobile .ss-rule {
+  width: clamp(28px, 8vw, 64px);
+}
+
+.screensaver.ss-mobile .ss-date {
+  font-size: clamp(0.55rem, 3vw, 0.85rem);
+  letter-spacing: 0.24em;
+}
+
+/* World clock: vertical rows become a wrapped row of compact chips —
+   label over time — so several zones fit without a tall list. */
+.screensaver.ss-mobile .ss-worldclock {
+  width: 100%;
+  max-width: 560px;
+  gap: clamp(6px, 1.8vh, 12px);
+}
+
+.screensaver.ss-mobile .ss-section-head {
+  justify-content: center;
+}
+
+.screensaver.ss-mobile .ss-section-head .ss-hairline {
+  display: none;
+}
+
+.screensaver.ss-mobile .ss-tz {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.screensaver.ss-mobile .ss-tz-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 16px;
+  border-top: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.screensaver.ss-mobile .ss-tz-row:first-child {
+  border-left: none;
+}
+
+.screensaver.ss-mobile .ss-tz-label {
+  font-size: clamp(0.55rem, 2.6vw, 0.75rem);
+}
+
+.screensaver.ss-mobile .ss-tz-time {
+  font-size: clamp(1.05rem, 5.5vh, 1.7rem);
 }
 </style>
