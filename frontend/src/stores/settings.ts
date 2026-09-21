@@ -176,7 +176,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const defaultGridCols = ref(3)
 
   const startOnBoot = ref(false)
-  const openSettingsInNewTab = ref(false)
+  const openSettingsInNewTab = ref(true)
   const autoCloseLauncher = ref(true)
 
   const recentActions = ref<string[]>([])
@@ -456,7 +456,7 @@ export const useSettingsStore = defineStore('settings', () => {
         defaultGridRows: settings.defaultGridRows ?? 3,
         defaultGridCols: settings.defaultGridCols ?? 3,
         startOnBoot: settings.startOnBoot ?? false,
-        openSettingsInNewTab: settings.openSettingsInNewTab === true,
+        openSettingsInNewTab: settings.openSettingsInNewTab !== false,
         autoCloseLauncher: settings.autoCloseLauncher !== false,
         recentActions: settings.recentActions ?? [],
         weatherLocationMode: settings.weatherLocationMode ?? 'auto',
