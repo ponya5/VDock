@@ -2,7 +2,7 @@
   <div
     class="deck-grid"
     ref="gridRef"
-    :class="{ 'drag-over': isDragOver, 'is-edit-mode': isEditMode, 'wiggle-buttons': isEditMode && settingsStore.editModeWiggle, 'dragging-active': isDraggingActive }"
+    :class="{ 'drag-over': isDragOver, 'is-edit-mode': isEditMode, 'wiggle-buttons': isEditMode && settingsStore.editModeWiggle, 'dragging-active': isDraggingActive, 'compact-cells': compactCells }"
     :style="gridStyle"
     @dragover="handleDragOver"
     @drop="handleDrop"
@@ -17,7 +17,7 @@
       :show-labels="showLabels"
       :show-tooltips="showTooltips"
       :compact="compact"
-      :button-size="buttonSize"
+      :button-size="effectiveButtonSize"
       :grid-index="button.position.row * renderedPage.grid_config.cols + button.position.col"
       :class="cellClasses[`${button.position.row}-${button.position.col}`]"
       :data-button-id="button.id"
@@ -183,8 +183,57 @@ useSwipe(gridRef, {
   }
 })
 
+// DL-057: on tall narrow viewports (portrait phones) the 1fr rows stretch
+// cells into slivers; on short wide ones (landscape phones) they squash
+// them below the button's minimum. When the natural cell aspect drifts too
+// far from square, switch to square cells sized by column width and let
+// the grid scroll vertically inside itself.
+const hostSize = ref({ w: 0, h: 0 })
+let hostObserver: ResizeObserver | undefined
+
+const GRID_PAD = 8
+const GRID_GAP = 8
+
+const cellMetrics = computed(() => {
+  const { rows, cols } = renderedPage.value.grid_config
+  const { w, h } = hostSize.value
+  if (!w || !h) return null
+  const cellW = w / cols
+  const cellH = h / rows
+  const cellPx = Math.max(40, Math.floor((w - GRID_PAD * 2 - GRID_GAP * (cols - 1)) / cols))
+  const aspect = cellH / cellW
+  return { cellW, cellH, cellPx, compact: aspect > 1.3 || aspect < 0.7 }
+})
+
+const compactCells = computed(() => cellMetrics.value?.compact === true)
+
+// Scale icon/label through the existing buttonSize pipeline so small cells
+// stay proportional (<=88px cells shrink; larger cells unaffected).
+const effectiveButtonSize = computed(() => {
+  const m = cellMetrics.value
+  if (!m?.compact) return props.buttonSize
+  return Math.min(props.buttonSize, m.cellPx / 88)
+})
+
 const gridStyle = computed(() => {
   const { rows, cols } = renderedPage.value.grid_config
+  const m = cellMetrics.value
+
+  if (m?.compact) {
+    return {
+      display: 'grid',
+      gridTemplateRows: `repeat(${rows}, ${m.cellPx}px)`,
+      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+      gap: `${GRID_GAP}px`,
+      alignContent: 'start',
+      overflowY: 'auto',
+      width: '100%',
+      height: '100%',
+      padding: `${GRID_PAD}px`,
+      transform: `rotateX(${tiltX.value}deg) rotateY(${tiltY.value}deg)`,
+      transformOrigin: 'center'
+    }
+  }
 
   return {
     display: 'grid',
@@ -530,9 +579,22 @@ function handleGlobalTouchDrop(event: Event) {
 onMounted(() => {
   document.addEventListener('keydown', handleEscapeKey)
   document.addEventListener('vdock-touch-drop', handleGlobalTouchDrop as EventListener)
+
+  // Measure the grid's host (parent), not the grid itself — in compact
+  // mode the grid's own height becomes content-driven and would feed back.
+  const host = gridRef.value?.parentElement
+  if (host) {
+    hostSize.value = { w: host.clientWidth, h: host.clientHeight }
+    hostObserver = new ResizeObserver(entries => {
+      const rect = entries[0].contentRect
+      hostSize.value = { w: rect.width, h: rect.height }
+    })
+    hostObserver.observe(host)
+  }
 })
 
 onUnmounted(() => {
+  hostObserver?.disconnect()
   document.removeEventListener('keydown', handleEscapeKey)
   document.removeEventListener('vdock-touch-drop', handleGlobalTouchDrop as EventListener)
   // Clean up any lingering touch drag listeners
@@ -677,6 +739,35 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
 .deck-grid.drag-over {
   background-color: var(--color-primary-light);
   border: 2px dashed var(--color-primary);
+}
+
+/* DL-057 compact mode: cells can be smaller than DeckButton's 60px floor
+   and the 64px icon tile — let them shrink, and thin the internal
+   scrollbar on touch screens. */
+.deck-grid.compact-cells :deep(.deck-button) {
+  min-width: 0;
+  min-height: 0;
+}
+
+.deck-grid.compact-cells :deep(.button-content) {
+  padding: 6px 4px;
+  gap: 3px;
+}
+
+.deck-grid.compact-cells :deep(.button-icon):has(.fontawesome-icon):not(:has(.media-container)),
+.deck-grid.compact-cells :deep(.button-icon):has(.custom-icon):not(:has(.media-container)) {
+  min-width: 0;
+  min-height: 0;
+  padding: 6px;
+  border-radius: 12px;
+}
+
+.deck-grid.compact-cells::-webkit-scrollbar {
+  width: 4px;
+}
+
+.deck-grid.compact-cells {
+  scrollbar-width: thin;
 }
 
 /* Edit mode: wiggle all buttons — opt-in via Settings ("Wiggle buttons in

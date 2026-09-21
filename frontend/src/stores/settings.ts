@@ -61,7 +61,7 @@ export const SETTINGS_DEFAULTS = {
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_BACKGROUND_ID,
   dashboardFont: 'default' as const,
-  appScanningEnabled: true,
+  appScanningEnabled: false,
   agentAlertsEnabled: true,
   tutorialCompleted: false,
   pressSoundEnabled: true,
@@ -218,7 +218,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // image URL paints behind the screensaver widgets.
   const screensaverBackground = ref<string>(DEFAULT_BACKGROUND_ID)
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
-  const appScanningEnabled = ref(true)
+  const appScanningEnabled = ref(false)
   const agentAlertsEnabled = ref(true)
   // Persisted onboarding flag — true once the tour is finished or skipped.
   // Server-backed (not localStorage) so it survives cache clears and is
@@ -477,7 +477,7 @@ export const useSettingsStore = defineStore('settings', () => {
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
         screensaverBackground: settings.screensaverBackground ?? DEFAULT_BACKGROUND_ID,
         dashboardFont: settings.dashboardFont ?? 'default',
-        appScanningEnabled: settings.appScanningEnabled ?? true,
+        appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
         pressSoundEnabled: settings.pressSoundEnabled ?? true,

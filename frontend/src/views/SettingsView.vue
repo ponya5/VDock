@@ -90,7 +90,6 @@
             <div class="nav-sub">
               <button type="button" @click="scrollToPanel('startup')">Startup &amp; navigation</button>
               <button type="button" @click="scrollToPanel('connection')">Connection</button>
-              <button type="button" @click="scrollToPanel('device')">Connect a device</button>
             </div>
           </Collapse>
         </div>
@@ -104,6 +103,18 @@
           >
             <FontAwesomeIcon :icon="['fas', 'plug']" />
             <span>Integrations</span>
+          </button>
+        </div>
+        <div class="nav-group">
+          <button
+            type="button"
+            class="nav-item nav-rail-item"
+            :aria-current="activeTab === 'connect' ? 'page' : undefined"
+            data-tour="nav-connect"
+            @click="activeTab = 'connect'"
+          >
+            <FontAwesomeIcon :icon="['fas', 'mobile-screen-button']" />
+            <span>Connect a device</span>
           </button>
         </div>
         <div class="nav-group">
@@ -1139,9 +1150,20 @@
               </div>
             </section>
 
-            <section class="panel" id="device">
+          </div>
+        </div>
+
+        <!-- ── Connect a device ── -->
+        <div v-if="activeTab === 'connect'" class="content">
+          <div class="col">
+            <section class="panel">
               <div class="panel-head"><h2>Connect a device</h2><span class="hint">Any phone or tablet on your Wi-Fi can be a second deck — no app to install.</span></div>
               <div class="panel-body">
+                <ol class="connect-steps">
+                  <li><b>Same Wi-Fi.</b> Connect the phone or tablet to the same network as this PC.</li>
+                  <li><b>Allow LAN access.</b> Turn it on below and relaunch VDock once — this makes the deck reachable on your network.</li>
+                  <li><b>Scan the code.</b> Point the device camera at the QR, or type the deck address into its browser.</li>
+                </ol>
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Allow LAN access</span>
@@ -1686,6 +1708,7 @@ const PAGE_META: Record<string, { crumb: string; title: string; blurb: string }>
   templates: { crumb: 'Templates', title: 'App templates', blurb: 'Drop-in scenes for popular apps.' },
   server: { crumb: 'Server', title: 'Server', blurb: 'Ports, LAN access and startup behaviour.' },
   integration: { crumb: 'Integrations', title: 'Integrations', blurb: 'Scenes that follow the app in focus.' },
+  connect: { crumb: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.' },
   logs: { crumb: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.' },
   about: { crumb: 'About', title: 'About VDock', blurb: 'Version, help and project links.' },
 }
@@ -2438,6 +2461,7 @@ const tabs = [
   { id: 'templates', name: 'Templates', icon: ['fas', 'layer-group'] },
   { id: 'server', name: 'Server', icon: ['fas', 'server'] },
   { id: 'integration', name: 'Integrations', icon: ['fas', 'plug'] },
+  { id: 'connect', name: 'Connect a device', icon: ['fas', 'mobile-screen-button'] },
   { id: 'logs', name: 'Logs', icon: ['fas', 'file-lines'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
@@ -2471,6 +2495,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
   { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', tabId: 'integration', icon: ['fas', 'desktop'] },
+  { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck', tabId: 'connect', icon: ['fas', 'mobile-screen-button'] },
   { label: 'About VDock', keywords: 'version about info', tabId: 'about', icon: ['fas', 'info-circle'] }
 ]
 
@@ -2797,6 +2822,11 @@ watch(activeTab, (tab) => {
   if (tab === 'integration') {
     void refreshRunningApps()
     void fetchAgentHookStatus()
+  }
+  if (tab === 'connect') {
+    // DL-057: present the QR immediately — refresh the LAN URL, then wait
+    // for the canvas to mount before drawing.
+    void settingsStore.loadServerConfig().then(() => nextTick(renderQr))
   }
   if (tab === 'logs') {
     void loadLogs()
@@ -4146,6 +4176,19 @@ onMounted(async () => {
 /* ==========================================================================
    QR + server rows
    ========================================================================== */
+
+.connect-steps {
+  margin: 0 0 6px;
+  padding: 12px 14px 12px 30px;
+  display: grid;
+  gap: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+.connect-steps b { color: var(--text); }
 
 .qr-row { align-items: center; }
 .qr-canvas { width: 128px; height: 128px; border-radius: var(--r-md); background: #fff; padding: 6px; flex: none; }
