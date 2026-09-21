@@ -226,3 +226,26 @@ def test_argv_is_recorded_with_an_absolute_binary():
     result = sr.run([PY, '-c', 'pass'])
 
     assert os.path.isabs(result.argv[0])
+
+
+def test_run_timeout_kills_the_process_tree():
+    """A surviving grandchild must not keep the output pipes open.
+
+    subprocess.run's timeout kills only the direct child; if a shimmed or
+    wrapped binary leaves an inner process alive, the follow-up
+    communicate() would block on pipes the grandchild inherited. The
+    runner must kill the whole tree instead.
+    """
+    import time
+    code = (
+        'import subprocess, sys, time;'
+        'subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"]);'
+        'time.sleep(60)'
+    )
+    start = time.time()
+    result = sr.run([PY, '-c', code], timeout=2)
+    elapsed = time.time() - start
+
+    assert result.timed_out
+    # Without the tree kill this hangs ~60s (the grandchild's sleep).
+    assert elapsed < 20

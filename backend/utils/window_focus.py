@@ -13,6 +13,7 @@ what this module does on Windows.
   should fall back to its old "already focused?" check.
 """
 import logging
+import os
 import platform
 import time
 from typing import List, Optional, Sequence, Tuple
@@ -188,29 +189,51 @@ def _visible_windows_by_pid() -> dict:
 
 
 def _session_pids(marker: str) -> List[int]:
-    """PIDs whose name or command line contains ``marker``."""
-    import psutil
+    """PIDs of live ``marker`` session processes.
 
-    needle = marker.lower()
-    pids: List[int] = []
-    for proc in psutil.process_iter(('name', 'cmdline')):
-        try:
-            info = proc.info
-            if needle in (info.get('name') or '').lower():
-                pids.append(proc.pid)
-                continue
-            cmdline = info.get('cmdline')
-            if cmdline and needle in ' '.join(cmdline).lower():
-                pids.append(proc.pid)
-        except (psutil.NoSuchProcess, psutil.AccessDenied,
-                psutil.ZombieProcess):
-            continue
-    return pids
+    Delegates to ``integrations.sessions`` so window resolution and the
+    ``session_alive`` gate share one definition of what a session is --
+    the tightened matcher ignores the desktop app and helper processes
+    that merely mention the marker. Imported lazily: utils must not grow
+    a hard dependency on the integrations package.
+    """
+    from integrations import sessions
+
+    return sessions.iter_session_pids(marker)
+
+
+def _cwd_tier(session_cwd: Optional[str], prefer_cwd: Optional[str]) -> int:
+    """How well a session's working directory matches the preferred one.
+
+    0 -- exact match;
+    1 -- the session sits at or above the project directory (e.g. the
+         session was launched in the repo root, the button resolved a
+         subdirectory);
+    2 -- the session is nested inside the preferred directory;
+    3 -- unrelated, or no preference was given.
+    """
+    if not session_cwd or not prefer_cwd:
+        return 3
+    a = os.path.normcase(os.path.normpath(session_cwd))
+    b = os.path.normcase(os.path.normpath(prefer_cwd))
+    if a == b:
+        return 0
+    if b.startswith(a + os.sep):
+        return 1
+    if a.startswith(b + os.sep):
+        return 2
+    return 3
+
+
+#: Ancestors that are shell roots, not session hosts: enumerating their
+#: children would admit every unrelated top-level window as a candidate.
+_NON_HOST_ANCESTORS = {'explorer.exe'}
 
 
 def find_session_host_window(
     marker: str,
     prefer_title: Optional[str] = None,
+    prefer_cwd: Optional[str] = None,
 ) -> Optional[int]:
     """HWND of the top-level window hosting a ``marker`` session process.
 
@@ -224,6 +247,11 @@ def find_session_host_window(
     Windows whose owner IS the session process itself (e.g. the Claude desktop
     app matching 'claude') sort last: a deck button means the hosted terminal
     session, not a standalone app that happens to share the name.
+
+    With several sessions running, ``prefer_cwd`` picks the one whose working
+    directory matches (or nests inside) the button's project; remaining ties
+    break toward the most recently started session rather than process
+    enumeration order.
     """
     if platform.system() != 'Windows':
         return None
@@ -251,17 +279,44 @@ def find_session_host_window(
         except Exception:
             continue
 
-    candidates: List[Tuple[int, str, bool]] = []  # (hwnd, title, self_owned)
+    # (hwnd, title, self_owned, cwd_tier, create_time)
+    candidates: List[Tuple[int, str, bool, int, float]] = []
     for pid in session_pids:
+        sess_cwd: Optional[str] = None
+        create_time = 0.0
         try:
-            chain = [pid] + [p.pid for p in psutil.Process(pid).parents()]
+            proc = psutil.Process(pid)
+            parents = proc.parents()
+            chain = [pid] + [p.pid for p in parents]
+            try:
+                cwd = proc.cwd()
+                sess_cwd = cwd if isinstance(cwd, str) else None
+            except Exception:
+                pass
+            try:
+                create_time = float(proc.create_time())
+            except Exception:
+                pass
+            chain_names = {pid: (proc.name() or '').lower()}
+            for p in parents:
+                try:
+                    chain_names[p.pid] = (p.name() or '').lower()
+                except Exception:
+                    pass
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             chain = [pid]
+            chain_names = {}
+        tier = _cwd_tier(sess_cwd, prefer_cwd)
         found = False
         for anc in chain:
+            if chain_names.get(anc) in _NON_HOST_ANCESTORS:
+                # A shell root's children are every app on the desktop --
+                # not this session's host window. Stop walking here.
+                break
             for owner in [anc] + children_of.get(anc, []):
                 for hwnd, title in win_by_pid.get(owner, ()):
-                    candidates.append((hwnd, title, owner == pid))
+                    candidates.append(
+                        (hwnd, title, owner == pid, tier, create_time))
                     found = True
             if found:
                 break
@@ -269,13 +324,14 @@ def find_session_host_window(
     if not candidates:
         return None
 
-    def _rank(item: Tuple[int, str, bool]) -> Tuple[bool, bool]:
-        hwnd, title, self_owned = item
+    def _rank(item: Tuple[int, str, bool, int, float]) -> tuple:
+        hwnd, title, self_owned, cwd_tier, create_time = item
         title_miss = bool(
             prefer_title and prefer_title.lower() not in title.lower()
         )
-        # Hosted sessions before self-owned apps; title hint last.
-        return (self_owned, title_miss)
+        # Project-matching session first, hosted before self-owned apps,
+        # title hint, then newest session as a deterministic tiebreak.
+        return (cwd_tier, self_owned, title_miss, -create_time)
 
     candidates.sort(key=_rank)
     return candidates[0][0]

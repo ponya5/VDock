@@ -119,6 +119,30 @@ def _truncate(text: str) -> str:
     return text[:MAX_OUTPUT_CHARS] + '\n... [output truncated]'
 
 
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Kill ``proc`` and every descendant.
+
+    Killing only the direct child leaks grandchildren, which keep our
+    output pipes open and make the follow-up ``communicate()`` block
+    forever -- observed when a timed-out ``claude.cmd`` shim left its
+    inner claude.exe alive and the job sat 'running' past its timeout.
+    """
+    try:
+        import psutil
+        parent = psutil.Process(proc.pid)
+        for child in parent.children(recursive=True):
+            try:
+                child.kill()
+            except psutil.Error:
+                pass
+        parent.kill()
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+
+
 def run(
     argv: Sequence[str],
     *,
@@ -176,25 +200,22 @@ def run(
 
     logger.debug('Running %s (cwd=%s)', resolved[0], cwd)
 
+    # Popen + communicate rather than subprocess.run: on timeout we must kill
+    # the process *tree*, which run()'s kill-the-child-only behaviour cannot
+    # do -- a surviving grandchild would keep the output pipes open and hang
+    # the follow-up communicate() forever.
     try:
-        completed = subprocess.run(
+        proc = subprocess.Popen(
             resolved,
             cwd=cwd,
             env=run_env,
-            input=stdin,
-            capture_output=True,
+            stdin=subprocess.PIPE if stdin is not None else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             encoding='utf-8',
             errors='replace',
-            timeout=timeout,
             shell=False,  # never; see the module docstring
-            check=False,
-        )
-    except subprocess.TimeoutExpired:
-        logger.warning('%s timed out after %ss', resolved[0], timeout)
-        return CommandResult(
-            ok=False, exit_code=-1, stdout='',
-            stderr=f'Timed out after {timeout}s', argv=resolved, timed_out=True,
         )
     except OSError as e:
         logger.error('Failed to run %s: %s', resolved[0], e)
@@ -202,11 +223,29 @@ def run(
             ok=False, exit_code=-1, stdout='', stderr=str(e), argv=resolved,
         )
 
+    try:
+        stdout, stderr = proc.communicate(input=stdin, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        logger.warning('%s timed out after %ss', resolved[0], timeout)
+        _kill_tree(proc)
+        try:
+            stdout, stderr = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            # An unkillable descendant still holds a pipe; report the
+            # timeout rather than hang the job worker.
+            stdout, stderr = '', ''
+        return CommandResult(
+            ok=False, exit_code=-1,
+            stdout=_truncate(stdout or ''),
+            stderr=_truncate(stderr or '') or f'Timed out after {timeout}s',
+            argv=resolved, timed_out=True,
+        )
+
     return CommandResult(
-        ok=completed.returncode == 0,
-        exit_code=completed.returncode,
-        stdout=_truncate(completed.stdout or ''),
-        stderr=_truncate(completed.stderr or ''),
+        ok=proc.returncode == 0,
+        exit_code=proc.returncode,
+        stdout=_truncate(stdout or ''),
+        stderr=_truncate(stderr or ''),
         argv=resolved,
     )
 

@@ -14,7 +14,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from integrations import context, keymaps  # noqa: E402
+from integrations import context, keymaps, sessions  # noqa: E402
 from integrations.claude_code_pack import Plugin as ClaudeCodePlugin  # noqa: E402
 from integrations.claude_pack import Plugin as ClaudePlugin  # noqa: E402
 from integrations.copilot_pack import Plugin as CopilotPlugin  # noqa: E402
@@ -453,11 +453,14 @@ def test_cc_commands_resolve_the_session_host_window(mocker):
     macro = mocker.patch('integrations.editor_base.MacroAction')
     macro.return_value.execute.return_value = mocker.Mock(
         success=True, message='ok', details=None, data={})
+    mocker.patch('integrations.editor_base.context.current_editor',
+                 return_value=mocker.Mock(cwd=None))
 
     result = ClaudeCodePlugin().execute_action('cc_clear', {})
 
     assert result['success'] is True
-    host.assert_called_once_with('claude', prefer_title='claude')
+    host.assert_called_once_with('claude', prefer_title='claude',
+                                 prefer_cwd=None)
     focus.assert_called_once_with(4321)
     by_exe.assert_not_called(), 'host resolution must win over the exe list'
 
@@ -672,6 +675,113 @@ def test_session_host_window_returns_none_without_a_session(mocker):
                  return_value='Windows')
     mocker.patch.object(window_focus, '_session_pids', return_value=[])
     assert window_focus.find_session_host_window('claude') is None
+
+
+def test_session_host_window_prefers_matching_cwd(mocker):
+    """Two sessions enumerated in the wrong order: the one running in the
+    button's project wins even though the other is listed first."""
+    from utils import window_focus
+    mocker.patch('utils.window_focus.platform.system',
+                 return_value='Windows')
+    mocker.patch.object(window_focus, '_session_pids',
+                        return_value=[100, 150])
+    mocker.patch.object(
+        window_focus, '_visible_windows_by_pid',
+        return_value={200: [(1111, 'claude A')],
+                      250: [(2222, 'claude B')]})
+    mocker.patch('psutil.process_iter', return_value=[])
+
+    def fake_process(pid):
+        proc = mocker.Mock()
+        parent = mocker.Mock()
+        parent.pid = {100: 200, 150: 250}[pid]
+        proc.parents.return_value = [parent]
+        proc.cwd.return_value = {100: r'C:\other',
+                                 150: r'C:\proj'}[pid]
+        proc.create_time.return_value = 1.0
+        return proc
+
+    mocker.patch('psutil.Process', side_effect=fake_process)
+
+    hwnd = window_focus.find_session_host_window(
+        'claude', prefer_title='claude', prefer_cwd=r'C:\proj')
+    assert hwnd == 2222
+
+
+def test_session_host_window_tiebreaks_to_newest_session(mocker):
+    """With no cwd preference, equal candidates resolve to the most
+    recently started session rather than enumeration order."""
+    from utils import window_focus
+    mocker.patch('utils.window_focus.platform.system',
+                 return_value='Windows')
+    mocker.patch.object(window_focus, '_session_pids',
+                        return_value=[100, 150])
+    mocker.patch.object(
+        window_focus, '_visible_windows_by_pid',
+        return_value={200: [(1111, 'claude A')],
+                      250: [(2222, 'claude B')]})
+    mocker.patch('psutil.process_iter', return_value=[])
+
+    def fake_process(pid):
+        proc = mocker.Mock()
+        parent = mocker.Mock()
+        parent.pid = {100: 200, 150: 250}[pid]
+        proc.parents.return_value = [parent]
+        proc.cwd.return_value = r'C:\proj'
+        proc.create_time.return_value = {100: 1.0, 150: 2.0}[pid]
+        return proc
+
+    mocker.patch('psutil.Process', side_effect=fake_process)
+
+    hwnd = window_focus.find_session_host_window(
+        'claude', prefer_title='claude')
+    assert hwnd == 2222
+
+
+def test_cwd_tier_orders_exact_then_ancestor_then_nested():
+    from utils import window_focus
+    assert window_focus._cwd_tier(r'C:\proj', r'C:\proj') == 0
+    # Session at the repo root, button resolved a subdirectory.
+    assert window_focus._cwd_tier(r'C:\proj', r'C:\proj\sub') == 1
+    # Session nested inside the preferred directory.
+    assert window_focus._cwd_tier(r'C:\proj\sub', r'C:\proj') == 2
+    assert window_focus._cwd_tier(r'C:\other', r'C:\proj') == 3
+    # A shared prefix is not nesting: C:\project2 is not inside C:\proj.
+    assert window_focus._cwd_tier(r'C:\project2', r'C:\proj') == 3
+    assert window_focus._cwd_tier(None, r'C:\proj') == 3
+
+
+def test_session_match_counts_real_cli_processes():
+    cli = {'name': 'claude.exe', 'exe': r'C:\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe',
+           'cmdline': [r'C:\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe', '--continue']}
+    assert sessions._matches(cli, 'claude')
+
+    node = {'name': 'node.exe', 'exe': r'C:\node\node.exe',
+            'cmdline': ['node', r'C:\npm\claude-code\cli.js']}
+    assert sessions._matches(node, 'claude')
+
+    shim_wrap = {'name': 'cmd.exe', 'exe': r'C:\Windows\System32\cmd.exe',
+                 'cmdline': ['cmd.exe', '/c', r'"C:\npm\claude.cmd"', '--continue']}
+    assert sessions._matches(shim_wrap, 'claude')
+
+
+def test_session_match_rejects_helpers_and_desktop_app():
+    # The Claude desktop app shares the claude.exe name but is no session.
+    desktop = {'name': 'claude.exe',
+               'exe': r'C:\Users\x\AppData\Local\AnthropicClaude\claude.exe',
+               'cmdline': [r'C:\Users\x\AppData\Local\AnthropicClaude\claude.exe']}
+    assert not sessions._matches(desktop, 'claude')
+
+    # A helper whose script blob merely mentions the marker.
+    helper = {'name': 'python.exe', 'exe': r'C:\Python\python.exe',
+              'cmdline': ['python', '-c', 'print("claude")']}
+    assert not sessions._matches(helper, 'claude')
+
+    # `cmd /c claude --continue` names claude as a bare argument; the real
+    # session is its child claude.exe, not this wrapper.
+    bare_arg = {'name': 'cmd.exe', 'exe': r'C:\Windows\System32\cmd.exe',
+                'cmdline': ['cmd.exe', '/c', 'claude', '--continue']}
+    assert not sessions._matches(bare_arg, 'claude')
 
 
 def test_keymap_commands_use_supported_macro_steps():

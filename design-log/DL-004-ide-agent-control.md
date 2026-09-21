@@ -509,3 +509,55 @@ resolution and `--continue` is the only argument, so there is nothing for
 the `.cmd` shim's `%*` to mangle. Verified live: POST `claude_continue`
 (`resume: true`) → new `cmd.exe` + `claude.exe` processes stay alive, window
 persists instead of flash-closing.
+
+**Follow-up 4 (2026-09-22) — deterministic multi-session targeting,
+stricter session matching, real timeouts.** Three open issues from the
+multi-session live test:
+
+1. *Arbitrary pick with N sessions.* `find_session_host_window` sorted by
+   `(self_owned, title_miss)` and took the first survivor — enumeration
+   order — so the winner was whichever process `psutil` listed first (in
+   testing, a Devin-hosted helper whose window title happened to contain
+   "Claude"). Fix: candidates now carry the session process's cwd and
+   creation time; rank becomes `(cwd_miss, self_owned, title_miss,
+   -create_time)` — the session running in the button's project wins, then
+   hosted-over-self-owned, title hint, then newest session as a stable
+   tiebreak. `prefer_cwd` comes from the button's `cwd` config (new
+   optional field on session-gated commands) or the focused editor's
+   resolved project; unset means the old ranking applies.
+
+2. *Substring matching over-counts.* Marker 'claude' matched the Claude
+   desktop app and any helper process whose argv merely mentions claude
+   (agent harnesses, `cmd /c claude` wrappers, `-c` script blobs), which
+   both lit the scene live-dot with no CLI running and fed non-session
+   processes into window resolution. `sessions.py` now owns the shared
+   predicate: a process counts when its name matches, its argv[0] matches,
+   or a command-line token is invocable-looking (path/script token ending
+   in a known executable extension). Desktop-app binaries (claude.exe
+   under AnthropicClaude/WindowsApps) are excluded. `session_alive`,
+   `find_session_process` and `window_focus._session_pids` all use it.
+
+3. *Jobs could outlive their timeout.* `subprocess.run(timeout=…)` kills
+   only the direct child; a surviving grandchild (the real claude.exe
+   under the old `.cmd` shim) kept the output pipes open and the follow-up
+   `communicate()` blocked forever — one Review job sat "running" past its
+   600s cap. `run()` now uses Popen + `communicate(timeout)` and, on
+   timeout, kills the whole process tree via psutil before draining the
+   pipes.
+
+**Implementation results (follow-up 4):** live-verified against five
+concurrent `claude.exe` sessions — tightened matching yields exactly the
+five CLI pids (cmd wrappers, python/bash helpers, desktop app all
+excluded). With `prefer_cwd` the resolver is deterministic: `backend`
+cwd → that session's `✳ Claude Code` console; `VDock2` → the Devin-hosted
+session's window; `C:\Users\user` → the home console (exact match beats
+three nested sessions); no preference → newest session rather than
+enumeration order. A real `cc_todos` press through the live API raised
+the home session's console to the foreground (verified via
+`GetForegroundWindow`). Additionally fixed a latent test-isolation bug
+the full suite exposed: `app.py` calls `Config.apply_saved_toggles()` at
+import, permanently overlaying the user's `config.json` (`allow_lan:
+true`) onto the class — `test_server_binds_to_localhost_by_default` then
+failed for every run after any app-importing test. The test now checks
+the pre-overlay default in a clean subprocess, and `ALLOW_LAN`/`HOST`
+joined the conftest guarded-flags list. 782/782 backend tests pass.

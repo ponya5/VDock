@@ -14,6 +14,7 @@ modules matching that suffix, so shared helpers are never mistaken for packs.
 """
 import logging
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 from actions.catalog import ActionSpec, ConfigField, RUNS_BACKEND
@@ -46,19 +47,38 @@ def foreground_exe() -> Optional[str]:
     return editor.app_exe
 
 
-def _resolve_session_host(command: Command) -> Optional[int]:
-    """HWND of the window hosting this command's session, or None."""
+def _resolve_session_host(command: Command,
+                          configured_cwd: Optional[str] = None
+                          ) -> Optional[int]:
+    """HWND of the window hosting this command's session, or None.
+
+    ``configured_cwd`` (the button's Working directory) or the focused
+    editor's project tells the resolver *which* session when several run
+    at once; neither applies -> the resolver's own ranking decides.
+    """
     if not command.session_marker:
         return None
+    prefer_cwd: Optional[str] = None
+    if configured_cwd:
+        path = Path(str(configured_cwd)).expanduser()
+        if path.is_dir():
+            prefer_cwd = str(path)
+        else:
+            logger.warning('Configured session cwd does not exist: %s',
+                           configured_cwd)
+    if prefer_cwd is None:
+        prefer_cwd = context.current_editor().cwd
     return window_focus.find_session_host_window(
         command.session_marker,
         prefer_title=command.window_title_hint,
+        prefer_cwd=prefer_cwd,
     )
 
 
 def send(command: Command, text_override: Optional[str] = None,
          enforce_focus: bool = True, focus_first: bool = True,
-         allow_destructive: bool = False) -> Dict[str, Any]:
+         allow_destructive: bool = False,
+         cwd: Optional[str] = None) -> Dict[str, Any]:
     """Send ``command`` to the target application.
 
     Args:
@@ -71,6 +91,9 @@ def send(command: Command, text_override: Optional[str] = None,
             Required on a touch deck: pressing a button there steals focus,
             so nothing would ever reach the app otherwise.
         allow_destructive: Permit commands classified 'destructive'.
+        cwd: Working directory identifying which session to target when
+            several run at once. None resolves to the focused editor's
+            project.
     """
     # Gate on cheap checks first so a refused press never yanks focus around.
     if command.risk == RISK_DESTRUCTIVE and not allow_destructive:
@@ -99,7 +122,7 @@ def send(command: Command, text_override: Optional[str] = None,
         # session marker: the host window's owner is whatever IDE or terminal
         # spawned the agent (Devin, Cursor, VS Code, Windows Terminal, a
         # classic conhost console...) -- a static exe list can't know it.
-        host_hwnd = _resolve_session_host(command)
+        host_hwnd = _resolve_session_host(command, cwd)
         if host_hwnd is not None:
             if focus_first:
                 if not window_focus.focus_hwnd(host_hwnd):
@@ -245,6 +268,15 @@ class KeystrokeEditorPlugin(BasePlugin):
                          'takes focus itself.',
                 ),
             )
+            if cmd.session_marker:
+                fields += (
+                    ConfigField(
+                        'cwd', 'Session working directory', 'text',
+                        help='When several sessions run at once, send to the '
+                             'one running in this directory. Empty: the '
+                             'focused editor\'s project.',
+                    ),
+                )
             if cmd.risk == RISK_DESTRUCTIVE:
                 fields += (
                     ConfigField(
@@ -292,4 +324,5 @@ class KeystrokeEditorPlugin(BasePlugin):
             enforce_focus=bool(config.get('enforce_focus', True)),
             focus_first=bool(config.get('focus_first', True)),
             allow_destructive=bool(config.get('allow_destructive', False)),
+            cwd=config.get('cwd'),
         )

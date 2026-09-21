@@ -10,6 +10,7 @@ until someone turns authentication on, then a wide-open door.
 import ast
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -134,8 +135,28 @@ def test_command_execution_is_off_by_default():
 
 
 def test_server_binds_to_localhost_by_default():
-    assert Config.HOST in ('127.0.0.1', 'localhost')
-    assert Config.ALLOW_LAN is False
+    """With no env overrides or saved toggles, the server is localhost-only.
+
+    Runs in a fresh interpreter: ``app.py`` calls ``apply_saved_toggles()``
+    at import time, overlaying the user's persisted ``config.json`` onto
+    ``Config`` -- correct in production, but it poisons the class for any
+    test that runs after an app import. The default being asserted here is
+    what ``config.py`` computes before that overlay exists.
+    """
+    backend = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    code = (
+        "import sys; sys.path.insert(0, '.');"
+        "from config import Config;"
+        "print(Config.HOST, Config.ALLOW_LAN)"
+    )
+    env = {k: v for k, v in os.environ.items()
+           if k not in ('HOST', 'ALLOW_LAN')}
+    out = subprocess.run([sys.executable, '-c', code], cwd=backend, env=env,
+                         capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    host, allow_lan = out.stdout.split()
+    assert host in ('127.0.0.1', 'localhost')
+    assert allow_lan == 'False'
 
 
 # --- the Python floor the installers promise ---------------------------------
