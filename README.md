@@ -1,228 +1,145 @@
 <div align="center">
 
-<img src="docs/assets/vdock-banner.svg" alt="VDock — Virtual Stream Deck" width="920" />
+<img src="docs/assets/vdock-banner.svg" alt="VDock — Virtual Stream Deck" width="880" />
 
-<br />
+### Your desktop. On real buttons.
 
-<img src="docs/assets/vdock2-tour.gif" alt="VDock 2.0 — deck-key button designs, the design picker, rebuilt settings, and the editorial screensaver" width="920" />
+**A free, open-source stream deck that runs on a screen you already own — and the only one that speaks fluent Claude Code.**
 
-<br />
+<img src="docs/assets/vdock2-intro.gif" alt="VDock 2.0 — a 7-inch touch panel running VDock, the deck, driving Claude Code from a button, and the ambient screensaver" width="880" />
 
-**▶ [Watch the 40-second tour](docs/assets/vdock2-tour.mp4)** — 1080p, no sound
-
-<br />
+**▶ [Watch the full 70-second tour](docs/assets/vdock2-intro.mp4)** — 1080p, no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0.0-6ea8ff)](#-whats-new-in-20)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](README.md)
+[![Version](https://img.shields.io/badge/Version-2.0.0-6ea8ff)](#whats-new-in-20)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#requirements)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-**Your customizable control deck — drive Claude Code, GitHub, Cursor and Copilot from real buttons, alongside system actions, live widgets, and animated backgrounds.**
-
-[Quick Start](#-quick-start) · [What's new in 2.0](#-whats-new-in-20) · [Features](#-features) · [Integrations](docs/INTEGRATIONS.md) · [Setup Menu](#-one-setup-for-everything) · [Community](#-community) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
+[Quick start](#quick-start) · [Why VDock](#why-vdock) · [Use cases](#real-use-cases) · [Features](#features) · [What's new](#whats-new-in-20) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
 
 </div>
 
 ---
 
+## Contents
+
+- [What is VDock?](#what-is-vdock)
+- [Why VDock](#why-vdock)
+- [Real use cases](#real-use-cases)
+- [Quick start](#quick-start)
+- [Features](#features)
+- [What's new in 2.0](#whats-new-in-20)
+- [Use it from your phone](#use-it-from-your-phone)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [What VDock isn't (yet)](#what-vdock-isnt-yet)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
 ## What is VDock?
 
-VDock is a **virtual stream deck** for your computer — no hardware required.
+A stream deck is a grid of physical buttons that fire the things you do all day — mute the mic, switch the scene, run the build. The good ones cost £150–£250 and lock you to one vendor's store.
 
-Build button grids for everyday tasks (launch apps, hotkeys, volume, CPU/GPU
-monitoring, OBS scenes, weather) **and for the work you actually do all day**:
-run a Claude Code prompt, open a pull request, check CI, fire Cursor's Composer,
-or POST to any webhook — all from a button.
+**VDock is that deck, in software, for free.** Point any spare screen at it — a £30 USB touch panel, an old tablet, your phone, or just a browser tab — and you get a grid of buttons you design yourself.
 
-**76 built-in actions** across 10 categories, plus up to **160 more** that appear
-automatically when VDock detects the apps you already run — **236 actions across
-12 categories** with everything installed. Use it as a **desktop app (Electron)**,
-in your **browser**, or on a **7-inch touch panel** next to your keyboard.
-Everything is editable: layouts, scenes, pages, icons, designs, backgrounds, and actions.
+<div align="center">
+<img src="docs/assets/screens/panel-on-desk.jpg" alt="A 7-inch touch panel above a keyboard showing VDock's ambient screensaver with clock, weather, headlines and market prices" width="760" />
+<br /><em>A 7-inch panel above the keyboard. No hardware from a vendor, no account, no subscription.</em>
+</div>
 
-```mermaid
-flowchart LR
-  A[setup.bat / setup.sh] --> B[Install deps]
-  B --> C[Desktop shortcut]
-  C --> D[launch.bat / launch.sh]
-  D --> E[Backend :5000]
-  D --> F[Frontend :3000]
-  D --> G[Electron window]
-  G --> H[Your custom deck]
-```
+Out of the box it ships **79 actions** across 11 categories — apps, hotkeys, media, system control, metrics, webhooks, sliders. It then **detects the tools already on your machine** and adds up to **160 more**, so a developer's install ends up with **239 actions** and a designer's install stays lean. Nothing is configured; nothing that can't run is offered.
+
+What makes it different from every other deck is the last part: **VDock was built around AI coding agents.** Claude Code gets 40 actions of its own, a button that shows whether your session is actually alive, and a full-screen alert the moment your agent stops and waits for you.
 
 ---
 
-## 🆕 What's new in 2.0
+## Why VDock
 
-### Ten deck-key designs — pick one, don't configure it
+|  | VDock | Elgato Virtual SD | Touch Portal | WebDeck |
+|---|---|---|---|---|
+| **Price** | Free, MIT | Free **only if** you own Elgato hardware | Free tier is 4×2, 2 pages; Pro $13.99 | Free, GPLv3 |
+| **Host OS** | Windows · macOS · Linux | Windows · macOS | Windows · macOS | **Windows only** |
+| **AI agent actions** | **Claude Code (40), Copilot, Cursor, Devin, VS Code, JetBrains** | — | — | — |
+| **Agent-waiting alerts** | **Yes** | — | — | — |
+| **Ambient dashboard when idle** | **Yes** — clock, weather, news, markets | — | — | — |
+| **Account required** | No | Yes | Yes | No |
+| **Telemetry** | None | — | — | None |
+| **Plugin marketplace** | Templates + scene packs | Large | **Largest** | Small |
 
-Every button can now wear a real design, chosen from a grid of **live swatches**
-in the Button Editor instead of a text dropdown buried three fields down.
-
-| | |
-|---|---|
-| <img src="docs/assets/screens/button-design-picker.png" alt="Button Design picker showing ten live design swatches" width="440" /> | <img src="docs/assets/screens/deck-designs.png" alt="A deck mixing several button designs" width="440" /> |
-
-**Classic · Glass · Glow Glass · Gem · Neon Rim · Watermark · Deck Key · Status Key · Full Art · Folder**
-
-Each one is brand-parametric — it picks up the button's own colour — and stacks
-with any of **16 overlay effects** (fire, plasma, aurora, scanline, rain, holographic,
-metallic, liquid, and more). Set one button, or hit **Save & Apply to All Buttons**
-to push a design across every scene, page *and* the docked sidebar.
-
-The **Button Size** slider now resizes the actual button box, not just the icon and
-label inside it.
-
-### Settings, rebuilt
-
-<img src="docs/assets/screens/settings-appearance.png" alt="Appearance settings with live preview and touch mode panel" width="920" />
-
-- **Four Appearance sub-tabs** — Button Behaviour · Layout & Behavior · Background · Screen Saver
-- **Live Preview** renders a real deck button through the actual component, so what you see can't drift from what ships
-- **Find a setting** — search jumps straight to the right tab *and* sub-tab
-- **Per-setting reset** — 27 reset icons, one source of truth for defaults
-- **Session Logs** tab — browse and tail backend and frontend logs, colour-coded by level, exportable as a zip
-
-### The screensaver became an editorial dashboard
-
-<img src="docs/assets/screens/screensaver.png" alt="VDock screensaver showing clock, weather, headlines, markets and world clocks" width="920" />
-
-Walk away and the deck turns into a display piece: **clock, weather, RSS headlines,
-sports, stock & crypto quotes, and world clocks** — six widgets, **no API keys**
-for any of them.
-
-Drag any widget to move it, drag its corner to resize it, and save — all from a
-live editor inside Settings. Widget config, delay and backgrounds now sit in their
-own sub-tabs instead of one long scroll.
-
-### Dashboard typography
-
-The screensaver's editorial look is now available on the deck itself. Three
-dashboard fonts — **Modern Sans** (Heebo), **Editorial** (Instrument Serif +
-JetBrains Mono labels) and **Terminal Mono** (JetBrains Mono) — applied live,
-with the Settings UI left alone.
-
-### Built for the panel on your desk
-
-<img src="docs/assets/screens/settings-7inch.png" alt="VDock settings rendered on a 1024x600 touch panel" width="700" />
-
-The whole interface was redesigned around **1024×600**. Three touch modes —
-**Normal (1.0×)**, **Touch-Friendly (1.5×)** and **Tablet (2.0×)** — with a
-configurable minimum target size (44px default, WCAG 2.1 AA), auto-promoted when
-VDock detects a small or touch screen.
-
-### Under the hood
-
-- **Security hardening** — every API route behind auth, path-traversal containment on static and upload routes, upload type whitelist, 16MB request cap
-- **No more stale bundles** — the service worker now reloads the panel onto a new build instead of serving a cached one
-- **Frontend errors captured** — Vue errors, unhandled rejections and `console.error` are shipped to the log files you can read in Settings
-- **Smoother page transitions** — incoming buttons stay hidden until the reveal wave reaches them
-- **In-app confirm dialogs** replacing native `confirm()`, so nothing blocks a kiosk screen
+**In one line:** free, agent-native, ambient, and yours — with an honest gap on ecosystem size that [we're upfront about below](#what-vdock-isnt-yet).
 
 ---
 
-## ✨ Features
+## Real use cases
 
-### Control deck
-| | |
-|---|---|
-| 🎛️ **Custom grids** | Drag, resize, and arrange buttons freely |
-| 🎬 **Scenes & pages** | Multiple layouts per profile with page navigation and 6 transition styles |
-| 📌 **Docked sidebar** | Persistent buttons across all pages |
-| 🎨 **10 button designs** | Live-swatch picker + 16 stackable overlay effects |
-| 🧩 **Templates** | 42 app templates across 6 categories to get started fast |
+### 1. Driving an AI coding agent without leaving the keyboard
 
-### AI & developer integrations
-| | |
-|---|---|
-| 🤖 **Claude Code** | 40 actions — prompts, slash commands (`/code-review`, `/commit`), session resume. Uses your existing `claude` login |
-| 💬 **Claude API** | One-shot prompts straight to the clipboard (optional API key) |
-| 🐙 **GitHub** | PRs, issues, checks, workflow runs via `gh` — plus live PR count, CI status and notification badges **on the button face** |
-| ✨ **Cursor** | Composer, AI chat, inline edit, accept/reject diff |
-| 🧑‍✈️ **GitHub Copilot** | Chat, inline suggestions, `/explain` `/fix` `/tests` `/doc` |
-| 🧠 **VS Code · JetBrains · Visual Studio · Devin** | 79 more editor and agent commands, per-app keymaps |
-| 🪝 **HTTP / webhooks** | Any REST endpoint — Discord, Slack, n8n, Zapier, Home Assistant — and show a value from the JSON response on the button |
+<img src="docs/assets/screens/claude-code-scene.png" alt="VDock's Claude Code scene: Open Claude, Review /code-review, Commit /commit, claude.ai, Explain, Write Tests, Fix Tests, Continue" width="820" />
 
-> Integrations are optional and self-detecting. VDock works fully with none of
-> them installed; actions it can't run are greyed out with the reason.
+The scene above is in the default profile. Tap **Review** and `/code-review` lands in your live Claude Code session — not a new one, the one you're already in. **Continue** resumes after a context compact. **Commit** runs `/commit`.
 
-### Actions & automation
-| | |
-|---|---|
-| ⌨️ **Hotkeys & macros** | Keyboard shortcuts and chained actions |
-| 🖥️ **System control** | Volume, brightness, media, power, window management |
-| 🚀 **Apps & URLs** | Launch programs, open sites, run commands |
-| 🔀 **Toggles & random** | Two-state switches (mute/unmute) and shuffle keys |
-| 🧭 **Scene navigation** | Jump to a page, switch scenes, auto-switch by focused app |
-| 🎬 **OBS integration** | Scenes, sources, streaming controls |
+Two details that make this actually usable:
 
-### Live widgets
-| | |
-|---|---|
-| 📊 **System metrics** | CPU, RAM, GPU, disk, network |
-| 🌤️ **Weather** | Auto or manual city, no API key needed |
-| 🕐 **Time widgets** | World clock, timer, countdown |
-| 📰 **News & sports** | RSS/Atom headlines that rotate on the screensaver — no API key |
-| 📈 **Markets** | Free stock and crypto quotes — no API key |
-| 🔔 **Live button state** | Spinner while an action runs, badges for PR counts and CI status |
+- **The green dot on the scene tab** means VDock can see the agent process running right now, so you know the button will land somewhere before you press it.
+- **Agent attention alerts** — when Claude stops to ask permission or a question, VDock raises a pulsing amber card over everything, including the screensaver. You see it from across the room instead of finding it ten minutes later. One click in **Settings → Integrations** installs the Claude hook; any agent can drive it by POSTing to `/api/agent-events`.
 
-### Look & feel
-| | |
-|---|---|
-| 🌈 **54 animated backgrounds** | Aurora, light rays, silk, iridescence, prism, ferrofluid, and more (60 catalogue entries with gradients and custom uploads) |
-| 🖼️ **Custom wallpapers** | Upload dashboard and button backgrounds; per-scene and per-app backgrounds |
-| ✍️ **3 dashboard fonts** | Modern Sans, Editorial, Terminal Mono |
-| ✨ **Touch modes** | Normal, Touch-Friendly, and Tablet sizing |
-| 🎞️ **Animated avatars** | GIF and Lottie profile avatars, plus static presets |
-| 🌙 **Dark UI** | Polished dashboard with optional header and sidebar |
+### 2. A second screen that earns its desk space
+
+Leave VDock idle and it becomes an ambient dashboard: clock, weather, rotating headlines, sports, live stock and crypto quotes, world clocks. **No API keys for any of it.** Drag widgets to rearrange them, drag a corner to resize.
+
+<img src="docs/assets/screens/screensaver.png" alt="VDock screensaver: large clock, weather, four news headlines, sports, market prices and world clocks over an animated iridescent background" width="820" />
+
+### 3. Calls and recording
+
+Mute, camera, push-to-talk (a button can fire on press and a different action on release), OBS scene switching, and a **volume slider you drag** rather than a button you tap eleven times.
+
+### 4. Anything with an HTTP endpoint
+
+One `http_request` action covers Home Assistant, n8n, Zapier, Discord webhooks, your own CI. Point a button at a JSON endpoint and show a value from the response **on the button face** — build status, queue depth, whatever you watch.
+
+### 5. A phone as a spare deck
+
+Settings → Server shows a QR code. Scan it from any phone on the same Wi-Fi and you have a second deck — [nothing to install](#use-it-from-your-phone).
+
+### 6. A kiosk or workshop panel
+
+Tablet touch mode, 44px minimum targets, and a first-run tour mean you can hand a panel to someone who has never seen it.
 
 ---
 
-## 🚀 Quick Start
+## Quick start
 
-### Prerequisites
+### Requirements
 
-**Required**
-
-| Requirement | Version | Download |
-|-------------|---------|----------|
-| Python | 3.9+ | [python.org](https://www.python.org/downloads/) |
+| Required | Version | Get it |
+|---|---|---|
+| Python | 3.9+ | [python.org](https://www.python.org/downloads/) — on Windows tick **"Add Python to PATH"** |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
 
-> **Windows:** During Python install, check **"Add Python to PATH"**.
+Everything else is optional. VDock runs fully with none of the tools below installed — actions it can't run are greyed out **with the reason shown**, never hidden and never failing on press.
 
-**Optional — only for the integrations you want**
+| Optional | Unlocks | Install |
+|---|---|---|
+| [Claude Code](https://claude.com/product/claude-code) | 40 Claude Code actions | `npm i -g @anthropic-ai/claude-code` |
+| [GitHub CLI](https://cli.github.com) | PRs, issues, CI checks, live badges | `winget install GitHub.cli` → `gh auth login` |
+| Git | Repo-aware actions | [git-scm.com](https://git-scm.com/) |
 
-| Tool | Unlocks | Install |
-|------|---------|---------|
-| [Claude Code](https://claude.com/product/claude-code) | Claude prompt, slash command and session actions | `npm i -g @anthropic-ai/claude-code` |
-| [GitHub CLI](https://cli.github.com) | PR, issue, checks and workflow actions | `winget install GitHub.cli` then `gh auth login` |
-| Git | Repo-aware actions (branch, CI status) | [git-scm.com](https://git-scm.com/) |
-
-Setup detects each of these and tells you what it found. Nothing here is
-required to run VDock.
-
-### 1. Get the code
+### Install
 
 ```bash
 git clone https://github.com/ponya5/VDock2.git
 cd VDock2
 ```
 
-Or download and extract the ZIP from GitHub.
-
-### 2. Run setup (one menu for everything)
-
 <details open>
 <summary><strong>Windows</strong></summary>
 
-Double-click **`setup.bat`** at the repo root, or run:
-
-```cmd
-setup.bat
-```
+Double-click **`setup.bat`**, or run it from a terminal. Choose **[1] Full setup**.
 
 </details>
 
@@ -236,184 +153,215 @@ chmod +x setup.sh launch.sh
 
 </details>
 
-### 3. Launch
+Setup installs dependencies, creates a desktop shortcut, writes `backend/.env`, and reports which optional tools it found.
 
-After setup, either:
+### Run
 
-- **Double-click the desktop shortcut** (`VDock` on Windows, `VDock.command` on macOS)
-- Or run **`launch.bat`** (Windows) / **`./launch.sh`** (macOS/Linux)
+Double-click the **VDock** desktop shortcut, or run `launch.bat` / `./launch.sh`. Give it **5–10 seconds**, then it opens at **http://localhost:3000** (or the port you chose).
 
-Wait **5–10 seconds** for services to start. VDock opens at **http://localhost:3000** (or whichever port you chose during setup).
-
----
-
-## 🧰 One setup for everything
-
-The setup menu handles all first-run tasks:
-
-```
-========================================================
-  VDock Setup
-========================================================
-
-  [1] Full setup (recommended)
-      Install Python + Node deps, Electron, desktop shortcut,
-      create backend/.env, detect integration CLIs
-
-  [2] Install dependencies only
-      Skip desktop shortcut creation
-
-  [3] Create desktop shortcut only
-      Adds a VDock icon to your Desktop
-
-  [4] Configure ports
-      Change which localhost ports VDock uses
-      (useful if 3000/5000 are already taken by other apps)
-
-  [5] Launch VDock now
-
-  [6] Exit
-```
-
-**Non-interactive flags** (for scripts/CI):
-
-```cmd
-setup.bat --full       REM install + configure ports (kept as-is) + shortcut
-setup.bat --deps       REM dependencies only
-setup.bat --shortcut   REM desktop shortcut only
-setup.bat --ports      REM change frontend/backend ports
-setup.bat --launch     REM start VDock
-```
+First launch walks you through a **13-step tour** — profiles, scenes, edit mode, the sidebar, settings, the screensaver — and drops you into a starter profile with four working scenes: **Media**, **Claude Code**, **Cursor** and **Websites**. Every button in it works with no keys and no config.
 
 ---
 
-## 📁 Project structure
+## Features
 
-```
-VDock/
-├── setup.bat / setup.sh     ← Start here (interactive installer)
-├── launch.bat / launch.sh   ← Daily launcher
-├── backend/                 ← Python Flask API
-│   └── integrations/        ← Per-app action packs and keymaps
-├── frontend/                ← Vue 3 + TypeScript UI
-│   └── electron/            ← Desktop app shell
-├── design-log/              ← Numbered design decisions (DL-001 …)
-├── docs/                    ← Guides and assets
-└── scripts/                 ← Maintainer build/deploy tools
-    └── VDock-Launcher.py    ← Launcher engine
-```
+### The deck
+
+<img src="docs/assets/screens/deck.png" alt="VDock's Media scene with mute, volume up and down, a draggable volume slider, and transport controls" width="820" />
+
+| | |
+|---|---|
+| **Scenes & pages** | Multiple layouts per profile, page navigation, 6 transition styles, auto-switch to follow the focused app |
+| **Docked sidebar** | Buttons that stay put across every page |
+| **Sliders** | Drag or scroll for volume, brightness and VDock's own dimmer — merge two side-by-side sliders into one wide one |
+| **Macros** | One press runs an ordered list of actions, each with its own delay |
+| **Toggles** | Two-state buttons with their own icon, colour and label per state, synced across every open window |
+| **Press vs release** | Fire on touch or on lift, with an optional second action on release — push-to-talk from a button |
+| **Quick-deck overlay** | A floating mini deck over whatever you're doing: `` ` `` in the window, `Ctrl+Shift+D` globally in the desktop build |
+| **Scene packs** | Export a scene as JSON and import it anywhere — buttons only, no settings, no secrets, safe to share |
+
+### Build it
+
+<img src="docs/assets/screens/edit-mode.png" alt="VDock edit mode: buttons with remove and edit badges, a searchable Button Actions sidebar, and grid size controls" width="820" />
+
+Tap the pencil, drag buttons around, resize the grid, search the action list, save. On a touch panel you drag with a finger. Changes save themselves.
+
+### Integrations
+
+| | |
+|---|---|
+| **Claude Code** | 40 actions — prompts, slash commands, session resume/rewind/compact, mode and model switches, approve/deny, todos, transcript. Uses your existing `claude` login |
+| **GitHub** | `gh`-powered PRs, issues, checks, workflow runs — plus live PR count, CI status and notification badges on the button face |
+| **Cursor · Copilot · VS Code · JetBrains · Visual Studio · Devin** | 102 more editor and agent commands, per-app keymaps |
+| **OBS** | Scenes, sources, streaming controls |
+| **HTTP / webhooks** | Any REST endpoint, any method, and a value from the JSON response rendered on the button |
+
+> Keystroke actions only fire when the target editor is actually focused. That's deliberate — keys never land in the wrong window.
+
+### Look and feel
+
+<img src="docs/assets/screens/deck-designs.png" alt="A VDock deck mixing several button designs" width="410" /> <img src="docs/assets/screens/button-design-picker.png" alt="The Button Design picker showing ten live design swatches" width="410" />
+
+| | |
+|---|---|
+| **10 button designs** | Classic, Glass, Glow Glass, Gem, Neon Rim, Watermark, Deck Key, Status Key, Full Art, Folder — picked from live swatches, not a dropdown |
+| **16 overlay effects** | Fire, plasma, aurora, scanline, rain, holographic, metallic, liquid and more, on top of any design |
+| **54 animated backgrounds** | Aurora, light rays, silk, iridescence, prism, ferrofluid… (60 catalogue entries with gradients and your own uploads), per-scene and per-app |
+| **3 dashboard fonts** | Modern Sans, Editorial (Instrument Serif), Terminal Mono |
+| **3 touch modes** | Normal 1.0× · Touch-Friendly 1.5× · Tablet 2.0×, with a 44px minimum target (WCAG 2.1 AA), auto-selected on small or touch screens |
+| **Press feedback** | An optional synthesized click so a glass panel feels like it has keys |
+
+### Templates
+
+<img src="docs/assets/screens/app-templates.png" alt="VDock's App templates gallery: AI Assistants and AI Coding categories with one-click Add Scene buttons" width="820" />
+
+**36 ready-made scenes** across AI Assistants, AI Coding, AI Image & Video, Design & Creative, Automation & Dev, and AI Models & Platforms. One tap adds a working scene.
+
+### Live widgets
+
+CPU · RAM · GPU · disk · network · weather · world clock · timer · countdown · RSS news · sports · free stock and crypto quotes · spinner while an action runs · PR and CI badges.
 
 ---
 
-## ⚙️ Configuration
+## What's new in 2.0
+
+<img src="docs/assets/screens/settings-screensaver.png" alt="VDock settings: sidebar navigation, screensaver widget rows with per-widget options, and a live preview panel" width="820" />
+
+**Settings, rebuilt.** Sidebar navigation instead of nested tab bars, a live preview rail beside the controls, search that jumps straight to the right page and scrolls to the setting, per-section reset, and a savebar that tells you the truth — changes save themselves, so there's no fake "unsaved" counter.
+
+**Eight power features**, closing the gaps against Touch Portal and Elgato: macros, toggles, sliders, the quick-deck overlay, QR/LAN connect, press feedback, scene packs, and on-press/on-release triggers.
+
+**Agent attention alerts** and the **scene live dot** — the two things that make an AI coding deck genuinely useful rather than a novelty.
+
+**A first-run tour** and a starter profile that works with zero configuration.
+
+**Under the hood:** auth on every API route, path-traversal containment, upload type whitelist, a 16MB request cap, a service worker that reloads onto new builds instead of serving stale ones, and frontend errors shipped to logs you can read in **Settings → Logs** and export as a zip.
+
+---
+
+## Use it from your phone
+
+1. **Settings → Server → Connect a device**
+2. Turn on **Allow LAN access**
+3. **Relaunch VDock** — the bind address is chosen at startup
+4. Scan the QR code, or type the `http://<your-lan-ip>:<port>` address shown next to it
+
+No app to install; it's the same web UI. Two things to expect: the phone may need **one reload** the first time (the service worker serves its cached copy once, then updates), and on Windows you must **allow the firewall prompt for `python.exe` on private networks**.
+
+LAN access is off by default and the QR encodes nothing but a local address.
+
+---
+
+## Configuration
 
 | What | Where |
-|------|-------|
-| App settings (UI) | **Settings** gear in the dashboard |
-| Server config template | `backend/data/config.example.json` |
-| Local server config | `backend/data/config.json` (created on first run, not in git) |
-| Backend secrets | `backend/.env` (copy from `backend/.env.example`) |
-
-### Settings panes
-
-- **Appearance** — Button Behaviour, Layout & Behavior, Background, Screen Saver
-- **Templates** — 42 one-click app decks
-- **Server** — ports, auto-start on boot, open settings in a new browser tab
-- **Widgets & Integration** — weather location, RSS news and sports feeds, market
-  tickers, world clocks, auto scene switching per app
-- **Logs** — tail, filter and export backend/frontend logs
-- **About** — version and build info
+|---|---|
+| Everything you'd normally change | **Settings** in the app — searchable, autosaving |
+| Server config | `backend/data/config.json` (created on first run, gitignored) |
+| Secrets | `backend/.env` (copy from `backend/.env.example`) |
+| Ports | `setup.bat --ports` / `./setup.sh` option 4 |
 
 ### Optional API keys
 
-Everything below is optional; the matching actions are greyed out with an
-explanation until you set them. Edit `backend/.env`:
+You probably need none of these.
 
-| Variable | Needed for | Notes |
-|----------|-----------|-------|
-| `ANTHROPIC_API_KEY` | "Ask Claude (API)" only | The Claude **Code** actions use your existing `claude` login and need no key |
-| `GITHUB_TOKEN` | Live PR / CI / notification widgets only | The `gh` actions use your existing `gh auth login`. Needs `repo` + `notifications` scopes |
+| Variable | Needed for | Note |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | "Ask Claude (API)" only | The Claude **Code** actions use your existing `claude` login — no key |
+| `GITHUB_TOKEN` | Live PR / CI / notification badges only | The `gh` actions use `gh auth login`. Needs `repo` + `notifications` |
 | `VDOCK_DEFAULT_REPO_PATH` | Fallback repo when VDock can't infer one | Optional |
 
-> VDock never sends these to the frontend — the action list exposes only
-> whether an integration is configured, and secrets are stripped from any
-> command output before it reaches a notification or the log.
+Secrets never reach the frontend — the action list exposes only *whether* an integration is configured, and secrets are stripped from command output before it reaches a notification or a log.
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 | Problem | Try this |
-|---------|----------|
-| Python/Node not found | Reinstall with PATH enabled, restart terminal |
-| Port 5000 or 3000 in use | Close other Python/Node processes in Task Manager |
+|---|---|
+| Python/Node not found | Reinstall with PATH enabled, restart the terminal |
+| Port 3000 or 5000 in use | Change ports in setup, or close the other process |
 | Setup failed on npm | Delete `frontend/node_modules`, run setup option **2** again |
-| Electron doesn't open | Open **http://localhost:3000** manually in your browser |
-| macOS blocks launcher | Right-click `VDock.command` → **Open** the first time |
-| Claude / GitHub buttons greyed out | Hover for the reason. Usually the CLI isn't installed or `gh auth login` hasn't been run |
-| Keystroke actions do nothing | They only fire when the target editor is focused — this is deliberate, so keys never land in the wrong window |
-| UI looks like an older build | It self-heals on reload now; if not, hard-refresh once to clear the old service worker |
-| Something misbehaving | **Settings → Logs** — tail the backend and frontend logs, or export them with an issue |
-
-More help: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) · [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) · [`docs/setup/DESKTOP_LAUNCHER.md`](docs/setup/DESKTOP_LAUNCHER.md)
+| Desktop window doesn't open | Open **http://localhost:3000** in a browser |
+| macOS blocks the launcher | Right-click `VDock.command` → **Open**, first time only |
+| Claude / GitHub buttons greyed out | Hover for the reason — usually the CLI isn't installed or `gh auth login` hasn't run |
+| Keystroke actions do nothing | They only fire when the target editor is focused. Deliberate |
+| Phone can't reach VDock | Allow LAN access, **relaunch**, allow the Windows firewall prompt, reload the page once |
+| UI looks like an old build | It self-heals on reload; if not, hard-refresh once |
+| Something else | **Settings → Logs** — tail backend and frontend logs, or export them with your issue |
 
 ---
 
-## 🛠️ Development
+## What VDock isn't (yet)
+
+Being straight about this, because a README that only lists wins isn't useful:
+
+- **No plugin marketplace.** Touch Portal and Elgato have large third-party ecosystems. VDock has 36 templates and shareable scene packs, which covers most of it — but not all of it.
+- **Shallow logic model.** Two-state toggles, yes. Global variables, events and conditionals like Touch Portal's? Not yet.
+- **The global summon hotkey is desktop-only.** `Ctrl+Shift+D` from anywhere works in the Electron build. In a browser tab, `` ` `` only works while VDock has focus — browsers can't register OS-global hotkeys, and no amount of wanting changes that.
+- **Mobile is the web UI over LAN, not a native app.** Zero install, but also no push notifications or background running.
+- **macOS and Linux volume/brightness sliders** are implemented with the right fallbacks but have had less real-device testing than Windows. Reports welcome.
+
+---
+
+## Development
 
 ```bash
 # Backend
 cd backend
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+source venv/bin/activate         # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 
-# Frontend (separate terminal)
+# Frontend (second terminal)
 cd frontend
 npm install
 npm run dev
 ```
 
-### Tests
-
 ```bash
-# Backend (install test deps once)
+# Tests
 cd backend && pip install -r requirements-dev.txt && pytest
-
-# Frontend
 cd frontend && npm test
 ```
 
-See [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md)
-for architecture, how to add an action type, and how to write an integration
-pack. Design decisions are logged in [`design-log/`](design-log/) — one numbered
-entry per change, with the problem, the design and the verification.
+**Architecture:** Vue 3 + TypeScript front end, Python Flask + Socket.IO back end, Electron shell for the desktop build. Actions live in a catalog the frontend reads at runtime; integrations are self-detecting plugin packs under `backend/integrations/`.
+
+Every change is written up in **[`design-log/`](design-log/)** — one numbered entry with the problem, the design, and how it was verified. Start there if you want to understand why something is the way it is. [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) covers adding an action type or writing an integration pack.
+
+```
+VDock2/
+├── setup.bat / setup.sh      ← interactive installer
+├── launch.bat / launch.sh    ← daily launcher
+├── backend/                  ← Flask API, actions, integration packs
+├── frontend/                 ← Vue 3 + TypeScript UI
+│   └── electron/             ← desktop shell
+├── design-log/               ← numbered design decisions
+└── docs/                     ← guides and assets
+```
 
 ---
 
-## 🌐 Community
+## Contributing
 
-- **Issues & bugs** — [GitHub Issues](https://github.com/ponya5/VDock2/issues)
-- **Ideas & questions** — open a discussion or issue on the repo
-- **Contributing** — fork → branch → PR; design decisions live in [`design-log/`](design-log/)
+Issues and pull requests are welcome — fork, branch, PR. Good first contributions: a new integration pack, an app template, a background, or a fix for something in [What VDock isn't](#what-vdock-isnt-yet).
 
----
+If you're reporting a bug, **Settings → Logs → Export** gives you a zip worth attaching.
 
-## 📜 License
-
-MIT — see [LICENSE](LICENSE).
-
-## 🤝 Contributing
-
-Issues and pull requests are welcome. Fork → branch → PR.
+Security issues: please use [GitHub security advisories](https://github.com/ponya5/VDock2/security/advisories) rather than a public issue.
 
 ---
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, ship it.
 
 <div align="center">
+<br />
 
-**VDock2** — put your most-used controls one click away.
+**VDock2** · built by [Daniel Shalom (@ponya5)](https://github.com/ponya5)
 
-Free, open source, and self-hosted — clone it, run it, make it yours.
+If it saved you a click today, a ⭐ helps other people find it.
 
 </div>
