@@ -1,6 +1,7 @@
 <template>
   <div
     v-if="visible"
+    ref="rootEl"
     class="screensaver"
     :class="{ 'ss-edit-mode': layoutEdit, 'ss-mobile': isMobileViewport }"
     @click="onRootTap"
@@ -93,7 +94,7 @@
     <div
       v-if="showNewsWidget"
       :ref="el => setWidgetEl('news', el)"
-      class="ss-pos"
+      class="ss-pos ss-wrap-news"
       :class="{ 'ss-editing': layoutEdit }"
       :style="posStyle('news', widgetScaleNum)"
       @pointerdown="startDrag('news', $event)"
@@ -113,7 +114,7 @@
         </div>
         <div class="ss-article-grid" aria-live="polite">
           <article
-            v-for="(item, i) in newsWindow"
+            v-for="(item, i) in visibleNewsItems"
             :key="`${i}-${item.url || item.title}`"
             class="ss-article"
             :title="item.url"
@@ -209,7 +210,7 @@
     <div
       v-if="showWorldClockWidget"
       :ref="el => setWidgetEl('worldclock', el)"
-      class="ss-pos"
+      class="ss-pos ss-wrap-worldclock"
       :class="{ 'ss-editing': layoutEdit }"
       :style="posStyle('worldclock', widgetScaleNum)"
       @pointerdown="startDrag('worldclock', $event)"
@@ -365,11 +366,11 @@ const weatherIcon = computed(() => weather.value?.icon || ['fas', 'cloud-sun'])
 const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C` : '--°C')
 const location = computed(() => weather.value?.location || '—')
 
-// On phones the screensaver is deliberately sparse: clock + world clock
-// only — feeds/weather/markets would be unreadable density on a small
-// screen (DL-063). World clock is always on for mobile regardless of the
-// desktop widget picks.
-const showWeatherWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('weather'))
+// On phones the screensaver gets a curated set (DL-063 follow-up):
+// clock + weather + world clock always; headlines too when they fit
+// without scrolling (newsFits guard). Markets and sports stay off —
+// they're the densest feeds.
+const showWeatherWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('weather'))
 // Touch mode feeds the same scale as the user sliders: a small panel running
 // tablet mode gets readable widgets without finding the sliders, and the
 // percentage still adjusts on top. Capped at 1.5 — the full tablet
@@ -380,9 +381,21 @@ const touchScale = computed(() => Math.min(settingsStore.touchModeMultiplier, 1.
 // Capped at 2x combined — the pill is anchored to a corner, so an unchecked
 // value would clip off the screen edge.
 const weatherScale = computed(() =>
-  Math.min((settingsStore.screensaverWeatherSize / 100) * touchScale.value, 2)
+  isMobileViewport.value
+    ? Math.min((settingsStore.screensaverWeatherSize / 100) * touchScale.value, 0.9)
+    : Math.min((settingsStore.screensaverWeatherSize / 100) * touchScale.value, 2)
 )
-const showNewsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('news'))
+// Headlines show on mobile only while the column/rail doesn't overflow —
+// a smaller screen drops back to clock + weather + world clock. The flag
+// is driven by the ResizeObserver near onMounted.
+const newsFits = ref(true)
+const showNewsWidget = computed(() =>
+  isMobileViewport.value ? newsFits.value : settingsStore.screensaverWidgets.includes('news')
+)
+// Two headlines max on mobile — glanceable, not a reading list.
+const visibleNewsItems = computed(() =>
+  isMobileViewport.value ? newsWindow.value.slice(0, 2) : newsWindow.value
+)
 const showMarketWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('market'))
 const showWorldClockWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('worldclock'))
 const showSportsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('sports'))
@@ -880,7 +893,31 @@ function updateDrift() {
   driftY.value = Math.cos(driftTick / 90) * 16
 }
 
+// --- Mobile headline fit guard --------------------------------------------------
+// Headlines earn a slot only while everything fits without scrolling:
+// the observer re-evaluates on any size change — a tiny landscape screen
+// drops to clock + weather + world clock; a roomier orientation brings
+// them back. One-directional per measurement cycle so it can't flap.
+const rootEl = ref<HTMLElement | null>(null)
+let ssObserver: ResizeObserver | null = null
+
+function evalNewsFit() {
+  const el = rootEl.value
+  if (!el || !isMobileViewport.value) return
+  if (el.scrollHeight > el.clientHeight + 4 || el.scrollWidth > el.clientWidth + 4) {
+    newsFits.value = false
+  }
+}
+
 onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined' && rootEl.value) {
+    ssObserver = new ResizeObserver(() => {
+      newsFits.value = true
+      nextTick(evalNewsFit)
+    })
+    ssObserver.observe(rootEl.value)
+  }
+  nextTick(evalNewsFit)
   clockTimer = setInterval(() => { time.value = new Date() }, 1000)
   driftTimer = setInterval(updateDrift, 500)
   onViewportResize()
@@ -905,6 +942,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  ssObserver?.disconnect()
+  ssObserver = null
   if (clockTimer) clearInterval(clockTimer)
   if (driftTimer) clearInterval(driftTimer)
   widgetObserver?.disconnect()
@@ -1466,13 +1505,19 @@ onUnmounted(() => {
 }
 
 /* ── Mobile screensaver (DL-063) ─────────────────────────────────────────
-   Phones get a dedicated sparse layout: clock + world clock, centered in a
-   flow column — the saved desktop positions/drift would scatter widgets
-   off a small screen, so .ss-pos is flattened (inline styles need
-   !important). Landscape-first sizing: height is the scarce dimension. */
+   Phones get a dedicated sparse layout: clock + weather + world clock,
+   plus headlines while they fit (newsFits guard). The saved desktop
+   positions/drift would scatter widgets off a small screen, so .ss-pos is
+   flattened into flow (inline styles need !important).
+   Landscape = two-column grid: clock hero left, glance rail right.
+   Portrait = single centered column, clock first. */
 .screensaver.ss-mobile {
-  gap: clamp(10px, 4vh, 22px);
+  gap: clamp(8px, 3vh, 18px);
   padding: 0 5vw;
+  /* The narrow-viewport media rule above switches to top-aligned scroll —
+     mobile stays centered and clip-contained instead. */
+  justify-content: center;
+  overflow-y: hidden;
 }
 
 .screensaver.ss-mobile .ss-pos {
@@ -1482,8 +1527,15 @@ onUnmounted(() => {
   transform: none !important;
 }
 
+/* Column order (portrait): clock hero, weather, headlines, world clock.
+   In landscape grid mode `order` also decides the rail's row sequence. */
+.screensaver.ss-mobile .ss-body { order: -2; }
+.screensaver.ss-mobile .ss-weather { order: -1; }
+
 .screensaver.ss-mobile .ss-time {
-  font-size: clamp(3rem, 26vh, 9rem);
+  /* min() of both axes — a portrait phone is tall but narrow, so the
+     digits must fit the width too, not just the height. */
+  font-size: clamp(3rem, min(24vh, 25vw), 9rem);
 }
 
 .screensaver.ss-mobile .ss-date-line {
@@ -1500,20 +1552,53 @@ onUnmounted(() => {
   letter-spacing: 0.24em;
 }
 
+/* Weather pill — left-aligned, compact; scale is capped in the computed
+   (--ss-weather-scale is an inline style so CSS can't override it). */
+.screensaver.ss-mobile .ss-weather {
+  justify-content: flex-start;
+  pointer-events: none;
+}
+
+/* Headlines — single column, tight rows, one-line titles: glanceable. */
+.screensaver.ss-mobile .ss-news {
+  gap: clamp(4px, 1.4vh, 10px);
+}
+
+.screensaver.ss-mobile .ss-article-grid {
+  grid-template-columns: 1fr;
+  row-gap: clamp(3px, 1vh, 8px);
+}
+
+.screensaver.ss-mobile .ss-article {
+  min-height: 0;
+  gap: 0.25rem;
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
+.screensaver.ss-mobile .ss-article-title {
+  -webkit-line-clamp: 1;
+  font-size: clamp(0.68rem, 0.55rem + 0.8vw, 0.9rem);
+  line-height: 1.25;
+}
+
+.screensaver.ss-mobile .ss-article-meta {
+  display: none;
+}
+
+.screensaver.ss-mobile .ss-section {
+  gap: clamp(4px, 1.4vh, 10px);
+}
+
+.screensaver.ss-mobile .ss-section-head h2 {
+  font-size: clamp(0.5rem, 0.45rem + 0.4vw, 0.7rem);
+}
+
 /* World clock: vertical rows become a wrapped row of compact chips —
    label over time — so several zones fit without a tall list. */
 .screensaver.ss-mobile .ss-worldclock {
   width: 100%;
   max-width: 560px;
-  gap: clamp(6px, 1.8vh, 12px);
-}
-
-.screensaver.ss-mobile .ss-section-head {
-  justify-content: center;
-}
-
-.screensaver.ss-mobile .ss-section-head .ss-hairline {
-  display: none;
 }
 
 .screensaver.ss-mobile .ss-tz {
@@ -1526,7 +1611,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px 16px;
+  padding: 4px 14px;
   border-top: none;
   border-left: 1px solid rgba(255, 255, 255, 0.14);
 }
@@ -1541,5 +1626,55 @@ onUnmounted(() => {
 
 .screensaver.ss-mobile .ss-tz-time {
   font-size: clamp(1.05rem, 5.5vh, 1.7rem);
+}
+
+/* Landscape: clock + date hero on the left, everything else in a right
+   "glance rail" — weather pill, headlines, world-clock chips stacked in
+   `order`-modified sequence. Height stays the constraint, width does the
+   work. */
+@media (orientation: landscape) {
+  .screensaver.ss-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    column-gap: 5vw;
+    align-content: center;
+    row-gap: 1.6vh;
+    justify-items: center;
+  }
+
+  .screensaver.ss-mobile .ss-body {
+    grid-column: 1;
+    grid-row: 1 / span 10;
+    align-self: center;
+  }
+
+  .screensaver.ss-mobile .ss-weather,
+  .screensaver.ss-mobile .ss-wrap-news,
+  .screensaver.ss-mobile .ss-wrap-worldclock {
+    grid-column: 2;
+    justify-self: stretch;
+  }
+
+  .screensaver.ss-mobile .ss-worldclock {
+    max-width: none;
+  }
+
+  .screensaver.ss-mobile .ss-tz {
+    justify-content: flex-start;
+  }
+
+  .screensaver.ss-mobile .ss-section-head {
+    justify-content: flex-start;
+  }
+}
+
+/* Portrait keeps the single centered column — the heads stay centered. */
+@media (orientation: portrait) {
+  .screensaver.ss-mobile .ss-section-head {
+    justify-content: center;
+  }
+  .screensaver.ss-mobile .ss-section-head .ss-hairline {
+    display: none;
+  }
 }
 </style>

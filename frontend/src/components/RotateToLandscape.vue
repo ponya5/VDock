@@ -24,10 +24,15 @@ import { useMobileViewport } from '@/utils/mobileViewport'
 // The deck is landscape-only on phones: a 5-6 column grid can never be
 // comfortable in portrait. The phone detection itself is shared
 // (useMobileViewport) so the same flag also strips config affordances.
+// The screensaver is exempt — it's passive glanceable content with its
+// own portrait layout (DL-063), not an interactive surface to gate.
+const props = defineProps<{ screensaverActive?: boolean }>()
 const { isMobileViewport, isPortrait } = useMobileViewport()
 const dismissed = ref(false)
 
-const blocked = computed(() => isMobileViewport.value && isPortrait.value && !dismissed.value)
+const blocked = computed(() =>
+  isMobileViewport.value && isPortrait.value && !dismissed.value && !props.screensaverActive
+)
 </script>
 
 <style scoped>

@@ -180,7 +180,7 @@
     </div>
 
     <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt -->
-    <RotateToLandscape />
+    <RotateToLandscape :screensaver-active="screensaverVisible" />
   </div>
 </template>
 

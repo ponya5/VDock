@@ -85,3 +85,40 @@ Caught during verification: the first LAN check showed an empty rail —
 not `dashboardStore.scenes`). Rebuilt; LAN now renders all 4 segments.
 
 Checks: `vue-tsc` clean, production build clean, 239/239 frontend tests.
+
+## Follow-up — mobile widget set (clock + weather + headlines if they fit)
+
+User feedback: clock+worldclock alone is too sparse — allow **weather**
+and **headlines** too, but only if everything is visible without
+scrolling; otherwise fall back to clock + weather + world clock.
+Animated screensaver background stays (it was never gated).
+
+- `showWeatherWidget`/`showNewsWidget` re-enabled on mobile (market and
+  sports stay hidden — they're the heaviest feeds).
+- **Landscape**: two-column grid — clock+date hero left, a "glance rail"
+  right stacking weather pill → headlines (2 items, 1-line clamp) →
+  world-clock chips. **Portrait**: single column, clock first, then
+  weather, headlines, world clock (flex `order`).
+- **`newsFits` overflow guard**: a ResizeObserver on the screensaver
+  root measures `scrollHeight > clientHeight` → drops headlines (the
+  explicit fallback set), re-evaluates on every resize so rotating to a
+  roomier orientation can bring them back.
+- Weather pill uses the existing `--ss-weather-scale` var capped at 0.9
+  on mobile (inline style wins over CSS, so the scale is clamped in the
+  computed, not overridden).
+
+Verified on Galaxy S9+ emulation (658×320 landscape / 320×658 portrait,
+production LAN build):
+
+- Landscape: two-column grid live — clock hero left, glance rail right
+  (weather pill → headlines → world-clock chips), markets/sports absent.
+- Portrait: centered column clock→weather→headlines→world clock.
+- Two fixes found in verification: `min(24vh, 25vw)` for the clock
+  (portrait phones are tall but narrow — digits clipped horizontally at
+  pure `vh`), and `justify-content:center` + `overflow:hidden` on the
+  root (the pre-existing `max-width:620px` rule forced top-aligned
+  scrollable, defeating the centered column).
+- Rotate gate now takes `screensaver-active` — a portrait phone shows
+  the clock instead of a rotate prompt, since the screensaver is
+  passive glanceable content, not the interactive deck.
+- 239/239 frontend tests, `vue-tsc` + production build clean.
