@@ -1368,6 +1368,7 @@
                     <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
                     <a class="btn" href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'bug']" /> Report an issue</a>
                     <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'star']" /> Star the repo</a>
+                    <a class="btn" href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'coffee']" /> Buy me a coffee</a>
                   </div>
                 </div>
               </div>
