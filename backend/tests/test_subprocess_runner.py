@@ -75,6 +75,24 @@ def test_spawn_also_refuses_a_string_argv():
         sr.spawn('notepad')
 
 
+def test_spawn_never_combines_new_console_and_detached(monkeypatch):
+    """WinError 87 regression: those two flags are mutually exclusive and
+    CreateProcess rejects the combination with ERROR_INVALID_PARAMETER."""
+    calls = []
+
+    class FakePopen:
+        def __init__(self, argv, **kwargs):
+            calls.append(kwargs)
+
+    monkeypatch.setattr(sr.subprocess, 'Popen', FakePopen)
+    sr.spawn([PY, '--version'])
+
+    flags = calls[0].get('creationflags', 0)
+    new_console = getattr(sr.subprocess, 'CREATE_NEW_CONSOLE', 0x10)
+    detached = getattr(sr.subprocess, 'DETACHED_PROCESS', 0x08)
+    assert not (flags & new_console and flags & detached)
+
+
 # --- resolution and failure reporting ----------------------------------------
 
 def test_missing_binary_raises_a_named_error():

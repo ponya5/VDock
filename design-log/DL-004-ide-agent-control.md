@@ -425,3 +425,42 @@ live Devin-hosted session. A stale backend process was found sharing
 port 5000 (Windows `SO_REUSEADDR` lets two listeners bind the same
 socket — the old code answered the first probe); killed it, the current
 backend reports all 40 `cc_*` actions.
+
+### Follow-up (2026-09-21): `claude_continue` fails with WinError 87
+
+**Reported:** every press of the `claude_continue` buttons ("Open Claude",
+"Continue") toasted `Action Failed — Could not start Claude Code
+(WinError 87) The parameter is incorrect`.
+
+**Root cause.** `utils/subprocess_runner.py::spawn` OR'd
+`CREATE_NEW_CONSOLE | DETACHED_PROCESS` into `Popen(creationflags=...)`.
+The two flags are mutually exclusive — `CreateProcess` rejects the
+combination with `ERROR_INVALID_PARAMETER` (87). Reproduced directly:
+`Popen([claude.cmd, '--version'], creationflags=NEW_CONSOLE|DETACHED)`
+raises it. Even without the error, `DETACHED_PROCESS` was wrong for this
+action — it gives the child *no* console, so an interactive `claude`
+session would open invisible. `CREATE_NEW_CONSOLE` alone is the correct
+flag: the child gets its own console window and outlives VDock, which is
+what the original comment intended.
+
+**Fix:** keep `CREATE_NEW_CONSOLE`, drop `DETACHED_PROCESS`. No other
+spawn-path change — `sr.run` (used by `claude_prompt`/`claude_slash`)
+passes no creation flags and was never affected.
+
+**Known limitation (not changed):** `claude` resolves to the npm
+`claude.cmd` shim, so arguments reach it through `cmd.exe` even with
+`shell=False` — batch-file argument escaping is a Windows/cmd limitation,
+not something `list2cmdline` quoting can fully close. The docstring's
+"never through a shell" guarantee holds for the launch mechanism but
+`.cmd` shims remain a weak spot for metacharacters in prompts.
+
+**Verified (2026-09-21):**
+
+- `Popen` with the old flag pair raises `[WinError 87]` on this machine;
+  with `CREATE_NEW_CONSOLE` alone, `sr.spawn(['claude', '--continue'])`
+  returns cleanly and the interactive terminal window opens.
+- `claude_open` (`target=web`) exercised through `execute_action` —
+  returns success (`start "" "https://claude.ai"` path unaffected).
+- New regression test `test_spawn_never_combines_new_console_and_detached`
+  monkeypatches `Popen` and asserts the two flags are never OR'd together.
+- `test_subprocess_runner.py` 40/40, `test_integrations.py` 51/51 pass.

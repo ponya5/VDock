@@ -192,11 +192,11 @@ def spawn(
     run_env = {**os.environ, **env} if env else None
     creation_flags = 0
     if os.name == 'nt':
-        # Detach from VDock so closing the app does not kill the terminal.
-        creation_flags = (
-            getattr(subprocess, 'CREATE_NEW_CONSOLE', 0)
-            | getattr(subprocess, 'DETACHED_PROCESS', 0)
-        )
+        # A console of its own keeps the terminal usable and alive after
+        # VDock exits. DETACHED_PROCESS must not be OR'd in: the two flags
+        # are mutually exclusive, and CreateProcess fails the combination
+        # with WinError 87.
+        creation_flags = getattr(subprocess, 'CREATE_NEW_CONSOLE', 0)
 
     subprocess.Popen(  # noqa: S603 - argv list, shell=False
         [binary, *(str(a) for a in argv[1:])],
