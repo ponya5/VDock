@@ -89,3 +89,20 @@ error unrelated to this change).
 its own column — merge chips are `DeckGrid`-only, so docked sliders
 don't offer merging (vertical column, horizontal control — correct to
 skip).
+
+## Follow-up (2026-09-22) — wheel scrolling + merge failure feedback
+
+Two defects from live use:
+
+- **Wheel did nothing.** `SliderButtonFace` only handled pointer-drag and
+  arrow keys — scrolling over a volume slider was dead input. The face
+  root now handles `@wheel.prevent`: each notch nudges `max(step, 5)%`
+  (a notch should be audible even at fine configured steps), and a 160ms
+  trailing timer force-dispatches the resting value so the 120ms dispatch
+  throttle can't leave the system level short of the face.
+- **Merge failed silently.** `mergeSliderButtons` returns false when the
+  pair isn't side-by-side/same-height, and the caller showed no feedback —
+  a click that does nothing reads as broken. `handleButtonMerge` now
+  surfaces an error toast on refusal. (Verified the chip path itself
+  works: clicking it merged two volume sliders into one 2-col slider,
+  persisted to the profile.)

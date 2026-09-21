@@ -195,6 +195,13 @@ export function useButtonActions() {
   function handleButtonMerge(leftId: string, rightId: string) {
     if (dashboardStore.mergeSliderButtons(leftId, rightId)) {
       notificationsStore.success('Sliders merged', 'Combined into one wide slider. Undo splits them again.')
+    } else {
+      // The store refuses silently today — a click that does nothing reads
+      // as "broken", so say why.
+      notificationsStore.error(
+        'Cannot merge',
+        'Only sliders sitting side-by-side at the same height can merge.'
+      )
     }
   }
 

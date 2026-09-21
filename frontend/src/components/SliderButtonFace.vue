@@ -1,5 +1,10 @@
 <template>
-  <div class="slider-face" :class="{ compact }" :style="faceStyle">
+  <div
+    class="slider-face"
+    :class="{ compact }"
+    :style="faceStyle"
+    @wheel.prevent="onWheel"
+  >
     <div class="slider-head">
       <FontAwesomeIcon :icon="targetIcon" class="slider-icon" />
       <span v-if="button.label" class="slider-label">{{ button.label }}</span>
@@ -64,6 +69,7 @@ const value = ref<number>(Number(cfg.value.value ?? min.value))
 const dragging = ref(false)
 const trackRef = ref<HTMLElement | null>(null)
 let lastDispatch = 0
+let wheelTimer: number | undefined
 const THROTTLE_MS = 120
 
 const fillPct = computed(() =>
@@ -156,6 +162,22 @@ function onPointerUp(e: PointerEvent) {
 
 function nudge(delta: number) {
   apply(value.value + delta, true)
+}
+
+// A wheel notch should be audible, not sub-perceptible — floor at 5%
+// even when the configured step is finer.
+const wheelStep = computed(() => Math.max(step.value, 5))
+
+function onWheel(e: WheelEvent) {
+  if (props.button.enabled === false || dashboardStore.isEditMode) return
+  const dir = e.deltaY < 0 ? 1 : -1
+  apply(value.value + dir * wheelStep.value)
+  vibrate(8)
+  // The 120ms dispatch throttle can swallow the final tick, leaving the
+  // system level short of what the face shows — force it once the wheel
+  // stops moving.
+  window.clearTimeout(wheelTimer)
+  wheelTimer = window.setTimeout(() => apply(value.value, true), 160)
 }
 
 onMounted(() => {
