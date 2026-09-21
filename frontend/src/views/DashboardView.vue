@@ -162,6 +162,9 @@
     <div v-if="actionResult && settingsStore.toastLevel !== 'off' && actionResult.success === false" class="action-toast error">
       {{ actionResult.message }}
     </div>
+
+    <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt -->
+    <RotateToLandscape />
   </div>
 </template>
 
@@ -184,6 +187,7 @@ import ScreenSaver from '@/components/ScreenSaver.vue'
 import EditSidebar from '@/components/EditSidebar.vue'
 import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
+import RotateToLandscape from '@/components/RotateToLandscape.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useTutorial } from '@/services/tutorial'
