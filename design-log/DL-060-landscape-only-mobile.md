@@ -51,3 +51,12 @@ permanently blocked.
   on all literal font sizes — initial px values replaced with the
   project's clamp convention.
 - `vue-tsc` clean, production build clean, 239/239 frontend tests.
+
+**Follow-up (stale-bundle gap found during phone verification):** the S21
+screenshots showed the *previous* bundle — no gate, no header auto-hide.
+The `controllerchange` reload existed, but the SW update *check* only ran
+on page `load`, and a Chrome-restored phone tab may never fire `load`
+again. `main.ts` now also calls `registration.update()` hourly and on
+`visibilitychange` → visible, so deploys self-apply without a manual
+refresh. One manual reload is still needed this once to pick up the build
+containing this fix.

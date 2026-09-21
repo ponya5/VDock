@@ -29,6 +29,19 @@ if ('serviceWorker' in navigator) {
     swReloading = true
     window.location.reload()
   })
+
+  // A deck tab stays open for days and a restored phone tab may never fire
+  // `load` again — registration.update() is what actually discovers a new
+  // sw.js, so poll hourly and on every return to foreground. Paired with the
+  // controllerchange reload above, a deploy self-applies without a manual
+  // refresh.
+  const checkForSwUpdate = () => {
+    navigator.serviceWorker.getRegistration().then(r => r?.update()).catch(() => {})
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForSwUpdate()
+  })
+  setInterval(checkForSwUpdate, 60 * 60 * 1000)
 }
 
 installSessionLog(app)
