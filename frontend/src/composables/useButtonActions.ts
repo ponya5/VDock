@@ -191,18 +191,19 @@ export function useButtonActions() {
     dashboardStore.swapButtons(sourceId, targetId)
   }
 
-  /** Merge chip between two adjacent sliders — one wide slider, undoable. */
-  function handleButtonMerge(leftId: string, rightId: string) {
-    if (dashboardStore.mergeSliderButtons(leftId, rightId)) {
-      notificationsStore.success('Sliders merged', 'Combined into one wide slider. Undo splits them again.')
-    } else {
-      // The store refuses silently today — a click that does nothing reads
-      // as "broken", so say why.
+  /** Widen chip: grow into the next free column, or merge a slider sibling. */
+  function handleSliderExpand(id: string) {
+    if (!dashboardStore.expandSliderButton(id)) {
       notificationsStore.error(
-        'Cannot merge',
-        'Only sliders sitting side-by-side at the same height can merge.'
+        'Cannot widen',
+        'The next cell is taken — only free space or another slider can be absorbed.'
       )
     }
+  }
+
+  /** Narrow chip: give one column back. */
+  function handleSliderShrink(id: string) {
+    dashboardStore.shrinkSliderButton(id)
   }
 
   function handleActionDrop(action: any, position: { row: number; col: number }) {
@@ -534,7 +535,8 @@ export function useButtonActions() {
     handleButtonDelete,
     handleButtonMove,
     handleButtonSwap,
-    handleButtonMerge,
+    handleSliderExpand,
+    handleSliderShrink,
     handleActionDrop,
     handlePlaceholderClick,
     handlePlaceholderLongPress,

@@ -64,13 +64,48 @@ def _audio_worker_loop(work_q):
                 endpoint_box['err'] = f'Audio device unavailable: {e}'
         return endpoint_box['endpoint'], endpoint_box['err']
 
+    def app_volume(process, set_value=None):
+        """Per-app session volume. set_value 0.0-1.0 or None to read.
+
+        Returns (percent | True, None) or (None, error)."""
+        try:
+            from pycaw.pycaw import AudioUtilities
+        except ImportError:
+            return None, 'pycaw not installed (pip install pycaw)'
+        proc = (process or '').strip().lower()
+        if not proc:
+            return None, 'No process configured'
+        if not proc.endswith('.exe'):
+            proc += '.exe'
+        try:
+            matched = None
+            for session in AudioUtilities.GetAllSessions():
+                name = ''
+                try:
+                    if session.Process:
+                        name = session.Process.name().lower()
+                except Exception:
+                    name = ''
+                if name == proc:
+                    matched = session
+                    break
+            if matched is None:
+                return None, f'No audio session for {proc}'
+            vol = matched.SimpleAudioVolume
+            if set_value is None:
+                return round(vol.GetMasterVolume() * 100), None
+            vol.SetMasterVolume(set_value, None)
+            return True, None
+        except Exception as e:
+            return None, str(e)
+
     while True:
         job = work_q.get()
         if job is None:
             break
         fn, done, box = job
         try:
-            box['result'] = fn(get_endpoint)
+            box['result'] = fn({'endpoint': get_endpoint, 'app_volume': app_volume})
         except Exception as e:
             box['error'] = e
         done.set()
@@ -78,7 +113,7 @@ def _audio_worker_loop(work_q):
 
 
 def _run_on_audio_thread(fn, timeout=5):
-    """Run fn(get_endpoint) on the COM worker; returns fn's result."""
+    """Run fn(ctx) on the COM worker; returns fn's result."""
     global _audio_worker_thread, _audio_worker_queue
     with _audio_worker_lock:
         if _audio_worker_thread is None or not _audio_worker_thread.is_alive():
@@ -105,7 +140,7 @@ class CrossPlatformAction(BaseAction):
         'shutdown', 'restart', 'sleep', 'lock_screen',
         # Volume control
         'volume_up', 'volume_down', 'volume_mute', 'volume_unmute',
-        'volume_set', 'volume_get',
+        'volume_set', 'volume_get', 'app_volume_set', 'app_volume_get',
         # Microphone control
         'microphone_mute', 'microphone_unmute',
         # Brightness control
@@ -157,6 +192,10 @@ class CrossPlatformAction(BaseAction):
                 return self._volume_set()
             elif action == 'volume_get':
                 return self._volume_get()
+            elif action == 'app_volume_set':
+                return self._app_volume_set()
+            elif action == 'app_volume_get':
+                return self._app_volume_get()
             elif action == 'brightness_up':
                 return self._brightness_up()
             elif action == 'brightness_down':
@@ -385,8 +424,8 @@ class CrossPlatformAction(BaseAction):
         Core Audio objects must never be created or released on Flask workers.
         Returns (level_percent | True, None) or (None, error).
         """
-        def job(get_endpoint):
-            endpoint, err = get_endpoint()
+        def job(ctx):
+            endpoint, err = ctx['endpoint']()
             if endpoint is None:
                 return None, err
             try:
@@ -467,6 +506,41 @@ class CrossPlatformAction(BaseAction):
                 )
             return ActionResult(False, 'Could not read volume (amixer)')
         return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
+
+    def _app_volume_process(self):
+        return str(self.config.get('process') or self.config.get('app') or '').strip()
+
+    def _app_volume_set(self) -> ActionResult:
+        """Set one app's session volume 0-100 — the app_volume slider."""
+        if _SYSTEM != 'Windows':
+            return ActionResult(False, 'Per-app volume is Windows-only')
+        process = self._app_volume_process()
+        if not process:
+            return ActionResult(False, 'No process configured')
+        try:
+            value = max(0, min(100, int(float(self.config.get('value', 50)))))
+        except (TypeError, ValueError):
+            return ActionResult(False, 'Invalid volume value (0-100 expected)')
+        result, err = _run_on_audio_thread(
+            lambda ctx: ctx['app_volume'](process, value / 100.0))
+        if result is not None:
+            return ActionResult(
+                True, f'{process} volume set to {value}%',
+                {'value': value, 'badge': f'{value}%'})
+        return ActionResult(False, err or f'Could not set {process} volume')
+
+    def _app_volume_get(self) -> ActionResult:
+        """Current session volume 0-100 for the configured process."""
+        if _SYSTEM != 'Windows':
+            return ActionResult(False, 'Per-app volume is Windows-only')
+        process = self._app_volume_process()
+        if not process:
+            return ActionResult(False, 'No process configured')
+        value, err = _run_on_audio_thread(
+            lambda ctx: ctx['app_volume'](process))
+        if value is not None:
+            return ActionResult(True, f'{process} volume {value}%', {'value': value})
+        return ActionResult(False, err or f'Could not read {process} volume')
 
     # Brightness Control Actions
     def _brightness_up(self) -> ActionResult:

@@ -660,7 +660,16 @@
           <div class="rail">
             <div class="preview">
               <div class="preview-head"><FontAwesomeIcon :icon="['fas', 'eye']" /> Preview</div>
-              <div class="preview-stage preview-stage-bg preview-stage-bg-tall" :class="previewBackgroundClass" :style="previewBackgroundStyle">
+              <div ref="bgPreviewStage" class="preview-stage preview-stage-bg preview-stage-bg-tall" :class="previewBackgroundClass" :style="previewBackgroundStyle">
+                <!-- Component-kind backgrounds are position:fixed 100vw×100vh —
+                     a transformed wrapper becomes their containing block, so a
+                     viewport-sized inner stage scaled down renders the real
+                     effect inside the rail instead of a checkerboard. -->
+                <div v-if="previewBgComponent" class="preview-bg-clip">
+                  <div class="preview-bg-viewport" :style="{ transform: `scale(${bgPreviewScale})` }">
+                    <component :is="previewBgComponent" :key="settingsStore.background" :on-error="onPreviewBgError" />
+                  </div>
+                </div>
                 <div class="mock-grid mock-grid-ghost">
                   <span v-for="i in 6" :key="i" class="mock-key ghost"></span>
                 </div>
@@ -1797,6 +1806,42 @@ const previewButton = computed<Button>(() => ({
 // scene/page-background overrides, which aren't relevant to a settings
 // preview) so the preview pane shows exactly what the dashboard would.
 const previewBackgroundClass = computed(() => backgroundClassFor(settingsStore.background))
+
+// The real component for 'component'-kind backgrounds, rendered inside the
+// scaled-viewport stage (see template). Falls back to the checkerboard via
+// previewBackgroundStyle when the component reports an init failure.
+const bgPreviewFailed = ref<string | null>(null)
+const previewBgComponent = computed(() => {
+  const option = resolveBackground(settingsStore.background)
+  return option.kind === 'component' && bgPreviewFailed.value !== option.id
+    ? option.component
+    : null
+})
+function onPreviewBgError(err: unknown) {
+  console.warn('[settings-preview] background fell back:', settingsStore.background, err)
+  bgPreviewFailed.value = settingsStore.background
+}
+
+// The inner stage is 100vw×100vh; scale = stage width / real viewport width.
+const bgPreviewStage = ref<HTMLElement | null>(null)
+const bgPreviewScale = ref(0.2)
+let bgPreviewObserver: ResizeObserver | undefined
+watch(bgPreviewStage, (el, _old, onCleanup) => {
+  bgPreviewObserver?.disconnect()
+  if (!el) return
+  const update = () => {
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    if (vw > 0 && vh > 0 && el.clientWidth > 0 && el.clientHeight > 0) {
+      // cover, not contain — the stage clips whatever doesn't fit
+      bgPreviewScale.value = Math.max(el.clientWidth / vw, el.clientHeight / vh)
+    }
+  }
+  update()
+  bgPreviewObserver = new ResizeObserver(update)
+  bgPreviewObserver.observe(el)
+  onCleanup(() => bgPreviewObserver?.disconnect())
+})
 
 // Inline styles always win over the (global, unscoped) dashboard-bg-* classes
 // regardless of CSS specificity, so every branch here sets an explicit
@@ -4141,7 +4186,11 @@ onMounted(async () => {
   min-height: 180px;
   background: radial-gradient(120% 90% at 50% 0%, #17294a 0%, #0c1526 60%, #0a111f 100%);
 }
-.preview-stage-bg { background-size: cover; background-position: center; }
+.preview-stage-bg { background-size: cover; background-position: center; position: relative; }
+/* scaled-viewport host for real component backgrounds (DL-059) */
+.preview-bg-clip { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; z-index: 0; }
+.preview-bg-viewport { width: 100vw; height: 100vh; transform-origin: top left; }
+.preview-stage-bg .mock-grid { position: relative; z-index: 1; }
 .preview-stage-grid { min-height: 150px; }
 .preview-stage-bg-tall { min-height: 240px; }
 .preview-foot { padding: 11px 14px; border-top: 1px solid var(--line-soft); color: var(--text-3); font-size: var(--fs-xs); }
@@ -4158,6 +4207,13 @@ onMounted(async () => {
 .mock-key.side { aspect-ratio: auto; }
 .mock-grid-ghost .mock-key { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); }
 .preview-stage-grid .mock-grid { grid-template-columns: repeat(4, 1fr); max-width: 240px; }
+
+/* mini dashboard mock (Layout & sidebar preview rail) */
+.mock-dash { display: flex; gap: 12px; width: 100%; max-width: 300px; align-items: stretch; }
+.mock-dash-side { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.mock-dash-side .mock-key { border-radius: 8px; }
+.mock-dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1; align-content: start; }
+.mock-dash-grid .mock-key { border-radius: 8px; }
 
 /* screensaver mock */
 .ss-mock { display: grid; place-items: center; gap: 6px; text-align: center; color: #dfe9f7; }

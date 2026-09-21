@@ -496,7 +496,13 @@
               <option value="volume">System volume</option>
               <option value="brightness">Screen brightness</option>
               <option value="ui_brightness">VDock brightness (this app)</option>
+              <option value="app_volume">App volume (one process)</option>
             </select>
+          </div>
+          <div v-if="actionConfig.target === 'app_volume'" class="form-group">
+            <label>Process name</label>
+            <input v-model="actionConfig.process" type="text" class="input" placeholder="spotify.exe" />
+            <p class="form-help">The app's executable as shown in the Windows volume mixer — e.g. spotify.exe, chrome.exe.</p>
           </div>
           <div class="slider-range-grid">
             <div class="form-group">

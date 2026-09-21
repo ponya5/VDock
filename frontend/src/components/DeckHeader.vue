@@ -23,10 +23,13 @@
         <div class="header-left">
           <div class="profile-avatar-container">
             <img
-              v-if="currentProfile?.avatar"
+              v-if="currentProfile?.avatar && !avatarBroken"
+              :key="currentProfile.avatar"
               :src="currentProfile.avatar"
               :alt="currentProfile.name"
               class="profile-avatar enhanced-avatar"
+              @error="avatarBroken = true"
+              @load="avatarBroken = false"
             />
             <div v-else class="profile-avatar-placeholder enhanced-avatar">
               <FontAwesomeIcon :icon="['fas', 'user']" />
@@ -175,6 +178,9 @@ const headerRef = ref<HTMLElement | null>(null)
 const progressWidth = ref(100)
 const isFullscreen = ref(typeof document !== 'undefined' && !!document.fullscreenElement)
 const isRefreshing = ref(false)
+// Broken avatar files (e.g. deleted uploads) otherwise paint the alt text
+// over the icon row — fall back to the placeholder glyph instead.
+const avatarBroken = ref(false)
 
 // In the Electron shell, fullscreen is a native window property controlled
 // via IPC and doesn't fire the DOM `fullscreenchange` event, so it can't be
@@ -241,12 +247,33 @@ const AUTOHIDE_MS = 5000
 const TICK_MS = 50
 
 function revealHeader() {
+  userRevealedOnShort = true
   settingsStore.showHeader = true
 }
 
 function collapseHeader() {
   stopAutohide()
   settingsStore.showHeader = false
+}
+
+// Short viewports (landscape phones): a 164px header leaves the deck
+// unusable, so it starts hidden — the reveal tab/swipe-down still works.
+// If WE hid it, rotating back to a tall viewport restores it; an explicit
+// user hide stays hidden.
+const SHORT_VIEWPORT_PX = 480
+let userRevealedOnShort = false
+let autoHidOnShort = false
+
+function autoHideOnShortViewport() {
+  if (window.innerHeight < SHORT_VIEWPORT_PX) {
+    if (!userRevealedOnShort && settingsStore.showHeader) {
+      settingsStore.showHeader = false
+      autoHidOnShort = true
+    }
+  } else if (autoHidOnShort && !settingsStore.showHeader) {
+    settingsStore.showHeader = true
+    autoHidOnShort = false
+  }
 }
 
 function startAutohide() {
@@ -305,6 +332,8 @@ useSwipe(headerRef, {
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+  window.addEventListener('resize', autoHideOnShortViewport)
+  autoHideOnShortViewport()
   getElectronFullscreen().then((value) => {
     isFullscreen.value = value
   })
@@ -313,6 +342,7 @@ onMounted(() => {
 onUnmounted(() => {
   stopAutohide()
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  window.removeEventListener('resize', autoHideOnShortViewport)
 })
 </script>
 

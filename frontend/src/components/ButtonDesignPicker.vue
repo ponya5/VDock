@@ -111,8 +111,11 @@ function onOverlayChange(e: Event) {
 
 .design-swatch-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  /* Fixed ~88px tiles keep the picker compact — fluid 1fr columns let the
+     swatches dominate the whole panel on wide layouts. */
+  grid-template-columns: repeat(5, minmax(0, 88px));
+  gap: 8px;
+  justify-content: center;
 }
 
 .design-swatch-wrap {
@@ -234,8 +237,8 @@ function onOverlayChange(e: Event) {
 
 @media (max-width: 640px) {
   .design-swatch-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 72px));
+    gap: 6px;
   }
 }
 </style>

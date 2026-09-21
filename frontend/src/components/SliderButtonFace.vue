@@ -40,6 +40,7 @@
  *   volume        → cross_platform volume_set (absolute, 0-100)
  *   brightness    → cross_platform brightness_set
  *   ui_brightness → local VDock dimmer, no backend round-trip
+ *   app_volume    → per-app session volume (config.process)
  *
  * Dispatches are throttled while dragging (the backend applies real volume —
  * 60 events/sec of nircmd calls is how sliders get laggy), with a final set on
@@ -95,6 +96,7 @@ const targetIcon = computed(() => {
     return value.value <= 0 ? ['fas', 'volume-mute'] : value.value < 50 ? ['fas', 'volume-down'] : ['fas', 'volume-up']
   }
   if (target.value === 'brightness') return ['fas', 'sun']
+  if (target.value === 'app_volume') return ['fas', 'headphones']
   return ['fas', 'adjust']
 })
 
@@ -117,7 +119,9 @@ function apply(v: number, force = false) {
   const rounded = Math.round(value.value)
   const action = target.value === 'brightness'
     ? { type: 'cross_platform', config: { action: 'brightness_set', brightness: rounded } }
-    : { type: 'cross_platform', config: { action: 'volume_set', value: rounded } }
+    : target.value === 'app_volume'
+      ? { type: 'cross_platform', config: { action: 'app_volume_set', process: cfg.value.process ?? '', value: rounded } }
+      : { type: 'cross_platform', config: { action: 'volume_set', value: rounded } }
   dashboardStore.executeAction(action, props.button.id).then((result) => {
     if (result?.success) {
       buttonStateStore.set(props.button.id, { badge: result.data?.badge ?? `${rounded}%` })
@@ -186,6 +190,15 @@ onMounted(() => {
   if (target.value === 'volume') {
     dashboardStore.executeAction(
       { type: 'cross_platform', config: { action: 'volume_get' } },
+      props.button.id
+    ).then((result) => {
+      if (result?.success && typeof result.data?.value === 'number') {
+        value.value = clamp(result.data.value)
+      }
+    }).catch(() => {})
+  } else if (target.value === 'app_volume' && cfg.value.process) {
+    dashboardStore.executeAction(
+      { type: 'cross_platform', config: { action: 'app_volume_get', process: cfg.value.process } },
       props.button.id
     ).then((result) => {
       if (result?.success && typeof result.data?.value === 'number') {

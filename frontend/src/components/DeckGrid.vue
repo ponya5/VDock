@@ -58,22 +58,36 @@
       <FontAwesomeIcon :icon="['fas', 'plus']" />
     </div>
 
-    <!-- Slider merge chips: a small handle on the shared edge of two
-         adjacent same-height sliders, only in edit mode. Anchored to the
-         right button's first column and nudged left by half the chip plus
-         half the grid gap so it sits centred exactly on the seam. -->
-    <button
-      v-for="seam in sliderSeams"
-      :key="`merge-${seam.leftId}-${seam.rightId}`"
-      class="slider-merge-chip"
-      :style="seamStyle(seam)"
-      type="button"
-      title="Merge sliders into one wide slider"
-      aria-label="Merge sliders"
-      @click.stop="handleSliderMerge(seam.leftId, seam.rightId)"
-    >
-      <FontAwesomeIcon :icon="['fas', 'link']" />
-    </button>
+    <!-- Slider resize chips: a handle pair on the slider's right edge in
+         edit mode. Widen grows into the next cell — free space expands,
+         an adjacent same-height slider merges (the old seam chip). Narrow
+         gives the column back. -->
+    <template v-for="edge in sliderEdges" :key="`edge-${edge.id}`">
+      <button
+        v-if="edge.canExpand"
+        class="slider-resize-chip widen"
+        :class="{ solo: !edge.canShrink }"
+        :style="edgeStyle(edge)"
+        type="button"
+        :title="edge.expandIsMerge ? 'Merge with the slider next door' : 'Widen into the next free cell'"
+        :aria-label="edge.expandIsMerge ? 'Merge sliders' : 'Widen slider'"
+        @click.stop="handleSliderExpand(edge.id)"
+      >
+        <FontAwesomeIcon :icon="edge.expandIsMerge ? ['fas', 'link'] : ['fas', 'plus']" />
+      </button>
+      <button
+        v-if="edge.canShrink"
+        class="slider-resize-chip shrink"
+        :class="{ solo: !edge.canExpand }"
+        :style="edgeStyle(edge)"
+        type="button"
+        title="Narrow by one column"
+        aria-label="Narrow slider"
+        @click.stop="handleSliderShrink(edge.id)"
+      >
+        <FontAwesomeIcon :icon="['fas', 'minus']" />
+      </button>
+    </template>
 
     <!-- Ambient Deck Overlay -->
     <DeckOverlay
@@ -134,7 +148,8 @@ const emit = defineEmits<{
   placeholderLongPress: [position: { row: number; col: number }]
   buttonMove: [buttonId: string, newPosition: { row: number; col: number }]
   buttonSwap: [sourceId: string, targetId: string]
-  buttonMerge: [leftId: string, rightId: string]
+  sliderExpand: [id: string]
+  sliderShrink: [id: string]
   doubleTap: [button: Button]
   longPress: [button: Button]
   exitEditMode: []
@@ -183,11 +198,12 @@ useSwipe(gridRef, {
   }
 })
 
-// DL-057: on tall narrow viewports (portrait phones) the 1fr rows stretch
-// cells into slivers; on short wide ones (landscape phones) they squash
-// them below the button's minimum. When the natural cell aspect drifts too
-// far from square, switch to square cells sized by column width and let
-// the grid scroll vertically inside itself.
+// DL-057/DL-059: on tall narrow viewports (portrait phones) the 1fr rows
+// stretch cells into slivers; on short wide ones (landscape phones) they
+// squash them below the button's minimum. In compact mode cells are
+// square and sized by the LIMITING dimension — min of the width- and
+// height-driven cell size — so the whole deck always fits the screen,
+// centred, no scrolling (only spills to scroll below a hard 36px floor).
 const hostSize = ref({ w: 0, h: 0 })
 let hostObserver: ResizeObserver | undefined
 
@@ -200,7 +216,9 @@ const cellMetrics = computed(() => {
   if (!w || !h) return null
   const cellW = w / cols
   const cellH = h / rows
-  const cellPx = Math.max(40, Math.floor((w - GRID_PAD * 2 - GRID_GAP * (cols - 1)) / cols))
+  const fitW = (w - GRID_PAD * 2 - GRID_GAP * (cols - 1)) / cols
+  const fitH = (h - GRID_PAD * 2 - GRID_GAP * (rows - 1)) / rows
+  const cellPx = Math.max(36, Math.floor(Math.min(fitW, fitH)))
   const aspect = cellH / cellW
   return { cellW, cellH, cellPx, compact: aspect > 1.3 || aspect < 0.7 }
 })
@@ -223,10 +241,11 @@ const gridStyle = computed(() => {
     return {
       display: 'grid',
       gridTemplateRows: `repeat(${rows}, ${m.cellPx}px)`,
-      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+      gridTemplateColumns: `repeat(${cols}, ${m.cellPx}px)`,
       gap: `${GRID_GAP}px`,
-      alignContent: 'start',
-      overflowY: 'auto',
+      alignContent: 'center',
+      justifyContent: 'center',
+      overflow: 'auto',
       width: '100%',
       height: '100%',
       padding: `${GRID_PAD}px`,
@@ -287,54 +306,78 @@ const emptySlots = computed(() => {
 })
 
 /**
- * Edit-mode merge affordance for sliders: one seam per pair of adjacent
- * same-height sliders (right button's first column = left's right edge).
- * Works for already-merged sliders too, so chains extend 2→3→n wide.
+ * Edit-mode resize affordance for sliders: one handle pair per slider on its
+ * right edge. Widen grows into the next column when it's free — or merges
+ * when it holds a same-height slider. Narrow gives a column back. Mirrors
+ * the store's expandSliderButton legality check.
  */
-interface SliderSeam {
-  leftId: string
-  rightId: string
+interface SliderEdge {
+  id: string
   row: number
   rows: number
-  rightCol: number
+  lastCol: number
+  canExpand: boolean
+  expandIsMerge: boolean
+  canShrink: boolean
 }
 
-const sliderSeams = computed<SliderSeam[]>(() => {
+const sliderEdges = computed<SliderEdge[]>(() => {
   if (!props.isEditMode) return []
-  const sliders = renderedPage.value.buttons.filter(
-    b => b.enabled && b.action?.type === 'slider'
-  )
-  const seams: SliderSeam[] = []
-  for (const left of sliders) {
-    for (const right of sliders) {
-      if (
-        left.id !== right.id &&
-        left.position.row === right.position.row &&
-        left.size.rows === right.size.rows &&
-        right.position.col === left.position.col + left.size.cols
-      ) {
-        seams.push({
-          leftId: left.id,
-          rightId: right.id,
-          row: left.position.row,
-          rows: left.size.rows,
-          rightCol: right.position.col
-        })
+  const { cols } = renderedPage.value.grid_config
+  const buttons = renderedPage.value.buttons.filter(b => b.enabled)
+
+  const occupantAt = (r: number, c: number, excludeId: string) =>
+    buttons.find(b =>
+      b.id !== excludeId &&
+      b.position.col <= c && c < b.position.col + b.size.cols &&
+      b.position.row <= r && r < b.position.row + b.size.rows
+    )
+
+  return buttons
+    .filter(b => b.action?.type === 'slider')
+    .map(btn => {
+      const nextCol = btn.position.col + btn.size.cols
+      let canExpand = false
+      let expandIsMerge = false
+      if (nextCol < cols) {
+        canExpand = true
+        for (let r = btn.position.row; r < btn.position.row + btn.size.rows; r++) {
+          const occ = occupantAt(r, nextCol, btn.id)
+          if (!occ) continue
+          const mergeable =
+            occ.action?.type === 'slider' &&
+            occ.position.row === btn.position.row &&
+            occ.size.rows === btn.size.rows &&
+            occ.position.col === nextCol
+          if (!mergeable) { canExpand = false; break }
+          expandIsMerge = true
+        }
       }
-    }
-  }
-  return seams
+      return {
+        id: btn.id,
+        row: btn.position.row,
+        rows: btn.size.rows,
+        lastCol: btn.position.col + btn.size.cols - 1,
+        canExpand,
+        expandIsMerge,
+        canShrink: btn.size.cols > 1
+      }
+    })
 })
 
-function seamStyle(seam: SliderSeam) {
+function edgeStyle(edge: SliderEdge) {
   return {
-    gridColumn: `${seam.rightCol + 1}`,
-    gridRow: `${seam.row + 1} / span ${seam.rows}`
+    gridColumn: `${edge.lastCol + 1}`,
+    gridRow: `${edge.row + 1} / span ${edge.rows}`
   }
 }
 
-function handleSliderMerge(leftId: string, rightId: string) {
-  emit('buttonMerge', leftId, rightId)
+function handleSliderExpand(id: string) {
+  emit('sliderExpand', id)
+}
+
+function handleSliderShrink(id: string) {
+  emit('sliderShrink', id)
 }
 
 const placeholderStyle = computed(() => {
@@ -788,35 +831,40 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
   transition: filter 0.15s ease;
 }
 
-/* Slider merge chip — sits on the seam between two adjacent sliders.
-   justify-self:start + translateX(-50% - 6px) centres it on the 12px
-   grid gap: -50% of the chip width pulls its centre to the cell's left
-   edge, -6px shifts it onto the middle of the gap. */
-.slider-merge-chip {
-  justify-self: start;
+/* Slider resize chips — a +/− handle pair straddling the slider's right
+   edge. Anchored to the slider's last column with justify-self:end +
+   translateX(50%), so each chip centres exactly on the outer edge.
+   Widen sits 17px above centre, narrow 17px below; a lone chip recentres. */
+.slider-resize-chip {
+  justify-self: end;
   align-self: center;
-  transform: translateX(calc(-50% - 6px));
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: var(--color-primary, #4aa3ff);
   color: #fff;
-  font-size: calc(12px * min(var(--touch-multiplier, 1), 1.25));
+  font-size: calc(11px * min(var(--touch-multiplier, 1), 1.25));
   cursor: pointer;
   z-index: 45; /* above the buttons' edit overlay */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   transition: transform 150ms var(--ease-out, ease-out), background 150ms var(--ease-out, ease-out);
 }
 
-.slider-merge-chip:hover {
-  transform: translateX(calc(-50% - 6px)) scale(1.15);
-  background: var(--color-primary-light, #6ea8ff);
-}
+.slider-resize-chip.widen { transform: translateX(50%) translateY(-17px); }
+.slider-resize-chip.shrink { transform: translateX(50%) translateY(17px); background: rgba(30, 41, 59, 0.92); }
+.slider-resize-chip.widen.solo,
+.slider-resize-chip.shrink.solo { transform: translateX(50%); }
 
-.slider-merge-chip:active {
-  transform: translateX(calc(-50% - 6px)) scale(0.95);
-}
+.slider-resize-chip.widen:hover { transform: translateX(50%) translateY(-17px) scale(1.15); }
+.slider-resize-chip.shrink:hover { transform: translateX(50%) translateY(17px) scale(1.15); background: rgba(51, 65, 85, 0.95); }
+.slider-resize-chip.widen.solo:hover,
+.slider-resize-chip.shrink.solo:hover { transform: translateX(50%) scale(1.15); }
+
+.slider-resize-chip.widen:active { transform: translateX(50%) translateY(-17px) scale(0.95); }
+.slider-resize-chip.shrink:active { transform: translateX(50%) translateY(17px) scale(0.95); }
+.slider-resize-chip.widen.solo:active,
+.slider-resize-chip.shrink.solo:active { transform: translateX(50%) scale(0.95); }
 
 /* Drop target highlight */
 .drop-target-active {

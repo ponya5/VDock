@@ -602,6 +602,13 @@ _CUSTOM: Tuple[ActionSpec, ...] = (
         keywords=('slider', 'drag', 'dim', 'level'),
     ),
     ActionSpec(
+        id='slider_app_volume', label='App Volume Slider', category='sliders',
+        icon=('fas', 'headphones'), action_type='slider', runs_on=RUNS_FRONTEND,
+        default_config={'target': 'app_volume', 'process': '', 'min': 0, 'max': 100, 'step': 5},
+        description="Drag to set one app's volume (configure the process name).",
+        keywords=('slider', 'drag', 'level', 'audio', 'app', 'spotify'),
+    ),
+    ActionSpec(
         id='cross_platform', label='Cross-Platform Action', category='custom',
         icon=('fas', 'globe-americas'), action_type='cross_platform',
         description='Any built-in system action, chosen by name.',

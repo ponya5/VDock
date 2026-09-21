@@ -63,7 +63,8 @@
             @placeholder-long-press="handlePlaceholderLongPress"
             @button-move="handleButtonMove"
             @button-swap="handleButtonSwap"
-            @button-merge="handleButtonMerge"
+            @slider-expand="handleSliderExpand"
+            @slider-shrink="handleSliderShrink"
             @swipe-up="nextScene"
             @swipe-down="previousScene"
             @long-press="handleDeckButtonLongPress"
@@ -222,7 +223,8 @@ const {
   handleButtonDelete,
   handleButtonMove,
   handleButtonSwap,
-  handleButtonMerge,
+  handleSliderExpand,
+  handleSliderShrink,
   handleActionDrop,
   handlePlaceholderClick,
   handlePlaceholderLongPress,

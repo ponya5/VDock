@@ -717,6 +717,58 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return true
   }
 
+  /**
+   * Grow a slider one column to the right. The target cell must be inside the
+   * grid and free across every row the slider spans; if it holds a same-height
+   * slider this becomes a merge. One history entry.
+   */
+  function expandSliderButton(id: string) {
+    const page = currentPage.value
+    const btn = page?.buttons.find(b => b.id === id)
+    if (!page || !btn || btn.action?.type !== 'slider') return false
+
+    const cols = page.grid_config.cols
+    const nextCol = btn.position.col + btn.size.cols
+    if (nextCol >= cols) return false
+
+    for (let r = btn.position.row; r < btn.position.row + btn.size.rows; r++) {
+      const occupant = page.buttons.find(b =>
+        b.enabled &&
+        b.id !== id &&
+        b.position.col <= nextCol &&
+        nextCol < b.position.col + b.size.cols &&
+        b.position.row <= r &&
+        r < b.position.row + b.size.rows
+      )
+      if (!occupant) continue
+      // Occupied: only mergeable when it's a same-top, same-height slider
+      if (
+        occupant.action?.type === 'slider' &&
+        occupant.position.row === btn.position.row &&
+        occupant.size.rows === btn.size.rows &&
+        occupant.position.col === nextCol
+      ) {
+        return mergeSliderButtons(id, occupant.id)
+      }
+      return false
+    }
+
+    btn.size = { ...btn.size, cols: btn.size.cols + 1 }
+    addToHistory()
+    saveProfile()
+    return true
+  }
+
+  /** Narrow a wide slider back by one column (rightmost column freed). */
+  function shrinkSliderButton(id: string) {
+    const btn = currentPage.value?.buttons.find(b => b.id === id)
+    if (!btn || btn.action?.type !== 'slider' || btn.size.cols <= 1) return false
+    btn.size = { ...btn.size, cols: btn.size.cols - 1 }
+    addToHistory()
+    saveProfile()
+    return true
+  }
+
   return {
     currentProfile,
     currentScene,
@@ -748,6 +800,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     moveButton,
     swapButtons,
     mergeSliderButtons,
+    expandSliderButton,
+    shrinkSliderButton,
     updateButton,
     getButton,
     applyGlobalButtonStyle,
