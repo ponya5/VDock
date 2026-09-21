@@ -1,5 +1,5 @@
 <template>
-  <footer class="deck-footer" :class="{ 'edit-mode': isEditMode }">
+  <footer class="deck-footer" :class="{ 'edit-mode': isEditMode, mobile: isMobileViewport }">
     <!-- Left Side: Page Dots -->
     <div class="footer-left">
       <div v-if="totalPages > 1" class="page-dots">
@@ -61,6 +61,9 @@
 
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useMobileViewport } from '@/utils/mobileViewport'
+
+const { isMobileViewport } = useMobileViewport()
 
 interface Props {
   isEditMode: boolean
@@ -100,6 +103,12 @@ const emit = defineEmits<{
   z-index: 90;
 }
 
+/* Mobile: the footer only ever carries page dots (edit controls can't
+   activate) — slimmed to the 44px touch-target floor the dots need. */
+.deck-footer.mobile {
+  min-height: 44px;
+}
+
 .footer-left {
   display: flex;
   align-items: center;
@@ -127,6 +136,7 @@ const emit = defineEmits<{
   box-sizing: content-box;
   transition: all 0.2s var(--ease-out);
 }
+
 
 .page-dot.active {
   background-color: #4aa3ff;

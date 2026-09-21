@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-view" :class="dashboardBackgroundClass" :style="dashboardBackgroundStyle">
+  <div class="dashboard-view" :class="[dashboardBackgroundClass, { mobile: isMobileViewport }]" :style="dashboardBackgroundStyle">
     <!-- Decomposed Header component -->
     <DeckHeader
       :current-profile="currentProfile"
@@ -23,7 +23,7 @@
       <!-- Docked Sidebar -->
       <DockedSidebar
         v-slot:default
-        v-if="settingsStore.dockedSidebarEnabled && currentPage"
+        v-if="settingsStore.dockedSidebarEnabled && currentPage && !isMobileViewport"
         :docked-buttons="currentProfile?.dockedButtons || []"
         :grid-rows="currentPage.grid_config.rows"
         :is-edit-mode="isEditMode"
@@ -41,7 +41,7 @@
         @placeholder-click="onDockedPlaceholderClick"
       />
       
-      <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
+      <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
         <template v-if="currentPage">
           <DeckGrid
             :page="currentPage"
@@ -199,6 +199,7 @@ import { useButtonActions } from '@/composables/useButtonActions'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
 import { confirmDialog } from '@/composables/useConfirm'
+import { useMobileViewport } from '@/utils/mobileViewport'
 import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 
 const router = useRouter()
@@ -627,6 +628,10 @@ const currentPage = computed(() => dashboardStore.currentPage)
 const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
 const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
 const isEditMode = computed(() => dashboardStore.isEditMode)
+// Phones: hide the docked sidebar (config-bound dead width), let the
+// header overlay instead of squeezing the deck, and reserve a slim top
+// strip so the header-reveal pill never sits on buttons.
+const { isMobileViewport } = useMobileViewport()
 
 function toggleCategory(categoryId: string) {
   const index = expandedCategories.value.indexOf(categoryId)
@@ -963,6 +968,7 @@ onUnmounted(() => {
 .dashboard-view {
   display: flex;
   flex-direction: column;
+  position: relative; /* anchor for the mobile overlay header */
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -990,6 +996,13 @@ onUnmounted(() => {
 
 .main-content.with-docked-sidebar {
   margin-left: 0;
+}
+
+/* Mobile: reserve a slim strip at the top so the header-reveal pill sits
+   in dead padding instead of covering the first row of buttons. */
+.dashboard-view.mobile .main-content {
+  padding-top: 34px;
+  box-sizing: border-box;
 }
 
 .no-profile {

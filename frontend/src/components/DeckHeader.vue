@@ -1,5 +1,5 @@
 <template>
-  <div class="deck-header-wrapper" :class="{ 'header-hidden': !settingsStore.showHeader }">
+  <div class="deck-header-wrapper" :class="{ 'header-hidden': !settingsStore.showHeader, mobile: isMobileViewport }">
     <!-- Reveal trigger area (visible when header is hidden). Large + mostly
          transparent hit-target so it's easy to grab with a swipe or tap
          without needing pixel-perfect precision. -->
@@ -638,6 +638,77 @@ onUnmounted(() => {
 /* Enhanced scene nav sizing */
 .enhanced-scene-nav {
   --pill-height: calc(56px * var(--touch-multiplier, 1));
+}
+
+/* ── Mobile header ───────────────────────────────────────────────────
+   On phones the header is a temporary overlay: it floats above the deck
+   (which keeps its size underneath) instead of squeezing the grid into a
+   strip, and it renders slim — ~52px instead of ~90px. The reveal trigger
+   shrinks to a thin top-edge strip so it neither covers the first row of
+   buttons nor swallows their touches. */
+.deck-header-wrapper.mobile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+}
+
+.deck-header-wrapper.mobile .deck-header {
+  min-height: 0;
+  padding: 4px 12px 14px;
+}
+
+.deck-header-wrapper.mobile .header-content {
+  min-height: 44px;
+  gap: 0.5rem;
+}
+
+.deck-header-wrapper.mobile .profile-avatar-container {
+  width: 36px;
+  height: 36px;
+}
+
+.deck-header-wrapper.mobile .btn-icon-circle {
+  width: 42px;
+  height: 42px;
+  /* The touch-mode floor (44px×multiplier) is a min-* override — it must
+     be reset too or it silently wins over width/height. */
+  min-width: 42px;
+  min-height: 42px;
+  font-size: 1.05rem;
+}
+
+.deck-header-wrapper.mobile .enhanced-scene-nav :deep(.segment) {
+  min-height: 36px;
+  min-width: 72px;
+  padding: 6px 10px;
+}
+
+.deck-header-wrapper.mobile .header-actions-group {
+  gap: 0.4rem;
+}
+
+.deck-header-wrapper.mobile .header-exit-group {
+  margin-left: 0.6rem;
+  padding-left: 0.6rem;
+}
+
+.deck-header-wrapper.mobile .enhanced-scene-nav {
+  --pill-height: 42px;
+}
+
+.deck-header-wrapper.mobile .header-reveal-trigger {
+  height: 34px;
+}
+
+.deck-header-wrapper.mobile .reveal-pill {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 12px;
+  margin-top: 4px;
+  gap: 0.35rem;
+  font-size: 0.72rem;
 }
 
 /* The 7-inch mockup drops the profile name — the avatar carries the context
