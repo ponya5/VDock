@@ -131,6 +131,7 @@ CATEGORIES: Tuple[CategorySpec, ...] = (
     CategorySpec('streaming', 'Streaming', ('fas', 'video')),
     CategorySpec('ai', 'AI Assistants', ('fas', 'robot')),
     CategorySpec('dev', 'Developer', ('fas', 'code')),
+    CategorySpec('sliders', 'Sliders', ('fas', 'sliders-h')),
     CategorySpec('custom', 'Custom', ('fas', 'puzzle-piece')),
 )
 
@@ -580,21 +581,21 @@ _CUSTOM: Tuple[ActionSpec, ...] = (
         ),
     ),
     ActionSpec(
-        id='slider_volume', label='Volume Slider', category='custom',
+        id='slider_volume', label='Volume Slider', category='sliders',
         icon=('fas', 'sliders-h'), action_type='slider', runs_on=RUNS_FRONTEND,
         default_config={'target': 'volume', 'min': 0, 'max': 100, 'step': 1},
         description='Drag to set the system output volume.',
         keywords=('slider', 'drag', 'level', 'audio'),
     ),
     ActionSpec(
-        id='slider_brightness', label='Brightness Slider', category='custom',
+        id='slider_brightness', label='Brightness Slider', category='sliders',
         icon=('fas', 'sun'), action_type='slider', runs_on=RUNS_FRONTEND,
         default_config={'target': 'brightness', 'min': 0, 'max': 100, 'step': 5},
         description='Drag to set the screen brightness.',
         keywords=('slider', 'drag', 'level', 'display'),
     ),
     ActionSpec(
-        id='slider_ui_brightness', label='UI Dimmer Slider', category='custom',
+        id='slider_ui_brightness', label='UI Dimmer Slider', category='sliders',
         icon=('fas', 'adjust'), action_type='slider', runs_on=RUNS_FRONTEND,
         default_config={'target': 'ui_brightness', 'min': 40, 'max': 160, 'step': 5},
         description='Drag to dim or brighten the VDock interface.',

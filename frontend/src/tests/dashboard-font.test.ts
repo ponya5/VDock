@@ -40,16 +40,16 @@ describe('dashboard font option', () => {
   })
 })
 
-describe('screensaver sub-tabs', () => {
-  it('declares the three sub-tabs with widgets default', () => {
-    expect(settingsView).toContain("screensaverSubTab = ref<'widgets' | 'settings' | 'backgrounds'>('widgets')")
+describe('screensaver page (DL-054 merged panels)', () => {
+  it('gates the screensaver page on the appearance sub-route', () => {
+    expect(settingsView).toContain("appearanceSubTab === 'screensaver'")
   })
 
-  it('gates every screensaver section on a sub-tab', () => {
+  it('keeps widgets, timing and background as anchored panels', () => {
     for (const gate of [
-      "screensaverSubTab === 'settings'",
-      "screensaverSubTab === 'backgrounds'",
-      "screensaverSubTab === 'widgets'",
+      'id="ss-widgets"',
+      'id="ss-activation"',
+      'id="ss-background"',
     ]) {
       expect(settingsView).toContain(gate)
     }

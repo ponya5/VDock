@@ -58,6 +58,23 @@
       <FontAwesomeIcon :icon="['fas', 'plus']" />
     </div>
 
+    <!-- Slider merge chips: a small handle on the shared edge of two
+         adjacent same-height sliders, only in edit mode. Anchored to the
+         right button's first column and nudged left by half the chip plus
+         half the grid gap so it sits centred exactly on the seam. -->
+    <button
+      v-for="seam in sliderSeams"
+      :key="`merge-${seam.leftId}-${seam.rightId}`"
+      class="slider-merge-chip"
+      :style="seamStyle(seam)"
+      type="button"
+      title="Merge sliders into one wide slider"
+      aria-label="Merge sliders"
+      @click.stop="handleSliderMerge(seam.leftId, seam.rightId)"
+    >
+      <FontAwesomeIcon :icon="['fas', 'link']" />
+    </button>
+
     <!-- Ambient Deck Overlay -->
     <DeckOverlay
       v-if="dashboardStore.currentScene?.overlay_style && dashboardStore.currentScene.overlay_style !== 'none'"
@@ -116,6 +133,8 @@ const emit = defineEmits<{
   placeholderClick: [position: { row: number; col: number }]
   placeholderLongPress: [position: { row: number; col: number }]
   buttonMove: [buttonId: string, newPosition: { row: number; col: number }]
+  buttonSwap: [sourceId: string, targetId: string]
+  buttonMerge: [leftId: string, rightId: string]
   doubleTap: [button: Button]
   longPress: [button: Button]
   exitEditMode: []
@@ -218,6 +237,57 @@ const emptySlots = computed(() => {
   return slots
 })
 
+/**
+ * Edit-mode merge affordance for sliders: one seam per pair of adjacent
+ * same-height sliders (right button's first column = left's right edge).
+ * Works for already-merged sliders too, so chains extend 2→3→n wide.
+ */
+interface SliderSeam {
+  leftId: string
+  rightId: string
+  row: number
+  rows: number
+  rightCol: number
+}
+
+const sliderSeams = computed<SliderSeam[]>(() => {
+  if (!props.isEditMode) return []
+  const sliders = renderedPage.value.buttons.filter(
+    b => b.enabled && b.action?.type === 'slider'
+  )
+  const seams: SliderSeam[] = []
+  for (const left of sliders) {
+    for (const right of sliders) {
+      if (
+        left.id !== right.id &&
+        left.position.row === right.position.row &&
+        left.size.rows === right.size.rows &&
+        right.position.col === left.position.col + left.size.cols
+      ) {
+        seams.push({
+          leftId: left.id,
+          rightId: right.id,
+          row: left.position.row,
+          rows: left.size.rows,
+          rightCol: right.position.col
+        })
+      }
+    }
+  }
+  return seams
+})
+
+function seamStyle(seam: SliderSeam) {
+  return {
+    gridColumn: `${seam.rightCol + 1}`,
+    gridRow: `${seam.row + 1} / span ${seam.rows}`
+  }
+}
+
+function handleSliderMerge(leftId: string, rightId: string) {
+  emit('buttonMerge', leftId, rightId)
+}
+
 const placeholderStyle = computed(() => {
   const { rows, cols } = renderedPage.value.grid_config
   const buttonSize = Math.min(100 / Math.max(rows, cols), 80) // Dynamic sizing
@@ -271,8 +341,10 @@ let dropTargetEl: HTMLElement | null = null
 
 function startTouchDrag(button: Button) {
   if (!gridRef.value) return
+  if (dragSourceId === button.id && isDraggingActive.value) return // already dragging this one
   isDraggingActive.value = true
   dragSourceId = button.id
+  vibrate(50) // grab haptic — confirms the lift on touch panels
 
   // Find the source button element
   const sourceEl = gridRef.value.querySelector(`[data-button-id="${button.id}"]`) as HTMLElement | null
@@ -351,24 +423,30 @@ function onTouchEndDrag() {
     sourceEl?.classList.remove('dragging-source')
   }
 
-  // Execute swap
+  // Execute drop: swap with an occupied cell, move into an empty one
   if (dropTargetEl && dragSourceId) {
     dropTargetEl.classList.remove('drop-target-active')
     const targetId = dropTargetEl.dataset.buttonId
 
     if (targetId && targetId !== dragSourceId) {
-      // Find source and target buttons
-      const srcBtn = renderedPage.value.buttons.find(b => b.id === dragSourceId)
-      const tgtBtn = renderedPage.value.buttons.find(b => b.id === targetId)
-      if (srcBtn && tgtBtn) {
-        // Swap positions
-        const srcPos = { ...srcBtn.position }
-        const tgtPos = { ...tgtBtn.position }
-        emit('buttonMove', dragSourceId, tgtPos)
-        emit('buttonMove', targetId, srcPos)
+      let landed = false
+      if (targetId.startsWith('placeholder-')) {
+        const pos = parsePlaceholderPosition(dropTargetEl)
+        if (pos) {
+          emit('buttonMove', dragSourceId, pos)
+          landed = true
+        }
+      } else if (renderedPage.value.buttons.some(b => b.id === targetId)) {
+        // Swap must be one atomic store op — two sequential moves both fail
+        // the collision check because the other button hasn't left yet.
+        emit('buttonSwap', dragSourceId, targetId)
+        landed = true
+      }
+
+      if (landed) {
         vibrate(100)
 
-        // Spring-in animation on target cell
+        // Spring-in animation on the source button's new cell
         const capturedSourceId = dragSourceId
         nextTick(() => {
           const newEl = gridRef.value?.querySelector(`[data-button-id="${capturedSourceId}"]`) as HTMLElement | null
@@ -617,6 +695,36 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
 .deck-grid.dragging-active .deck-button:not(.dragging-source) {
   filter: brightness(0.6);
   transition: filter 0.15s ease;
+}
+
+/* Slider merge chip — sits on the seam between two adjacent sliders.
+   justify-self:start + translateX(-50% - 6px) centres it on the 12px
+   grid gap: -50% of the chip width pulls its centre to the cell's left
+   edge, -6px shifts it onto the middle of the gap. */
+.slider-merge-chip {
+  justify-self: start;
+  align-self: center;
+  transform: translateX(calc(-50% - 6px));
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: var(--color-primary, #4aa3ff);
+  color: #fff;
+  font-size: calc(12px * min(var(--touch-multiplier, 1), 1.25));
+  cursor: pointer;
+  z-index: 45; /* above the buttons' edit overlay */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 150ms var(--ease-out, ease-out), background 150ms var(--ease-out, ease-out);
+}
+
+.slider-merge-chip:hover {
+  transform: translateX(calc(-50% - 6px)) scale(1.15);
+  background: var(--color-primary-light, #6ea8ff);
+}
+
+.slider-merge-chip:active {
+  transform: translateX(calc(-50% - 6px)) scale(0.95);
 }
 
 /* Drop target highlight */

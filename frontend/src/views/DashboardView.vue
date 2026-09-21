@@ -30,7 +30,6 @@
         :show-labels="settingsStore.showLabels"
         :show-tooltips="settingsStore.showTooltips"
         :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
-        :show-header="settingsStore.showHeader"
         @button-click="handleButtonClick"
         @press="handleButtonPress"
         @release="handleButtonRelease"
@@ -39,9 +38,7 @@
         @button-copy="handleButtonCopy"
         @button-delete="handleDockedButtonDelete"
         @button-drop="handleDockedButtonDrop"
-        @add-button="onDockedAddButton"
         @placeholder-click="onDockedPlaceholderClick"
-        @toggle-header="settingsStore.showHeader = !settingsStore.showHeader"
       />
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled }">
@@ -65,6 +62,8 @@
             @placeholder-click="onPlaceholderClick"
             @placeholder-long-press="handlePlaceholderLongPress"
             @button-move="handleButtonMove"
+            @button-swap="handleButtonSwap"
+            @button-merge="handleButtonMerge"
             @swipe-up="nextScene"
             @swipe-down="previousScene"
             @long-press="handleDeckButtonLongPress"
@@ -222,6 +221,8 @@ const {
   handleButtonCopy,
   handleButtonDelete,
   handleButtonMove,
+  handleButtonSwap,
+  handleButtonMerge,
   handleActionDrop,
   handlePlaceholderClick,
   handlePlaceholderLongPress,
@@ -305,10 +306,6 @@ function onDockedPlaceholderClick(position: { row: number; col: number }) {
     quickAddVisible.value = true
   }
 }
-
-// The sidebar's "+" header button picks the first empty slot itself and
-// reports it here — same flow as clicking that slot directly.
-const onDockedAddButton = onDockedPlaceholderClick
 
 function onQuickAddSelect(button: Button) {
   if (quickAddTarget.value === 'docked') {
@@ -863,6 +860,22 @@ function handleKeyDown(event: KeyboardEvent) {
           success: true,
           message: 'Click on a placeholder to paste the button'
         })
+      }
+    }
+
+    // Edit-mode undo/redo — the store keeps profile history but nothing
+    // triggered it. Ctrl+Z splits a mistaken slider merge, restores a
+    // deleted button, etc. saveProfile keeps disk in sync like every
+    // other mutation.
+    const key = event.key.toLowerCase()
+    if (isEditMode.value && (key === 'z' || key === 'y')) {
+      event.preventDefault()
+      if (key === 'z' && !event.shiftKey && dashboardStore.canUndo) {
+        dashboardStore.undo()
+        dashboardStore.saveProfile()
+      } else if ((key === 'y' || (key === 'z' && event.shiftKey)) && dashboardStore.canRedo) {
+        dashboardStore.redo()
+        dashboardStore.saveProfile()
       }
     }
   }

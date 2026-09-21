@@ -319,8 +319,17 @@ class CrossPlatformAction(BaseAction):
         """
         try:
             from ctypes import cast, POINTER
+            import comtypes
             from comtypes import CLSCTX_ALL
             from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+            # COM initializes per-thread; Flask request workers start without
+            # it, so every pycaw call on a fresh thread failed with
+            # "CoInitialize has not been called".
+            try:
+                comtypes.CoInitialize()
+            except OSError:
+                pass  # already initialized under another model — still usable
 
             devices = AudioUtilities.GetSpeakers()
             interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)

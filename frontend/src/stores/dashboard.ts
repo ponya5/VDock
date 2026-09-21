@@ -649,6 +649,74 @@ export const useDashboardStore = defineStore('dashboard', () => {
     saveProfile()
       }
 
+  /**
+   * Exchange two buttons' positions atomically. Two sequential moveButton calls
+   * can't express a swap — the first move always collides with the button that
+   * hasn't left yet — so touch drag-to-reorder needs this as one operation.
+   * Sizes may differ, so the swapped placements are still validated against
+   * the grid bounds and every other button.
+   */
+  function swapButtons(id1: string, id2: string) {
+    if (!currentPage.value || id1 === id2) return false
+    const a = currentPage.value.buttons.find(b => b.id === id1)
+    const b = currentPage.value.buttons.find(b => b.id === id2)
+    if (!a || !b) return false
+
+    const posA = { ...a.position }
+    const posB = { ...b.position }
+    const testA = { ...a, position: posB }
+    const testB = { ...b, position: posA }
+
+    const { rows, cols } = currentPage.value.grid_config
+    const inBounds = (btn: Button) =>
+      btn.position.row >= 0 && btn.position.col >= 0 &&
+      btn.position.row + btn.size.rows <= rows &&
+      btn.position.col + btn.size.cols <= cols
+    if (!inBounds(testA) || !inBounds(testB)) return false
+
+    // Swapped footprints must not overlap each other or any third button.
+    if (checkButtonCollision(testA, testB)) return false
+    const collidesThird = (btn: Button) =>
+      currentPage.value!.buttons.some(other =>
+        other.id !== id1 && other.id !== id2 && other.enabled && checkButtonCollision(btn, other)
+      )
+    if (collidesThird(testA) || collidesThird(testB)) return false
+
+    a.position = posB
+    b.position = posA
+    addToHistory()
+    saveProfile()
+    return true
+  }
+
+  /**
+   * Merge two horizontally adjacent slider buttons into one wide slider.
+   * The left button keeps its config/style and absorbs the right button's
+   * columns; the right button is removed. One history entry, so undo
+   * restores both buttons in a single step.
+   */
+  function mergeSliderButtons(leftId: string, rightId: string) {
+    if (!currentPage.value) return false
+    const left = currentPage.value.buttons.find(b => b.id === leftId)
+    const right = currentPage.value.buttons.find(b => b.id === rightId)
+    if (!left || !right) return false
+    if (left.action?.type !== 'slider' || right.action?.type !== 'slider') return false
+
+    const adjacent =
+      left.position.row === right.position.row &&
+      left.size.rows === right.size.rows &&
+      right.position.col === left.position.col + left.size.cols
+    if (!adjacent) return false
+
+    left.size = { ...left.size, cols: left.size.cols + right.size.cols }
+    currentPage.value.buttons.splice(
+      currentPage.value.buttons.findIndex(b => b.id === rightId), 1
+    )
+    addToHistory()
+    saveProfile()
+    return true
+  }
+
   return {
     currentProfile,
     currentScene,
@@ -678,6 +746,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     addButton,
     removeButton,
     moveButton,
+    swapButtons,
+    mergeSliderButtons,
     updateButton,
     getButton,
     applyGlobalButtonStyle,

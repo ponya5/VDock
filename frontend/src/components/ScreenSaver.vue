@@ -233,6 +233,24 @@
       ></span>
     </div>
 
+    <!-- Alignment guides — full-span dashed rules shown while a dragged
+         widget snaps to another widget's edge/center or the viewport
+         center line. -->
+    <template v-if="layoutEdit">
+      <div
+        v-for="x in guideV"
+        :key="`gv${x}`"
+        class="ss-guide ss-guide-v"
+        :style="{ left: `${x}%` }"
+      ></div>
+      <div
+        v-for="y in guideH"
+        :key="`gh${y}`"
+        class="ss-guide ss-guide-h"
+        :style="{ top: `${y}%` }"
+      ></div>
+    </template>
+
     <!-- Layout editor toolbar. Its own events are stopped so a tap here can
          never reach the dismiss handler or start a drag. -->
     <div
@@ -500,7 +518,7 @@ interface WidgetBox {
   k: number // transform scale actually applied
 }
 
-function widgetBox(id: ScreensaverWidgetId): WidgetBox {
+function widgetBox(id: ScreensaverWidgetId, padClock = true): WidgetBox {
   const l = activeLayout.value[id]
   const k = transformScale(id, l.scale)
   const c = clampCenter(id, l.x, l.y, k)
@@ -509,8 +527,9 @@ function widgetBox(id: ScreensaverWidgetId): WidgetBox {
   let halfW = size && vw ? ((size.w * k) / vw) * 50 : 5
   let halfH = size && vh ? ((size.h * k) / vh) * 50 : 5
   // The clock drifts ±20px from its center — reserve that excursion so
-  // neighbors never clip it mid-drift.
-  if (id === 'clock' && vw && vh) {
+  // neighbors never clip it mid-drift. Alignment guides pass padClock=false:
+  // they must line up with the visible box, not the invisible reserve.
+  if (padClock && id === 'clock' && vw && vh) {
     halfW += (20 / vw) * 100
     halfH += (20 / vh) * 100
   }
@@ -616,24 +635,99 @@ const clockStyle = computed(() => {
 const clampPos = (v: number) => Math.min(94, Math.max(6, v))
 const clampScale = (v: number) => Math.min(2.5, Math.max(0.5, v))
 
+interface SnapHold {
+  guide: number        // % position of the alignment line snapped to
+  anchorOffset: number // dragged-box anchor's offset from its center
+}
+
 let dragState: {
   id: ScreensaverWidgetId
   startX: number
   startY: number
   origX: number
   origY: number
+  snapX: SnapHold | null
+  snapY: SnapHold | null
 } | null = null
 let resizeState: { id: ScreensaverWidgetId; startY: number; origScale: number } | null = null
+
+// Alignment guides shown while a drag snap holds — viewport % positions.
+const guideV = ref<number[]>([])
+const guideH = ref<number[]>([])
+const SS_SNAP_PX = 8
+const SS_SNAP_RELEASE_PX = 14
 
 function startDrag(id: ScreensaverWidgetId, e: PointerEvent) {
   if (!props.layoutEdit) return
   e.preventDefault()
   e.stopPropagation()
   const l = editLayout.value[id]
-  dragState = { id, startX: e.clientX, startY: e.clientY, origX: l.x, origY: l.y }
+  dragState = {
+    id,
+    startX: e.clientX,
+    startY: e.clientY,
+    origX: l.x,
+    origY: l.y,
+    snapX: null,
+    snapY: null,
+  }
   window.addEventListener('pointermove', onDragMove)
   window.addEventListener('pointerup', endInteraction, { once: true })
   window.addEventListener('pointercancel', endInteraction, { once: true })
+}
+
+// Snap one axis: compare the dragged box's edge/center anchors against the
+// other widgets' edges/centers and the viewport center line. An engaged snap
+// holds until the raw position clears the release band, so the boundary
+// doesn't flicker.
+function snapAxis(
+  drag: { id: ScreensaverWidgetId; snapX: SnapHold | null; snapY: SnapHold | null },
+  axis: 'x' | 'y',
+  rawCenter: number,
+  k: number,
+): { pos: number; guide: number | null } {
+  const { w: vw, h: vh } = viewport.value
+  const span = axis === 'x' ? vw : vh
+  const snapThresh = span ? (SS_SNAP_PX / span) * 100 : 0
+  const releaseThresh = span ? (SS_SNAP_RELEASE_PX / span) * 100 : 0
+  const hold = axis === 'x' ? drag.snapX : drag.snapY
+
+  if (hold) {
+    const snapped = hold.guide - hold.anchorOffset
+    if (Math.abs(rawCenter - snapped) <= releaseThresh) {
+      return { pos: snapped, guide: hold.guide }
+    }
+    if (axis === 'x') drag.snapX = null
+    else drag.snapY = null
+  }
+  if (!span || !snapThresh) return { pos: rawCenter, guide: null }
+
+  const size = widgetSizes.value[drag.id]
+  const half = size ? (((axis === 'x' ? size.w : size.h) * k) / span) * 50 : 5
+  const anchors = [-half, 0, half]
+  const targets = [50] // viewport center line
+  for (const id of mountedWidgets.value) {
+    if (id === drag.id) continue
+    const b = widgetBox(id, false)
+    if (axis === 'x') targets.push(b.x - b.halfW, b.x, b.x + b.halfW)
+    else targets.push(b.y - b.halfH, b.y, b.y + b.halfH)
+  }
+
+  let best: { guide: number; anchorOffset: number; d: number } | null = null
+  for (const o of anchors) {
+    for (const t of targets) {
+      const d = t - (rawCenter + o)
+      if (Math.abs(d) <= snapThresh && (!best || Math.abs(d) < Math.abs(best.d))) {
+        best = { guide: t, anchorOffset: o, d }
+      }
+    }
+  }
+  if (!best) return { pos: rawCenter, guide: null }
+
+  const next: SnapHold = { guide: best.guide, anchorOffset: best.anchorOffset }
+  if (axis === 'x') drag.snapX = next
+  else drag.snapY = next
+  return { pos: best.guide - best.anchorOffset, guide: best.guide }
 }
 
 function onDragMove(e: PointerEvent) {
@@ -641,14 +735,29 @@ function onDragMove(e: PointerEvent) {
   const dx = ((e.clientX - dragState.startX) / window.innerWidth) * 100
   const dy = ((e.clientY - dragState.startY) / window.innerHeight) * 100
   const l = editLayout.value[dragState.id]
-  const c = clampCenter(
-    dragState.id,
-    dragState.origX + dx,
-    dragState.origY + dy,
-    transformScale(dragState.id, l.scale),
-  )
+  const k = transformScale(dragState.id, l.scale)
+  const rawX = dragState.origX + dx
+  const rawY = dragState.origY + dy
+
+  const sx = snapAxis(dragState, 'x', rawX, k)
+  const sy = snapAxis(dragState, 'y', rawY, k)
+  const c = clampCenter(dragState.id, sx.pos, sy.pos, k)
+
+  // Edge clamping can shift a snapped position — then the alignment isn't
+  // real, so drop the guide rather than show it where the widget isn't.
+  if (sx.guide != null && c.x !== sx.pos) {
+    dragState.snapX = null
+    sx.guide = null
+  }
+  if (sy.guide != null && c.y !== sy.pos) {
+    dragState.snapY = null
+    sy.guide = null
+  }
+
   l.x = c.x
   l.y = c.y
+  guideV.value = sx.guide != null ? [sx.guide] : []
+  guideH.value = sy.guide != null ? [sy.guide] : []
 }
 
 function startResize(id: ScreensaverWidgetId, e: PointerEvent) {
@@ -670,6 +779,8 @@ function onResizeMove(e: PointerEvent) {
 function endInteraction() {
   dragState = null
   resizeState = null
+  guideV.value = []
+  guideH.value = []
   window.removeEventListener('pointermove', onDragMove)
   window.removeEventListener('pointermove', onResizeMove)
 }
@@ -1218,6 +1329,31 @@ onUnmounted(() => {
   height: 10px;
   border-right: 2px solid #0a0a14;
   border-bottom: 2px solid #0a0a14;
+}
+
+.ss-guide {
+  position: absolute;
+  pointer-events: none;
+  /* Above the widgets (z 2), under the edit toolbar (z 4). */
+  z-index: 3;
+}
+
+.ss-guide-v {
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px dashed var(--accent, #7aa2ff);
+  transform: translateX(-1px);
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
+}
+
+.ss-guide-h {
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed var(--accent, #7aa2ff);
+  transform: translateY(-1px);
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
 }
 
 .ss-edit-toolbar {

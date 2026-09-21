@@ -214,15 +214,30 @@ export function usePinch(target: MaybeRef<HTMLElement | null | undefined>, optio
 
 export interface DoubleTapOptions {
   delay?: number;
+  threshold?: number;
   onDoubleTap?: (e: PointerEvent) => void;
 }
 
 export function useDoubleTap(target: MaybeRef<HTMLElement | null | undefined>, options: DoubleTapOptions = {}) {
   const delay = options.delay ?? 300;
+  const threshold = options.threshold ?? 10;
   let lastTapTime = 0;
   let tapCount = 0;
+  let downPos: { x: number; y: number } | null = null;
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.isPrimary) downPos = { x: e.clientX, y: e.clientY };
+  };
 
   const onClick = (e: PointerEvent) => {
+    // A pointerup only counts as a tap if the press started on this element
+    // and stayed put — a drag-drop landing here is not a tap.
+    if (!downPos) return;
+    const dx = Math.abs(e.clientX - downPos.x);
+    const dy = Math.abs(e.clientY - downPos.y);
+    downPos = null;
+    if (dx > threshold || dy > threshold) return;
+
     const now = Date.now();
     if (now - lastTapTime < delay) {
       tapCount++;
@@ -239,10 +254,15 @@ export function useDoubleTap(target: MaybeRef<HTMLElement | null | undefined>, o
 
   watch(() => unref(target), (el, _, onCleanup) => {
     if (el) {
+      el.addEventListener('pointerdown', onPointerDown as EventListener);
       el.addEventListener('pointerup', onClick as EventListener);
     }
     onCleanup(() => {
-      if (el) el.removeEventListener('pointerup', onClick as EventListener);
+      if (el) {
+        el.removeEventListener('pointerdown', onPointerDown as EventListener);
+        el.removeEventListener('pointerup', onClick as EventListener);
+      }
+      downPos = null;
     });
   }, { immediate: true });
 }

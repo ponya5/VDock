@@ -25,6 +25,11 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-011](DL-011-animated-avatars.md) | Animated GIF avatars | Implemented — tests green, manual upload check pending |
 | [DL-012](DL-012-edit-mode-wiggle.md) | Edit-mode wiggle opt-in | Implemented — default off, tests green |
 | [DL-013](DL-013-screensaver-layout.md) | Screensaver layout, background & editor | Implemented — side-by-side default, drag/resize editor, own background; backend restart needed for server sync |
+| [DL-052](DL-052-mergeable-slider-buttons.md) | Mergeable slider buttons + Sliders action category | Implemented — seam merge chips, Ctrl+Z/Y undo wiring, Sliders catalog category |
+| [DL-053](DL-053-settings-accordion-animation.md) | Settings accordion expand/collapse animation | Implemented — reusable Collapse component, Templates + widget cards + picker |
+| [DL-054](DL-054-settings-sidebar-redesign.md) | Settings shell redesign: sidebar nav, row-based panels, preview rail | Implemented — mockup ported, all pages re-skinned, 231 tests green |
+| [DL-055](DL-055-edit-mode-touch-drag.md) | Edit-mode touch drag + atomic button swap | Implemented — grab via hold-or-move, swapButtons store op, slider/double-tap guards |
+| [DL-056](DL-056-lan-device-connection.md) | LAN device connection fix (QR → black screen) | Implemented — config.json toggles applied at boot, socket URL derives from page host, socket CORS origins cover backend/dev/LAN |
 
 **Status values:** Planned → In progress → Complete.
 

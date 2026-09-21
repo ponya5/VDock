@@ -1,36 +1,36 @@
-// DL-035: Button Behaviour pane split into Button Display / Live Preview /
-// Touch Mode sub-tabs, each with a Save & Apply action.
+// DL-035 → DL-054: the Button Behaviour pane's nested sub-tab row was replaced
+// by a single Buttons page (sidebar IA) whose panels — Sizing & touch, Key
+// design, Motion, Labels & feedback — are reached by anchor scrolling.
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const view = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
 
-describe('button behaviour sub-tabs', () => {
-  it('declares buttonsSubTab with display default', () => {
-    expect(view).toContain("buttonsSubTab = ref<'display' | 'preview' | 'touch'>('display')")
+describe('button behaviour page (DL-054 merged panels)', () => {
+  it('declares appearanceSubTab with buttons default', () => {
+    expect(view).toContain("appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')")
   })
 
-  it('renders the three nested sub-tab buttons', () => {
-    for (const t of ["buttonsSubTab === 'display'", "buttonsSubTab === 'preview'", "buttonsSubTab === 'touch'"]) {
-      // each appears twice: active-class check + section v-if
-      expect(view.split(t).length).toBeGreaterThanOrEqual(3)
+  it('renders the merged panels with anchor ids', () => {
+    for (const id of ['id="sizing"', 'id="design"', 'id="motion"', 'id="feedback"', 'id="touch"']) {
+      expect(view).toContain(id)
     }
-    expect(view).toContain('Button Display')
-    expect(view).toContain('Live Preview')
-    expect(view).toContain('Touch Mode')
+    expect(view).toContain('Sizing &amp; touch')
+    expect(view).toContain('Key design')
+    expect(view).toContain('Live preview')
+    expect(view).toContain('Touch mode')
   })
 
-  it('gives every sub-tab a save/apply action', () => {
+  it('keeps the save/apply actions', () => {
     expect(view).toContain('saveAndApplyButtonSettings')
-    // two generic applies (display + touch) + the apply-all in preview
-    expect(view.split('saveAndApplyButtonSettings').length).toBeGreaterThanOrEqual(3)
     expect(view).toContain('applyButtonBehaviourToAll')
     expect(view).toContain('requestVdockRefresh()')
   })
 
-  it('routes settings search to the nested tabs', () => {
-    expect(view).toContain("deepTab")
-    expect(view).toContain("buttonsSubTab.value = match.deepTab")
+  it('routes settings search through deepTab anchors', () => {
+    expect(view).toContain('deepTab')
+    expect(view).toContain('deepTabAnchor')
+    expect(view).toContain('scrollToPanel(anchor)')
   })
 })

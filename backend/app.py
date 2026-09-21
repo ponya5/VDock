@@ -62,6 +62,11 @@ def add_security_headers(response):
 # Initialize extensions
 CORS(app, origins=Config.CORS_ORIGINS)
 
+# Saved toggle switches (config.json, written by Settings → Server) are the
+# source of truth — apply them before the socket CORS list and the __main__
+# bind decision read ALLOW_LAN. init_app() re-applies them, harmlessly.
+Config.apply_saved_toggles()
+
 # Initialize rate limiter
 limiter = Limiter(
     app=app,
@@ -73,7 +78,7 @@ limiter = Limiter(
 
 socketio = SocketIO(
     app,
-    cors_allowed_origins=Config.CORS_ORIGINS,
+    cors_allowed_origins=Config.socket_origins(),
     async_mode='threading'
 )
 

@@ -231,12 +231,8 @@ const activeTabLabel = computed(() => {
 .user-guide-modal {
   width: 950px;
   height: 85vh;
-  /* Same proportional scale as the settings UI (App.vue --ui-zoom); the
-     vw/vh bounds are divided back out so the modal can't outgrow the
-     window at large scales. */
-  zoom: var(--ui-zoom, 1);
-  max-width: calc(95vw / var(--ui-zoom, 1));
-  max-height: calc(92vh / var(--ui-zoom, 1));
+  max-width: 95vw;
+  max-height: 92vh;
   padding: 0;
   overflow: hidden;
   background: var(--color-background);

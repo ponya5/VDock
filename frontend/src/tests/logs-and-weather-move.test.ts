@@ -12,12 +12,19 @@ describe('weather location move', () => {
     expect(view).not.toContain('Widgets & Integration')
   })
 
-  it('location controls live under the screensaver widgets sub-tab', () => {
-    // The section is gated on screensaverSubTab === 'widgets'
-    const idx = view.indexOf('Weather Location')
+  it('location controls live inside the weather widget detail (DL-054)', () => {
+    // DL-054 merged the widgets/settings/backgrounds sub-tabs into one
+    // screensaver page; the location select sits inside the weather widget's
+    // expanding detail row, gated on the widgets panel of that page.
+    const idx = view.indexOf('weatherLocationMode')
     expect(idx).toBeGreaterThan(-1)
+    // the field lives in the weather widget's expanding detail row, which is
+    // inside the ss-widgets panel
+    const panelIdx = view.indexOf('id="ss-widgets"')
+    expect(panelIdx).toBeGreaterThan(-1)
+    expect(panelIdx).toBeLessThan(idx)
     const before = view.slice(Math.max(0, idx - 400), idx)
-    expect(before).toContain("screensaverSubTab === 'widgets'")
+    expect(before).toContain("w.id === 'weather'")
     // And the old integration-tab section is gone
     expect(view).not.toContain('<h2>Weather Widget Location</h2>')
   })

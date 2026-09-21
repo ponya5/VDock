@@ -51,7 +51,7 @@
             </div>
             <div style="flex: 1">
               <label class="small-label">Columns</label>
-              <input v-model.number="editedButton.size.cols" type="number" class="input" min="1" max="3" />
+              <input v-model.number="editedButton.size.cols" type="number" class="input" min="1" max="12" />
             </div>
           </div>
         </div>

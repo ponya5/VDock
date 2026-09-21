@@ -9,6 +9,7 @@
       </div>
 
       <div class="modal-body">
+        <div class="editor-col">
         <div class="form-group">
           <label>Scene Name</label>
           <input 
@@ -85,7 +86,9 @@
           </div>
           <p class="form-help">Adjust the size of scene navigation buttons</p>
         </div>
+        </div>
 
+        <div class="editor-col">
         <!-- Pages Management -->
         <div class="form-group">
           <label>
@@ -187,6 +190,7 @@
             <input v-model="editedScene.isActive" type="checkbox" />
             <span>Set as Active Scene</span>
           </label>
+        </div>
         </div>
       </div>
 
@@ -454,9 +458,41 @@ async function deletePage(index: number) {
 
 <style scoped>
 .scene-editor {
-  width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
+  width: min(920px, 94vw);
+  max-height: 88vh;
+  /* Header + footer stay pinned, only the body scrolls */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .scene-editor {
+    width: min(560px, 94vw);
+  }
+
+  .scene-editor .modal-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 700px) {
+  .scene-editor {
+    max-height: 94vh;
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .scene-editor .modal-header {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .scene-editor .modal-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .scene-editor .form-group {
+    margin-bottom: var(--spacing-sm);
+  }
 }
 
 .modal-header {
@@ -464,6 +500,7 @@ async function deletePage(index: number) {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-lg);
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -486,7 +523,15 @@ async function deletePage(index: number) {
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   margin-bottom: var(--spacing-lg);
+  padding-bottom: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  align-items: start;
 }
 
 .form-group {
@@ -520,6 +565,7 @@ async function deletePage(index: number) {
   gap: var(--spacing-sm);
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .footer-spacer {
@@ -570,14 +616,14 @@ async function deletePage(index: number) {
 
 .color-palette {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   gap: var(--spacing-xs);
-  max-width: 300px;
 }
 
 .color-swatch {
-  width: 30px;
-  height: 30px;
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
   border-radius: var(--radius-sm);
   border: 2px solid var(--color-border);
   cursor: pointer;
@@ -693,7 +739,7 @@ async function deletePage(index: number) {
   flex-direction: column;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-sm);
-  max-height: 200px;
+  max-height: 240px;
   overflow-y: auto;
   padding: var(--spacing-xs);
   background-color: var(--color-background);

@@ -1,8 +1,41 @@
 """Configuration management for VDock backend."""
 import os
 import json
+import socket
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+
+def lan_ip() -> Optional[str]:
+    """Primary LAN IPv4 — the address the 'Connect a device' QR card uses.
+
+    The UDP-connect trick picks the right interface without sending traffic;
+    falls back to the hostname lookup, then None when there is no route.
+    """
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            probe.connect(('192.168.255.255', 1))  # unroutable — no packets sent
+            return probe.getsockname()[0]
+        finally:
+            probe.close()
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return None
+
+
+def _read_env_port(env_file: Path, key: str, default: int) -> int:
+    """Pull a PORT-style value out of a .env file (same parse as the launcher)."""
+    try:
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line.startswith(f'{key}='):
+                return int(line.split('=', 1)[1].strip())
+    except (OSError, ValueError):
+        pass
+    return default
 
 
 class Config:
@@ -83,16 +116,35 @@ class Config:
             )
 
     @classmethod
+    def apply_saved_toggles(cls):
+        """Re-apply persisted toggle switches over the env-derived defaults.
+
+        PUT /api/config writes these keys to config.json and updates the
+        runtime class attrs — but nothing used to read them back at startup,
+        so "applies on next launch" never happened: ALLOW_LAN toggled on in
+        Settings still bound 127.0.0.1 after a restart. The file is the
+        source of truth once it exists; env vars only seed first run.
+        """
+        saved = cls.load_config()
+        for key, attr in (
+            ('require_auth', 'REQUIRE_AUTH'),
+            ('allow_lan', 'ALLOW_LAN'),
+            ('use_ssl', 'USE_SSL'),
+            ('enable_plugins', 'ENABLE_PLUGINS'),
+        ):
+            if isinstance(saved.get(key), bool):
+                setattr(cls, attr, saved[key])
+
+    @classmethod
     def init_app(cls):
         """Initialize application directories and configuration."""
-        cls.validate()
         cls.DATA_DIR.mkdir(exist_ok=True)
         cls.PROFILES_DIR.mkdir(exist_ok=True)
         cls.UPLOADS_DIR.mkdir(exist_ok=True)
         (cls.UPLOADS_DIR / 'backgrounds').mkdir(exist_ok=True)
         (cls.UPLOADS_DIR / 'button_backgrounds').mkdir(exist_ok=True)
         cls.PLUGINS_DIR.mkdir(exist_ok=True)
-        
+
         # Create default config file if it doesn't exist
         config_file = cls.DATA_DIR / 'config.json'
         if not config_file.exists():
@@ -104,7 +156,36 @@ class Config:
                 'use_ssl': cls.USE_SSL,
                 'enable_plugins': cls.ENABLE_PLUGINS
             })
+
+        # Apply saved toggles before validate() — a file-set REQUIRE_AUTH must
+        # still hit the "no password set" guard.
+        cls.apply_saved_toggles()
+        cls.validate()
     
+    @classmethod
+    def socket_origins(cls):
+        """Origins allowed to open a Socket.IO connection.
+
+        The page is often served from a different origin than the socket:
+        the Vite dev server proxies /api but the socket connects cross-origin
+        (localhost:4444 → :5000), and ALLOW_LAN serves phones from the LAN IP.
+        python-engineio rejects any Origin not in this list — including a
+        same-origin one — so each real serving origin must be named.
+        """
+        origins = set(o.strip() for o in cls.CORS_ORIGINS if o.strip())
+        frontend_port = _read_env_port(
+            cls.BASE_DIR.parent / 'frontend' / '.env', 'VITE_PORT', 3000
+        )
+        for host in ('localhost', '127.0.0.1'):
+            origins.add(f'http://{host}:{cls.PORT}')       # backend serves dist
+            origins.add(f'http://{host}:{frontend_port}')  # vite dev
+        if cls.ALLOW_LAN:
+            ip = lan_ip()
+            if ip:
+                origins.add(f'http://{ip}:{cls.PORT}')
+                origins.add(f'http://{ip}:{frontend_port}')
+        return sorted(origins)
+
     @classmethod
     def load_config(cls) -> Dict[str, Any]:
         """Load configuration from file."""

@@ -186,6 +186,18 @@ export function useButtonActions() {
     dashboardStore.moveButton(buttonId, newPosition)
   }
 
+  /** Touch drag onto an occupied cell — atomic position exchange. */
+  function handleButtonSwap(sourceId: string, targetId: string) {
+    dashboardStore.swapButtons(sourceId, targetId)
+  }
+
+  /** Merge chip between two adjacent sliders — one wide slider, undoable. */
+  function handleButtonMerge(leftId: string, rightId: string) {
+    if (dashboardStore.mergeSliderButtons(leftId, rightId)) {
+      notificationsStore.success('Sliders merged', 'Combined into one wide slider. Undo splits them again.')
+    }
+  }
+
   function handleActionDrop(action: any, position: { row: number; col: number }) {
     const button = resolveButtonForAction(action, position)
     if (button) {
@@ -245,9 +257,11 @@ export function useButtonActions() {
   }
 
   function handleDeckButtonLongPress(button: Button) {
-    if (!dashboardStore.isEditMode) {
-      dashboardStore.toggleEditMode()
-    }
+    // In edit mode the emit is the drag-grab gesture — DeckGrid already turned
+    // it into a touch reorder. Opening the editor here would pop a modal
+    // under the user's finger mid-drag.
+    if (dashboardStore.isEditMode) return
+    dashboardStore.toggleEditMode()
     editingButton.value = { ...button }
   }
 
@@ -512,6 +526,8 @@ export function useButtonActions() {
     handleButtonCopy,
     handleButtonDelete,
     handleButtonMove,
+    handleButtonSwap,
+    handleButtonMerge,
     handleActionDrop,
     handlePlaceholderClick,
     handlePlaceholderLongPress,

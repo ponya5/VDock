@@ -6,31 +6,6 @@
       @mousedown="startResize"
       title="Drag to resize"
     ></div>
-    <div
-      class="sidebar-header"
-      @click="!props.showHeader && emit('toggleHeader')"
-    >
-      <button
-        v-if="!props.showHeader"
-        type="button"
-        class="header-toggle-button"
-        @click.stop="emit('toggleHeader')"
-        title="Show header"
-        aria-label="Show header"
-      >
-        <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
-        <span>Show Header</span>
-      </button>
-      <h3 v-else>Docked Buttons</h3>
-      <button
-        v-if="isEditMode"
-        class="add-btn"
-        @click.stop="handleAddButton"
-        title="Add Docked Button"
-      >
-        <FontAwesomeIcon :icon="['fas', 'plus']" />
-      </button>
-    </div>
 
     <button v-if="isNarrow" class="sidebar-close-btn" @click="toggleSidebar">
       <FontAwesomeIcon :icon="['fas', 'times']" />
@@ -118,15 +93,13 @@ interface Props {
   showLabels?: boolean
   showTooltips?: boolean
   buttonSize?: number
-  showHeader?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   showLabels: true,
   showTooltips: true,
-  buttonSize: 1.0,
-  showHeader: true
+  buttonSize: 1.0
 })
 
 const emit = defineEmits<{
@@ -136,9 +109,7 @@ const emit = defineEmits<{
   buttonCopy: [button: Button]
   buttonDelete: [buttonId: string]
   buttonDrop: [event: DragEvent, position: { row: number; col: number }]
-  addButton: [position: { row: number; col: number }]
   placeholderClick: [position: { row: number; col: number }]
-  toggleHeader: []
 }>()
 
 const gridCols = 1 // Docked sidebar is always 1 column
@@ -221,10 +192,10 @@ const sidebarWidth = computed(() => {
 
 const gridStyle = computed(() => {
   const gap = 8
-  // Sidebar chrome above the grid: own padding + header row + weather card
-  // (~150px) + edit hint (~34px) when those are rendered.
+  // Sidebar chrome above the grid: own padding + weather card (~180px) +
+  // edit hint (~34px) when those are rendered.
   let paddingBlock = 32
-  if (!isMobile.value && weather.value) paddingBlock += 150
+  if (!isMobile.value && weather.value) paddingBlock += 180
   if (props.isEditMode && !isMobile.value) paddingBlock += 34
   const rows = Math.max(props.gridRows, 1)
 
@@ -304,18 +275,6 @@ function handlePlaceholderDrop(event: DragEvent, row: number, col: number) {
   dragOverSlot.value = null
 
   emit('buttonDrop', event, { row, col })
-}
-
-function handleAddButton() {
-  // Find first empty slot
-  for (let row = 0; row < props.gridRows; row++) {
-    for (let col = 0; col < gridCols; col++) {
-      if (!getButtonAt(row, col)) {
-        emit('addButton', { row, col })
-        return
-      }
-    }
-  }
 }
 
 function handlePlaceholderClick(row: number, col: number) {
@@ -398,10 +357,6 @@ function stopResize() {
   width: 100vw;
 }
 
-.docked-sidebar.is-mobile .sidebar-header {
-  display: none;
-}
-
 .resize-handle {
   position: absolute;
   top: 0;
@@ -426,26 +381,6 @@ function stopResize() {
   right: -4px;
   width: 12px;
   height: 100%;
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-touch-sm, var(--spacing-sm));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background-color var(--transition-fast), cursor var(--transition-fast);
-}
-
-/* Removed clickable-header styles as we now use a proper button */
-
-.sidebar-header h3 {
-  font-size: clamp(0.70rem, 2vw + 0.42rem, 1.00rem);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 0;
 }
 
 /* Weather card — the mockup's top-of-column tile. Centered vertical stack:
@@ -517,64 +452,6 @@ function stopResize() {
   font-size: 0.72rem;
   line-height: 1.35;
   color: var(--color-text-secondary);
-}
-
-.header-toggle-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-touch-xs, var(--spacing-xs));
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  padding: var(--spacing-touch-sm, var(--spacing-sm));
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
-  font-family: inherit;
-  font-size: calc(clamp(0.60rem, 2vw + 0.38rem, 0.90rem) * min(var(--touch-multiplier, 1), 1.25));
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: center;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  touch-action: manipulation;
-}
-
-.header-toggle-button:hover {
-  background: #1f6fd1;
-  border-color: #1f6fd1;
-}
-
-.header-toggle-button svg {
-  font-size: calc(clamp(0.64rem, 2vw + 0.40rem, 0.96rem) * min(var(--touch-multiplier, 1), 1.4));
-  flex-shrink: 0;
-}
-
-.add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  min-width: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  background-color: #1f6fd1;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: white;
-  font-size: calc(clamp(0.60rem, 2vw + 0.38rem, 0.90rem) * min(var(--touch-multiplier, 1), 1.4));
-  touch-action: manipulation;
-  flex-shrink: 0;
-}
-
-.add-btn:hover {
-  background: #2a80e0;
-  transform: scale(1.05);
 }
 
 .sidebar-grid {

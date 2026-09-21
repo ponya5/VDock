@@ -1,5 +1,5 @@
 <template>
-  <div class="slider-face" :class="{ compact }">
+  <div class="slider-face" :class="{ compact }" :style="faceStyle">
     <div class="slider-head">
       <FontAwesomeIcon :icon="targetIcon" class="slider-icon" />
       <span v-if="button.label" class="slider-label">{{ button.label }}</span>
@@ -48,7 +48,7 @@ import { useButtonStateStore } from '@/stores/buttonState'
 import { useSettingsStore } from '@/stores/settings'
 import { vibrate } from '@/utils/haptics'
 
-const props = defineProps<{ button: Button; compact?: boolean }>()
+const props = defineProps<{ button: Button; compact?: boolean; buttonSize?: number }>()
 
 const dashboardStore = useDashboardStore()
 const buttonStateStore = useButtonStateStore()
@@ -69,6 +69,20 @@ const THROTTLE_MS = 120
 const fillPct = computed(() =>
   max.value === min.value ? 0 : ((value.value - min.value) / (max.value - min.value)) * 100
 )
+
+// Match the regular button label sizing (DeckButton labelStyle): the button's
+// fontSize scaled by the global button-size/touch-mode multiplier. Track and
+// thumb scale too, but capped so big scales don't turn the track into a bar.
+const faceScale = computed(() => props.buttonSize ?? 1)
+const faceStyle = computed(() => {
+  const base = props.button.style?.fontSize || 14
+  const trackScale = Math.min(faceScale.value, 1.5)
+  return {
+    '--slider-text': `${Math.max(10, Math.round(base * faceScale.value))}px`,
+    '--slider-track-h': `${Math.round(28 * trackScale)}px`,
+    '--slider-thumb': `${Math.round(24 * trackScale)}px`
+  }
+})
 
 const targetIcon = computed(() => {
   if (target.value === 'volume') {
@@ -113,7 +127,10 @@ function valueFromPointer(clientX: number): number {
 }
 
 function onPointerDown(e: PointerEvent) {
-  if (props.button.enabled === false) return
+  // In edit mode the press belongs to the parent's drag-grab — applying a value
+  // would fire a real volume_set/brightness_set while rearranging, and pointer
+  // capture would steal the gesture.
+  if (props.button.enabled === false || dashboardStore.isEditMode) return
   dragging.value = true
   try {
     trackRef.value?.setPointerCapture(e.pointerId)
@@ -174,13 +191,13 @@ onMounted(() => {
   min-width: 0;
 }
 .slider-icon {
-  font-size: 1rem;
+  font-size: calc(var(--slider-text, 13px) * 1.15);
   opacity: 0.9;
 }
 .slider-label {
   flex: 1;
   min-width: 0;
-  font-size: 0.8rem;
+  font-size: var(--slider-text, 0.8rem);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -189,15 +206,15 @@ onMounted(() => {
 .slider-value {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: calc(var(--slider-text, 14px) * 1.08);
 }
 .slider-value small {
-  font-size: 0.65rem;
+  font-size: calc(var(--slider-text, 14px) * 0.72);
   opacity: 0.7;
 }
 .slider-track {
   position: relative;
-  height: 28px; /* touch: the whole band is grabbable, not just the thumb */
+  height: var(--slider-track-h, 28px); /* touch: the whole band is grabbable, not just the thumb */
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -216,12 +233,12 @@ onMounted(() => {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
+  width: var(--slider-thumb, 24px);
+  height: var(--slider-thumb, 24px);
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
-.compact .slider-track { height: 22px; }
-.compact .slider-thumb { width: 18px; height: 18px; }
+.compact .slider-track { height: calc(var(--slider-track-h, 28px) * 0.78); }
+.compact .slider-thumb { width: calc(var(--slider-thumb, 24px) * 0.75); height: calc(var(--slider-thumb, 24px) * 0.75); }
 </style>

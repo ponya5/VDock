@@ -188,6 +188,39 @@ All eight features implemented, exercised live at 1024×600, and verified.
 - Backend functional: toggle side/sublabel flip + rollback; multi-action delay.
 - No secrets/personal data added; QR carries only a LAN URL; LAN stays opt-in.
 
+### Follow-up (2026-09-21): volume slider broken on Windows
+
+Reported: slider stuck at 0%, drag did nothing, and the name/% text was
+tiny next to regular button labels.
+
+Two root causes:
+
+1. **Missing dep**: `pycaw` (in `requirements.txt`, `sys_platform ==
+   'win32'`) was never installed in `backend/venv`, so
+   `_windows_volume_interface()` returned early and `volume_set` fell
+   through to NirCmd — also absent. Installed `pycaw==20240210` (+ dep
+   `comtypes`) into the venv.
+2. **COM threading**: once pycaw was present, calls still failed with
+   `WinError -2147221008 CoInitialize has not been called` — COM is
+   per-thread and Flask-SocketIO request workers start uninitialized.
+   Fix: `comtypes.CoInitialize()` inside `_windows_volume_interface()`
+   before `AudioUtilities.GetSpeakers()` (OSError swallowed — already-
+   initialized threads stay usable). Verified: direct thread test +
+   8× `volume_get` + `volume_set` over the live API all succeed, and a
+   synthetic pointer drag on the dashboard moved the real OS volume
+   (30%) and read it back.
+
+UI sizing: `SliderButtonFace` ignored `buttonSize`, so its text stayed
+at fixed ~13px while regular labels scaled. Now accepts `button-size`
+(DeckButton passes it), scales label/value/icon via `--slider-text`
+(same `fontSize × buttonSize` formula as `labelStyle`), and scales
+track/thumb via `--slider-track-h`/`--slider-thumb` capped at 1.5×.
+Verified live at 1568×830: label and % read at parity with neighbouring
+button labels.
+
+Frontend: `vue-tsc` clean, 231/231 tests. Backend: py_compile clean,
+501 action/catalog/plugin tests pass.
+
 ### Still open (follow-ups)
 
 - `volume_set`/`volume_get` exercised on Windows dev host; macOS/Linux fallbacks

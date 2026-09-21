@@ -98,3 +98,17 @@ Verified live at 1024×600: full 12-step walk, spotlights land on the
 nav rail / search / tab bar / widget picker / about card, activates
 fire (Screen Saver + About tabs open), finale routes home, Done sets
 `vdock_tutorial_done` and closes. 231/231 tests, typecheck clean.
+
+## Implementation Results — help screenshot refresh (2026-09-21)
+
+The stored captures in `public/assets/help/` were stale — taken before
+DL-049 removed the "DOCKED BUTTONS" sidebar header and before the
+button-label sizing fixes, so the guide showed overlapping/cramped UI.
+
+- Re-captured `dashboard.png`, `edit-mode.png`, `settings.png` live at
+  1568×830 (wider viewport gives the masonry + grid room to breathe)
+  and copied to both `public/assets/help/` and `dist/assets/help/`.
+- `helpScreens.ts` marker coords re-measured for the new frames;
+  badges placed at feature edges instead of on top of controls.
+- Verified in the live User Guide Screens tab: all three figures render
+  clean, no marker overlap, no stale chrome. `vue-tsc` clean.

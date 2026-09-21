@@ -100,6 +100,7 @@
         v-else-if="button.action?.type === 'slider'"
         :button="button"
         :compact="compact"
+        :button-size="buttonSize"
       />
 
       <div v-else-if="isFolderStyle || resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
@@ -271,13 +272,42 @@ useDoubleTap(buttonRef, {
   }
 })
 
+// Edit-mode touch drag: HTML5 drag never fires on touchscreens, so the grab
+// gesture is this emit — DeckGrid turns it into startTouchDrag. It must fire
+// both ways a user grabs: hold 500ms (long-press path below) or press-and-move
+// >12px (handleEditModeMove — dragging immediately is the natural instinct,
+// and cancelling the gesture on early movement reads as "touch doesn't work").
+let downTarget: EventTarget | null = null
+let downPos: { x: number; y: number } | null = null
+let grabEmitted = false
+
+const overlayControlSelector = '.edit-overlay-actions button, .delete-btn'
+
+function emitGrab() {
+  if (grabEmitted) return
+  // Long-pressing an overlay control (delete/edit/copy) is not a drag grab.
+  if ((downTarget as HTMLElement | null)?.closest?.(overlayControlSelector)) return
+  grabEmitted = true
+  emit('longPress', props.button)
+}
+
 useLongPress(buttonRef, {
-  onLongPress: () => {
-    if (!props.isEditMode) {
-      emit('longPress', props.button)
-    }
-  }
+  onLongPress: emitGrab
 })
+
+function handleEditModeMove(event: PointerEvent) {
+  if (!downPos || !event.isPrimary || grabEmitted) return
+  const dx = Math.abs(event.clientX - downPos.x)
+  const dy = Math.abs(event.clientY - downPos.y)
+  if (dx > 12 || dy > 12) emitGrab()
+}
+
+function endEditModeGrab() {
+  downPos = null
+  window.removeEventListener('pointermove', handleEditModeMove)
+  window.removeEventListener('pointerup', endEditModeGrab)
+  window.removeEventListener('pointercancel', endEditModeGrab)
+}
 
 // Check if this is a special action type that renders its own content
 const isSpecialActionType = computed(() => {
@@ -687,7 +717,19 @@ let releasePending = false
 
 function handlePointerDown(event: PointerEvent) {
   triggerRipple(event)
-  if (props.isEditMode || !props.button.enabled || props.isPlaceholder) return
+  downTarget = event.target
+  if (props.isEditMode) {
+    // Watch the whole window: the finger travels off the button during a drag,
+    // and setPointerCapture would retarget click events and break the
+    // delete/edit/copy overlay buttons.
+    downPos = { x: event.clientX, y: event.clientY }
+    grabEmitted = false
+    window.addEventListener('pointermove', handleEditModeMove, { passive: true })
+    window.addEventListener('pointerup', endEditModeGrab, { once: true })
+    window.addEventListener('pointercancel', endEditModeGrab, { once: true })
+    return
+  }
+  if (!props.button.enabled || props.isPlaceholder) return
   const action = props.button.action
   if (!action || action.type === 'slider') return // slider owns its pointer lifecycle
 
