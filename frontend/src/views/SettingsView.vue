@@ -1368,10 +1368,6 @@
                     <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
                     <a class="btn" href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'bug']" /> Report an issue</a>
                     <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'star']" /> Star the repo</a>
-                    <a href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener" class="kofi-btn">
-                      <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
-                      Buy me a coffee
-                    </a>
                   </div>
                 </div>
               </div>
@@ -1401,6 +1397,13 @@
                 </dl>
               </div>
             </section>
+
+            <div class="about-support">
+              <a href="https://ko-fi.com/danielshalom" target="_blank" rel="noopener" class="kofi-btn">
+                <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" class="kofi-icon" />
+                Buy me a coffee
+              </a>
+            </div>
           </div>
         </div>
 
@@ -4162,23 +4165,25 @@ onMounted(async () => {
 .about-links { display: flex; flex-wrap: wrap; gap: 10px; }
 .about-links .btn { text-decoration: none; }
 
+.about-support { display: flex; justify-content: center; padding: 4px 0 8px; }
+
 .kofi-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: 8px;
+  padding: 5px 14px;
   background: #ff5e5b;
   color: #fff;
   border-radius: var(--radius-full);
   text-decoration: none;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 600;
-  min-height: 40px;
+  min-height: 30px;
   flex-shrink: 0;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 .kofi-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-.kofi-icon { width: 24px; height: 24px; object-fit: contain; }
+.kofi-icon { width: 18px; height: 18px; object-fit: contain; }
 
 .feature-grid-new { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .feature {
