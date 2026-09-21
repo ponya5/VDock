@@ -106,3 +106,16 @@ Two defects from live use:
   surfaces an error toast on refusal. (Verified the chip path itself
   works: clicking it merged two volume sliders into one 2-col slider,
   persisted to the profile.)
+
+## Follow-up 2 (2026-09-22) — settings savebar pinned mid-page
+
+`SettingsView`'s `.savebar` was `position: sticky; bottom: 0` as a direct
+child of `.main` — the scroll container itself. A sticky element is
+clamped to its containing block, and a scroll container's box is only the
+scrollport, not the scrolled content: the bar was pinned at content-y
+≈ viewport height and scrolled off upward on any scroll (verified:
+scrollTop 800 → rect top −259). It only looked right at scrollTop 0.
+Fix: `.content` is now the scroller (`overflow-y: auto`) and the savebar
+is a static flex footer beneath it — always at the bottom, never
+overlapping cards. Verified live at 1024×560: bar rect stays
+top=541/bottom=600 at scrollTop 0, 800 and end.
