@@ -1,6 +1,6 @@
 {
   "name": "vdock-frontend",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "VDock frontend — Vue 3 + TypeScript UI for the virtual stream deck",
   "license": "MIT",
   "author": "VDock Contributors",
