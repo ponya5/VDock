@@ -124,6 +124,11 @@ class AppProfile:
     default_layout: Tuple[Tuple[str, ...], ...] = ()
     #: Where live status comes from, e.g. 'claude_hooks'. None means no status.
     status_source: Optional[str] = None
+    #: Action-type ids owned by this profile that are NOT keymap commands --
+    #: plugin actions like claude_pack's `claude_prompt`. The frontend's
+    #: scene→app vote maps these to the profile so a scene built purely of
+    #: plugin buttons still resolves (DL-033 follow-up).
+    action_types: Tuple[str, ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialise for GET /api/app-profiles."""
@@ -133,6 +138,7 @@ class AppProfile:
             'exes': list(self.exes),
             'kind': self.kind,
             'status_source': self.status_source,
+            'action_types': list(self.action_types),
             'default_layout': [list(row) for row in self.default_layout],
             'commands': [
                 {

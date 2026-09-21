@@ -66,3 +66,19 @@ def test_no_false_terminal_detection(client):
             if not marker_live:
                 assert 'claude-code' not in detected
             break
+
+
+def test_terminal_agent_profiles_declare_plugin_action_types(client):
+    """Scenes built from pack actions (claude_prompt, ...) must still vote
+    for their profile — the frontend folds action_types into the same map
+    as command ids (DL-033 follow-up)."""
+    resp = client.get('/api/app-profiles')
+    assert resp.status_code == 200
+    profiles = {p['id']: p for p in resp.get_json()['profiles']}
+    claude = profiles['claude-code']
+    for action_type in ('claude_prompt', 'claude_slash', 'claude_continue',
+                        'claude_api_prompt', 'claude_open'):
+        assert action_type in claude['action_types']
+    # Editor profiles declare none — their action types already are
+    # keymap command ids.
+    assert profiles['vscode']['action_types'] == []

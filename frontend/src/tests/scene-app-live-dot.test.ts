@@ -88,6 +88,7 @@ describe('sceneAppIsLive behavior', () => {
                     id: 'claude-code',
                     exes: ['windowsterminal.exe'],
                     commands: [{ id: 'cc_prompt' }, { id: 'cc_interrupt' }],
+                    action_types: ['claude_prompt', 'claude_slash'],
                   },
                   {
                     id: 'cursor',
@@ -119,6 +120,17 @@ describe('sceneAppIsLive behavior', () => {
     const svc = await loadService()
     const scene = sceneWith({
       pages: [{ buttons: [{ action: { type: 'cc_prompt' } }, { action: { type: 'cc_interrupt' } }] }],
+    })
+    expect(svc.sceneAppIsLive(scene as any)).toBe(true)
+  })
+
+  it('lights a scene whose buttons are plugin action types, not commands', async () => {
+    // The shipped Claude Code scene uses claude_pack actions (claude_prompt
+    // etc.), which are not keymap commands — the profile's action_types
+    // must carry the vote (DL-033 follow-up).
+    const svc = await loadService()
+    const scene = sceneWith({
+      pages: [{ buttons: [{ action: { type: 'claude_prompt' } }, { action: { type: 'claude_slash' } }] }],
     })
     expect(svc.sceneAppIsLive(scene as any)).toBe(true)
   })

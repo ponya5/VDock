@@ -370,6 +370,12 @@ CLAUDE_CODE_PROFILE = AppProfile(
     commands=CLAUDE_CODE_COMMANDS, kind='terminal_agent',
     # Hooks land in Phase 3; until then sessions are detected by process scan.
     status_source=None,
+    # claude_pack's plugin actions — a scene built of these still votes for
+    # this profile even though none of its buttons carry a cc_* command id.
+    action_types=(
+        'claude_prompt', 'claude_slash', 'claude_continue',
+        'claude_api_prompt', 'claude_open',
+    ),
     default_layout=(
         ('cc_prompt', 'cc_interrupt', 'cc_approve', 'cc_deny'),
         ('cc_clear', 'cc_mode', 'cc_rewind', 'cc_todos'),

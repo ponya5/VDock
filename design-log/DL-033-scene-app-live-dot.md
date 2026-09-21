@@ -58,3 +58,24 @@ covers custom integrations pointing at arbitrary exes (spotify.exe…).
 - Live: dot renders top-right of the Claude Code pill when its session is
   detected; absent for apps not running.
 - vitest + typecheck + build; backend pytest for the endpoint.
+
+## Follow-up (2026-09-21): dot missing on plugin-action scenes
+
+**Reported:** Claude Code scene shows no green dot even with a live
+`claude` session. Two causes found:
+
+1. **`appScanningEnabled: false`** in `user_settings.json` — the poll that
+   feeds the dots never starts. The user wants the feature, so the toggle
+   gets enabled via the settings API (reversible in Settings).
+2. **Command vote can't reach `claude-code`.** The scene's buttons are
+   `claude_prompt`/`claude_slash`/`claude_continue`/`claude_open` — plugin
+   action types from `claude_pack`, not keymap commands. `profileIdByCommand`
+   only knows `cc_*` ids, so the vote resolves nothing and the dot never
+   renders.
+
+**Fix:** `AppProfile` gains `action_types: Tuple[str, ...]` — non-command
+action ids the profile owns — serialised via `to_dict` into
+`/api/app-profiles`. `claude-code` declares the five `claude_*` ids (the
+only pack with plugin actions today; other packs' action types already
+are keymap command ids). `loadProfileMaps` folds `action_types` into the
+same vote map, so the existing resolution order is untouched.

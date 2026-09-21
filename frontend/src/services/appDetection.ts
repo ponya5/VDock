@@ -50,6 +50,11 @@ async function loadProfileMaps(): Promise<void> {
       for (const cmd of p.commands ?? []) {
         if (cmd?.id) profileIdByCommand.set(String(cmd.id), p.id)
       }
+      // Plugin action types the profile owns (e.g. claude_pack's
+      // claude_prompt) vote for the profile exactly like command ids.
+      for (const t of p.action_types ?? []) {
+        profileIdByCommand.set(String(t), p.id)
+      }
     }
     profilesLoaded = true
   } catch {
