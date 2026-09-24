@@ -1598,13 +1598,19 @@ const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
 
 // --- Connect a device (QR) ----------------------------------------------------
-// The URL a phone needs is the one serving the app: the backend port, which
-// serves the built frontend in production. In dev, Vite only binds localhost —
-// so the backend port (serving dist/) is still the right target.
+// The URL a phone needs is the one actually serving live code. In a built
+// (production/packaged) app, that's the backend port, which serves dist/.
+// In dev (`npm run dev`), it's the Vite dev server's own port instead —
+// Vite now binds every interface (see vite.config.ts), so a LAN device gets
+// the same always-fresh HMR source the desktop Electron window does,
+// instead of silently freezing on whatever dist/ happened to contain the
+// last time someone ran `npm run build` (see DL-069).
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
 const lanUrl = computed(() => {
   const ip = serverConfig.value?.lan_ip
-  const port = serverConfig.value?.port
+  const port = import.meta.env.DEV
+    ? Number(import.meta.env.VITE_PORT) || 3000
+    : serverConfig.value?.port
   if (!ip || !port) return null
   return `http://${ip}:${port}`
 })
