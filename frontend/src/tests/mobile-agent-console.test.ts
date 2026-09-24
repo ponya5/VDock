@@ -120,11 +120,16 @@ describe('MobileAgentConsole', () => {
     expect(mountConsole().find('textarea').exists()).toBe(false)
   })
 
-  it('points at the launch shortcut when the agent is not running', () => {
+  it('renders no conversation card at all when there is nothing to show', () => {
+    sessionState.stateEntry.value = { prompt: '', reply: '', project: '', message: '' }
+    expect(mountConsole().find('.mac-conversation').exists()).toBe(false)
+  })
+
+  it('points at the launch shortcut when the agent is not running, with no filler card', () => {
     sessionState.isAgentPossiblyRunning.value = false
     sessionState.stateEntry.value = undefined
     const wrapper = mountConsole()
-    expect(wrapper.find('.mac-empty').text()).toContain("isn't running")
+    expect(wrapper.find('.mac-conversation').exists()).toBe(false)
     expect(wrapper.find('.mac-actions').exists()).toBe(false)
     expect(wrapper.find('.mac-shortcut.highlighted').text()).toBe('Open Claude')
   })

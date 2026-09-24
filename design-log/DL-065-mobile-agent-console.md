@@ -329,3 +329,45 @@ phone, where the state actions and per-scene shortcut buttons are enough.
   clean.
 - `frontend/dist/` rebuilt so the change reaches the backend-served path
   too (see DL-069).
+
+## Follow-up 3: drop the empty-state card too; shortcuts as a wrapping grid (2026-09-25)
+
+### Problem
+
+Follow-up 2 shrank the empty-state card but still rendered it — live, its
+"Use the buttons below to drive Claude Code on your PC" line was itself
+exactly the kind of filler the user wanted gone entirely, still eating a
+full-width card above the buttons it was describing. Separately, the
+shortcut row (Open Claude, Review, Commit, claude.ai, Explain, Write
+Tests, Fix Tests, …) was a horizontal-scrolling pill strip: on a narrower
+phone, several of those buttons scrolled off-screen with no visible
+indication more existed, and the pills themselves were sized for a label,
+not for an easy thumb target.
+
+### Fix
+
+- The `.mac-conversation` card is now `v-if="hasConversation"` — it does
+  not render *at all* when there is no prompt, reply, working, or
+  permission state to show, rather than rendering a smaller "nothing to
+  say" version of itself. Removed `emptyStateIcon`/`emptyStateText` and the
+  `.mac-empty` styles entirely, since nothing references them anymore.
+- `.mac-shortcuts` changed from a horizontal-scrolling flex row
+  (`overflow-x: auto`) to a wrapping CSS grid
+  (`grid-template-columns: repeat(auto-fit, minmax(84px, 1fr))`): every
+  shortcut is visible on screen at once on any phone width, reflowing into
+  more rows instead of ever scrolling off-screen, and each tile grew to a
+  68px-tall icon-over-label button (up from a 44px-tall pill) for an
+  easier tap target. The landscape/short-viewport media query switches
+  tiles to a row layout (icon beside label, 110px minimum column) to keep
+  them compact without shrinking back to hard-to-hit pills.
+
+### Verification
+
+- `mobile-agent-console.test.ts`: updated the "agent not running" test to
+  assert `.mac-conversation` doesn't exist at all (previously asserted its
+  text content); added `renders no conversation card at all when there is
+  nothing to show` for the ready-but-idle case.
+- Full frontend suite: 59 files / 251 tests green; `vue-tsc --noEmit`
+  clean.
+- `frontend/dist/` rebuilt again so this reaches the LAN-served path too
+  (see DL-069).

@@ -16,32 +16,31 @@
       </span>
     </header>
 
-    <div ref="conversationRef" class="mac-conversation" :class="{ 'mac-conversation--empty': !hasConversation }">
-      <template v-if="hasConversation">
-        <article v-if="lastPrompt" class="mac-message from-user">
-          <span class="mac-author">You</span>
-          <p class="mac-message-text">{{ lastPrompt }}</p>
-        </article>
-        <article v-if="currentState === 'working'" class="mac-message from-agent is-working">
-          <span class="mac-author">{{ agentName }}</span>
-          <p class="mac-message-text">
-            <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
-            {{ workingMessage }}
-          </p>
-        </article>
-        <article v-else-if="lastReply" class="mac-message from-agent">
-          <span class="mac-author">{{ agentName }}</span>
-          <p class="mac-message-text">{{ lastReply }}</p>
-        </article>
-        <article v-if="currentState === 'permission'" class="mac-message from-agent is-permission">
-          <span class="mac-author">{{ agentName }} is asking</span>
-          <p class="mac-message-text">{{ stateEntry?.message || 'Needs your permission' }}</p>
-        </article>
-      </template>
-      <div v-else class="mac-empty">
-        <FontAwesomeIcon :icon="['fas', emptyStateIcon]" class="mac-empty-icon" />
-        <p>{{ emptyStateText }}</p>
-      </div>
+    <!-- No filler card when there's nothing to show (DL-069 follow-up): a
+         "use the buttons below" hint just repeated what the buttons below
+         already say for themselves, and cost the biggest chunk of the
+         screen doing it. The card only appears once there's an actual
+         prompt, reply, working/permission state to display. -->
+    <div v-if="hasConversation" ref="conversationRef" class="mac-conversation">
+      <article v-if="lastPrompt" class="mac-message from-user">
+        <span class="mac-author">You</span>
+        <p class="mac-message-text">{{ lastPrompt }}</p>
+      </article>
+      <article v-if="currentState === 'working'" class="mac-message from-agent is-working">
+        <span class="mac-author">{{ agentName }}</span>
+        <p class="mac-message-text">
+          <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
+          {{ workingMessage }}
+        </p>
+      </article>
+      <article v-else-if="lastReply" class="mac-message from-agent">
+        <span class="mac-author">{{ agentName }}</span>
+        <p class="mac-message-text">{{ lastReply }}</p>
+      </article>
+      <article v-if="currentState === 'permission'" class="mac-message from-agent is-permission">
+        <span class="mac-author">{{ agentName }} is asking</span>
+        <p class="mac-message-text">{{ stateEntry?.message || 'Needs your permission' }}</p>
+      </article>
     </div>
 
     <div
@@ -82,8 +81,9 @@
         <FontAwesomeIcon
           :icon="runningShortcutId === shortcut.button.id ? ['fas', 'spinner'] : shortcut.icon"
           :spin="runningShortcutId === shortcut.button.id"
+          class="mac-shortcut-icon"
         />
-        <span>{{ shortcut.label }}</span>
+        <span class="mac-shortcut-label">{{ shortcut.label }}</span>
       </button>
     </div>
   </section>
@@ -166,15 +166,6 @@ const hasConversation = computed(() =>
 const emphasizesPrimaryAction = computed(() =>
   currentState.value === 'working' || currentState.value === 'permission'
 )
-
-const emptyStateIcon = computed(() => (isAgentPossiblyRunning.value ? 'comments' : 'power-off'))
-
-const emptyStateText = computed(() => {
-  if (!isAgentPossiblyRunning.value) {
-    return `${agentName.value} isn't running on your PC. Start it from a shortcut below.`
-  }
-  return `Use the buttons below to drive ${agentName.value} on your PC.`
-})
 
 function shortcutLabel(button: Button): string {
   return button.layers?.label?.text || button.label || button.tooltip || ''
@@ -328,16 +319,6 @@ trackAgentSurfaceVisibility(
   -webkit-overflow-scrolling: touch;
 }
 
-/* With no composer to type into, there's nothing left to say about a card
-   that just repeats "isn't running" / "use the buttons below" — so unlike
-   a real conversation (which keeps flex: 1 to grow and scroll), the empty
-   state only claims the room its one line of text actually needs, leaving
-   the action buttons below as the visually dominant part of the screen. */
-.mac-conversation--empty {
-  flex: 0 0 auto;
-  min-height: 0;
-}
-
 .mac-message {
   display: flex;
   flex-direction: column;
@@ -385,29 +366,6 @@ trackAgentSurfaceVisibility(
   overflow-wrap: anywhere;
   user-select: text;
   -webkit-user-select: text;
-}
-
-.mac-empty {
-  margin: auto;
-  max-width: 320px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.mac-empty p {
-  margin: 0;
-  font-size: clamp(0.82rem, 0.78rem + 0.25vw, 0.92rem);
-  line-height: 1.4;
-}
-
-.mac-empty-icon {
-  flex-shrink: 0;
-  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
-  color: var(--agent-accent);
 }
 
 /* --- State actions ------------------------------------------------------------ */
@@ -465,34 +423,45 @@ trackAgentSurfaceVisibility(
 .mac-action:disabled { opacity: 0.6; cursor: default; }
 
 /* --- Shortcuts --------------------------------------------------------------- */
+/* A wrapping grid instead of a horizontal-scroll pill row (DL-069 follow-up):
+   a scrolling row hides however many buttons don't fit the first screenful,
+   with no visual hint more exist — every shortcut needs to be visible and
+   reachable at once, on any phone width, without discovering a scrollbar.
+   `auto-fit`/`minmax` reflows the tile count per row to whatever the screen
+   actually fits, wrapping to more rows rather than ever hiding a button. */
 .mac-shortcuts {
   flex-shrink: 0;
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin: 0 -12px;
-  padding: 0 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 10px;
 }
 
-.mac-shortcuts::-webkit-scrollbar { display: none; }
-
 .mac-shortcut {
-  flex: 0 0 auto;
-  min-height: 44px;
-  display: inline-flex;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  border-radius: 999px;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
   color: inherit;
-  font-size: clamp(0.82rem, 0.78rem + 0.3vw, 0.95rem);
+  font-size: clamp(0.8rem, 0.75rem + 0.35vw, 0.95rem);
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
   touch-action: manipulation;
   cursor: pointer;
+}
+
+.mac-shortcut-icon {
+  font-size: 1.35em;
+}
+
+.mac-shortcut-label {
+  overflow-wrap: anywhere;
 }
 
 .mac-shortcut.highlighted {
@@ -534,8 +503,15 @@ trackAgentSurfaceVisibility(
     gap: 6px;
   }
 
+  .mac-shortcuts {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+
   .mac-shortcut {
-    min-height: 40px;
+    min-height: 44px;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px 10px;
   }
 }
 
