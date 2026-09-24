@@ -522,6 +522,15 @@
             The button face becomes a drag track — drag horizontally to set the
             level. Tap the edges to nudge by one step.
           </p>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="showSliderPresets" type="checkbox" class="checkbox" />
+              Show quick-jump presets (0/25/50/75/100%) under the track
+            </label>
+            <p class="form-help">
+              Turn this off on very small buttons where the row won't fit.
+            </p>
+          </div>
         </div>
 
         <!-- Press behaviour: when the action fires + push-to-talk release -->
@@ -1632,6 +1641,14 @@ const multiSteps = ref<MultiStep[]>(
   }))
 )
 const multiStopOnError = ref(props.button.action?.config?.stop_on_error !== false)
+
+// slider: the presets row defaults on, matching SliderButtonFace's own
+// `!== false` fallback — a two-way computed keeps the checkbox in sync
+// with actionConfig without showing "unchecked" for an unset (=on) button.
+const showSliderPresets = computed<boolean>({
+  get: () => actionConfig.value.show_presets !== false,
+  set: (checked) => { actionConfig.value.show_presets = checked }
+})
 
 // toggle: per-side action + appearance.
 const toggleOnAction = ref(props.button.action?.config?.on_action)

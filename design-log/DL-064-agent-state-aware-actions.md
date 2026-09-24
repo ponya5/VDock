@@ -342,3 +342,68 @@ In the bar, **Newline** (Ctrl+J) is dropped from `ready`, because it only
 helps while you are hand-typing a draft. The `unknown` state's **Enter** is
 also dropped: it sends the same key as Submit. Backend: 838 passed. Frontend:
 241 passed.
+
+## Follow-up: live audit of every Claude scene button
+
+Each remaining button was pressed against the real CLI, and the Claude window
+was captured with `PrintWindow`.
+
+| Button | Result |
+|---|---|
+| Open Claude | Works: opens a session and the hook reports `ready`. |
+| Review (`/code-review`) | Works: the built-in command is the top autocomplete match. |
+| Commit (`/commit`) | **Broken, and risky.** No `/commit` command is active here; the commit plugin is cached on disk but not enabled. The top match is `/[employer]-operations:sla-response-drafter`, so Enter would run an unrelated command. |
+| Explain / Write Tests | Work, but **tab indentation is lost**: `\t` is sent as a real Tab key, which Claude's input treats as a shortcut. With an empty clipboard the prompt arrives with no code in it. |
+| Fix Tests | Works: a plain prompt. |
+| claude.ai | Opens the browser; independent of the CLI. |
+
+Also observed: the user's Electron deck still showed the previous layout
+(Resume/Model/Add File) because it had not reloaded. Pressing Resume opened
+the `/resume` picker, which the deck cannot drive. It swallowed the next
+typed prompt into its search box, and it took two Esc presses to close.
+
+### Design
+
+- **Commit** sends a plain instruction that needs no plugin: "Commit the
+  current changes with a clear, descriptive commit message." The secondary
+  label becomes `git commit`.
+- **Tabs:** for commands that type into a terminal agent (the ones with
+  `newline_keys`), typed text has its tabs expanded to spaces
+  (`expandtabs(4)`), so code indentation survives.
+- **Empty clipboard:** a prompt that uses `{clipboard}` fails with "Copy some
+  code first" when the clipboard is empty, instead of sending a prompt with
+  nothing in it.
+
+### Audit Implementation Results
+
+- Implemented as designed, in `keymaps/base.py` (`TERMINAL_TAB_WIDTH`),
+  `context.clipboard_text()`, the guard in
+  `KeystrokeEditorPlugin.execute_action`, `defaultProfile.ts`
+  (`COMMIT_PROMPT`) and `dev-claude-code.json`. The user's saved profile was
+  migrated, with a backup at `profile-before-commit-fix.json`.
+- Live re-test: Explain with an empty clipboard returned "Copy some code
+  first". Explain with a tab-indented snippet reached Claude with its
+  indentation intact, and Claude explained it without the earlier
+  indentation warning.
+- Backend: 840 passed, including new tests for tab expansion and the
+  empty-clipboard guard. Frontend: all tests passed.
+
+## Follow-up: bigger "needs you" alert
+
+The alert card (`AgentAlertOverlay.vue`) used fixed sizes: a 46 px icon, a
+1.05rem title and a 560 px maximum width. On the 7" panel it was a small
+strip above the screensaver clock, easy to miss from arm's length.
+
+### Follow-up Implementation Results
+
+- Every size now follows the viewport with `clamp()`: the width is
+  `min(880px, 100vw - 24px)`, and the icon and Got it button are
+  52–84 px. The title, message and project text scale with the viewport
+  height.
+- Up to 520 px wide (phones), the card wraps: icon and text on one row,
+  then a full-width Got it button, with phone-sized font caps.
+- **Verified (Playwright):**
+  - At 1024×600 the card grew from about 560×75 to 880×130 px.
+  - On iPhone 13 portrait (390×664) the card is 366 px wide, with the text
+    beside the icon and a 56 px full-width button.
+  - The 250 frontend tests pass, including `property8` (font sizes).

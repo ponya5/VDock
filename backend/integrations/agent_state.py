@@ -30,6 +30,9 @@ DEFAULT_SESSION_ID = 'default'
 #: A killed session never reports its end, so a state goes stale eventually.
 STATE_TTL_SECONDS = 30 * 60
 
+MAX_PROMPT_CHARS = 2000
+MAX_REPLY_CHARS = 6000
+
 _lock = threading.Lock()
 _sessions_by_source: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
@@ -43,22 +46,39 @@ def normalise_session_id(raw_session_id: Any) -> str:
     return str(raw_session_id or DEFAULT_SESSION_ID)[:100]
 
 
+def _conversation(previous_entry: Dict[str, Any], prompt: str, reply: str) -> Dict[str, str]:
+    """The last prompt/reply pair after this event.
+
+    Most events carry no text, so the pair carries over; a new prompt
+    starts a new turn and clears the previous reply.
+    """
+    if prompt:
+        return {'prompt': prompt[:MAX_PROMPT_CHARS], 'reply': reply[:MAX_REPLY_CHARS]}
+    return {
+        'prompt': previous_entry.get('prompt', ''),
+        'reply': reply[:MAX_REPLY_CHARS] if reply else previous_entry.get('reply', ''),
+    }
+
+
 def record(source: str, state: str, message: str = '', cwd: str = '',
-           project: str = '', session_id: str = DEFAULT_SESSION_ID) -> Dict[str, Any]:
+           project: str = '', session_id: str = DEFAULT_SESSION_ID,
+           prompt: str = '', reply: str = '') -> Dict[str, Any]:
     """Store ``state`` for one session of ``source``; returns the entry."""
     if state not in ALLOWED_STATES:
         raise ValueError(f'Unknown agent state: {state}')
-    entry = {
-        'source': source,
-        'session_id': session_id,
-        'state': state,
-        'message': message[:300],
-        'cwd': cwd[:300],
-        'project': project[:120],
-        'ts': time.time(),
-    }
     with _lock:
-        _sessions_by_source.setdefault(source, {})[session_id] = entry
+        sessions = _sessions_by_source.setdefault(source, {})
+        entry = {
+            'source': source,
+            'session_id': session_id,
+            'state': state,
+            'message': message[:300],
+            'cwd': cwd[:300],
+            'project': project[:120],
+            **_conversation(sessions.get(session_id, {}), prompt, reply),
+            'ts': time.time(),
+        }
+        sessions[session_id] = entry
     return entry
 
 

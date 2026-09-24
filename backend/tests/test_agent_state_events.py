@@ -270,6 +270,96 @@ def test_hook_body_carries_the_session_id():
     assert cursor_body['session_id'] == 'xyz'
 
 
+# ---------------------------------------------------------------------------
+# Conversation (DL-065 mobile console)
+# ---------------------------------------------------------------------------
+
+def _write_transcript(path, entries):
+    path.write_text('\n'.join(json.dumps(entry) for entry in entries) + '\n', encoding='utf-8')
+    return str(path)
+
+
+def test_hook_sends_the_submitted_prompt():
+    body = hook.build_body('claude', 'working', {
+        'hook_event_name': 'UserPromptSubmit', 'prompt': '  Fix the login bug  ',
+    })
+    assert body['prompt'] == 'Fix the login bug'
+    assert 'reply' not in body
+
+
+def test_hook_prefers_the_reported_last_assistant_message(tmp_path):
+    transcript_path = _write_transcript(tmp_path / 't.jsonl', [
+        {'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': 'from transcript'}]}},
+    ])
+    body = hook.build_body('claude', 'ready', {
+        'hook_event_name': 'Stop', 'last_assistant_message': 'reported',
+        'transcript_path': transcript_path,
+    })
+    assert body['reply'] == 'reported'
+
+
+def test_hook_reads_the_last_assistant_text_from_the_transcript(tmp_path):
+    transcript_path = _write_transcript(tmp_path / 't.jsonl', [
+        {'type': 'user', 'message': {'content': 'hi'}},
+        {'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': 'Older reply'}]}},
+        {'type': 'assistant', 'message': {'content': [
+            {'type': 'text', 'text': 'Done.'}, {'type': 'text', 'text': 'Tests pass.'},
+        ]}},
+        {'type': 'assistant', 'message': {'content': [{'type': 'tool_use', 'name': 'Bash'}]}},
+    ])
+    body = hook.build_body('claude', 'ready', {'hook_event_name': 'Stop', 'transcript_path': transcript_path})
+    assert body['reply'] == 'Done.\nTests pass.'
+
+
+def test_hook_survives_a_missing_transcript(tmp_path):
+    body = hook.build_body('claude', 'ready', {
+        'hook_event_name': 'Stop', 'transcript_path': str(tmp_path / 'missing.jsonl'),
+    })
+    assert 'reply' not in body
+
+
+def test_hook_keeps_the_end_of_a_long_reply():
+    long_reply = 'start ' + 'x' * hook.MAX_REPLY_CHARS + ' summary'
+    body = hook.build_body('claude', 'ready', {'hook_event_name': 'Stop', 'last_assistant_message': long_reply})
+    assert len(body['reply']) == hook.MAX_REPLY_CHARS
+    assert body['reply'].startswith('…')
+    assert body['reply'].endswith(' summary')
+
+
+def test_cursor_hook_sends_prompt_and_reply():
+    prompt_body = hook.build_body('cursor', 'working', {'hook_event_name': 'beforeSubmitPrompt', 'prompt': 'Refactor'})
+    reply_body = hook.build_body('cursor', 'working', {'hook_event_name': 'afterAgentResponse', 'text': 'Refactored.'})
+    assert prompt_body['prompt'] == 'Refactor'
+    assert reply_body['reply'] == 'Refactored.'
+
+
+def test_conversation_carries_over_and_a_new_prompt_clears_the_old_reply(client, emitted):
+    client.post('/api/agent-events', json={'source': 'claude', 'state': 'working', 'prompt': 'First'})
+    client.post('/api/agent-events', json={'source': 'claude', 'state': 'working', 'message': 'Using Bash'})
+    client.post('/api/agent-events', json={'source': 'claude', 'state': 'ready', 'reply': 'Answer one'})
+    claude = agent_state.get('claude')
+    assert (claude['prompt'], claude['reply']) == ('First', 'Answer one')
+
+    client.post('/api/agent-events', json={'source': 'claude', 'state': 'working', 'prompt': 'Second'})
+    claude = agent_state.get('claude')
+    assert (claude['prompt'], claude['reply']) == ('Second', '')
+
+
+def test_conversation_is_capped():
+    entry = agent_state.record('claude', 'ready', prompt='p' * 5000, reply='r' * 9000)
+    assert len(entry['prompt']) == agent_state.MAX_PROMPT_CHARS
+    assert len(entry['reply']) == agent_state.MAX_REPLY_CHARS
+
+
+def test_agent_profiles_declare_their_prompt_command():
+    assert PROFILES_BY_ID['claude-code'].to_dict()['prompt_command'] == 'cc_prompt'
+    assert PROFILES_BY_ID['devin'].to_dict()['prompt_command'] == 'devin_prompt'
+    assert PROFILES_BY_ID['cursor'].to_dict()['prompt_command'] == 'cursor_followup'
+    for profile in PROFILES_BY_ID.values():
+        if profile.prompt_command:
+            assert COMMANDS_BY_ID[profile.prompt_command].types_text is not None
+
+
 def test_unknown_state_is_rejected(client):
     response = client.post('/api/agent-events', json={'source': 'claude', 'state': 'dancing'})
     assert response.status_code == 400
@@ -318,6 +408,27 @@ def test_multiline_prompt_uses_newline_chord_and_submits_once():
     assert len(newline_presses) == 3
     assert typed == ['Explain:', 'def f():', '  pass']
     assert all('\n' not in text for text in typed)
+
+
+def test_tab_indentation_is_typed_as_spaces_into_terminal_agents():
+    steps = COMMANDS_BY_ID['cc_prompt'].to_macro_steps('def f():\n\treturn 1')
+    typed = [step['text'] for step in steps if step['type'] == 'text']
+
+    assert typed == ['def f():', '    return 1']
+
+
+def test_clipboard_prompt_refuses_an_empty_clipboard(mocker):
+    from integrations import context
+    from integrations.claude_code_pack import Plugin as ClaudeCodePlugin
+    mocker.patch.object(context, 'clipboard_text', return_value='  ')
+    send = mocker.patch('integrations.editor_base.send')
+
+    result = ClaudeCodePlugin().execute_action(
+        'cc_prompt', {'text': 'Explain:\n\n{clipboard}'})
+
+    assert result['success'] is False
+    assert result['message'] == 'Copy some code first'
+    send.assert_not_called()
 
 
 def test_cc_submit_is_a_session_gated_enter():

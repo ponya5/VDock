@@ -1,14 +1,48 @@
-"""Cursor keybindings."""
+"""Cursor keybindings.
+
+Chat input focus keys, verified against Cursor 3.21's workbench bundle:
+Ctrl+L / Ctrl+I *toggle* the agent pane (pressed while it is focused they
+close it), so nothing that types afterwards may start with them. Ctrl+Shift+L
+("Open New Agent Chat") always opens and focuses a fresh input, and
+Ctrl+Shift+Y ("Focus Chat Followup", Windows binding) focuses the current
+chat's input. Both chat inputs take Shift+Enter as a line break.
+"""
 from typing import Tuple
 
 from .base import AppProfile, Command, CURSOR_EXES, RISK_INPUT, state_actions_of
 
+NEW_AGENT_CHAT_KEYS = ('ctrl', 'shift', 'l')
+FOCUS_CHAT_FOLLOWUP_KEYS = ('ctrl', 'shift', 'y')
+CHAT_NEWLINE_KEYS = ('shift', 'enter')
+
 CURSOR_COMMANDS: Tuple[Command, ...] = (
     Command(
+        id='cursor_prompt', label='New Agent Prompt',
+        description='Open a new agent chat and send a prompt to it '
+                    '(Ctrl+Shift+L, type, Enter).',
+        keys=NEW_AGENT_CHAT_KEYS, icon='paper-plane',
+        types_text='Explain the current file.', submit=True,
+        newline_keys=CHAT_NEWLINE_KEYS,
+        keywords=('cursor', 'prompt', 'agent', 'ask', 'send', 'type'),
+        target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
+    ),
+    Command(
+        id='cursor_followup', label='Send Follow-up',
+        description='Send a message to the current agent chat '
+                    '(Ctrl+Shift+Y, type, Enter). Defaults to "continue".',
+        keys=FOCUS_CHAT_FOLLOWUP_KEYS, icon='reply',
+        types_text='continue', submit=True,
+        newline_keys=CHAT_NEWLINE_KEYS,
+        keywords=('cursor', 'followup', 'continue', 'reply', 'send'),
+        target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
+    ),
+    Command(
         id='cursor_submit', label='Submit',
-        description='Send the message typed in the chat / agent input '
-                    '(Enter).',
-        keys=('enter',), icon='paper-plane',
+        description='Send the message typed in the current agent chat '
+                    '(Ctrl+Shift+Y, Enter) — focusing the chat first, so '
+                    'Enter never lands in a file.',
+        keys=FOCUS_CHAT_FOLLOWUP_KEYS, after_keys=(('enter',),),
+        icon='paper-plane',
         keywords=('cursor', 'submit', 'send', 'enter', 'prompt'),
         target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
     ),
@@ -46,9 +80,9 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
         keywords=('cursor', 'edit', 'inline', 'k'), target_exes=CURSOR_EXES,
     ),
     Command(
-        id='cursor_new_chat', label='New Cursor Chat',
-        description='Start a fresh chat session.',
-        keys=('ctrl', 'shift', 'l'), icon='plus',
+        id='cursor_new_chat', label='New Agent Chat',
+        description='Open a fresh agent chat, input focused (Ctrl+Shift+L).',
+        keys=NEW_AGENT_CHAT_KEYS, icon='plus',
         keywords=('cursor', 'new', 'chat', 'reset'), target_exes=CURSOR_EXES,
     ),
     Command(
@@ -101,20 +135,24 @@ CURSOR_PROFILE = AppProfile(
     id='cursor', label='Cursor', exes=CURSOR_EXES,
     commands=CURSOR_COMMANDS, kind='editor',
     status_source='cursor',
+    # Cursor's hooks cannot report a pending approval, so there is no
+    # 'permission' row: Accept/Reject stay reachable in every state instead.
     state_actions=(
         ('ready', state_actions_of(
-            'cursor_submit', ('cursor_new_chat', 'New Chat'),
+            'cursor_submit', ('cursor_followup', 'Continue'),
+            ('cursor_new_chat', 'New Chat'),
             ('cursor_accept', 'Accept'), ('cursor_reject', 'Reject'),
         )),
         ('working', state_actions_of(
-            'cursor_cancel', ('cursor_accept', 'Accept'),
+            ('cursor_cancel', 'Stop'), ('cursor_accept', 'Accept'),
             ('cursor_reject', 'Reject'),
         )),
         ('unknown', state_actions_of(
-            'cursor_submit', ('cursor_accept', 'Accept'),
-            ('cursor_reject', 'Reject'), ('cursor_chat', 'Chat'),
+            'cursor_submit', ('cursor_followup', 'Continue'),
+            ('cursor_cancel', 'Stop'), ('cursor_new_chat', 'New Chat'),
         )),
     ),
+    prompt_command='cursor_followup',
     default_layout=(
         ('cursor_composer', 'cursor_chat', 'cursor_accept', 'cursor_reject'),
         ('cursor_inline_edit', 'cursor_new_chat', 'cursor_toggle_terminal', 'cursor_quick_open'),

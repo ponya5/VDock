@@ -25,7 +25,7 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-011](DL-011-animated-avatars.md) | Animated GIF avatars | Implemented — tests green, manual upload check pending |
 | [DL-012](DL-012-edit-mode-wiggle.md) | Edit-mode wiggle opt-in | Implemented — default off, tests green |
 | [DL-013](DL-013-screensaver-layout.md) | Screensaver layout, background & editor | Implemented — side-by-side default, drag/resize editor, own background; backend restart needed for server sync |
-| [DL-052](DL-052-mergeable-slider-buttons.md) | Mergeable slider buttons + Sliders action category | Implemented — seam merge chips, Ctrl+Z/Y undo wiring, Sliders catalog category |
+| [DL-052](DL-052-mergeable-slider-buttons.md) | Mergeable slider buttons + Sliders action category | Implemented — seam merge chips, Ctrl+Z/Y undo wiring, Sliders catalog category; wheel scroll + merge-failure toast + savebar fix + comtypes/3.13 volume fix + quick-jump preset chips |
 | [DL-053](DL-053-settings-accordion-animation.md) | Settings accordion expand/collapse animation | Implemented — reusable Collapse component, Templates + widget cards + picker |
 | [DL-054](DL-054-settings-sidebar-redesign.md) | Settings shell redesign: sidebar nav, row-based panels, preview rail | Implemented — mockup ported, all pages re-skinned, 231 tests green |
 | [DL-055](DL-055-edit-mode-touch-drag.md) | Edit-mode touch drag + atomic button swap | Implemented — grab via hold-or-move, swapButtons store op, slider/double-tap guards |
@@ -38,6 +38,8 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-062](DL-062-mobile-layout-fit.md) | Mobile dashboard layout fit | Implemented — docked sidebar hidden, header overlay + slim, reveal pill off the buttons, slim footer |
 | [DL-063](DL-063-mobile-dedicated-surfaces.md) | Dedicated mobile chrome + screensaver | Implemented — MobileDeckChrome (scene rail, page steppers, ⋯ menu), screensaver = clock + world clock only |
 | [DL-064](DL-064-agent-state-aware-actions.md) | Agent state-aware actions | Implemented — hook-driven agent state (ready/working/permission), state-aware action bar, scene buttons type into the live CLI, Submit |
+| [DL-065](DL-065-mobile-agent-console.md) | Mobile agent console | Implemented — portrait phone console on agent scenes: state card, last prompt/reply from hooks, state actions, shortcut chips, prompt composer; live-verified end to end |
+| [DL-066](DL-066-ide-agent-parity.md) | IDE agent parity | In progress — Cursor prompt/follow-up/submit commands done and unit-verified (no live injection, by design); VS Code Copilot, Visual Studio and the Cursor scene rebuild pending |
 
 **Status values:** Planned → In progress → Complete.
 

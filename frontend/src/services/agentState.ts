@@ -18,6 +18,10 @@ export interface AgentStateEntry {
   message: string
   cwd: string
   project: string
+  /** Last prompt the user sent in this session (hooks, DL-065). */
+  prompt?: string
+  /** The agent's last reply, plain text. */
+  reply?: string
   ts: number
   /** Live sessions of this agent folded into this entry. */
   session_count?: number

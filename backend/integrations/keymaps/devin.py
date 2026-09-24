@@ -82,4 +82,5 @@ DEVIN_PROFILE = AppProfile(
             ('devin_interrupt', 'Interrupt'),
         )),
     ),
+    prompt_command='devin_prompt',
 )

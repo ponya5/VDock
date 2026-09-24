@@ -38,6 +38,8 @@ export interface AppProfileDto {
   /** Plugin action types owned by the profile (e.g. claude_prompt). */
   action_types?: string[]
   state_actions?: Partial<Record<AgentStateName, StateActionDto[]>>
+  /** Command that types free text into the live session (mobile composer). */
+  prompt_command?: string | null
   commands: AppCommandDto[]
 }
 

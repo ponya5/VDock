@@ -37,21 +37,24 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
 <style scoped>
 /* Sits above everything — dashboard (1000/2000), screensaver (500),
    tutorial (10000) — the whole point is you can't miss it. */
+/* Readable from arm's length on a 7" panel: every size follows the
+   viewport, so it is large at 1024x600 and still fits a phone. */
 .agent-alert {
   position: fixed;
-  top: 14px;
+  top: clamp(12px, 3vh, 28px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 30000;
   display: flex;
   align-items: center;
-  gap: 16px;
-  max-width: min(560px, calc(100vw - 24px));
-  padding: 14px 18px;
-  border-radius: 16px;
-  background: rgba(46, 32, 8, 0.96);
-  border: 1.5px solid #f5a524;
-  box-shadow: 0 0 0 4px rgba(245, 165, 36, 0.18), 0 14px 44px rgba(0, 0, 0, 0.6);
+  gap: clamp(14px, 2.4vw, 26px);
+  width: min(880px, calc(100vw - 24px));
+  box-sizing: border-box;
+  padding: clamp(14px, 3vh, 26px) clamp(16px, 2.6vw, 30px);
+  border-radius: clamp(16px, 2.6vh, 24px);
+  background: rgba(46, 32, 8, 0.97);
+  border: 2px solid #f5a524;
+  box-shadow: 0 0 0 5px rgba(245, 165, 36, 0.2), 0 18px 56px rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(10px);
   color: #ffd89e;
 }
@@ -59,21 +62,21 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
 .alert-icon {
   position: relative;
   flex-shrink: 0;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: clamp(52px, 12vh, 84px);
+  height: clamp(52px, 12vh, 84px);
+  border-radius: clamp(12px, 2.2vh, 18px);
   background: rgba(245, 165, 36, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: clamp(1.5rem, 5.5vh, 2.4rem);
   color: #f5a524;
 }
 
 .alert-pulse {
   position: absolute;
   inset: -4px;
-  border-radius: 14px;
+  border-radius: clamp(14px, 2.6vh, 20px);
   border: 2px solid rgba(245, 165, 36, 0.6);
   animation: alert-pulse 1.6s ease-out infinite;
 }
@@ -89,16 +92,17 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
 }
 
 .alert-title {
-  font-size: 1.05rem;
+  font-size: clamp(1.2rem, 4.4vh, 2rem);
   font-weight: 700;
+  line-height: 1.2;
   color: #ffe4b3;
 }
 
 .alert-message {
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-size: clamp(1rem, 3.2vh, 1.45rem);
+  line-height: 1.35;
   color: #f0cf9a;
-  margin-top: 2px;
+  margin-top: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -106,9 +110,9 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
 }
 
 .alert-project {
-  font-size: 0.78rem;
+  font-size: clamp(0.85rem, 2.6vh, 1.15rem);
   color: #c9a061;
-  margin-top: 4px;
+  margin-top: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -118,19 +122,55 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  min-height: 48px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 0 clamp(18px, 3vw, 34px);
+  min-height: clamp(52px, 12vh, 84px);
+  border-radius: clamp(12px, 2.2vh, 18px);
   border: none;
   background: #f5a524;
   color: #2a1c04;
-  font-size: 0.95rem;
+  font-size: clamp(1rem, 3.4vh, 1.5rem);
   font-weight: 700;
+  white-space: nowrap;
+  touch-action: manipulation;
   cursor: pointer;
 }
 
 .alert-dismiss:hover { filter: brightness(1.08); }
+.alert-dismiss:active { transform: scale(0.97); }
+
+/* Phones in portrait: the button drops under the text so the message keeps
+   the full width instead of wrapping one word per line. */
+@media (max-width: 520px) {
+  .agent-alert {
+    flex-wrap: wrap;
+  }
+
+  .alert-body {
+    flex: 1 1 0;
+  }
+
+  .alert-icon {
+    width: 56px;
+    height: 56px;
+    font-size: clamp(1.4rem, 1.2rem + 1vw, 1.6rem);
+  }
+
+  .alert-title {
+    font-size: clamp(1.15rem, 1rem + 1vw, 1.3rem);
+  }
+
+  .alert-message {
+    font-size: clamp(0.95rem, 0.9rem + 0.5vw, 1.05rem);
+  }
+
+  .alert-dismiss {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-height: 56px;
+    font-size: clamp(1.05rem, 1rem + 0.5vw, 1.15rem);
+  }
+}
 
 .alert-pop-enter-active,
 .alert-pop-leave-active {

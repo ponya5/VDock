@@ -28,6 +28,20 @@
       <div class="slider-fill" :style="{ width: `${fillPct}%` }" />
       <div class="slider-thumb" :style="{ left: `${fillPct}%` }" />
     </div>
+    <div v-if="showPresets" class="slider-presets">
+      <button
+        v-for="preset in presets"
+        :key="preset.value"
+        type="button"
+        class="slider-preset"
+        :class="{ active: preset.isActive }"
+        @pointerdown.stop
+        @click="applyPreset(preset.value)"
+      >
+        <FontAwesomeIcon v-if="preset.icon" :icon="preset.icon" />
+        <span v-else>{{ preset.label }}</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -45,6 +59,10 @@
  * Dispatches are throttled while dragging (the backend applies real volume —
  * 60 events/sec of nircmd calls is how sliders get laggy), with a final set on
  * release so the resting value always lands.
+ *
+ * A row of quick-jump chips (0/25/50/75/100% of the configured range) sits
+ * under the track — `config.show_presets` (default true) turns it off for
+ * buttons too small to fit it.
  */
 import { computed, onMounted, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -99,6 +117,32 @@ const targetIcon = computed(() => {
   if (target.value === 'app_volume') return ['fas', 'headphones']
   return ['fas', 'adjust']
 })
+
+// Quick-jump chips under the track: the bottom of the range, three even
+// steps across it, and the top — the same "0/25/50/75/100" shape regardless
+// of a custom min/max. Volume's bottom chip reads as mute (an icon, not a
+// number) since that's what tapping it does.
+const showPresets = computed(() => cfg.value.show_presets !== false)
+
+const presets = computed(() => {
+  const range = max.value - min.value
+  const fractions = [0, 0.25, 0.5, 0.75, 1]
+  return fractions.map((fraction) => {
+    const presetValue = clamp(min.value + fraction * range)
+    const isMuteChip = target.value === 'volume' && fraction === 0
+    return {
+      value: presetValue,
+      label: `${Math.round(presetValue)}`,
+      icon: isMuteChip ? ['fas', 'volume-mute'] : null,
+      isActive: Math.round(value.value) === Math.round(presetValue)
+    }
+  })
+})
+
+function applyPreset(presetValue: number) {
+  apply(presetValue, true)
+  vibrate(20)
+}
 
 function clamp(v: number): number {
   return Math.min(max.value, Math.max(min.value, Math.round(v / step.value) * step.value))
@@ -276,4 +320,35 @@ onMounted(() => {
 }
 .compact .slider-track { height: calc(var(--slider-track-h, 28px) * 0.78); }
 .compact .slider-thumb { width: calc(var(--slider-thumb, 24px) * 0.75); height: calc(var(--slider-thumb, 24px) * 0.75); }
+
+.slider-presets {
+  display: flex;
+  gap: 4px;
+}
+.slider-preset {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-size: calc(var(--slider-text, 13px) * 0.62);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.slider-preset:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.slider-preset.active {
+  background: var(--color-primary, #5b8cff);
+  border-color: transparent;
+}
+.compact .slider-preset { height: 16px; font-size: calc(var(--slider-text, 13px) * 0.55); }
 </style>

@@ -73,6 +73,40 @@ def test_macro_steps_honour_a_text_override():
     assert {'type': 'text', 'text': 'custom prompt'} in steps
 
 
+def test_cursor_prompt_opens_a_new_agent_chat_and_types_into_it():
+    """Regression guard for DL-066: Ctrl+Shift+L opens and focuses a new
+    agent chat (unlike the Ctrl+L / Ctrl+I toggles), so it is the only safe
+    lead-in key for a scene prompt button."""
+    prompt = keymaps.COMMANDS_BY_ID['cursor_prompt']
+    steps = prompt.to_macro_steps('Explain:\n\nclipboard text')
+    assert steps[0] == {'type': 'hotkey', 'keys': ['ctrl', 'shift', 'l']}
+    assert {'type': 'text', 'text': 'Explain:'} in steps
+    assert {'type': 'hotkey', 'keys': ['shift', 'enter']} in steps
+    assert {'type': 'text', 'text': 'clipboard text'} in steps
+    assert steps[-1] == {'type': 'hotkey', 'keys': ['enter']}
+
+
+def test_cursor_followup_focuses_the_current_chat_before_typing():
+    followup = keymaps.COMMANDS_BY_ID['cursor_followup']
+    steps = followup.to_macro_steps()
+    assert steps[0] == {'type': 'hotkey', 'keys': ['ctrl', 'shift', 'y']}
+    assert {'type': 'text', 'text': 'continue'} in steps
+    assert steps[-1] == {'type': 'hotkey', 'keys': ['enter']}
+
+
+def test_cursor_submit_focuses_the_chat_before_pressing_enter():
+    """cursor_submit must never be a bare Enter: with focus anywhere else
+    (e.g. a file) that would insert a newline instead of sending a chat
+    message."""
+    submit = keymaps.COMMANDS_BY_ID['cursor_submit']
+    steps = submit.to_macro_steps()
+    assert steps == [
+        {'type': 'hotkey', 'keys': ['ctrl', 'shift', 'y']},
+        {'type': 'delay', 'delay': 150},
+        {'type': 'hotkey', 'keys': ['enter']},
+    ]
+
+
 def test_the_old_module_is_gone():
     import os
     from config import Config

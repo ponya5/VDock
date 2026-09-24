@@ -101,10 +101,10 @@
           "action": {
             "type": "cc_prompt",
             "config": {
-              "text": "/commit"
+              "text": "Commit the current changes with a clear, descriptive commit message."
             }
           },
-          "secondary_label": "/commit"
+          "secondary_label": "git commit"
         },
         {
           "id": "btn-claude_prompt-0-3",

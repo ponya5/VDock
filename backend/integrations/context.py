@@ -199,6 +199,16 @@ def current_branch(cwd: Optional[str] = None) -> Optional[str]:
     return result.stdout.strip() if result.ok else None
 
 
+def clipboard_text() -> str:
+    """The clipboard's text, or '' when it is empty or unreadable."""
+    try:
+        import pyperclip
+        return pyperclip.paste() or ''
+    except Exception as e:
+        logger.warning('Could not read the clipboard: %s', e)
+        return ''
+
+
 def expand_placeholders(text: str, cwd: Optional[str] = None) -> str:
     """Substitute ``{clipboard}``, ``{repo}``, ``{branch}`` and ``{project}``.
 
@@ -211,12 +221,7 @@ def expand_placeholders(text: str, cwd: Optional[str] = None) -> str:
     replacements = {}
 
     if '{clipboard}' in text:
-        try:
-            import pyperclip
-            replacements['{clipboard}'] = pyperclip.paste() or ''
-        except Exception as e:
-            logger.warning('Could not read the clipboard: %s', e)
-            replacements['{clipboard}'] = ''
+        replacements['{clipboard}'] = clipboard_text()
 
     if '{repo}' in text or '{project}' in text or '{branch}' in text:
         target = resolve_cwd(cwd)

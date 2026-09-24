@@ -6,7 +6,7 @@
       v-if="isMobileViewport"
       :scenes="currentProfile?.scenes || []"
       :current-scene-index="currentSceneIndex"
-      :total-pages="currentScene?.pages.length || 1"
+      :total-pages="showsMobileAgentConsole ? 1 : currentScene?.pages.length || 1"
       :current-page-index="currentPageIndex"
       @set-scene="setScene"
       @previous-page="previousPage"
@@ -56,7 +56,8 @@
       />
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
-        <template v-if="currentPage">
+        <MobileAgentConsole v-if="currentPage && showsMobileAgentConsole" :scene="currentScene" />
+        <template v-else-if="currentPage">
           <AgentActionBar :scene="currentScene" />
           <div class="deck-grid-host">
             <DeckGrid
@@ -183,7 +184,7 @@
     </div>
 
     <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt -->
-    <RotateToLandscape :screensaver-active="screensaverVisible" />
+    <RotateToLandscape :portrait-allowed="screensaverVisible || showsMobileAgentConsole" />
   </div>
 </template>
 
@@ -209,12 +210,15 @@ import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
 import RotateToLandscape from '@/components/RotateToLandscape.vue'
 import AgentActionBar from '@/components/AgentActionBar.vue'
+import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useTutorial } from '@/services/tutorial'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import { appBackgroundForScene } from '@/data/appBackgrounds'
+import { sceneAppProfile } from '@/services/appDetection'
+import { agentStateEntry } from '@/services/agentState'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useButtonActions } from '@/composables/useButtonActions'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
@@ -364,6 +368,9 @@ let activeInputElement: HTMLInputElement | HTMLTextAreaElement | null = null
 
 function handleGlobalFocus(event: FocusEvent) {
   const target = event.target as HTMLElement
+  // Inputs built for the device's own keyboard (the phone console composer)
+  // would get the keypad stacked on top of it.
+  if (target?.closest('[data-native-keyboard]')) return
   if (
     target &&
     (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
@@ -687,6 +694,25 @@ function closeSidebar() {
 
 // Background preferences
 const appIntegrations = useAppIntegrations()
+
+// Phones get a portrait console instead of the grid on agent scenes (DL-065).
+const showsMobileAgentConsole = computed(() => {
+  const scene = currentScene.value
+  if (!isMobileViewport.value || !scene || isEditMode.value) return false
+  return Boolean(sceneAppProfile(scene, appIntegrations.value)?.state_actions)
+})
+
+// A reply or permission prompt reaching the phone console is what the user
+// is waiting for, so it wakes the screen like a touch would.
+const mobileConsoleConversationKey = computed(() => {
+  const scene = currentScene.value
+  if (!showsMobileAgentConsole.value || !scene) return null
+  const entry = agentStateEntry(sceneAppProfile(scene, appIntegrations.value)?.status_source)
+  return entry ? [entry.state, entry.prompt, entry.reply].join('\u0000') : null
+})
+watch(mobileConsoleConversationKey, (conversationKey) => {
+  if (conversationKey) dismissScreensaver()
+})
 // The scene slot resolves to the user's explicit override first; absent that,
 // an app-associated scene falls back to its bundled app wallpaper.
 const effectiveSceneBackground = computed(() => {

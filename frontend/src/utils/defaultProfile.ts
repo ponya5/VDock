@@ -160,6 +160,13 @@ function seedScene(
  * the agent action bar above the grid, which swaps them as Claude's state
  * changes — the grid only holds what applies in any state.
  */
+/**
+ * A plain instruction rather than `/commit`: that slash command only exists
+ * when a commit plugin is enabled, and otherwise Enter runs whichever command
+ * autocomplete ranked first.
+ */
+const COMMIT_PROMPT = 'Commit the current changes with a clear, descriptive commit message.'
+
 function createClaudeCodeScene(ts: number): Scene {
   const makeButton = seedButton(ts)
   const brand = '#D97757'
@@ -199,8 +206,8 @@ function createClaudeCodeScene(ts: number): Scene {
       label: 'Commit',
       icon: ['fas', 'code-commit'],
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt('/commit'),
-      secondary_label: '/commit',
+      action: livePrompt(COMMIT_PROMPT),
+      secondary_label: 'git commit',
       position: { row: 0, col: 2 }
     }),
     makeButton({

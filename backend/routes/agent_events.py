@@ -124,7 +124,7 @@ def post_agent_event():
     """Record + broadcast an agent state change.
 
     Body: {source, state: 'ready'|'working'|'permission'|'ended',
-           message?, project?, cwd?}
+           message?, project?, cwd?, session_id?, prompt?, reply?}
     Legacy body: {source, event: 'waiting'|'clear', ...}.
     Deliberately unauthenticated — agent hooks run as local shell commands
     and cannot carry UI tokens; localhost-only instead.
@@ -150,7 +150,9 @@ def post_agent_event():
         return jsonify({'success': False, 'error': 'Unknown state'}), 400
 
     agent_state.record(source, state, message=message, cwd=cwd,
-                       project=project, session_id=session_id)
+                       project=project, session_id=session_id,
+                       prompt=str(data.get('prompt') or ''),
+                       reply=str(data.get('reply') or ''))
     _broadcast_states()
     _update_alert(source, _wants_attention(data, state), message, project, cwd)
     return jsonify({'success': True})

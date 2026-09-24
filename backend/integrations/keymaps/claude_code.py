@@ -412,4 +412,5 @@ CLAUDE_CODE_PROFILE = AppProfile(
             ('cc_interrupt', 'Interrupt'),
         )),
     ),
+    prompt_command='cc_prompt',
 )

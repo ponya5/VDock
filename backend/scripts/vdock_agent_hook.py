@@ -48,6 +48,17 @@ CURSOR_REPLY_BY_EVENT = {
     'beforeSubmitPrompt': {'continue': True},
 }
 
+#: Payload fields carrying the conversation, per (source, event).
+PROMPT_EVENTS = {('claude', 'UserPromptSubmit'), ('cursor', 'beforeSubmitPrompt')}
+CURSOR_REPLY_EVENT = 'afterAgentResponse'
+CLAUDE_REPLY_EVENT = 'Stop'
+
+MAX_PROMPT_CHARS = 2000
+MAX_REPLY_CHARS = 6000
+#: The final assistant message sits at the end of the transcript; reading
+#: the tail keeps a long session's hook fast.
+TRANSCRIPT_TAIL_BYTES = 512 * 1024
+
 DEFAULT_MESSAGES = {
     'ready': 'Waiting for your prompt',
     'working': 'Working…',
@@ -82,9 +93,84 @@ def _session_cwd(payload: Dict[str, Any]) -> str:
     return str(workspace_roots[0]) if workspace_roots else ''
 
 
+def _assistant_text(transcript_entry: Dict[str, Any]) -> str:
+    if transcript_entry.get('type') != 'assistant':
+        return ''
+    message = transcript_entry.get('message') or {}
+    content = message.get('content') if isinstance(message, dict) else None
+    if isinstance(content, str):
+        return content.strip()
+    if not isinstance(content, list):
+        return ''
+    text_parts = [
+        str(part.get('text') or '')
+        for part in content
+        if isinstance(part, dict) and part.get('type') == 'text'
+    ]
+    return '\n'.join(text_parts).strip()
+
+
+def _read_transcript_tail(transcript_path: str) -> str:
+    try:
+        with open(transcript_path, 'rb') as transcript_file:
+            transcript_file.seek(0, 2)
+            file_size = transcript_file.tell()
+            transcript_file.seek(max(0, file_size - TRANSCRIPT_TAIL_BYTES))
+            return transcript_file.read().decode('utf-8', errors='replace')
+    except OSError:
+        return ''
+
+
+def last_assistant_reply(transcript_path: str) -> str:
+    """Text of the newest assistant message in a Claude Code transcript."""
+    if not transcript_path:
+        return ''
+    for line in reversed(_read_transcript_tail(transcript_path).splitlines()):
+        try:
+            transcript_entry = json.loads(line)
+        except ValueError:
+            # The first line of a tail read is usually cut mid-entry.
+            continue
+        if not isinstance(transcript_entry, dict):
+            continue
+        reply_text = _assistant_text(transcript_entry)
+        if reply_text:
+            return reply_text
+    return ''
+
+
+def _reply_text(source: str, event_name: str, payload: Dict[str, Any]) -> str:
+    if source == 'cursor':
+        return str(payload.get('text') or '') if event_name == CURSOR_REPLY_EVENT else ''
+    if event_name != CLAUDE_REPLY_EVENT:
+        return ''
+    reported_reply = str(payload.get('last_assistant_message') or '')
+    if reported_reply:
+        return reported_reply
+    return last_assistant_reply(str(payload.get('transcript_path') or ''))
+
+
+def conversation_fields(source: str, payload: Dict[str, Any]) -> Dict[str, str]:
+    """The prompt or reply an event carries, for the mobile console."""
+    event_name = str(payload.get('hook_event_name') or '')
+    fields: Dict[str, str] = {}
+    if (source, event_name) in PROMPT_EVENTS:
+        prompt_text = str(payload.get('prompt') or '').strip()
+        if prompt_text:
+            fields['prompt'] = prompt_text[:MAX_PROMPT_CHARS]
+    reply_text = _reply_text(source, event_name, payload).strip()
+    if len(reply_text) > MAX_REPLY_CHARS:
+        # A long reply ends with its summary, which is what a phone needs.
+        reply_text = '…' + reply_text[-(MAX_REPLY_CHARS - 1):]
+    if reply_text:
+        fields['reply'] = reply_text
+    return fields
+
+
 def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     cwd = _session_cwd(payload)
     return {
+        **conversation_fields(source, payload),
         'source': source,
         'state': state,
         # Only a notification means "come back to the agent" — a normal

@@ -119,3 +119,50 @@ Fix: `.content` is now the scroller (`overflow-y: auto`) and the savebar
 is a static flex footer beneath it — always at the bottom, never
 overlapping cards. Verified live at 1024×560: bar rect stays
 top=541/bottom=600 at scrollTop 0, 800 and end.
+
+## Follow-up 3 (2026-09-24) — comtypes crash silenced every real volume set,
+## quick-jump preset chips
+
+Reported as "the scroller is not fully responsive (not affecting the sound
+level)".
+
+### The volume level bug
+
+`_volume_set`/`_volume_get` route through `_run_on_audio_thread`, a
+dedicated COM apartment thread that owns the pycaw `IAudioEndpointVolume`
+pointer for its whole life. On this machine that thread died on its first
+line: `comtypes==1.4.0` raises `NameError: name '_compointer_base' is not
+defined` on `import comtypes` under Python 3.13 — a known comtypes/3.13
+ordering bug, fixed upstream in 1.4.17. The thread's exception handler in
+`_audio_worker_loop` never ran (the crash was in the `import` above the
+`try`), so `done.set()` was never called and every request silently timed
+out after 5s with `"Audio worker did not respond"`. The slider's own UI
+(fill/thumb/value label) updates unconditionally in `apply()`, so the face
+looked responsive while every real `volume_set`/`volume_get` failed —
+matching the report exactly.
+
+Fixed by upgrading `comtypes` to `>=1.4.17` and pinning it explicitly in
+`backend/requirements.txt` (it was previously an unpinned transitive
+dependency of `pycaw`, so a bare `pip install -r requirements.txt` could
+still land on the broken 1.4.0 depending on resolver luck). Verified live:
+`volume_get` → 16%, `volume_set 37` → real Windows volume moved to 37%
+(confirmed by a second `volume_get`), then restored to 16%.
+
+### Quick-jump preset chips
+
+Added a row of five chips under the slider track — 0/25/50/75/100% of the
+configured `min`/`max` range, with the 0% chip showing a mute icon instead
+of "0" when `target === 'volume'`. Tapping a chip calls the same `apply(v,
+true)` the drag/wheel paths use (forced dispatch, real haptic tick). The
+active chip highlights when the current value matches it. A new
+`config.show_presets` (default `true`, `!== false` fallback) hides the row
+for buttons too small to fit it — exposed as a checkbox in `ButtonEditor`'s
+slider section, backed by a `showSliderPresets` computed so the box reads
+correctly checked even though an unset config field means "on".
+
+`backend/tests/test_keymaps_package.py` and friends untouched (this fix is
+in `cross_platform_action.py`/`requirements.txt`, no test coverage exists
+for the live COM path — it can't run in CI without a real Windows audio
+device). Full backend suite: 854 passed. Frontend: `vue-tsc` shows no new
+errors from `SliderButtonFace.vue`/`ButtonEditor.vue`; the four touched
+test files (44 tests) pass.

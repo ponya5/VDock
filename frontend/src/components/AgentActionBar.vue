@@ -36,21 +36,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, toRef } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { AgentStateName, AppProfileDto } from '@/api/appProfiles'
 import type { Scene } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
-import { useNotificationsStore } from '@/stores/notifications'
-import { useSettingsStore } from '@/stores/settings'
-import { useAppIntegrations } from '@/composables/useAppIntegrations'
-import { detectedProfiles, loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
-import {
-  agentStateEntry,
-  agentStateFor,
-  initAgentState,
-  setAgentBarVisible,
-} from '@/services/agentState'
+import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
 
 /**
  * Agent action bar (DL-064): on a Claude Code / Cursor / Devin scene, shows
@@ -59,120 +49,25 @@ import {
  * while a permission dialog is open.
  */
 
-interface BarAction {
-  id: string
-  label: string
-  icon: string
-  description: string
-  isPrimary: boolean
-}
-
 const props = defineProps<{ scene: Scene | null }>()
 
-const STATE_LABELS: Record<AgentStateName, string> = {
-  ready: 'Ready for your prompt',
-  working: 'Working…',
-  permission: 'Needs your permission',
-  unknown: 'Session running',
-}
-
-const UNCONFIRMED_STATE_LABEL = 'Status unavailable'
-
 const dashboardStore = useDashboardStore()
-const settingsStore = useSettingsStore()
-const notificationsStore = useNotificationsStore()
-const appIntegrations = useAppIntegrations()
-const runningActionId = ref<string | null>(null)
-
-const profile = computed<AppProfileDto | null>(() =>
-  props.scene ? sceneAppProfile(props.scene, appIntegrations.value) : null
-)
-
-const stateEntry = computed(() => agentStateEntry(profile.value?.status_source))
-
-const currentState = computed<AgentStateName>(() => agentStateFor(profile.value?.status_source))
-
-const isAgentDetected = computed(() => {
-  const agentProfile = profile.value
-  return agentProfile ? detectedProfiles.value.has(agentProfile.id) : false
-})
-
-/**
- * With app scanning off, "not detected" means "not looked for", so the bar
- * stays up with the generic actions instead of vanishing on a live agent.
- */
-const isAgentPossiblyRunning = computed(() => {
-  if (!profile.value) return false
-  if (stateEntry.value || isAgentDetected.value) return true
-  return !settingsStore.appScanningEnabled
-})
-
-const visibleActions = computed<BarAction[]>(() => {
-  const agentProfile = profile.value
-  const stateActions = agentProfile?.state_actions
-  if (!agentProfile || !stateActions) return []
-  const entries = stateActions[currentState.value] ?? stateActions.unknown ?? []
-  const commandsById = new Map(agentProfile.commands.map(command => [command.id, command]))
-  return entries.flatMap((entry, index) => {
-    const command = commandsById.get(entry.id)
-    if (!command) return []
-    return [{
-      id: command.id,
-      label: entry.label ?? command.label,
-      icon: command.icon,
-      description: command.description,
-      isPrimary: index === 0,
-    }]
-  })
-})
+const {
+  profile,
+  stateEntry,
+  currentState,
+  stateLabel,
+  isAgentPossiblyRunning,
+  visibleActions,
+  runningActionId,
+  runAction,
+} = useAgentSession(toRef(props, 'scene'))
 
 const isVisible = computed(() =>
   !dashboardStore.isEditMode && isAgentPossiblyRunning.value && visibleActions.value.length > 0
 )
 
-const stateLabel = computed(() => {
-  const isUnconfirmed = currentState.value === 'unknown' && !isAgentDetected.value
-  return isUnconfirmed ? UNCONFIRMED_STATE_LABEL : STATE_LABELS[currentState.value]
-})
-
-async function runAction(action: BarAction): Promise<void> {
-  if (runningActionId.value) return
-  runningActionId.value = action.id
-  try {
-    const result = await dashboardStore.executeAction(
-      { type: action.id, config: {} },
-      `agent-bar-${action.id}`,
-    )
-    if (!result?.success) {
-      notificationsStore.error(
-        `${action.label} failed`,
-        result?.details || result?.message || 'The agent did not receive it',
-      )
-    }
-  } finally {
-    runningActionId.value = null
-  }
-}
-
-watch(
-  () => [profile.value?.status_source, isVisible.value] as const,
-  ([source, visible], previous) => {
-    const previousSource = previous?.[0]
-    if (previousSource && previousSource !== source) setAgentBarVisible(previousSource, false)
-    if (source) setAgentBarVisible(source, visible)
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
-  initAgentState()
-  void loadProfileMaps()
-})
-
-onUnmounted(() => {
-  const source = profile.value?.status_source
-  if (source) setAgentBarVisible(source, false)
-})
+trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisible)
 </script>
 
 <style scoped>

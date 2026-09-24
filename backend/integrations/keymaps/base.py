@@ -40,6 +40,8 @@ RISK_SAFE = 'safe'
 RISK_INPUT = 'input'
 RISK_DESTRUCTIVE = 'destructive'
 
+TERMINAL_TAB_WIDTH = 4
+
 
 @dataclass(frozen=True)
 class Command:
@@ -113,8 +115,10 @@ class Command:
     def _text_steps(self, text: str) -> List[Dict[str, Any]]:
         if not self.newline_keys:
             return [{'type': 'text', 'text': text}]
+        # Terminal agents bind Tab to a shortcut (autocomplete, thinking
+        # toggle), so a typed tab would drop code indentation.
         steps: List[Dict[str, Any]] = []
-        lines = text.replace('\r\n', '\n').split('\n')
+        lines = text.replace('\r\n', '\n').expandtabs(TERMINAL_TAB_WIDTH).split('\n')
         for line_index, line in enumerate(lines):
             if line_index:
                 steps.append({'type': 'hotkey', 'keys': list(self.newline_keys)})
@@ -170,6 +174,9 @@ class AppProfile:
     #: action bar (DL-064). 'unknown' is used when the agent runs but
     #: reports no state (no hook installed).
     state_actions: Tuple[Tuple[str, Tuple[StateAction, ...]], ...] = ()
+    #: Command that types free text from the mobile console into the live
+    #: session and submits it (DL-065). None hides the composer.
+    prompt_command: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialise for GET /api/app-profiles."""
@@ -185,6 +192,7 @@ class AppProfile:
                 state: [action.to_dict() for action in actions]
                 for state, actions in self.state_actions
             },
+            'prompt_command': self.prompt_command,
             'commands': [
                 {
                     'id': cmd.id,

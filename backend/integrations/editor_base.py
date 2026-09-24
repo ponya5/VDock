@@ -325,7 +325,15 @@ class KeystrokeEditorPlugin(BasePlugin):
 
         text = config.get('text')
         if text is not None:
-            text = context.expand_placeholders(str(text))
+            text = str(text)
+            if '{clipboard}' in text and not context.clipboard_text().strip():
+                return {
+                    'success': False,
+                    'message': 'Copy some code first',
+                    'details': 'This prompt sends whatever is on the '
+                               'clipboard, and the clipboard is empty.',
+                }
+            text = context.expand_placeholders(text)
 
         return send(
             command,

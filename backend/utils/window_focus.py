@@ -107,6 +107,22 @@ def interactive_desktop_blocked() -> bool:
         user32.CloseDesktop(desktop)
 
 
+def _attach_input(current_thread: int, foreground_thread: int) -> bool:
+    """Share the foreground thread's input state, when Windows allows it.
+
+    Some foreground apps refuse the attach (Access is denied), e.g. the
+    Claude desktop app. That must only skip this step, not abort the Alt-tap
+    and minimise/restore fallbacks that follow.
+    """
+    import win32process
+
+    try:
+        return bool(win32process.AttachThreadInput(current_thread, foreground_thread, True))
+    except Exception as error:  # noqa: BLE001 - pywintypes.error on refusal
+        logger.debug('AttachThreadInput refused: %s', error)
+        return False
+
+
 def _try_set_foreground(hwnd: int) -> bool:
     """One SetForegroundWindow attempt, attached to the foreground thread's
     input queue. pywin32 raises when Windows refuses; that is a normal
@@ -122,9 +138,7 @@ def _try_set_foreground(hwnd: int) -> bool:
         foreground_thread = win32process.GetWindowThreadProcessId(foreground)[0]
         current_thread = win32api.GetCurrentThreadId()
         if foreground_thread != current_thread:
-            attached = bool(win32process.AttachThreadInput(
-                current_thread, foreground_thread, True
-            ))
+            attached = _attach_input(current_thread, foreground_thread)
     try:
         win32gui.BringWindowToTop(hwnd)
         win32gui.SetForegroundWindow(hwnd)
