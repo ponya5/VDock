@@ -974,6 +974,12 @@ onMounted(async () => {
   }
 
   // First-run bubble tutorial (or a "Launch Tutorial" request from Settings).
+  // Must wait for the server's `tutorialCompleted` value — this view's mounted
+  // hook fires before App.vue's (Vue mounts children before parents), so
+  // without this await, `tutorialCompleted` could still be sitting on its
+  // `ref(false)` default and the tour would incorrectly restart on every
+  // launch even though it was already completed server-side.
+  await settingsStore.ensureSettingsLoaded()
   // Delayed so the deck renders before the tour starts measuring targets.
   setTimeout(() => tour.consumePendingOrFirstRun(), 800)
 

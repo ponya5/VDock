@@ -45,17 +45,26 @@
          mobile browsers refuse an unprompted requestFullscreen() call, so
          this needs to be a one-tap, hard-to-miss target rather than
          something buried behind ⋮. It pulses until the user has either
-         entered fullscreen or dismissed the suggestion once this visit. -->
-    <button
-      type="button"
-      class="mc-fullscreen-btn"
-      :class="{ 'mc-suggest': !isFullscreen && suggestFullscreen }"
-      :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
-      :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
-      @click="onFullscreen"
-    >
-      <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
-    </button>
+         entered fullscreen or dismissed the suggestion once this visit.
+         The callout bubble (DL-067 follow-up) spells it out in words for
+         the first few seconds — mainly for a phone that just landed here
+         fresh off a QR-code scan and has never seen this bar before. -->
+    <div class="mc-fullscreen-wrap">
+      <div v-if="!isFullscreen && showFullscreenCallout" class="mc-fullscreen-callout" role="status">
+        Tap for fullscreen
+        <span class="mc-fullscreen-callout-arrow" aria-hidden="true"></span>
+      </div>
+      <button
+        type="button"
+        class="mc-fullscreen-btn"
+        :class="{ 'mc-suggest': !isFullscreen && suggestFullscreen }"
+        :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+        :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+        @click="onFullscreen"
+      >
+        <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
+      </button>
+    </div>
 
     <div ref="menuWrapRef" class="mc-more-wrap">
       <button
@@ -195,14 +204,24 @@ const showExitConfirm = ref(false)
 // most mobile browsers block the unattended auto-fullscreen attempt below,
 // so this is the actual, reliable way in for most phones.
 const suggestFullscreen = ref(true)
+// Spells the pulse out in words for a few seconds, then fades — a silent
+// pulsing border is easy to miss on a phone screen someone is seeing for
+// the first time right after scanning the connect QR code.
+const showFullscreenCallout = ref(true)
+let fullscreenCalloutTimer: ReturnType<typeof setTimeout> | null = null
 
 function handleFullscreenChange() {
   if (!isElectron()) isFullscreen.value = !!document.fullscreenElement
 }
 
+watch(isFullscreen, (fullscreen) => {
+  if (fullscreen) showFullscreenCallout.value = false
+})
+
 async function onFullscreen() {
   menuOpen.value = false
   suggestFullscreen.value = false
+  showFullscreenCallout.value = false
   try {
     isFullscreen.value = await toggleElectronFullscreen()
   } catch (err) {
@@ -256,11 +275,14 @@ onMounted(() => {
       .then(result => { isFullscreen.value = result })
       .catch(() => { /* expected on most mobile browsers — button covers it */ })
   }
+
+  fullscreenCalloutTimer = setTimeout(() => { showFullscreenCallout.value = false }, 6000)
 })
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
   document.removeEventListener('pointerdown', onDocPointerDown)
   railObserver?.disconnect()
+  if (fullscreenCalloutTimer) clearTimeout(fullscreenCalloutTimer)
 })
 </script>
 
@@ -390,6 +412,42 @@ onUnmounted(() => {
 }
 
 /* --- Fullscreen (promoted out of the overflow menu, DL-067) --------------- */
+.mc-fullscreen-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.mc-fullscreen-callout {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -6px;
+  z-index: 61;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #1f6fd1;
+  color: #fff;
+  font-size: clamp(0.68rem, 0.55rem + 0.6vw, 0.8rem);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(31, 111, 209, 0.5);
+  animation: mc-fullscreen-callout-fade 6s ease forwards;
+  pointer-events: none;
+}
+.mc-fullscreen-callout-arrow {
+  position: absolute;
+  top: -5px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  background: #1f6fd1;
+  transform: rotate(45deg);
+}
+
+@keyframes mc-fullscreen-callout-fade {
+  0%, 75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
 .mc-fullscreen-btn {
   flex: 0 0 auto;
   width: 44px;
@@ -535,5 +593,6 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .mc-fullscreen-btn.mc-suggest { animation: none !important; }
+  .mc-fullscreen-callout { animation: none !important; opacity: 1; }
 }
 </style>

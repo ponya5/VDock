@@ -452,6 +452,34 @@ def launch_backend(venv_path: Path):
         return False
 
 
+def ensure_fresh_frontend(port: int = DEFAULT_FRONTEND_PORT) -> bool:
+    """Start the Vite dev server, restarting a stale/duplicate one first.
+
+    Vite's own file watcher normally picks up source edits on an already-running
+    dev server without a restart. But `launch_frontend()` used to be called
+    unconditionally on every launch — if a previous session's dev server was
+    still bound to the port (e.g. it survived a crashed Electron window, or a
+    second `npm run dev` silently failed to bind and left the old one running),
+    a relaunch would keep serving that old process's bundle indefinitely, with
+    no visible error. This mirrors `ensure_fresh_backend`'s approach so a
+    relaunch is a reliable way to guarantee the latest frontend code, not just
+    a "usually works" one.
+    """
+    listener_count = count_listeners_on_port(port)
+
+    if listener_count > 1:
+        print(f"[WARN] Found {listener_count} frontend dev servers on port {port}. Restarting...")
+        if kill_process_on_port(port):
+            time.sleep(2)
+        listener_count = 0
+
+    if listener_count == 0:
+        return launch_frontend()
+
+    print("[OK] Frontend dev server already running")
+    return True
+
+
 def launch_frontend():
     """Launch Vite dev server."""
     try:
@@ -579,7 +607,7 @@ def main():
     if not ensure_fresh_backend(venv):
         return False
 
-    if not launch_frontend():
+    if not ensure_fresh_frontend():
         return False
 
     frontend_url = f"http://localhost:{DEFAULT_FRONTEND_PORT}"

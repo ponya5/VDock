@@ -66,7 +66,7 @@ onMounted(async () => {
 
   apiClient.setNotificationsStore(notificationsStore)
 
-  await settingsStore.loadSettingsFromServer()
+  await settingsStore.ensureSettingsLoaded()
   await settingsStore.loadServerConfig()
 
   // Load the action catalog before any button can be pressed: it decides which

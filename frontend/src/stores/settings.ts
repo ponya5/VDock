@@ -237,6 +237,7 @@ export const useSettingsStore = defineStore('settings', () => {
   let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
   let serverSyncInFlight: Promise<void> | null = null
   let serverSyncQueued = false
+  let settingsLoadPromise: Promise<void> | null = null
   let isApplyingRemoteSettings = false
   let liveSyncInitialized = false
   let settingsBroadcastChannel: BroadcastChannel | null = null
@@ -579,6 +580,23 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  /**
+   * Same GET as `loadSettingsFromServer`, but shared: App.vue calls this on
+   * boot to actually populate `tutorialCompleted` and friends, while
+   * DashboardView awaits the same in-flight promise before deciding whether
+   * to auto-start the first-run tour. Without this, DashboardView's own
+   * mounted hook (which fires before App.vue's, per Vue's child-before-parent
+   * order) could check `tutorialCompleted` while it still held its `ref(false)`
+   * default — re-showing the tour on every launch regardless of what was
+   * actually persisted server-side.
+   */
+  function ensureSettingsLoaded(): Promise<void> {
+    if (!settingsLoadPromise) {
+      settingsLoadPromise = loadSettingsFromServer()
+    }
+    return settingsLoadPromise
+  }
+
   watch(
     [
       buttonSize,
@@ -847,6 +865,7 @@ export const useSettingsStore = defineStore('settings', () => {
     saveSettings,
     loadSettings,
     loadSettingsFromServer,
+    ensureSettingsLoaded,
     flushSettingsToServer,
     initLiveSync,
   }

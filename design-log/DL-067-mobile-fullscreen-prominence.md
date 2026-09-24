@@ -83,3 +83,33 @@ browser tab — there is no way around that from web content.
   --noEmit` clean. Not verified live on a physical phone browser from this
   session — flagged for the user to confirm the promoted button (and,
   opportunistically, the auto-trigger) on their device.
+
+## Follow-up: text callout for a phone's very first visit (2026-09-25)
+
+### Problem
+
+The user re-raised the same ask specifically for the QR-scan connect flow —
+a pulsing border alone is easy to miss on a phone screen someone is looking
+at for the first time, with no prior context for what the glowing button
+means.
+
+### Fix
+
+Added a small speech-bubble callout ("Tap for fullscreen") anchored below
+the fullscreen button in `MobileDeckChrome.vue`, shown for the first 6
+seconds after the chrome mounts (`showFullscreenCallout` ref + a
+`setTimeout`), then fading out via CSS animation. It also disappears the
+moment the user taps the button or fullscreen is entered by any other means
+(the best-effort auto-attempt succeeding, or the browser reporting a
+`fullscreenchange`), via a `watch(isFullscreen, …)`. `prefers-reduced-
+motion` keeps the bubble static (no fade animation) rather than removing it.
+
+This is additive to the existing pulsing button, not a replacement — phones
+where the auto-attempt above already succeeds skip both, since `isFullscreen`
+is already `true` by the time either would render.
+
+### Verification
+
+- Full frontend suite: 59 files / 253 tests green; `vue-tsc --noEmit`
+  clean.
+- Not yet verified live on a physical phone via the Connect QR flow.
