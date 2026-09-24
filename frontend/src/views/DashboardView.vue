@@ -58,34 +58,36 @@
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
         <template v-if="currentPage">
           <AgentActionBar :scene="currentScene" />
-          <DeckGrid
-            :page="currentPage"
-            :is-edit-mode="isEditMode"
-            :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
-            :show-labels="settingsStore.showLabels"
-            :show-tooltips="settingsStore.showTooltips"
-            :compact="shouldUseCompactMode"
-            @button-click="handleButtonClick"
-            @button-press="handleButtonPress"
-            @button-release="handleButtonRelease"
-            @button-edit="handleButtonEdit"
-            @button-copy="handleButtonCopy"
-            @button-delete="handleButtonDelete"
-            @swipe-left="nextPage"
-            @swipe-right="previousPage"
-            @action-drop="handleActionDrop"
-            @placeholder-click="onPlaceholderClick"
-            @placeholder-long-press="handlePlaceholderLongPress"
-            @button-move="handleButtonMove"
-            @button-swap="handleButtonSwap"
-            @slider-expand="handleSliderExpand"
-            @slider-shrink="handleSliderShrink"
-            @swipe-up="nextScene"
-            @swipe-down="previousScene"
-            @long-press="handleDeckButtonLongPress"
-            @double-tap="handleButtonClick"
-            @exit-edit-mode="dashboardStore.toggleEditMode"
-          />
+          <div class="deck-grid-host">
+            <DeckGrid
+              :page="currentPage"
+              :is-edit-mode="isEditMode"
+              :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
+              :show-labels="settingsStore.showLabels"
+              :show-tooltips="settingsStore.showTooltips"
+              :compact="shouldUseCompactMode"
+              @button-click="handleButtonClick"
+              @button-press="handleButtonPress"
+              @button-release="handleButtonRelease"
+              @button-edit="handleButtonEdit"
+              @button-copy="handleButtonCopy"
+              @button-delete="handleButtonDelete"
+              @swipe-left="nextPage"
+              @swipe-right="previousPage"
+              @action-drop="handleActionDrop"
+              @placeholder-click="onPlaceholderClick"
+              @placeholder-long-press="handlePlaceholderLongPress"
+              @button-move="handleButtonMove"
+              @button-swap="handleButtonSwap"
+              @slider-expand="handleSliderExpand"
+              @slider-shrink="handleSliderShrink"
+              @swipe-up="nextScene"
+              @swipe-down="previousScene"
+              @long-press="handleDeckButtonLongPress"
+              @double-tap="handleButtonClick"
+              @exit-edit-mode="dashboardStore.toggleEditMode"
+            />
+          </div>
         </template>
 
         <div v-if="!currentPage" class="no-profile">
@@ -1007,6 +1009,15 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   transition: all 0.3s var(--ease-io);
+}
+
+/* The grid is height: 100% of its parent; this host gives it only the space
+   left under the agent action bar instead of the whole column. */
+.deck-grid-host {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .main-content.with-sidebar {

@@ -36,7 +36,7 @@ test('seeded buttons use only no-key action types', () => {
   const allowed = new Set([
     'url', 'hotkey', 'cross_platform', 'macro',
     'claude_continue', 'claude_slash', 'claude_prompt', 'claude_open',
-    'cc_submit', 'cc_prompt', 'cc_interrupt',
+    'cc_prompt',
     'cursor_composer', 'cursor_chat', 'cursor_inline_edit', 'cursor_accept',
     'cursor_reject', 'cursor_toggle_terminal', 'cursor_quick_open',
     'cursor_command_palette'
@@ -49,6 +49,16 @@ test('seeded buttons use only no-key action types', () => {
       }
     }
   }
+})
+
+test('Claude grid leaves state-dependent actions to the agent action bar', () => {
+  const claudeScene = createDefaultProfile().scenes.find((scene) => scene.name === 'Claude Code')!
+  const buttons = claudeScene.pages[0].buttons
+  const barOwnedTypes = new Set(['cc_submit', 'cc_interrupt', 'cc_accept', 'cc_approve', 'cc_deny'])
+
+  expect(buttons.some((button) => barOwnedTypes.has(button.action!.type))).toBe(false)
+  expect(buttons.some((button) => button.action?.config?.text === 'continue')).toBe(false)
+  expect(claudeScene.pages[0].grid_config).toEqual({ rows: 2, cols: 4 })
 })
 
 test('button ids are unique across the profile', () => {

@@ -396,7 +396,7 @@ CLAUDE_CODE_PROFILE = AppProfile(
     # unlike typed y/n.
     state_actions=(
         ('ready', state_actions_of(
-            'cc_submit', ('cc_prompt', 'Continue'), 'cc_newline',
+            'cc_submit', ('cc_prompt', 'Continue'),
             ('cc_mode', 'Mode'), 'cc_clear', ('cc_compact', 'Compact'),
         )),
         ('working', state_actions_of(
@@ -409,7 +409,7 @@ CLAUDE_CODE_PROFILE = AppProfile(
         )),
         ('unknown', state_actions_of(
             'cc_submit', ('cc_prompt', 'Continue'),
-            ('cc_interrupt', 'Interrupt'), ('cc_accept', 'Enter'),
+            ('cc_interrupt', 'Interrupt'),
         )),
     ),
 )

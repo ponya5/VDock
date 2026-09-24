@@ -63,3 +63,22 @@ export function agentStateEntry(source: string | null | undefined): AgentStateEn
 }
 
 export const agentStates = readonly(statesBySource)
+
+/**
+ * Agent sources whose action bar is on screen right now. The alert overlay
+ * stands down for these: the bar already shows the state and the Approve/Deny
+ * buttons, and the overlay would cover them on a small panel.
+ */
+const sourcesWithVisibleBar = reactive(new Set<string>())
+
+export function setAgentBarVisible(source: string, isVisible: boolean): void {
+  if (isVisible) {
+    sourcesWithVisibleBar.add(source)
+    return
+  }
+  sourcesWithVisibleBar.delete(source)
+}
+
+export function isAgentBarVisible(source: string | null | undefined): boolean {
+  return source ? sourcesWithVisibleBar.has(source) : false
+}

@@ -121,7 +121,17 @@ function seedButton(ts: number) {
   }
 }
 
-function seedScene(ts: number, suffix: string, name: string, icon: string, color: string, buttons: Button[]): Scene {
+const DEFAULT_SCENE_GRID = { rows: 3, cols: 5 }
+
+function seedScene(
+  ts: number,
+  suffix: string,
+  name: string,
+  icon: string,
+  color: string,
+  buttons: Button[],
+  gridConfig: { rows: number; cols: number } = DEFAULT_SCENE_GRID
+): Scene {
   return {
     id: `scene-${ts}-${suffix}`,
     name,
@@ -132,7 +142,7 @@ function seedScene(ts: number, suffix: string, name: string, icon: string, color
         id: `page-${ts}-${suffix}`,
         name: 'Page 1',
         buttons,
-        grid_config: { rows: 3, cols: 5 }
+        grid_config: { ...gridConfig }
       }
     ],
     transition_style: 'light-bar',
@@ -145,6 +155,10 @@ function seedScene(ts: number, suffix: string, name: string, icon: string, color
  * "Open Claude" types into the live CLI window (cc_* keystroke actions), so
  * what you press is what you see happen in the session. No API key needed;
  * it's the user's own `claude` login.
+ *
+ * State-dependent actions (Submit, Continue, Interrupt, Approve/Deny) live in
+ * the agent action bar above the grid, which swaps them as Claude's state
+ * changes — the grid only holds what applies in any state.
  */
 function createClaudeCodeScene(ts: number): Scene {
   const makeButton = seedButton(ts)
@@ -163,40 +177,13 @@ function createClaudeCodeScene(ts: number): Scene {
       position: { row: 0, col: 0 }
     }),
     makeButton({
-      id: `btn-${ts}-c9`,
-      label: 'Submit',
-      icon: ['fas', 'paper-plane'],
-      style: { backgroundColor: '#16a34a', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cc_submit', config: {} },
-      tooltip: 'Send the prompt you typed in the session (Enter)',
-      position: { row: 0, col: 1 }
-    }),
-    makeButton({
-      id: `btn-${ts}-c8`,
-      label: 'Continue',
-      icon: ['fas', 'forward'],
-      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt('continue'),
-      tooltip: 'Type "continue" into the session and send it',
-      position: { row: 0, col: 2 }
-    }),
-    makeButton({
-      id: `btn-${ts}-c10`,
-      label: 'Interrupt',
-      icon: ['fas', 'hand'],
-      style: { backgroundColor: '#dc2626', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cc_interrupt', config: {} },
-      tooltip: 'Stop the current response (Esc)',
-      position: { row: 0, col: 3 }
-    }),
-    makeButton({
       id: `btn-${ts}-c4`,
       label: 'claude.ai',
       icon: ['fas', 'globe'],
       style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
       action: { type: 'claude_open', config: { target: 'new_chat' } },
       tooltip: 'Open a new chat on claude.ai',
-      position: { row: 0, col: 4 }
+      position: { row: 0, col: 3 }
     }),
     makeButton({
       id: `btn-${ts}-c2`,
@@ -205,7 +192,7 @@ function createClaudeCodeScene(ts: number): Scene {
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
       action: livePrompt('/code-review'),
       secondary_label: '/code-review',
-      position: { row: 1, col: 0 }
+      position: { row: 0, col: 1 }
     }),
     makeButton({
       id: `btn-${ts}-c3`,
@@ -214,7 +201,7 @@ function createClaudeCodeScene(ts: number): Scene {
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
       action: livePrompt('/commit'),
       secondary_label: '/commit',
-      position: { row: 1, col: 1 }
+      position: { row: 0, col: 2 }
     }),
     makeButton({
       id: `btn-${ts}-c5`,
@@ -223,7 +210,7 @@ function createClaudeCodeScene(ts: number): Scene {
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
       action: livePrompt('Explain what this code does:\n\n{clipboard}'),
       tooltip: 'Asks the session to explain whatever is on the clipboard',
-      position: { row: 1, col: 2 }
+      position: { row: 1, col: 0 }
     }),
     makeButton({
       id: `btn-${ts}-c6`,
@@ -232,7 +219,7 @@ function createClaudeCodeScene(ts: number): Scene {
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
       action: livePrompt('Write tests for this code:\n\n{clipboard}'),
       tooltip: 'Asks the session to write tests for clipboard code',
-      position: { row: 1, col: 3 }
+      position: { row: 1, col: 1 }
     }),
     makeButton({
       id: `btn-${ts}-c7`,
@@ -240,10 +227,10 @@ function createClaudeCodeScene(ts: number): Scene {
       icon: ['fas', 'wrench'],
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
       action: livePrompt('The tests are failing. Find and fix the cause.'),
-      position: { row: 1, col: 4 }
+      position: { row: 1, col: 2 }
     })
   ]
-  return seedScene(ts, 'claude', 'Claude Code', 'robot', brand, buttons)
+  return seedScene(ts, 'claude', 'Claude Code', 'robot', brand, buttons, { rows: 2, cols: 4 })
 }
 
 /**

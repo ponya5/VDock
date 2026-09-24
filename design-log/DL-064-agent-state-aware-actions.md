@@ -203,3 +203,142 @@ Windows screensaver desktop for the whole session.
   naming the lock screen or screensaver.
 - **Not verified:** keystroke delivery (Submit typing Enter into the focused
   Claude terminal). It needs an unlocked desktop.
+
+## Follow-up: live Submit test, and layout-independent typing
+
+### Finding
+
+With the desktop unlocked, the live test ran end to end: Open Claude, type a
+prompt with no Enter, then press **Submit**. The state went
+`ready → working` 2 s after the press and back to `ready` 44 s later, so
+Submit and state tracking work on the real CLI.
+
+The prompt itself, however, reached Claude garbled. Lowercase letters arrived
+as Hebrew characters, while capitals and "VDOCK-OK" came through intact. The
+Windows input layout was Hebrew. VDock's `text` macro step, which backs every
+typed command (`cc_prompt` Continue/Review/Commit, `/`-commands and
+`type_text`), uses `pyautogui.typewrite`. That function presses the **US
+virtual key** for each character, and the target window then interprets those
+keys through its own layout. Characters that have no US key, such as a Hebrew
+prompt, are silently dropped.
+
+### Design
+
+- New `backend/utils/text_input.py` with `type_text(text, interval_seconds)`.
+  On Windows it calls `SendInput` with `KEYEVENTF_UNICODE`, sending one
+  UTF-16 code unit per event (surrogate pairs cover emoji), so the character
+  arrives exactly as written, whatever the layout. `\n` and `\t` are sent as
+  the real Enter and Tab keys, because terminals treat a Unicode newline
+  differently from a key press. `\r` is dropped. On other platforms it falls
+  back to `pyautogui.typewrite`.
+- `MacroAction._execute_text` calls it. The step format is unchanged.
+
+### Verification Criteria
+
+- Unit tests: Unicode events per character, surrogate pairs for emoji, Enter
+  for `\n`, `\r` dropped, a partial `SendInput` send reported as a failure,
+  and the non-Windows fallback.
+- Live: with the Hebrew layout active, the same self-test prompt reaches
+  Claude verbatim and Claude answers `VDOCK-OK`.
+
+### Follow-up Implementation Results
+
+- Implemented as designed in `backend/utils/text_input.py`. It exposes
+  `plan_keystrokes` (pure and testable anywhere) and `type_text`, with a thin
+  `SendInput` sender. The INPUT union includes MOUSEINPUT so that `cbSize`
+  matches what Windows expects.
+- **Extra finding:** `pyautogui` is listed in `requirements.txt` but was not
+  installed in this machine's Python. Every `text` step, and so every typed
+  button, had been failing with `No module named 'pyautogui'`. The Windows
+  path no longer depends on it; only the non-Windows fallback uses it.
+- Tests: `test_text_input.py` has 10 tests covering the verification criteria
+  and the MacroAction wiring.
+- Live, with the Hebrew layout active and VDock typing through `cc_prompt`:
+  a mixed English and Hebrew prompt reached Claude byte for byte, and Claude
+  echoed it back. One earlier run picked up a few stray characters ("ng..",
+  "g"). They did not recur, and they match real keystrokes arriving while
+  the terminal was focused.
+
+## Follow-up: touch-sized bar embedded in the scene (7-inch screens)
+
+### Finding
+
+At 1024×600, a typical 7-inch panel, the bar was 58 px tall with 40 px
+buttons and 13 px text, sitting on top of scene buttons about 165 px tall.
+It was hard to read and hard to hit. It was also not part of the layout:
+`DeckGrid` is `height: 100%` of `.main-content`, and the bar sits above it in
+the same column, so the grid overflowed the screen by the bar's height (the
+grid ended at y = 668 on a 600 px screen). The Claude scene also still had
+Submit, Continue and Interrupt as grid buttons, which duplicated the bar.
+
+### Design
+
+- **Embed:** wrap `DeckGrid` in a `deck-grid-host` flex child
+  (`flex: 1; min-height: 0`). The grid then fills only the space left under
+  the bar, and its ResizeObserver, which measures the parent, sees the real
+  space available.
+- **Responsive, touch-sized bar:** the bar spans the grid's width and aligns
+  with its 12 px padding. Action buttons share the row equally
+  (`flex: 1 1 0`). Their height is `clamp(52px, 11vh, 84px)`, which gives
+  about 66 px at 600 px tall, with `clamp()` font sizes and larger icons.
+  The state pill gets a bigger dot and text. Below 720 px wide, the pill
+  takes its own row and the actions wrap on a grid (at least 120 px per
+  column).
+- **Claude scene layout:** the bar owns the state-dependent actions (Submit,
+  Continue, Interrupt, Approve and so on). The grid holds what applies in any
+  state, in 2 rows × 5 columns so each button gets more height:
+  - Row 0, session: Open Claude, Resume, Model, Add File, claude.ai.
+  - Row 1, prompts: Review, Commit, Explain, Write Tests, Fix Tests.
+  `seedScene` accepts a per-scene `grid_config`. The user's saved profile is
+  migrated the same way, with a backup first.
+
+### Verification Criteria
+
+- At 1024×600 the bar and grid fit on screen with no overflow, and the bar
+  buttons are at least 52 px tall.
+- At 800×480 and at a narrow width (600 px) the bar stays usable: it wraps,
+  with no clipped labels.
+- The default-profile tests pass, and a new test asserts that the Claude grid
+  does not duplicate bar actions.
+
+### Follow-up Implementation Results
+
+- Implemented as designed. The icon is stacked over the label at every width
+  up to 1100 px, not only at mid widths. In portrait, a horizontal layout at
+  134 px still cut off "New Session".
+- **Added: the alert overlay stands down under a visible bar.** At 1024×600
+  the "needs you" overlay covered the top of Approve and Option ↑. The bar
+  now records its source as on screen (`setAgentBarVisible` in
+  `agentState.ts`), and `AgentAlertOverlay` hides while that agent's bar is
+  visible. On any other scene the alert still pops up.
+- The user's saved profile was migrated to the 2×5 layout, keeping existing
+  button styles and IDs. Backup: `profile-before-bar-layout.json` in the
+  agent store.
+- Measured in a headless browser:
+
+  | Viewport | Bar buttons | Grid bottom | Overflow |
+  |---|---|---|---|
+  | 1024×600 | 66 px tall (6 across in ready, 4 in permission) | 600 | none |
+  | 800×480 | 53 px tall, 89 px wide, no truncation | 480 | none |
+  | 600×1024 | Wraps to a grid, 134 px wide, no truncation | 1024 | none |
+
+- Frontend: 241 passed, including the new Claude-grid test. No lint errors.
+
+## Follow-up: trim Claude buttons that do nothing from the deck
+
+The user reported buttons on the Claude scene that "don't affect anything".
+Resume, Model and Add File only open a picker (`/resume`, `/model`, `@`)
+that needs arrow keys or typing to finish, and neither the grid nor the bar
+offers those in the `ready` state. They are removed from the default scene
+and from the user's saved profile (backup: `profile-before-trim.json`). The
+Claude grid is now 2×4:
+- Row 0: Open Claude, Review, Commit, claude.ai.
+- Row 1: Explain, Write Tests, Fix Tests.
+
+`/code-review` and `/commit` were confirmed to exist as installed Claude
+plugin commands.
+
+In the bar, **Newline** (Ctrl+J) is dropped from `ready`, because it only
+helps while you are hand-typing a draft. The `unknown` state's **Enter** is
+also dropped: it sends the same key as Submit. Backend: 838 passed. Frontend:
+241 passed.

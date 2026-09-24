@@ -25,17 +25,18 @@
         @click="runAction(action)"
       >
         <FontAwesomeIcon
+          class="agent-action-icon"
           :icon="['fas', runningActionId === action.id ? 'spinner' : action.icon]"
           :spin="runningActionId === action.id"
         />
-        <span>{{ action.label }}</span>
+        <span class="agent-action-label">{{ action.label }}</span>
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { AgentStateName, AppProfileDto } from '@/api/appProfiles'
 import type { Scene } from '@/types'
@@ -44,7 +45,12 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { useSettingsStore } from '@/stores/settings'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { detectedProfiles, loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
-import { agentStateEntry, agentStateFor, initAgentState } from '@/services/agentState'
+import {
+  agentStateEntry,
+  agentStateFor,
+  initAgentState,
+  setAgentBarVisible,
+} from '@/services/agentState'
 
 /**
  * Agent action bar (DL-064): on a Claude Code / Cursor / Devin scene, shows
@@ -148,28 +154,45 @@ async function runAction(action: BarAction): Promise<void> {
   }
 }
 
+watch(
+  () => [profile.value?.status_source, isVisible.value] as const,
+  ([source, visible], previous) => {
+    const previousSource = previous?.[0]
+    if (previousSource && previousSource !== source) setAgentBarVisible(previousSource, false)
+    if (source) setAgentBarVisible(source, visible)
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
   initAgentState()
   void loadProfileMaps()
 })
+
+onUnmounted(() => {
+  const source = profile.value?.status_source
+  if (source) setAgentBarVisible(source, false)
+})
 </script>
 
 <style scoped>
+/* Touch-sized for 7" panels: every height scales with the viewport so the bar
+   stays one comfortable row at 1024x600 and still fits at 800x480. */
 .agent-action-bar {
   --agent-accent: #38bdf8;
+  --agent-action-height: clamp(52px, 11vh, 84px);
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 auto 10px;
-  padding: 8px 10px;
-  max-width: min(100%, 1100px);
-  border-radius: 14px;
+  align-items: stretch;
+  gap: clamp(8px, 1.4vw, 14px);
+  margin: 12px 12px 0;
+  padding: clamp(6px, 1.2vh, 10px);
+  border-radius: 18px;
+  flex-shrink: 0;
   background: rgba(15, 20, 28, 0.72);
   border: 1px solid color-mix(in srgb, var(--agent-accent) 45%, transparent);
   box-shadow: 0 0 18px color-mix(in srgb, var(--agent-accent) 22%, transparent);
   backdrop-filter: blur(10px);
   color: #e5e7eb;
-  flex-wrap: wrap;
 }
 
 .agent-action-bar.state-ready { --agent-accent: #22c55e; }
@@ -180,13 +203,15 @@ onMounted(() => {
 .agent-state-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
+  flex: 0 0 auto;
+  padding: 0 clamp(6px, 1vw, 12px);
 }
 
 .agent-state-dot {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--agent-accent);
   box-shadow: 0 0 8px var(--agent-accent);
@@ -201,12 +226,14 @@ onMounted(() => {
 .agent-state-text {
   display: flex;
   flex-direction: column;
+  gap: 2px;
   line-height: 1.15;
-  font-size: 0.75rem;
+  font-size: clamp(0.85rem, 2.6vh, 1.05rem);
+  white-space: nowrap;
 }
 
 .agent-state-text strong {
-  font-size: 0.82rem;
+  font-size: clamp(1rem, 3vh, 1.25rem);
 }
 
 .agent-state-text span {
@@ -215,25 +242,40 @@ onMounted(() => {
 
 .agent-actions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-left: auto;
+  flex: 1;
+  min-width: 0;
+  gap: clamp(6px, 1vw, 10px);
 }
 
 .agent-action {
+  flex: 1 1 0;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 10px;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--agent-action-height);
+  padding: 0 clamp(8px, 1.2vw, 16px);
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
-  font-size: 0.82rem;
+  font-size: clamp(0.9rem, 2.6vh, 1.2rem);
   font-weight: 600;
   cursor: pointer;
+  touch-action: manipulation;
   transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.agent-action-icon {
+  font-size: 1.25em;
+  flex-shrink: 0;
+}
+
+.agent-action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-action:hover:not(:disabled) {
@@ -262,6 +304,33 @@ onMounted(() => {
 @keyframes agent-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+/* Portrait / narrow panels: the state gets its own row and the actions wrap
+   into equal columns rather than shrinking below a touchable width. */
+@media (max-width: 720px) {
+  .agent-action-bar {
+    flex-direction: column;
+  }
+
+  .agent-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+
+/* Up to 7"-panel widths: stack icon over label so six buttons fit a row (or
+   a wrapped grid) without truncating their labels. */
+@media (max-width: 1100px) {
+  .agent-action {
+    flex-direction: column;
+    gap: 4px;
+    font-size: clamp(0.85rem, 2.6vh, 1.1rem);
+  }
+
+  .agent-action-icon {
+    font-size: 1.4em;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

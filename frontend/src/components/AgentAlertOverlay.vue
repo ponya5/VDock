@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="alert-pop">
-      <div v-if="alerts.alert.value && enabled" class="agent-alert" role="alert">
+      <div v-if="alerts.alert.value && enabled && !isCoveredByActionBar" class="agent-alert" role="alert">
         <div class="alert-icon">
           <FontAwesomeIcon :icon="['fas', 'robot']" />
           <span class="alert-pulse"></span>
@@ -26,10 +26,12 @@ import { computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { useSettingsStore } from '@/stores/settings'
+import { isAgentBarVisible } from '@/services/agentState'
 
 const alerts = useAgentAlerts()
 const settingsStore = useSettingsStore()
 const enabled = computed(() => settingsStore.agentAlertsEnabled !== false)
+const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value?.source))
 </script>
 
 <style scoped>

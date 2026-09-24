@@ -10,6 +10,7 @@ from typing import Dict, Any
 from .base_action import BaseAction, ActionResult
 from .hotkey_action import HotkeyAction
 from .command_action import CommandAction
+from utils.text_input import type_text
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,7 @@ class MacroAction(BaseAction):
             return ActionResult(False, 'No text specified')
 
         try:
-            import pyautogui
-            pyautogui.typewrite(text, interval=0.05)
+            type_text(text)
             message = f'Typed text: {text[:50]}...' if len(text) > 50 else f'Typed text: {text}'
             return ActionResult(True, message)
         except Exception as e:
