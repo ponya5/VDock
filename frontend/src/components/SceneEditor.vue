@@ -204,7 +204,7 @@
           <FontAwesomeIcon :icon="['fas', 'download']" /> Export
         </button>
         <button
-          v-if="isEditing && editedScene.isDefault"
+          v-if="isEditing && (editedScene.isDefault || isFactoryIdeSceneName(editedScene.name))"
           class="btn btn-secondary"
           @click="resetScene"
         >
@@ -242,6 +242,7 @@ import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useNotificationsStore } from '@/stores/notifications'
 import { confirmDialog } from '@/composables/useConfirm'
 import { downloadScenePack } from '@/utils/scenePack'
+import { isFactoryIdeSceneName } from '@/utils/defaultProfile'
 
 interface Props {
   scene?: Scene

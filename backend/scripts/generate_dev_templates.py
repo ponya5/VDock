@@ -141,46 +141,65 @@ def claude_code_deck() -> Dict[str, Any]:
 
 
 def cursor_deck() -> Dict[str, Any]:
+    """Mirrors `claude_code_deck`'s row layout (agent actions, then more agent
+    prompts, then utility, then nav) so the two IDE decks read as one family —
+    see DL-066's "all IDEs share the same design language" follow-up.
+    """
+    cursor_purple = '#8b5cf6'
+
+    def prompt(text: str) -> Dict[str, Any]:
+        return {'text': text}
+
     return template(
-        'dev-cursor-ai', 'Cursor AI', 'Composer, chat, inline edit and diff '
-        'controls for Cursor.', 'fa-wand-magic-sparkles', CURSOR,
+        'dev-cursor-ai', 'Cursor AI', 'Agent prompts, reviews, commits and '
+        'inline edits for Cursor — laid out the same way as the Claude Code '
+        'deck.', 'fa-wand-magic-sparkles', CURSOR,
         triggered_by='Cursor.exe',
         buttons=[
-            button(0, 0, 'Composer', 'wand-magic-sparkles', 'cursor_composer',
-                   {}, secondary='Ctrl+I', colour='#8b5cf6'),
-            button(0, 1, 'Chat', 'comments', 'cursor_chat', {},
-                   secondary='Ctrl+L', colour='#8b5cf6'),
-            button(0, 2, 'Inline Edit', 'pen', 'cursor_inline_edit', {},
-                   secondary='Ctrl+K', colour='#8b5cf6'),
-            button(0, 3, 'New Chat', 'plus', 'cursor_new_chat', {},
-                   secondary='Ctrl+Shift+L', colour='#8b5cf6'),
-            button(0, 4, 'Full Composer', 'expand', 'cursor_composer_full', {},
-                   colour='#8b5cf6'),
+            button(0, 0, 'New Agent', 'plus', 'cursor_new_chat', {},
+                   secondary='Ctrl+Shift+L', colour=cursor_purple,
+                   tooltip='Open a fresh Cursor agent chat'),
+            button(0, 1, 'Review', 'magnifying-glass', 'cursor_prompt',
+                   prompt('Review the current changes for correctness, edge '
+                          'cases and style. List concrete issues.'),
+                   colour=cursor_purple),
+            button(0, 2, 'Commit', 'code-commit', 'cursor_prompt',
+                   prompt('Write a concise, conventional commit message for '
+                          'the currently staged changes.'),
+                   colour=cursor_purple),
+            button(0, 3, 'Explain', 'circle-question', 'cursor_prompt',
+                   prompt('Explain what this code does:\n\n{clipboard}'),
+                   colour=cursor_purple,
+                   tooltip='Explains whatever is on the clipboard'),
+            button(0, 4, 'Write Tests', 'vial', 'cursor_prompt',
+                   prompt('Write tests for this code:\n\n{clipboard}'),
+                   colour=cursor_purple),
 
-            button(1, 0, 'Accept', 'check', 'cursor_accept', {}, colour=GREEN),
-            button(1, 1, 'Reject', 'xmark', 'cursor_reject', {}, colour=RED),
-            button(1, 2, 'Palette', 'terminal', 'cursor_command_palette', {},
-                   secondary='Ctrl+Shift+P'),
-            button(1, 3, 'Quick Open', 'magnifying-glass', 'cursor_quick_open',
-                   {}, secondary='Ctrl+P'),
-            button(1, 4, 'Find in Files', 'magnifying-glass',
-                   'cursor_find_in_files', {}, secondary='Ctrl+Shift+F'),
+            button(1, 0, 'Ask', 'comment-dots', 'cursor_prompt',
+                   prompt('In {project} on branch {branch}: '),
+                   colour=cursor_purple),
+            button(1, 1, 'Continue', 'forward', 'cursor_followup', {},
+                   colour=cursor_purple),
+            button(1, 2, 'Fix Tests', 'screwdriver-wrench', 'cursor_prompt',
+                   prompt('The tests are failing. Find and fix the cause.'),
+                   colour=cursor_purple),
+            button(1, 3, 'Accept', 'check', 'cursor_accept', {},
+                   secondary='Ctrl+Enter', colour=GREEN),
+            button(1, 4, 'Reject', 'xmark', 'cursor_reject', {},
+                   secondary='Ctrl+Backspace', colour=RED),
 
             button(2, 0, 'Terminal', 'terminal', 'cursor_toggle_terminal', {},
                    secondary='Ctrl+`'),
-            button(2, 1, 'Sidebar', 'bars', 'cursor_toggle_sidebar', {},
-                   secondary='Ctrl+B'),
-            button(2, 2, 'Ask Claude', 'robot', 'claude_prompt',
-                   {'prompt': 'In {project}: ', 'output': 'both'},
-                   colour=CLAUDE),
-            button(2, 3, 'Review', 'magnifying-glass', 'claude_slash',
-                   {'command': '/code-review'}, colour=CLAUDE),
-            button(2, 4, 'PR Checks', 'circle-check', 'gh_pr_checks', {},
-                   colour=GITHUB),
+            button(2, 1, 'Inline Edit', 'pen', 'cursor_inline_edit', {},
+                   secondary='Ctrl+K'),
+            button(2, 2, 'Copy', 'copy', 'macro',
+                   {'steps': [{'type': 'clipboard_copy'}]}),
+            button(2, 3, 'CPU', 'microchip', 'metric_cpu_usage', {}),
+            button(2, 4, 'Memory', 'memory', 'metric_memory', {}),
 
             button(3, 0, 'Prev Page', 'chevron-left', 'previous_page', {}),
             button(3, 1, 'Next Page', 'chevron-right', 'next_page', {}),
-            button(3, 4, 'CPU', 'microchip', 'metric_cpu_usage', {}),
+            button(3, 4, 'Clock', 'clock', 'time_world_clock', {}),
         ],
     )
 

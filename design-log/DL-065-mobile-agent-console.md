@@ -212,3 +212,60 @@ less as a phone. A touch 7" panel at 1024×600 therefore gets the mobile
 chrome (DL-060–063) and, on agent scenes, this console instead of the grid.
 The user's panel wasn't running during the test, so its classification is
 unconfirmed.
+
+## Follow-up: console/action bar not appearing on a real phone (2026-09-25)
+
+### Problem
+
+On the user's own device, a Claude Code scene showed the mobile chrome and
+the plain shortcut grid (Open Claude, Review, Commit…) with **no** agent
+action row at all — neither the desktop-style `AgentActionBar` nor this
+console's state/actions/composer. The same scene's `AgentActionBar` renders
+correctly on desktop.
+
+### Root cause
+
+`showsMobileAgentConsole` (`DashboardView.vue`) and `AgentActionBar`'s own
+`visibleActions` both key off `sceneAppProfile()`, which reads
+`profilesById` — populated once by `loadProfileMaps()`
+(`services/appDetection.ts`). Nothing calls that function until whichever
+agent surface mounts first pulls it in via `useAgentSession`'s `onMounted`:
+
+- **Desktop:** `AgentActionBar` always mounts (it's the unconditional
+  `v-else-if` branch), so it triggers the load itself and self-heals once
+  the request resolves.
+- **Mobile:** `showsMobileAgentConsole` starts `false` (empty profile map),
+  so the same `AgentActionBar` + grid branch mounts first and *should*
+  self-heal identically — except `appScanningEnabled` defaults to `false`
+  (DL-057), so `MobileDeckChrome`'s scanning watcher never calls
+  `startAppDetection()` either. The only path left is `loadProfileMaps()`'s
+  own `try/catch`, which swallowed a failed request with the comment "retry
+  on next poll tick" — a poll tick that never happens with scanning off. A
+  single failed request (very plausible for a phone's first request right
+  after joining over LAN/QR) permanently starves both surfaces of
+  `state_actions`, leaving only the plain grid with no way to recover.
+
+### Fix
+
+- `loadProfileMaps()` now retries the `/app-profiles` fetch up to 3 times
+  (1s/3s/8s backoff) before giving up, and concurrent callers share one
+  in-flight request instead of firing duplicate fetches.
+- `DashboardView.vue` calls `loadProfileMaps()` unconditionally in
+  `onMounted`, instead of waiting for `AgentActionBar`/`MobileAgentConsole`
+  to mount and request it themselves — removes the mount-order dependency
+  entirely so `showsMobileAgentConsole` resolves correctly regardless of
+  the app-scanning setting or which surface would otherwise have loaded it
+  first.
+- No change to grid sizing: `DeckGrid`'s existing host-`ResizeObserver` +
+  compact-cell logic (DL-057/059) already shrinks buttons to fit whatever
+  height remains once the console/action bar claims its space, down to its
+  existing 36px floor, so the "make buttons smaller to fit" concern from
+  the same report is resolved by the console/bar reliably appearing at all
+  rather than by a separate sizing change.
+
+### Verification
+
+- Frontend suite: 59 files / 250 tests green, `vue-tsc --noEmit` clean.
+- Not yet re-verified live on the reporting user's physical device (no
+  access to it from this session) — flagged for the user to confirm on
+  their phone.

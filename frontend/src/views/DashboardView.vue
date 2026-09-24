@@ -217,7 +217,7 @@ import { useTutorial } from '@/services/tutorial'
 import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import { appBackgroundForScene } from '@/data/appBackgrounds'
-import { sceneAppProfile } from '@/services/appDetection'
+import { loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
 import { agentStateEntry } from '@/services/agentState'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useButtonActions } from '@/composables/useButtonActions'
@@ -940,6 +940,15 @@ function handleKeyDown(event: KeyboardEvent) {
 }
 
 onMounted(async () => {
+  // Fetch app-profile metadata (state_actions, prompt_command, …) up front
+  // instead of waiting for AgentActionBar/MobileAgentConsole to mount and
+  // request it themselves. With app scanning off (the default) nothing else
+  // triggers this fetch, so `showsMobileAgentConsole` could otherwise stay
+  // false — grid buttons but no agent controls on a phone — until whichever
+  // surface happens to mount first pulls it in on its own. See DL-065
+  // follow-up.
+  void loadProfileMaps()
+
   // Load last used profile or first available profile
   const lastProfileId = localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
   let profileLoaded = false

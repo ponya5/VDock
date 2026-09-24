@@ -92,3 +92,71 @@ test('resetScene is a no-op for a non-default scene', () => {
   const after = store.currentProfile!.scenes.find((s) => s.id === 'scene-custom')!
   expect(after).toEqual(before)
 })
+
+// DL-066 follow-up: profiles created before the Cursor scene fix must not
+// stay stuck on the old layout forever — setProfile auto-upgrades an
+// untouched legacy Cursor scene on every load, in place.
+function legacyCursorScene() {
+  const legacyActionTypes = [
+    'cursor_composer', 'cursor_chat', 'cursor_inline_edit', 'cursor_command_palette',
+    'cursor_accept', 'cursor_reject', 'cursor_toggle_terminal', 'cursor_quick_open'
+  ]
+  return {
+    id: 'scene-legacy-cursor',
+    name: 'Cursor',
+    icon: 'i-cursor',
+    color: '#1f6fd1',
+    pages: [{
+      id: 'page-legacy-cursor',
+      name: 'Page 1',
+      grid_config: { rows: 3, cols: 5 },
+      buttons: legacyActionTypes.map((type, index) => ({
+        id: `btn-${index}`,
+        label: type,
+        icon: ['fas', 'star'] as [string, string],
+        icon_type: 'fontawesome' as const,
+        shape: 'rounded' as const,
+        size: { rows: 1, cols: 1 },
+        enabled: true,
+        position: { row: Math.floor(index / 4), col: index % 4 },
+        action: { type, config: {} }
+      }))
+    }]
+  }
+}
+
+test('setProfile auto-upgrades an untouched legacy Cursor scene to the current layout', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  const profile = makeProfile()
+  profile.scenes = [...profile.scenes, legacyCursorScene() as any]
+
+  store.setProfile(profile)
+
+  const cursorScene = store.currentProfile!.scenes.find((s) => s.name === 'Cursor')!
+  expect(cursorScene.id).toBe('scene-legacy-cursor') // id preserved
+  expect(cursorScene.pages[0].grid_config).toEqual({ rows: 2, cols: 4 })
+  const actionTypes = cursorScene.pages[0].buttons.map((b) => b.action?.type)
+  expect(actionTypes).toContain('cursor_new_chat')
+  expect(actionTypes).not.toContain('cursor_composer')
+})
+
+test('setProfile leaves a customised Cursor scene alone', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  const profile = makeProfile()
+  const customised = legacyCursorScene()
+  // One extra/renamed button is enough to mark it as no longer untouched.
+  customised.pages[0].buttons[0] = {
+    ...customised.pages[0].buttons[0],
+    action: { type: 'url', config: { url: 'https://example.com' } }
+  }
+  profile.scenes = [...profile.scenes, customised as any]
+
+  store.setProfile(profile)
+
+  const cursorScene = store.currentProfile!.scenes.find((s) => s.name === 'Cursor')!
+  const actionTypes = cursorScene.pages[0].buttons.map((b) => b.action?.type)
+  expect(actionTypes).toContain('url')
+  expect(actionTypes).not.toContain('cursor_new_chat')
+})

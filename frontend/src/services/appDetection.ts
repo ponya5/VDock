@@ -39,33 +39,60 @@ const profileIdByCommand = new Map<string, string>()
 let timer: number | null = null
 let inflight = false
 let profilesLoaded = false
+let loadProfileMapsPromise: Promise<void> | null = null
 
 const POLL_MS = 10_000
+/** Retry backoff for a failed /api/app-profiles fetch. With app scanning off
+ * (the default — DL-057), nothing else re-polls, so a single transient
+ * failure (e.g. a phone's first request right after joining the LAN) would
+ * otherwise leave state_actions unresolved forever — see DL-065 follow-up. */
+const PROFILE_LOAD_RETRY_DELAYS_MS = [1000, 3000, 8000]
 
-/** Load /api/app-profiles once. Detection polling calls it too; consumers
- * that need profiles while scanning is off (the agent bar) call it directly. */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/** Load /api/app-profiles once, retrying a few times on failure. Detection
+ * polling calls it too; consumers that need profiles while scanning is off
+ * (the agent bar, the mobile console) call it directly. Concurrent callers
+ * share the same in-flight request instead of firing duplicate fetches. */
 export async function loadProfileMaps(): Promise<void> {
   if (profilesLoaded) return
-  try {
-    const res = await apiClient.get('/app-profiles')
-    const loadedProfiles: AppProfileDto[] = res?.data?.profiles ?? []
-    profilesById.value = new Map(loadedProfiles.map(profile => [profile.id, profile]))
-    for (const p of loadedProfiles) {
-      for (const exe of p.exes ?? []) {
-        profileIdByExe.set(String(exe).toLowerCase(), p.id)
-      }
-      for (const cmd of p.commands ?? []) {
-        if (cmd?.id) profileIdByCommand.set(String(cmd.id), p.id)
-      }
-      // Plugin action types the profile owns (e.g. claude_pack's
-      // claude_prompt) vote for the profile exactly like command ids.
-      for (const t of p.action_types ?? []) {
-        profileIdByCommand.set(String(t), p.id)
+  if (loadProfileMapsPromise) return loadProfileMapsPromise
+
+  loadProfileMapsPromise = (async () => {
+    for (let attempt = 0; attempt <= PROFILE_LOAD_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        const res = await apiClient.get('/app-profiles')
+        const loadedProfiles: AppProfileDto[] = res?.data?.profiles ?? []
+        profilesById.value = new Map(loadedProfiles.map(profile => [profile.id, profile]))
+        for (const p of loadedProfiles) {
+          for (const exe of p.exes ?? []) {
+            profileIdByExe.set(String(exe).toLowerCase(), p.id)
+          }
+          for (const cmd of p.commands ?? []) {
+            if (cmd?.id) profileIdByCommand.set(String(cmd.id), p.id)
+          }
+          // Plugin action types the profile owns (e.g. claude_pack's
+          // claude_prompt) vote for the profile exactly like command ids.
+          for (const t of p.action_types ?? []) {
+            profileIdByCommand.set(String(t), p.id)
+          }
+        }
+        profilesLoaded = true
+        return
+      } catch {
+        const retryDelayMs = PROFILE_LOAD_RETRY_DELAYS_MS[attempt]
+        if (retryDelayMs === undefined) return
+        await delay(retryDelayMs)
       }
     }
-    profilesLoaded = true
-  } catch {
-    // Profiles are static in practice — retry on next poll tick.
+  })()
+
+  try {
+    await loadProfileMapsPromise
+  } finally {
+    loadProfileMapsPromise = null
   }
 }
 

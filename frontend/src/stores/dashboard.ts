@@ -4,7 +4,12 @@ import type { Profile, Page, Button, Scene, ActionResult } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
 import { useSettingsStore } from './settings'
-import { createDefaultScene } from '@/utils/defaultProfile'
+import {
+  createDefaultScene,
+  createFactoryIdeScene,
+  isFactoryIdeSceneName,
+  isUntouchedLegacyCursorScene
+} from '@/utils/defaultProfile'
 import { useMobileViewport } from '@/utils/mobileViewport'
 
 export const LAST_PROFILE_STORAGE_KEY = 'vdock_last_profile'
@@ -43,6 +48,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
       migratedProfile.scenes = [...migratedProfile.scenes, createDefaultScene()]
     }
 
+    // DL-066 follow-up: a "Cursor" scene created before the layout fix still
+    // carries the old Composer/Chat/Palette/Accept/Reject/Quick Open button
+    // set on a mis-sized grid. Auto-upgrade it in place, but only while it's
+    // byte-for-byte the untouched factory scene — this must never overwrite
+    // a scene the user has actually customised (see
+    // `isUntouchedLegacyCursorScene`). A hand-edited Cursor scene keeps
+    // SceneEditor's explicit "Reset to Default" as its own opt-in path.
+    migratedProfile.scenes = migratedProfile.scenes.map((scene) => {
+      if (!isUntouchedLegacyCursorScene(scene)) return scene
+      const fresh = createFactoryIdeScene('Cursor')
+      if (!fresh) return scene
+      return { ...scene, pages: fresh.pages, icon: fresh.icon, color: fresh.color }
+    })
+
     currentProfile.value = migratedProfile
     currentSceneIndex.value = 0
     currentPageIndex.value = 0
@@ -61,16 +80,23 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   /**
-   * Resets the given scene back to its factory layout (see `createDefaultScene`).
-   * No-ops if `sceneId` doesn't refer to the profile's default scene — this must
-   * never be able to wipe a user's custom scene.
+   * Resets the given scene back to its factory layout — either the single
+   * `isDefault` Media scene (`createDefaultScene`) or one of the built-in IDE
+   * scenes identified by name (Claude Code / Cursor, DL-066 follow-up). No-ops
+   * for anything else — this must never be able to wipe a user's custom scene.
    */
   function resetScene(sceneId: string) {
     if (!currentProfile.value) return
     const scene = currentProfile.value.scenes.find((s) => s.id === sceneId)
-    if (!scene || !scene.isDefault) return
+    if (!scene) return
 
-    const fresh = createDefaultScene()
+    const fresh = scene.isDefault
+      ? createDefaultScene()
+      : isFactoryIdeSceneName(scene.name)
+        ? createFactoryIdeScene(scene.name)
+        : null
+    if (!fresh) return
+
     scene.name = fresh.name
     scene.icon = fresh.icon
     scene.color = fresh.color

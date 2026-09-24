@@ -163,11 +163,15 @@ function seedScene(
 /**
  * A plain instruction rather than `/commit`: that slash command only exists
  * when a commit plugin is enabled, and otherwise Enter runs whichever command
- * autocomplete ranked first.
+ * autocomplete ranked first. Shared with the Cursor scene (DL-066) so
+ * the two IDE decks stay textually identical wherever the same prompt applies.
  */
 const COMMIT_PROMPT = 'Commit the current changes with a clear, descriptive commit message.'
+const EXPLAIN_PROMPT = 'Explain what this code does:\n\n{clipboard}'
+const WRITE_TESTS_PROMPT = 'Write tests for this code:\n\n{clipboard}'
+const FIX_TESTS_PROMPT = 'The tests are failing. Find and fix the cause.'
 
-function createClaudeCodeScene(ts: number): Scene {
+export function createClaudeCodeScene(ts: number = Date.now()): Scene {
   const makeButton = seedButton(ts)
   const brand = '#D97757'
   const promptColor = '#7c5cd6'
@@ -215,7 +219,7 @@ function createClaudeCodeScene(ts: number): Scene {
       label: 'Explain',
       icon: ['fas', 'circle-question'],
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt('Explain what this code does:\n\n{clipboard}'),
+      action: livePrompt(EXPLAIN_PROMPT),
       tooltip: 'Asks the session to explain whatever is on the clipboard',
       position: { row: 1, col: 0 }
     }),
@@ -224,7 +228,7 @@ function createClaudeCodeScene(ts: number): Scene {
       label: 'Write Tests',
       icon: ['fas', 'vial'],
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt('Write tests for this code:\n\n{clipboard}'),
+      action: livePrompt(WRITE_TESTS_PROMPT),
       tooltip: 'Asks the session to write tests for clipboard code',
       position: { row: 1, col: 1 }
     }),
@@ -233,7 +237,7 @@ function createClaudeCodeScene(ts: number): Scene {
       label: 'Fix Tests',
       icon: ['fas', 'wrench'],
       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt('The tests are failing. Find and fix the cause.'),
+      action: livePrompt(FIX_TESTS_PROMPT),
       position: { row: 1, col: 2 }
     })
   ]
@@ -241,82 +245,147 @@ function createClaudeCodeScene(ts: number): Scene {
 }
 
 /**
- * "Cursor" scene: the composer/chat/inline-edit action set from the
- * dev-cursor-ai template — one-tap AI editing controls.
+ * "Cursor" scene (DL-066): mirrors the Claude Code scene's shape —
+ * one "open a session" button, then prompt buttons that type straight into
+ * the live agent chat (`cursor_prompt`), plus the handful of direct editor
+ * actions that aren't a chat message. Same 2×4 grid, same prompt texts as
+ * Claude where the prompt is generic (Commit/Explain/Write Tests/Fix
+ * Tests), so the two IDE decks read as one family instead of two different
+ * button sets with two different grid densities.
+ *
+ * State-dependent actions (Submit, Continue/Stop, Accept, Reject) live in
+ * the agent action bar above the grid — same split as Claude Code, driven
+ * by the 'cursor' profile's `state_actions` (backend/integrations/keymaps/
+ * cursor.py).
  */
-function createCursorScene(ts: number): Scene {
+function createCursorScene(ts: number = Date.now()): Scene {
   const makeButton = seedButton(ts)
   const brand = '#1f6fd1'
+  const promptColor = '#7c5cd6'
+  const livePrompt = (text: string): Button['action'] => ({ type: 'cursor_prompt', config: { text } })
   const buttons: Button[] = [
     makeButton({
       id: `btn-${ts}-u1`,
-      label: 'Composer',
-      icon: ['fas', 'wand-magic-sparkles'],
+      label: 'New Agent',
+      icon: ['fas', 'plus'],
       style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
       layers: { effect: { type: 'glow', tint: 'brand' } },
-      action: { type: 'cursor_composer', config: {} },
-      tooltip: 'Open Cursor Composer',
+      action: { type: 'cursor_new_chat', config: {} },
+      tooltip: 'Open a new Cursor agent chat, input focused',
       position: { row: 0, col: 0 }
     }),
     makeButton({
       id: `btn-${ts}-u2`,
-      label: 'Chat',
-      icon: ['fas', 'comments'],
-      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_chat', config: {} },
+      label: 'Review',
+      icon: ['fas', 'magnifying-glass'],
+      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
+      action: livePrompt('Review this code for correctness, style, and potential bugs.'),
       position: { row: 0, col: 1 }
     }),
     makeButton({
       id: `btn-${ts}-u3`,
-      label: 'Inline Edit',
-      icon: ['fas', 'pen-to-square'],
-      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_inline_edit', config: {} },
+      label: 'Commit',
+      icon: ['fas', 'code-commit'],
+      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
+      action: livePrompt(COMMIT_PROMPT),
+      secondary_label: 'git commit',
       position: { row: 0, col: 2 }
     }),
     makeButton({
       id: `btn-${ts}-u4`,
-      label: 'Palette',
-      icon: ['fas', 'terminal'],
+      label: 'Inline Edit',
+      icon: ['fas', 'pen-to-square'],
       style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_command_palette', config: {} },
-      tooltip: 'Command palette',
+      action: { type: 'cursor_inline_edit', config: {} },
+      tooltip: 'Edit the current selection in place with AI (Ctrl+K)',
       position: { row: 0, col: 3 }
     }),
     makeButton({
       id: `btn-${ts}-u5`,
-      label: 'Accept',
-      icon: ['fas', 'check'],
-      style: { backgroundColor: '#16a34a', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_accept', config: {} },
+      label: 'Explain',
+      icon: ['fas', 'circle-question'],
+      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
+      action: livePrompt(EXPLAIN_PROMPT),
+      tooltip: 'Asks the session to explain whatever is on the clipboard',
       position: { row: 1, col: 0 }
     }),
     makeButton({
       id: `btn-${ts}-u6`,
-      label: 'Reject',
-      icon: ['fas', 'xmark'],
-      style: { backgroundColor: '#dc2626', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_reject', config: {} },
+      label: 'Write Tests',
+      icon: ['fas', 'vial'],
+      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
+      action: livePrompt(WRITE_TESTS_PROMPT),
+      tooltip: 'Asks the session to write tests for clipboard code',
       position: { row: 1, col: 1 }
     }),
     makeButton({
       id: `btn-${ts}-u7`,
-      label: 'Terminal',
-      icon: ['fas', 'terminal'],
-      style: { backgroundColor: '#334155', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_toggle_terminal', config: {} },
+      label: 'Fix Tests',
+      icon: ['fas', 'wrench'],
+      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
+      action: livePrompt(FIX_TESTS_PROMPT),
       position: { row: 1, col: 2 }
     }),
     makeButton({
       id: `btn-${ts}-u8`,
-      label: 'Quick Open',
-      icon: ['fas', 'file-circle-plus'],
+      label: 'Terminal',
+      icon: ['fas', 'terminal'],
       style: { backgroundColor: '#334155', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cursor_quick_open', config: {} },
+      action: { type: 'cursor_toggle_terminal', config: {} },
       position: { row: 1, col: 3 }
     })
   ]
-  return seedScene(ts, 'cursor', 'Cursor', 'i-cursor', brand, buttons)
+  return seedScene(ts, 'cursor', 'Cursor', 'i-cursor', brand, buttons, { rows: 2, cols: 4 })
+}
+
+/**
+ * Factory-built IDE scenes that a user can restore in place via SceneEditor's
+ * "Reset to Default" (DL-066 follow-up) — keyed by the scene name each
+ * builder produces. A scene qualifies for the reset affordance purely by
+ * name match; nothing else about a user's edited scene is inspected, so
+ * renaming it opts back out (consistent with there being no other durable
+ * link between a hand-editable scene and the factory template it came from).
+ */
+const FACTORY_IDE_SCENE_BUILDERS: Record<string, (ts?: number) => Scene> = {
+  'Claude Code': createClaudeCodeScene,
+  Cursor: createCursorScene
+}
+
+export function isFactoryIdeSceneName(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(FACTORY_IDE_SCENE_BUILDERS, name)
+}
+
+export function createFactoryIdeScene(name: string): Scene | null {
+  return FACTORY_IDE_SCENE_BUILDERS[name]?.() ?? null
+}
+
+/**
+ * The exact action-type set the pre-DL-066-follow-up `createCursorScene`
+ * shipped (Composer/Chat/Inline Edit/Palette/Accept/Reject/Terminal/Quick
+ * Open, on the wrong 3x5 grid_config). Profiles created before that fix
+ * still carry this scene verbatim — see `isUntouchedLegacyCursorScene`.
+ */
+const LEGACY_CURSOR_ACTION_TYPES = new Set([
+  'cursor_composer', 'cursor_chat', 'cursor_inline_edit', 'cursor_command_palette',
+  'cursor_accept', 'cursor_reject', 'cursor_toggle_terminal', 'cursor_quick_open'
+])
+
+/**
+ * True only when a "Cursor" scene's buttons are *exactly* the untouched
+ * pre-fix factory set — every legacy action type present, nothing else
+ * added or removed. A user who kept even one of those buttons but added or
+ * removed another has customised the scene, and this deliberately returns
+ * false for it: silently overwriting a hand-edited scene on load would be
+ * far worse than leaving one on the old layout. `setProfile` (dashboard
+ * store) uses this to auto-upgrade only the untouched case; anyone who has
+ * customised their Cursor scene keeps SceneEditor's explicit "Reset to
+ * Default" as an opt-in path instead.
+ */
+export function isUntouchedLegacyCursorScene(scene: Scene): boolean {
+  if (scene.name !== 'Cursor') return false
+  const actionTypes = scene.pages.flatMap((page) => page.buttons.map((button) => button.action?.type))
+  if (actionTypes.length !== LEGACY_CURSOR_ACTION_TYPES.size) return false
+  return actionTypes.every((type) => type !== undefined && LEGACY_CURSOR_ACTION_TYPES.has(type))
 }
 
 /**

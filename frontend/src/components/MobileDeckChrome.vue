@@ -41,6 +41,22 @@
       </button>
     </div>
 
+    <!-- Fullscreen is promoted out of the overflow menu (DL-067): most
+         mobile browsers refuse an unprompted requestFullscreen() call, so
+         this needs to be a one-tap, hard-to-miss target rather than
+         something buried behind ⋮. It pulses until the user has either
+         entered fullscreen or dismissed the suggestion once this visit. -->
+    <button
+      type="button"
+      class="mc-fullscreen-btn"
+      :class="{ 'mc-suggest': !isFullscreen && suggestFullscreen }"
+      :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+      :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+      @click="onFullscreen"
+    >
+      <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
+    </button>
+
     <div ref="menuWrapRef" class="mc-more-wrap">
       <button
         type="button"
@@ -52,10 +68,6 @@
         <FontAwesomeIcon :icon="['fas', 'ellipsis-vertical']" />
       </button>
       <div v-if="menuOpen" class="mc-menu" role="menu">
-        <button type="button" role="menuitem" class="mc-menu-item" @click="onFullscreen">
-          <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
-          <span>Fullscreen</span>
-        </button>
         <button type="button" role="menuitem" class="mc-menu-item" @click="onRefresh">
           <FontAwesomeIcon :icon="['fas', 'rotate-right']" :spin="isRefreshing" />
           <span>Refresh</span>
@@ -179,6 +191,10 @@ document.addEventListener('pointerdown', onDocPointerDown)
 const isFullscreen = ref(typeof document !== 'undefined' && !!document.fullscreenElement)
 const isRefreshing = ref(false)
 const showExitConfirm = ref(false)
+// Pulses the fullscreen button until the user acts on it once this visit —
+// most mobile browsers block the unattended auto-fullscreen attempt below,
+// so this is the actual, reliable way in for most phones.
+const suggestFullscreen = ref(true)
 
 function handleFullscreenChange() {
   if (!isElectron()) isFullscreen.value = !!document.fullscreenElement
@@ -186,6 +202,7 @@ function handleFullscreenChange() {
 
 async function onFullscreen() {
   menuOpen.value = false
+  suggestFullscreen.value = false
   try {
     isFullscreen.value = await toggleElectronFullscreen()
   } catch (err) {
@@ -227,6 +244,18 @@ async function confirmExit() {
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+
+  // Best-effort: browsers only honor requestFullscreen() with a recent user
+  // gesture, so this silently no-ops on most phone browsers (Safari,
+  // Chrome without prior site permission) and only actually lands in
+  // contexts that allow it (Electron, an installed PWA that already has
+  // fullscreen permission). The pulsing button above is the fallback that
+  // always works.
+  if (!isFullscreen.value) {
+    toggleElectronFullscreen()
+      .then(result => { isFullscreen.value = result })
+      .catch(() => { /* expected on most mobile browsers — button covers it */ })
+  }
 })
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
@@ -360,6 +389,35 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* --- Fullscreen (promoted out of the overflow menu, DL-067) --------------- */
+.mc-fullscreen-btn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(0.85rem, 0.65rem + 0.9vw, 1.05rem);
+  cursor: pointer;
+}
+.mc-fullscreen-btn:active { transform: scale(0.94); }
+
+.mc-fullscreen-btn.mc-suggest {
+  border-color: #1f6fd1;
+  background: rgba(31, 111, 209, 0.28);
+  color: #fff;
+  animation: mc-fullscreen-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mc-fullscreen-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(31, 111, 209, 0.55); }
+  50% { box-shadow: 0 0 0 8px rgba(31, 111, 209, 0); }
+}
+
 /* --- Overflow menu ---------------------------------------------------------- */
 .mc-more-wrap { position: relative; flex: 0 0 auto; }
 .mc-more-btn {
@@ -473,5 +531,9 @@ onUnmounted(() => {
   background: rgba(255, 82, 82, 0.18);
   border-color: rgba(255, 82, 82, 0.4);
   color: #ff8a80;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-fullscreen-btn.mc-suggest { animation: none !important; }
 }
 </style>

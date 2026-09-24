@@ -1,0 +1,432 @@
+diff --git a/backend/integrations/agent_state.py b/backend/integrations/agent_state.py
+index 2a9059e..61c04ba 100644
+--- a/backend/integrations/agent_state.py
++++ b/backend/integrations/agent_state.py
+@@ -30,6 +30,9 @@ DEFAULT_SESSION_ID = 'default'
+ #: A killed session never reports its end, so a state goes stale eventually.
+ STATE_TTL_SECONDS = 30 * 60
+ 
++MAX_PROMPT_CHARS = 2000
++MAX_REPLY_CHARS = 6000
++
+ _lock = threading.Lock()
+ _sessions_by_source: Dict[str, Dict[str, Dict[str, Any]]] = {}
+ 
+@@ -43,22 +46,39 @@ def normalise_session_id(raw_session_id: Any) -> str:
+     return str(raw_session_id or DEFAULT_SESSION_ID)[:100]
+ 
+ 
++def _conversation(previous_entry: Dict[str, Any], prompt: str, reply: str) -> Dict[str, str]:
++    """The last prompt/reply pair after this event.
++
++    Most events carry no text, so the pair carries over; a new prompt
++    starts a new turn and clears the previous reply.
++    """
++    if prompt:
++        return {'prompt': prompt[:MAX_PROMPT_CHARS], 'reply': reply[:MAX_REPLY_CHARS]}
++    return {
++        'prompt': previous_entry.get('prompt', ''),
++        'reply': reply[:MAX_REPLY_CHARS] if reply else previous_entry.get('reply', ''),
++    }
++
++
+ def record(source: str, state: str, message: str = '', cwd: str = '',
+-           project: str = '', session_id: str = DEFAULT_SESSION_ID) -> Dict[str, Any]:
++           project: str = '', session_id: str = DEFAULT_SESSION_ID,
++           prompt: str = '', reply: str = '') -> Dict[str, Any]:
+     """Store ``state`` for one session of ``source``; returns the entry."""
+     if state not in ALLOWED_STATES:
+         raise ValueError(f'Unknown agent state: {state}')
+-    entry = {
+-        'source': source,
+-        'session_id': session_id,
+-        'state': state,
+-        'message': message[:300],
+-        'cwd': cwd[:300],
+-        'project': project[:120],
+-        'ts': time.time(),
+-    }
+     with _lock:
+-        _sessions_by_source.setdefault(source, {})[session_id] = entry
++        sessions = _sessions_by_source.setdefault(source, {})
++        entry = {
++            'source': source,
++            'session_id': session_id,
++            'state': state,
++            'message': message[:300],
++            'cwd': cwd[:300],
++            'project': project[:120],
++            **_conversation(sessions.get(session_id, {}), prompt, reply),
++            'ts': time.time(),
++        }
++        sessions[session_id] = entry
+     return entry
+ 
+ 
+diff --git a/backend/integrations/context.py b/backend/integrations/context.py
+index b85cc97..612b673 100644
+--- a/backend/integrations/context.py
++++ b/backend/integrations/context.py
+@@ -199,6 +199,16 @@ def current_branch(cwd: Optional[str] = None) -> Optional[str]:
+     return result.stdout.strip() if result.ok else None
+ 
+ 
++def clipboard_text() -> str:
++    """The clipboard's text, or '' when it is empty or unreadable."""
++    try:
++        import pyperclip
++        return pyperclip.paste() or ''
++    except Exception as e:
++        logger.warning('Could not read the clipboard: %s', e)
++        return ''
++
++
+ def expand_placeholders(text: str, cwd: Optional[str] = None) -> str:
+     """Substitute ``{clipboard}``, ``{repo}``, ``{branch}`` and ``{project}``.
+ 
+@@ -211,12 +221,7 @@ def expand_placeholders(text: str, cwd: Optional[str] = None) -> str:
+     replacements = {}
+ 
+     if '{clipboard}' in text:
+-        try:
+-            import pyperclip
+-            replacements['{clipboard}'] = pyperclip.paste() or ''
+-        except Exception as e:
+-            logger.warning('Could not read the clipboard: %s', e)
+-            replacements['{clipboard}'] = ''
++        replacements['{clipboard}'] = clipboard_text()
+ 
+     if '{repo}' in text or '{project}' in text or '{branch}' in text:
+         target = resolve_cwd(cwd)
+diff --git a/backend/integrations/editor_base.py b/backend/integrations/editor_base.py
+index 5526f89..c8cbc64 100644
+--- a/backend/integrations/editor_base.py
++++ b/backend/integrations/editor_base.py
+@@ -325,7 +325,15 @@ class KeystrokeEditorPlugin(BasePlugin):
+ 
+         text = config.get('text')
+         if text is not None:
+-            text = context.expand_placeholders(str(text))
++            text = str(text)
++            if '{clipboard}' in text and not context.clipboard_text().strip():
++                return {
++                    'success': False,
++                    'message': 'Copy some code first',
++                    'details': 'This prompt sends whatever is on the '
++                               'clipboard, and the clipboard is empty.',
++                }
++            text = context.expand_placeholders(text)
+ 
+         return send(
+             command,
+diff --git a/backend/integrations/keymaps/base.py b/backend/integrations/keymaps/base.py
+index decae5b..3f50e6e 100644
+--- a/backend/integrations/keymaps/base.py
++++ b/backend/integrations/keymaps/base.py
+@@ -40,6 +40,8 @@ RISK_SAFE = 'safe'
+ RISK_INPUT = 'input'
+ RISK_DESTRUCTIVE = 'destructive'
+ 
++TERMINAL_TAB_WIDTH = 4
++
+ 
+ @dataclass(frozen=True)
+ class Command:
+@@ -113,8 +115,10 @@ class Command:
+     def _text_steps(self, text: str) -> List[Dict[str, Any]]:
+         if not self.newline_keys:
+             return [{'type': 'text', 'text': text}]
++        # Terminal agents bind Tab to a shortcut (autocomplete, thinking
++        # toggle), so a typed tab would drop code indentation.
+         steps: List[Dict[str, Any]] = []
+-        lines = text.replace('\r\n', '\n').split('\n')
++        lines = text.replace('\r\n', '\n').expandtabs(TERMINAL_TAB_WIDTH).split('\n')
+         for line_index, line in enumerate(lines):
+             if line_index:
+                 steps.append({'type': 'hotkey', 'keys': list(self.newline_keys)})
+@@ -170,6 +174,9 @@ class AppProfile:
+     #: action bar (DL-064). 'unknown' is used when the agent runs but
+     #: reports no state (no hook installed).
+     state_actions: Tuple[Tuple[str, Tuple[StateAction, ...]], ...] = ()
++    #: Command that types free text from the mobile console into the live
++    #: session and submits it (DL-065). None hides the composer.
++    prompt_command: Optional[str] = None
+ 
+     def to_dict(self) -> Dict[str, Any]:
+         """Serialise for GET /api/app-profiles."""
+@@ -185,6 +192,7 @@ class AppProfile:
+                 state: [action.to_dict() for action in actions]
+                 for state, actions in self.state_actions
+             },
++            'prompt_command': self.prompt_command,
+             'commands': [
+                 {
+                     'id': cmd.id,
+diff --git a/backend/integrations/keymaps/cursor.py b/backend/integrations/keymaps/cursor.py
+index 8d9a33e..d4e230e 100644
+--- a/backend/integrations/keymaps/cursor.py
++++ b/backend/integrations/keymaps/cursor.py
+@@ -1,14 +1,48 @@
+-"""Cursor keybindings."""
++"""Cursor keybindings.
++
++Chat input focus keys, verified against Cursor 3.21's workbench bundle:
++Ctrl+L / Ctrl+I *toggle* the agent pane (pressed while it is focused they
++close it), so nothing that types afterwards may start with them. Ctrl+Shift+L
++("Open New Agent Chat") always opens and focuses a fresh input, and
++Ctrl+Shift+Y ("Focus Chat Followup", Windows binding) focuses the current
++chat's input. Both chat inputs take Shift+Enter as a line break.
++"""
+ from typing import Tuple
+ 
+ from .base import AppProfile, Command, CURSOR_EXES, RISK_INPUT, state_actions_of
+ 
++NEW_AGENT_CHAT_KEYS = ('ctrl', 'shift', 'l')
++FOCUS_CHAT_FOLLOWUP_KEYS = ('ctrl', 'shift', 'y')
++CHAT_NEWLINE_KEYS = ('shift', 'enter')
++
+ CURSOR_COMMANDS: Tuple[Command, ...] = (
++    Command(
++        id='cursor_prompt', label='New Agent Prompt',
++        description='Open a new agent chat and send a prompt to it '
++                    '(Ctrl+Shift+L, type, Enter).',
++        keys=NEW_AGENT_CHAT_KEYS, icon='paper-plane',
++        types_text='Explain the current file.', submit=True,
++        newline_keys=CHAT_NEWLINE_KEYS,
++        keywords=('cursor', 'prompt', 'agent', 'ask', 'send', 'type'),
++        target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
++    ),
++    Command(
++        id='cursor_followup', label='Send Follow-up',
++        description='Send a message to the current agent chat '
++                    '(Ctrl+Shift+Y, type, Enter). Defaults to "continue".',
++        keys=FOCUS_CHAT_FOLLOWUP_KEYS, icon='reply',
++        types_text='continue', submit=True,
++        newline_keys=CHAT_NEWLINE_KEYS,
++        keywords=('cursor', 'followup', 'continue', 'reply', 'send'),
++        target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
++    ),
+     Command(
+         id='cursor_submit', label='Submit',
+-        description='Send the message typed in the chat / agent input '
+-                    '(Enter).',
+-        keys=('enter',), icon='paper-plane',
++        description='Send the message typed in the current agent chat '
++                    '(Ctrl+Shift+Y, Enter) — focusing the chat first, so '
++                    'Enter never lands in a file.',
++        keys=FOCUS_CHAT_FOLLOWUP_KEYS, after_keys=(('enter',),),
++        icon='paper-plane',
+         keywords=('cursor', 'submit', 'send', 'enter', 'prompt'),
+         target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
+     ),
+@@ -46,9 +80,9 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
+         keywords=('cursor', 'edit', 'inline', 'k'), target_exes=CURSOR_EXES,
+     ),
+     Command(
+-        id='cursor_new_chat', label='New Cursor Chat',
+-        description='Start a fresh chat session.',
+-        keys=('ctrl', 'shift', 'l'), icon='plus',
++        id='cursor_new_chat', label='New Agent Chat',
++        description='Open a fresh agent chat, input focused (Ctrl+Shift+L).',
++        keys=NEW_AGENT_CHAT_KEYS, icon='plus',
+         keywords=('cursor', 'new', 'chat', 'reset'), target_exes=CURSOR_EXES,
+     ),
+     Command(
+@@ -101,20 +135,24 @@ CURSOR_PROFILE = AppProfile(
+     id='cursor', label='Cursor', exes=CURSOR_EXES,
+     commands=CURSOR_COMMANDS, kind='editor',
+     status_source='cursor',
++    # Cursor's hooks cannot report a pending approval, so there is no
++    # 'permission' row: Accept/Reject stay reachable in every state instead.
+     state_actions=(
+         ('ready', state_actions_of(
+-            'cursor_submit', ('cursor_new_chat', 'New Chat'),
++            'cursor_submit', ('cursor_followup', 'Continue'),
++            ('cursor_new_chat', 'New Chat'),
+             ('cursor_accept', 'Accept'), ('cursor_reject', 'Reject'),
+         )),
+         ('working', state_actions_of(
+-            'cursor_cancel', ('cursor_accept', 'Accept'),
++            ('cursor_cancel', 'Stop'), ('cursor_accept', 'Accept'),
+             ('cursor_reject', 'Reject'),
+         )),
+         ('unknown', state_actions_of(
+-            'cursor_submit', ('cursor_accept', 'Accept'),
+-            ('cursor_reject', 'Reject'), ('cursor_chat', 'Chat'),
++            'cursor_submit', ('cursor_followup', 'Continue'),
++            ('cursor_cancel', 'Stop'), ('cursor_new_chat', 'New Chat'),
+         )),
+     ),
++    prompt_command='cursor_followup',
+     default_layout=(
+         ('cursor_composer', 'cursor_chat', 'cursor_accept', 'cursor_reject'),
+         ('cursor_inline_edit', 'cursor_new_chat', 'cursor_toggle_terminal', 'cursor_quick_open'),
+diff --git a/backend/routes/agent_events.py b/backend/routes/agent_events.py
+index c1cbc27..bf24b8e 100644
+--- a/backend/routes/agent_events.py
++++ b/backend/routes/agent_events.py
+@@ -124,7 +124,7 @@ def post_agent_event():
+     """Record + broadcast an agent state change.
+ 
+     Body: {source, state: 'ready'|'working'|'permission'|'ended',
+-           message?, project?, cwd?}
++           message?, project?, cwd?, session_id?, prompt?, reply?}
+     Legacy body: {source, event: 'waiting'|'clear', ...}.
+     Deliberately unauthenticated — agent hooks run as local shell commands
+     and cannot carry UI tokens; localhost-only instead.
+@@ -150,7 +150,9 @@ def post_agent_event():
+         return jsonify({'success': False, 'error': 'Unknown state'}), 400
+ 
+     agent_state.record(source, state, message=message, cwd=cwd,
+-                       project=project, session_id=session_id)
++                       project=project, session_id=session_id,
++                       prompt=str(data.get('prompt') or ''),
++                       reply=str(data.get('reply') or ''))
+     _broadcast_states()
+     _update_alert(source, _wants_attention(data, state), message, project, cwd)
+     return jsonify({'success': True})
+diff --git a/backend/scripts/vdock_agent_hook.py b/backend/scripts/vdock_agent_hook.py
+index b67af08..0f1dd1d 100644
+--- a/backend/scripts/vdock_agent_hook.py
++++ b/backend/scripts/vdock_agent_hook.py
+@@ -48,6 +48,17 @@ CURSOR_REPLY_BY_EVENT = {
+     'beforeSubmitPrompt': {'continue': True},
+ }
+ 
++#: Payload fields carrying the conversation, per (source, event).
++PROMPT_EVENTS = {('claude', 'UserPromptSubmit'), ('cursor', 'beforeSubmitPrompt')}
++CURSOR_REPLY_EVENT = 'afterAgentResponse'
++CLAUDE_REPLY_EVENT = 'Stop'
++
++MAX_PROMPT_CHARS = 2000
++MAX_REPLY_CHARS = 6000
++#: The final assistant message sits at the end of the transcript; reading
++#: the tail keeps a long session's hook fast.
++TRANSCRIPT_TAIL_BYTES = 512 * 1024
++
+ DEFAULT_MESSAGES = {
+     'ready': 'Waiting for your prompt',
+     'working': 'Working…',
+@@ -82,9 +93,84 @@ def _session_cwd(payload: Dict[str, Any]) -> str:
+     return str(workspace_roots[0]) if workspace_roots else ''
+ 
+ 
++def _assistant_text(transcript_entry: Dict[str, Any]) -> str:
++    if transcript_entry.get('type') != 'assistant':
++        return ''
++    message = transcript_entry.get('message') or {}
++    content = message.get('content') if isinstance(message, dict) else None
++    if isinstance(content, str):
++        return content.strip()
++    if not isinstance(content, list):
++        return ''
++    text_parts = [
++        str(part.get('text') or '')
++        for part in content
++        if isinstance(part, dict) and part.get('type') == 'text'
++    ]
++    return '\n'.join(text_parts).strip()
++
++
++def _read_transcript_tail(transcript_path: str) -> str:
++    try:
++        with open(transcript_path, 'rb') as transcript_file:
++            transcript_file.seek(0, 2)
++            file_size = transcript_file.tell()
++            transcript_file.seek(max(0, file_size - TRANSCRIPT_TAIL_BYTES))
++            return transcript_file.read().decode('utf-8', errors='replace')
++    except OSError:
++        return ''
++
++
++def last_assistant_reply(transcript_path: str) -> str:
++    """Text of the newest assistant message in a Claude Code transcript."""
++    if not transcript_path:
++        return ''
++    for line in reversed(_read_transcript_tail(transcript_path).splitlines()):
++        try:
++            transcript_entry = json.loads(line)
++        except ValueError:
++            # The first line of a tail read is usually cut mid-entry.
++            continue
++        if not isinstance(transcript_entry, dict):
++            continue
++        reply_text = _assistant_text(transcript_entry)
++        if reply_text:
++            return reply_text
++    return ''
++
++
++def _reply_text(source: str, event_name: str, payload: Dict[str, Any]) -> str:
++    if source == 'cursor':
++        return str(payload.get('text') or '') if event_name == CURSOR_REPLY_EVENT else ''
++    if event_name != CLAUDE_REPLY_EVENT:
++        return ''
++    reported_reply = str(payload.get('last_assistant_message') or '')
++    if reported_reply:
++        return reported_reply
++    return last_assistant_reply(str(payload.get('transcript_path') or ''))
++
++
++def conversation_fields(source: str, payload: Dict[str, Any]) -> Dict[str, str]:
++    """The prompt or reply an event carries, for the mobile console."""
++    event_name = str(payload.get('hook_event_name') or '')
++    fields: Dict[str, str] = {}
++    if (source, event_name) in PROMPT_EVENTS:
++        prompt_text = str(payload.get('prompt') or '').strip()
++        if prompt_text:
++            fields['prompt'] = prompt_text[:MAX_PROMPT_CHARS]
++    reply_text = _reply_text(source, event_name, payload).strip()
++    if len(reply_text) > MAX_REPLY_CHARS:
++        # A long reply ends with its summary, which is what a phone needs.
++        reply_text = '…' + reply_text[-(MAX_REPLY_CHARS - 1):]
++    if reply_text:
++        fields['reply'] = reply_text
++    return fields
++
++
+ def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+     cwd = _session_cwd(payload)
+     return {
++        **conversation_fields(source, payload),
+         'source': source,
+         'state': state,
+         # Only a notification means "come back to the agent" — a normal
+diff --git a/backend/utils/window_focus.py b/backend/utils/window_focus.py
+index 9f277b2..999668a 100644
+--- a/backend/utils/window_focus.py
++++ b/backend/utils/window_focus.py
+@@ -107,6 +107,22 @@ def interactive_desktop_blocked() -> bool:
+         user32.CloseDesktop(desktop)
+ 
+ 
++def _attach_input(current_thread: int, foreground_thread: int) -> bool:
++    """Share the foreground thread's input state, when Windows allows it.
++
++    Some foreground apps refuse the attach (Access is denied), e.g. the
++    Claude desktop app. That must only skip this step, not abort the Alt-tap
++    and minimise/restore fallbacks that follow.
++    """
++    import win32process
++
++    try:
++        return bool(win32process.AttachThreadInput(current_thread, foreground_thread, True))
++    except Exception as error:  # noqa: BLE001 - pywintypes.error on refusal
++        logger.debug('AttachThreadInput refused: %s', error)
++        return False
++
++
+ def _try_set_foreground(hwnd: int) -> bool:
+     """One SetForegroundWindow attempt, attached to the foreground thread's
+     input queue. pywin32 raises when Windows refuses; that is a normal
+@@ -122,9 +138,7 @@ def _try_set_foreground(hwnd: int) -> bool:
+         foreground_thread = win32process.GetWindowThreadProcessId(foreground)[0]
+         current_thread = win32api.GetCurrentThreadId()
+         if foreground_thread != current_thread:
+-            attached = bool(win32process.AttachThreadInput(
+-                current_thread, foreground_thread, True
+-            ))
++            attached = _attach_input(current_thread, foreground_thread)
+     try:
+         win32gui.BringWindowToTop(hwnd)
+         win32gui.SetForegroundWindow(hwnd)

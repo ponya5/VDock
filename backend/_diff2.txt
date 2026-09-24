@@ -1,0 +1,829 @@
+diff --git a/frontend/src/api/appProfiles.ts b/frontend/src/api/appProfiles.ts
+index 7dd3f8e..322e222 100644
+--- a/frontend/src/api/appProfiles.ts
++++ b/frontend/src/api/appProfiles.ts
+@@ -38,6 +38,8 @@ export interface AppProfileDto {
+   /** Plugin action types owned by the profile (e.g. claude_prompt). */
+   action_types?: string[]
+   state_actions?: Partial<Record<AgentStateName, StateActionDto[]>>
++  /** Command that types free text into the live session (mobile composer). */
++  prompt_command?: string | null
+   commands: AppCommandDto[]
+ }
+ 
+diff --git a/frontend/src/components/AgentActionBar.vue b/frontend/src/components/AgentActionBar.vue
+index 2bc3181..226f431 100644
+--- a/frontend/src/components/AgentActionBar.vue
++++ b/frontend/src/components/AgentActionBar.vue
+@@ -36,21 +36,11 @@
+ </template>
+ 
+ <script setup lang="ts">
+-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
++import { computed, toRef } from 'vue'
+ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+-import type { AgentStateName, AppProfileDto } from '@/api/appProfiles'
+ import type { Scene } from '@/types'
+ import { useDashboardStore } from '@/stores/dashboard'
+-import { useNotificationsStore } from '@/stores/notifications'
+-import { useSettingsStore } from '@/stores/settings'
+-import { useAppIntegrations } from '@/composables/useAppIntegrations'
+-import { detectedProfiles, loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
+-import {
+-  agentStateEntry,
+-  agentStateFor,
+-  initAgentState,
+-  setAgentBarVisible,
+-} from '@/services/agentState'
++import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
+ 
+ /**
+  * Agent action bar (DL-064): on a Claude Code / Cursor / Devin scene, shows
+@@ -59,120 +49,25 @@ import {
+  * while a permission dialog is open.
+  */
+ 
+-interface BarAction {
+-  id: string
+-  label: string
+-  icon: string
+-  description: string
+-  isPrimary: boolean
+-}
+-
+ const props = defineProps<{ scene: Scene | null }>()
+ 
+-const STATE_LABELS: Record<AgentStateName, string> = {
+-  ready: 'Ready for your prompt',
+-  working: 'Working…',
+-  permission: 'Needs your permission',
+-  unknown: 'Session running',
+-}
+-
+-const UNCONFIRMED_STATE_LABEL = 'Status unavailable'
+-
+ const dashboardStore = useDashboardStore()
+-const settingsStore = useSettingsStore()
+-const notificationsStore = useNotificationsStore()
+-const appIntegrations = useAppIntegrations()
+-const runningActionId = ref<string | null>(null)
+-
+-const profile = computed<AppProfileDto | null>(() =>
+-  props.scene ? sceneAppProfile(props.scene, appIntegrations.value) : null
+-)
+-
+-const stateEntry = computed(() => agentStateEntry(profile.value?.status_source))
+-
+-const currentState = computed<AgentStateName>(() => agentStateFor(profile.value?.status_source))
+-
+-const isAgentDetected = computed(() => {
+-  const agentProfile = profile.value
+-  return agentProfile ? detectedProfiles.value.has(agentProfile.id) : false
+-})
+-
+-/**
+- * With app scanning off, "not detected" means "not looked for", so the bar
+- * stays up with the generic actions instead of vanishing on a live agent.
+- */
+-const isAgentPossiblyRunning = computed(() => {
+-  if (!profile.value) return false
+-  if (stateEntry.value || isAgentDetected.value) return true
+-  return !settingsStore.appScanningEnabled
+-})
+-
+-const visibleActions = computed<BarAction[]>(() => {
+-  const agentProfile = profile.value
+-  const stateActions = agentProfile?.state_actions
+-  if (!agentProfile || !stateActions) return []
+-  const entries = stateActions[currentState.value] ?? stateActions.unknown ?? []
+-  const commandsById = new Map(agentProfile.commands.map(command => [command.id, command]))
+-  return entries.flatMap((entry, index) => {
+-    const command = commandsById.get(entry.id)
+-    if (!command) return []
+-    return [{
+-      id: command.id,
+-      label: entry.label ?? command.label,
+-      icon: command.icon,
+-      description: command.description,
+-      isPrimary: index === 0,
+-    }]
+-  })
+-})
++const {
++  profile,
++  stateEntry,
++  currentState,
++  stateLabel,
++  isAgentPossiblyRunning,
++  visibleActions,
++  runningActionId,
++  runAction,
++} = useAgentSession(toRef(props, 'scene'))
+ 
+ const isVisible = computed(() =>
+   !dashboardStore.isEditMode && isAgentPossiblyRunning.value && visibleActions.value.length > 0
+ )
+ 
+-const stateLabel = computed(() => {
+-  const isUnconfirmed = currentState.value === 'unknown' && !isAgentDetected.value
+-  return isUnconfirmed ? UNCONFIRMED_STATE_LABEL : STATE_LABELS[currentState.value]
+-})
+-
+-async function runAction(action: BarAction): Promise<void> {
+-  if (runningActionId.value) return
+-  runningActionId.value = action.id
+-  try {
+-    const result = await dashboardStore.executeAction(
+-      { type: action.id, config: {} },
+-      `agent-bar-${action.id}`,
+-    )
+-    if (!result?.success) {
+-      notificationsStore.error(
+-        `${action.label} failed`,
+-        result?.details || result?.message || 'The agent did not receive it',
+-      )
+-    }
+-  } finally {
+-    runningActionId.value = null
+-  }
+-}
+-
+-watch(
+-  () => [profile.value?.status_source, isVisible.value] as const,
+-  ([source, visible], previous) => {
+-    const previousSource = previous?.[0]
+-    if (previousSource && previousSource !== source) setAgentBarVisible(previousSource, false)
+-    if (source) setAgentBarVisible(source, visible)
+-  },
+-  { immediate: true },
+-)
+-
+-onMounted(() => {
+-  initAgentState()
+-  void loadProfileMaps()
+-})
+-
+-onUnmounted(() => {
+-  const source = profile.value?.status_source
+-  if (source) setAgentBarVisible(source, false)
+-})
++trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisible)
+ </script>
+ 
+ <style scoped>
+diff --git a/frontend/src/components/AgentAlertOverlay.vue b/frontend/src/components/AgentAlertOverlay.vue
+index 399659c..95a9814 100644
+--- a/frontend/src/components/AgentAlertOverlay.vue
++++ b/frontend/src/components/AgentAlertOverlay.vue
+@@ -37,21 +37,24 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
+ <style scoped>
+ /* Sits above everything — dashboard (1000/2000), screensaver (500),
+    tutorial (10000) — the whole point is you can't miss it. */
++/* Readable from arm's length on a 7" panel: every size follows the
++   viewport, so it is large at 1024x600 and still fits a phone. */
+ .agent-alert {
+   position: fixed;
+-  top: 14px;
++  top: clamp(12px, 3vh, 28px);
+   left: 50%;
+   transform: translateX(-50%);
+   z-index: 30000;
+   display: flex;
+   align-items: center;
+-  gap: 16px;
+-  max-width: min(560px, calc(100vw - 24px));
+-  padding: 14px 18px;
+-  border-radius: 16px;
+-  background: rgba(46, 32, 8, 0.96);
+-  border: 1.5px solid #f5a524;
+-  box-shadow: 0 0 0 4px rgba(245, 165, 36, 0.18), 0 14px 44px rgba(0, 0, 0, 0.6);
++  gap: clamp(14px, 2.4vw, 26px);
++  width: min(880px, calc(100vw - 24px));
++  box-sizing: border-box;
++  padding: clamp(14px, 3vh, 26px) clamp(16px, 2.6vw, 30px);
++  border-radius: clamp(16px, 2.6vh, 24px);
++  background: rgba(46, 32, 8, 0.97);
++  border: 2px solid #f5a524;
++  box-shadow: 0 0 0 5px rgba(245, 165, 36, 0.2), 0 18px 56px rgba(0, 0, 0, 0.65);
+   backdrop-filter: blur(10px);
+   color: #ffd89e;
+ }
+@@ -59,21 +62,21 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
+ .alert-icon {
+   position: relative;
+   flex-shrink: 0;
+-  width: 46px;
+-  height: 46px;
+-  border-radius: 12px;
++  width: clamp(52px, 12vh, 84px);
++  height: clamp(52px, 12vh, 84px);
++  border-radius: clamp(12px, 2.2vh, 18px);
+   background: rgba(245, 165, 36, 0.16);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+-  font-size: 1.3rem;
++  font-size: clamp(1.5rem, 5.5vh, 2.4rem);
+   color: #f5a524;
+ }
+ 
+ .alert-pulse {
+   position: absolute;
+   inset: -4px;
+-  border-radius: 14px;
++  border-radius: clamp(14px, 2.6vh, 20px);
+   border: 2px solid rgba(245, 165, 36, 0.6);
+   animation: alert-pulse 1.6s ease-out infinite;
+ }
+@@ -89,16 +92,17 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
+ }
+ 
+ .alert-title {
+-  font-size: 1.05rem;
++  font-size: clamp(1.2rem, 4.4vh, 2rem);
+   font-weight: 700;
++  line-height: 1.2;
+   color: #ffe4b3;
+ }
+ 
+ .alert-message {
+-  font-size: 0.9rem;
+-  line-height: 1.4;
++  font-size: clamp(1rem, 3.2vh, 1.45rem);
++  line-height: 1.35;
+   color: #f0cf9a;
+-  margin-top: 2px;
++  margin-top: 4px;
+   display: -webkit-box;
+   -webkit-line-clamp: 2;
+   -webkit-box-orient: vertical;
+@@ -106,9 +110,9 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
+ }
+ 
+ .alert-project {
+-  font-size: 0.78rem;
++  font-size: clamp(0.85rem, 2.6vh, 1.15rem);
+   color: #c9a061;
+-  margin-top: 4px;
++  margin-top: 6px;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: ellipsis;
+@@ -118,19 +122,55 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
+   flex-shrink: 0;
+   display: flex;
+   align-items: center;
+-  gap: 8px;
+-  padding: 10px 18px;
+-  min-height: 48px;
+-  border-radius: 12px;
++  gap: 10px;
++  padding: 0 clamp(18px, 3vw, 34px);
++  min-height: clamp(52px, 12vh, 84px);
++  border-radius: clamp(12px, 2.2vh, 18px);
+   border: none;
+   background: #f5a524;
+   color: #2a1c04;
+-  font-size: 0.95rem;
++  font-size: clamp(1rem, 3.4vh, 1.5rem);
+   font-weight: 700;
++  white-space: nowrap;
++  touch-action: manipulation;
+   cursor: pointer;
+ }
+ 
+ .alert-dismiss:hover { filter: brightness(1.08); }
++.alert-dismiss:active { transform: scale(0.97); }
++
++/* Phones in portrait: the button drops under the text so the message keeps
++   the full width instead of wrapping one word per line. */
++@media (max-width: 520px) {
++  .agent-alert {
++    flex-wrap: wrap;
++  }
++
++  .alert-body {
++    flex: 1 1 0;
++  }
++
++  .alert-icon {
++    width: 56px;
++    height: 56px;
++    font-size: clamp(1.4rem, 1.2rem + 1vw, 1.6rem);
++  }
++
++  .alert-title {
++    font-size: clamp(1.15rem, 1rem + 1vw, 1.3rem);
++  }
++
++  .alert-message {
++    font-size: clamp(0.95rem, 0.9rem + 0.5vw, 1.05rem);
++  }
++
++  .alert-dismiss {
++    flex: 1 1 100%;
++    justify-content: center;
++    min-height: 56px;
++    font-size: clamp(1.05rem, 1rem + 0.5vw, 1.15rem);
++  }
++}
+ 
+ .alert-pop-enter-active,
+ .alert-pop-leave-active {
+diff --git a/frontend/src/components/ButtonEditor.vue b/frontend/src/components/ButtonEditor.vue
+index 826f671..eb5b171 100644
+--- a/frontend/src/components/ButtonEditor.vue
++++ b/frontend/src/components/ButtonEditor.vue
+@@ -522,6 +522,15 @@
+             The button face becomes a drag track — drag horizontally to set the
+             level. Tap the edges to nudge by one step.
+           </p>
++          <div class="form-group">
++            <label class="checkbox-label">
++              <input v-model="showSliderPresets" type="checkbox" class="checkbox" />
++              Show quick-jump presets (0/25/50/75/100%) under the track
++            </label>
++            <p class="form-help">
++              Turn this off on very small buttons where the row won't fit.
++            </p>
++          </div>
+         </div>
+ 
+         <!-- Press behaviour: when the action fires + push-to-talk release -->
+@@ -1633,6 +1642,14 @@ const multiSteps = ref<MultiStep[]>(
+ )
+ const multiStopOnError = ref(props.button.action?.config?.stop_on_error !== false)
+ 
++// slider: the presets row defaults on, matching SliderButtonFace's own
++// `!== false` fallback — a two-way computed keeps the checkbox in sync
++// with actionConfig without showing "unchecked" for an unset (=on) button.
++const showSliderPresets = computed<boolean>({
++  get: () => actionConfig.value.show_presets !== false,
++  set: (checked) => { actionConfig.value.show_presets = checked }
++})
++
+ // toggle: per-side action + appearance.
+ const toggleOnAction = ref(props.button.action?.config?.on_action)
+ const toggleOffAction = ref(props.button.action?.config?.off_action)
+diff --git a/frontend/src/components/RotateToLandscape.vue b/frontend/src/components/RotateToLandscape.vue
+index 20c593c..cf1f447 100644
+--- a/frontend/src/components/RotateToLandscape.vue
++++ b/frontend/src/components/RotateToLandscape.vue
+@@ -24,14 +24,14 @@ import { useMobileViewport } from '@/utils/mobileViewport'
+ // The deck is landscape-only on phones: a 5-6 column grid can never be
+ // comfortable in portrait. The phone detection itself is shared
+ // (useMobileViewport) so the same flag also strips config affordances.
+-// The screensaver is exempt — it's passive glanceable content with its
+-// own portrait layout (DL-063), not an interactive surface to gate.
+-const props = defineProps<{ screensaverActive?: boolean }>()
++// Surfaces with their own portrait layout are exempt: the screensaver
++// (DL-063) and the mobile agent console (DL-065).
++const props = defineProps<{ portraitAllowed?: boolean }>()
+ const { isMobileViewport, isPortrait } = useMobileViewport()
+ const dismissed = ref(false)
+ 
+ const blocked = computed(() =>
+-  isMobileViewport.value && isPortrait.value && !dismissed.value && !props.screensaverActive
++  isMobileViewport.value && isPortrait.value && !dismissed.value && !props.portraitAllowed
+ )
+ </script>
+ 
+diff --git a/frontend/src/components/SliderButtonFace.vue b/frontend/src/components/SliderButtonFace.vue
+index 79b5880..e5c445a 100644
+--- a/frontend/src/components/SliderButtonFace.vue
++++ b/frontend/src/components/SliderButtonFace.vue
+@@ -28,6 +28,20 @@
+       <div class="slider-fill" :style="{ width: `${fillPct}%` }" />
+       <div class="slider-thumb" :style="{ left: `${fillPct}%` }" />
+     </div>
++    <div v-if="showPresets" class="slider-presets">
++      <button
++        v-for="preset in presets"
++        :key="preset.value"
++        type="button"
++        class="slider-preset"
++        :class="{ active: preset.isActive }"
++        @pointerdown.stop
++        @click="applyPreset(preset.value)"
++      >
++        <FontAwesomeIcon v-if="preset.icon" :icon="preset.icon" />
++        <span v-else>{{ preset.label }}</span>
++      </button>
++    </div>
+   </div>
+ </template>
+ 
+@@ -45,6 +59,10 @@
+  * Dispatches are throttled while dragging (the backend applies real volume —
+  * 60 events/sec of nircmd calls is how sliders get laggy), with a final set on
+  * release so the resting value always lands.
++ *
++ * A row of quick-jump chips (0/25/50/75/100% of the configured range) sits
++ * under the track — `config.show_presets` (default true) turns it off for
++ * buttons too small to fit it.
+  */
+ import { computed, onMounted, ref } from 'vue'
+ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+@@ -100,6 +118,32 @@ const targetIcon = computed(() => {
+   return ['fas', 'adjust']
+ })
+ 
++// Quick-jump chips under the track: the bottom of the range, three even
++// steps across it, and the top — the same "0/25/50/75/100" shape regardless
++// of a custom min/max. Volume's bottom chip reads as mute (an icon, not a
++// number) since that's what tapping it does.
++const showPresets = computed(() => cfg.value.show_presets !== false)
++
++const presets = computed(() => {
++  const range = max.value - min.value
++  const fractions = [0, 0.25, 0.5, 0.75, 1]
++  return fractions.map((fraction) => {
++    const presetValue = clamp(min.value + fraction * range)
++    const isMuteChip = target.value === 'volume' && fraction === 0
++    return {
++      value: presetValue,
++      label: `${Math.round(presetValue)}`,
++      icon: isMuteChip ? ['fas', 'volume-mute'] : null,
++      isActive: Math.round(value.value) === Math.round(presetValue)
++    }
++  })
++})
++
++function applyPreset(presetValue: number) {
++  apply(presetValue, true)
++  vibrate(20)
++}
++
+ function clamp(v: number): number {
+   return Math.min(max.value, Math.max(min.value, Math.round(v / step.value) * step.value))
+ }
+@@ -276,4 +320,35 @@ onMounted(() => {
+ }
+ .compact .slider-track { height: calc(var(--slider-track-h, 28px) * 0.78); }
+ .compact .slider-thumb { width: calc(var(--slider-thumb, 24px) * 0.75); height: calc(var(--slider-thumb, 24px) * 0.75); }
++
++.slider-presets {
++  display: flex;
++  gap: 4px;
++}
++.slider-preset {
++  flex: 1;
++  min-width: 0;
++  height: 20px;
++  border: 1px solid rgba(255, 255, 255, 0.14);
++  border-radius: 6px;
++  background: rgba(255, 255, 255, 0.08);
++  color: inherit;
++  font-size: calc(var(--slider-text, 13px) * 0.62);
++  font-weight: 600;
++  font-variant-numeric: tabular-nums;
++  line-height: 1;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  cursor: pointer;
++  touch-action: manipulation;
++}
++.slider-preset:hover {
++  background: rgba(255, 255, 255, 0.16);
++}
++.slider-preset.active {
++  background: var(--color-primary, #5b8cff);
++  border-color: transparent;
++}
++.compact .slider-preset { height: 16px; font-size: calc(var(--slider-text, 13px) * 0.55); }
+ </style>
+diff --git a/frontend/src/composables/useAgentSession.ts b/frontend/src/composables/useAgentSession.ts
+new file mode 100644
+index 0000000..4335df5
+--- /dev/null
++++ b/frontend/src/composables/useAgentSession.ts
+@@ -0,0 +1,184 @@
++import { computed, onMounted, onUnmounted, ref, watch, type ComputedRef, type Ref } from 'vue'
++import type { AgentStateName, AppProfileDto } from '@/api/appProfiles'
++import type { Scene } from '@/types'
++import { useDashboardStore } from '@/stores/dashboard'
++import { useNotificationsStore } from '@/stores/notifications'
++import { useSettingsStore } from '@/stores/settings'
++import { useAppIntegrations } from '@/composables/useAppIntegrations'
++import { detectedProfiles, loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
++import {
++  agentStateEntry,
++  agentStateFor,
++  initAgentState,
++  setAgentBarVisible,
++  type AgentStateEntry,
++} from '@/services/agentState'
++
++/**
++ * The live agent behind a scene (DL-064, DL-065): which profile it is, what
++ * it is doing, and the actions that fit that moment. Shared by the desktop
++ * action bar and the mobile agent console.
++ */
++
++export interface AgentSessionAction {
++  id: string
++  label: string
++  icon: string
++  description: string
++  isPrimary: boolean
++}
++
++export interface AgentActionResult {
++  success: boolean
++  message?: string
++  details?: string
++}
++
++const STATE_LABELS: Record<AgentStateName, string> = {
++  ready: 'Ready for your prompt',
++  working: 'Working…',
++  permission: 'Needs your permission',
++  unknown: 'Session running',
++}
++
++const UNCONFIRMED_STATE_LABEL = 'Status unavailable'
++const NOT_RUNNING_STATE_LABEL = 'Not running'
++
++export interface AgentSession {
++  profile: ComputedRef<AppProfileDto | null>
++  stateEntry: ComputedRef<AgentStateEntry | undefined>
++  currentState: ComputedRef<AgentStateName>
++  stateLabel: ComputedRef<string>
++  isAgentDetected: ComputedRef<boolean>
++  isAgentPossiblyRunning: ComputedRef<boolean>
++  visibleActions: ComputedRef<AgentSessionAction[]>
++  runningActionId: Ref<string | null>
++  runAction: (action: AgentSessionAction) => Promise<void>
++  sendPrompt: (promptText: string) => Promise<AgentActionResult>
++}
++
++export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
++  const dashboardStore = useDashboardStore()
++  const settingsStore = useSettingsStore()
++  const notificationsStore = useNotificationsStore()
++  const appIntegrations = useAppIntegrations()
++  const runningActionId = ref<string | null>(null)
++
++  const profile = computed<AppProfileDto | null>(() =>
++    scene.value ? sceneAppProfile(scene.value, appIntegrations.value) : null
++  )
++
++  const stateEntry = computed(() => agentStateEntry(profile.value?.status_source))
++
++  const currentState = computed<AgentStateName>(() => agentStateFor(profile.value?.status_source))
++
++  const isAgentDetected = computed(() => {
++    const agentProfile = profile.value
++    return agentProfile ? detectedProfiles.value.has(agentProfile.id) : false
++  })
++
++  /**
++   * With app scanning off, "not detected" means "not looked for", so the
++   * agent counts as possibly running instead of vanishing on a live session.
++   */
++  const isAgentPossiblyRunning = computed(() => {
++    if (!profile.value) return false
++    if (stateEntry.value || isAgentDetected.value) return true
++    return !settingsStore.appScanningEnabled
++  })
++
++  const visibleActions = computed<AgentSessionAction[]>(() => {
++    const agentProfile = profile.value
++    const stateActions = agentProfile?.state_actions
++    if (!agentProfile || !stateActions) return []
++    const entries = stateActions[currentState.value] ?? stateActions.unknown ?? []
++    const commandsById = new Map(agentProfile.commands.map(command => [command.id, command]))
++    return entries.flatMap((entry, index) => {
++      const command = commandsById.get(entry.id)
++      if (!command) return []
++      return [{
++        id: command.id,
++        label: entry.label ?? command.label,
++        icon: command.icon,
++        description: command.description,
++        isPrimary: index === 0,
++      }]
++    })
++  })
++
++  const stateLabel = computed(() => {
++    if (!isAgentPossiblyRunning.value) return NOT_RUNNING_STATE_LABEL
++    const isUnconfirmed = currentState.value === 'unknown' && !isAgentDetected.value
++    return isUnconfirmed ? UNCONFIRMED_STATE_LABEL : STATE_LABELS[currentState.value]
++  })
++
++  async function runAction(action: AgentSessionAction): Promise<void> {
++    if (runningActionId.value) return
++    runningActionId.value = action.id
++    try {
++      const result = await dashboardStore.executeAction(
++        { type: action.id, config: {} },
++        `agent-bar-${action.id}`,
++      )
++      if (!result?.success) {
++        notificationsStore.error(
++          `${action.label} failed`,
++          result?.details || result?.message || 'The agent did not receive it',
++        )
++      }
++    } finally {
++      runningActionId.value = null
++    }
++  }
++
++  async function sendPrompt(promptText: string): Promise<AgentActionResult> {
++    const promptCommand = profile.value?.prompt_command
++    if (!promptCommand) return { success: false, message: 'This agent has no prompt input' }
++    const result = await dashboardStore.executeAction(
++      { type: promptCommand, config: { text: promptText } },
++      `agent-composer-${promptCommand}`,
++    )
++    return result ?? { success: false, message: 'The agent did not receive it' }
++  }
++
++  onMounted(() => {
++    initAgentState()
++    void loadProfileMaps()
++  })
++
++  return {
++    profile,
++    stateEntry,
++    currentState,
++    stateLabel,
++    isAgentDetected,
++    isAgentPossiblyRunning,
++    visibleActions,
++    runningActionId,
++    runAction,
++    sendPrompt,
++  }
++}
++
++/**
++ * Tells the alert overlay that a surface already shows this agent's state
++ * and Approve/Deny, so the overlay doesn't cover it.
++ */
++export function trackAgentSurfaceVisibility(
++  source: ComputedRef<string | null | undefined>,
++  isVisible: ComputedRef<boolean>,
++): void {
++  watch(
++    () => [source.value, isVisible.value] as const,
++    ([currentSource, visible], previous) => {
++      const previousSource = previous?.[0]
++      if (previousSource && previousSource !== currentSource) setAgentBarVisible(previousSource, false)
++      if (currentSource) setAgentBarVisible(currentSource, visible)
++    },
++    { immediate: true },
++  )
++
++  onUnmounted(() => {
++    if (source.value) setAgentBarVisible(source.value, false)
++  })
++}
+diff --git a/frontend/src/services/agentState.ts b/frontend/src/services/agentState.ts
+index 1f84cb7..f5e4286 100644
+--- a/frontend/src/services/agentState.ts
++++ b/frontend/src/services/agentState.ts
+@@ -18,6 +18,10 @@ export interface AgentStateEntry {
+   message: string
+   cwd: string
+   project: string
++  /** Last prompt the user sent in this session (hooks, DL-065). */
++  prompt?: string
++  /** The agent's last reply, plain text. */
++  reply?: string
+   ts: number
+   /** Live sessions of this agent folded into this entry. */
+   session_count?: number
+diff --git a/frontend/src/utils/defaultProfile.ts b/frontend/src/utils/defaultProfile.ts
+index ede86d5..e2073ff 100644
+--- a/frontend/src/utils/defaultProfile.ts
++++ b/frontend/src/utils/defaultProfile.ts
+@@ -160,6 +160,13 @@ function seedScene(
+  * the agent action bar above the grid, which swaps them as Claude's state
+  * changes — the grid only holds what applies in any state.
+  */
++/**
++ * A plain instruction rather than `/commit`: that slash command only exists
++ * when a commit plugin is enabled, and otherwise Enter runs whichever command
++ * autocomplete ranked first.
++ */
++const COMMIT_PROMPT = 'Commit the current changes with a clear, descriptive commit message.'
++
+ function createClaudeCodeScene(ts: number): Scene {
+   const makeButton = seedButton(ts)
+   const brand = '#D97757'
+@@ -199,8 +206,8 @@ function createClaudeCodeScene(ts: number): Scene {
+       label: 'Commit',
+       icon: ['fas', 'code-commit'],
+       style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
+-      action: livePrompt('/commit'),
+-      secondary_label: '/commit',
++      action: livePrompt(COMMIT_PROMPT),
++      secondary_label: 'git commit',
+       position: { row: 0, col: 2 }
+     }),
+     makeButton({
+diff --git a/frontend/src/views/DashboardView.vue b/frontend/src/views/DashboardView.vue
+index 35b8d6c..47c1cc1 100644
+--- a/frontend/src/views/DashboardView.vue
++++ b/frontend/src/views/DashboardView.vue
+@@ -6,7 +6,7 @@
+       v-if="isMobileViewport"
+       :scenes="currentProfile?.scenes || []"
+       :current-scene-index="currentSceneIndex"
+-      :total-pages="currentScene?.pages.length || 1"
++      :total-pages="showsMobileAgentConsole ? 1 : currentScene?.pages.length || 1"
+       :current-page-index="currentPageIndex"
+       @set-scene="setScene"
+       @previous-page="previousPage"
+@@ -56,7 +56,8 @@
+       />
+       
+       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
+-        <template v-if="currentPage">
++        <MobileAgentConsole v-if="currentPage && showsMobileAgentConsole" :scene="currentScene" />
++        <template v-else-if="currentPage">
+           <AgentActionBar :scene="currentScene" />
+           <div class="deck-grid-host">
+             <DeckGrid
+@@ -183,7 +184,7 @@
+     </div>
+ 
+     <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt -->
+-    <RotateToLandscape :screensaver-active="screensaverVisible" />
++    <RotateToLandscape :portrait-allowed="screensaverVisible || showsMobileAgentConsole" />
+   </div>
+ </template>
+ 
+@@ -209,12 +210,15 @@ import QuickAddPicker from '@/components/QuickAddPicker.vue'
+ import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
+ import RotateToLandscape from '@/components/RotateToLandscape.vue'
+ import AgentActionBar from '@/components/AgentActionBar.vue'
++import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
+ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+ import { createDefaultProfile } from '@/utils/defaultProfile'
+ import { useTutorial } from '@/services/tutorial'
+ import { openStandaloneSettings } from '@/utils/openStandaloneSettings'
+ import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
+ import { appBackgroundForScene } from '@/data/appBackgrounds'
++import { loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
++import { agentStateEntry } from '@/services/agentState'
+ import { useAppIntegrations } from '@/composables/useAppIntegrations'
+ import { useButtonActions } from '@/composables/useButtonActions'
+ import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
+@@ -364,6 +368,9 @@ let activeInputElement: HTMLInputElement | HTMLTextAreaElement | null = null
+ 
+ function handleGlobalFocus(event: FocusEvent) {
+   const target = event.target as HTMLElement
++  // Inputs built for the device's own keyboard (the phone console composer)
++  // would get the keypad stacked on top of it.
++  if (target?.closest('[data-native-keyboard]')) return
+   if (
+     target &&
+     (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
+@@ -687,6 +694,25 @@ function closeSidebar() {
+ 
+ // Background preferences
+ const appIntegrations = useAppIntegrations()
++
++// Phones get a portrait console instead of the grid on agent scenes (DL-065).
++const showsMobileAgentConsole = computed(() => {
++  const scene = currentScene.value
++  if (!isMobileViewport.value || !scene || isEditMode.value) return false
++  return Boolean(sceneAppProfile(scene, appIntegrations.value)?.state_actions)
++})
++
++// A reply or permission prompt reaching the phone console is what the user
++// is waiting for, so it wakes the screen like a touch would.
++const mobileConsoleConversationKey = computed(() => {
++  const scene = currentScene.value
++  if (!showsMobileAgentConsole.value || !scene) return null
++  const entry = agentStateEntry(sceneAppProfile(scene, appIntegrations.value)?.status_source)
++  return entry ? [entry.state, entry.prompt, entry.reply].join('\u0000') : null
++})
++watch(mobileConsoleConversationKey, (conversationKey) => {
++  if (conversationKey) dismissScreensaver()
++})
+ // The scene slot resolves to the user's explicit override first; absent that,
+ // an app-associated scene falls back to its bundled app wallpaper.
+ const effectiveSceneBackground = computed(() => {
+@@ -914,6 +940,15 @@ function handleKeyDown(event: KeyboardEvent) {
+ }
+ 
+ onMounted(async () => {
++  // Fetch app-profile metadata (state_actions, prompt_command, …) up front
++  // instead of waiting for AgentActionBar/MobileAgentConsole to mount and
++  // request it themselves. With app scanning off (the default) nothing else
++  // triggers this fetch, so `showsMobileAgentConsole` could otherwise stay
++  // false — grid buttons but no agent controls on a phone — until whichever
++  // surface happens to mount first pulls it in on its own. See DL-065
++  // follow-up.
++  void loadProfileMaps()
++
+   // Load last used profile or first available profile
+   const lastProfileId = localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
+   let profileLoaded = false
