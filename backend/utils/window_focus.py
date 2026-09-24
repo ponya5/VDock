@@ -76,43 +76,120 @@ def find_target_window(
     return matches[0][0]
 
 
+def interactive_desktop_blocked() -> bool:
+    """True while Windows shows the lock screen or its screensaver.
+
+    Input then goes to a separate desktop ('Winlogon' / 'Screen-saver'), so
+    no window can be focused and no keystroke reaches an app -- worth
+    telling the user instead of reporting a generic focus failure.
+    """
+    if platform.system() != 'Windows':
+        return False
+    import ctypes
+    import ctypes.wintypes
+
+    user32 = ctypes.windll.user32
+    desktop_read_objects = 0x0001
+    user_object_name = 2
+    desktop = user32.OpenInputDesktop(0, False, desktop_read_objects)
+    if not desktop:
+        # Access denied to the input desktop is itself the lock screen.
+        return True
+    try:
+        name_buffer = ctypes.create_unicode_buffer(256)
+        needed = ctypes.wintypes.DWORD()
+        if not user32.GetUserObjectInformationW(
+                desktop, user_object_name, name_buffer,
+                ctypes.sizeof(name_buffer), ctypes.byref(needed)):
+            return False
+        return name_buffer.value.lower() != 'default'
+    finally:
+        user32.CloseDesktop(desktop)
+
+
+def _try_set_foreground(hwnd: int) -> bool:
+    """One SetForegroundWindow attempt, attached to the foreground thread's
+    input queue. pywin32 raises when Windows refuses; that is a normal
+    outcome here, not an error."""
+    import win32api
+    import win32gui
+    import win32process
+
+    foreground = win32gui.GetForegroundWindow()
+    attached = False
+    foreground_thread = current_thread = 0
+    if foreground and foreground != hwnd:
+        foreground_thread = win32process.GetWindowThreadProcessId(foreground)[0]
+        current_thread = win32api.GetCurrentThreadId()
+        if foreground_thread != current_thread:
+            attached = bool(win32process.AttachThreadInput(
+                current_thread, foreground_thread, True
+            ))
+    try:
+        win32gui.BringWindowToTop(hwnd)
+        win32gui.SetForegroundWindow(hwnd)
+    except Exception:  # noqa: BLE001 - refusal is signalled by raising
+        pass
+    finally:
+        if attached:
+            win32process.AttachThreadInput(current_thread, foreground_thread, False)
+    time.sleep(0.05)
+    return win32gui.GetForegroundWindow() == hwnd
+
+
+def _tap_alt_key() -> None:
+    """Synthesise an Alt press/release.
+
+    Windows' foreground lock only lets the process that received the last
+    input event change the foreground window. The backend never receives
+    input -- the user tapped the deck -- so a synthetic keystroke from this
+    process is what unlocks SetForegroundWindow. Alt alone has no side
+    effect once released (it is swallowed before any menu opens because a
+    focus change follows immediately).
+    """
+    import win32api
+    import win32con
+
+    win32api.keybd_event(win32con.VK_MENU, 0, win32con.KEYEVENTF_EXTENDEDKEY, 0)
+    win32api.keybd_event(
+        win32con.VK_MENU, 0,
+        win32con.KEYEVENTF_EXTENDEDKEY | win32con.KEYEVENTF_KEYUP, 0,
+    )
+
+
+def _minimise_and_restore(hwnd: int) -> None:
+    """Last resort: a restore from minimised is always allowed to activate."""
+    import win32con
+    import win32gui
+
+    win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+
 def focus_hwnd(hwnd: int) -> bool:
     """Force ``hwnd`` to the foreground. Returns True when it got there.
 
     Windows only lets a process set the foreground window under narrow
-    conditions; attaching to the foreground thread's input queue is the
-    standard way to satisfy them.
+    conditions, so this escalates: plain attach-and-set, then unlock the
+    foreground lock with a synthetic Alt tap, then minimise/restore.
     """
-    import win32api
     import win32con
     import win32gui
-    import win32process
 
     try:
         if win32gui.IsIconic(hwnd):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-
-        foreground = win32gui.GetForegroundWindow()
-        attached = False
-        if foreground and foreground != hwnd:
-            fg_thread = win32process.GetWindowThreadProcessId(foreground)[0]
-            current_thread = win32api.GetCurrentThreadId()
-            if fg_thread != current_thread:
-                win32process.AttachThreadInput(
-                    current_thread, fg_thread, True
-                )
-                attached = True
-        try:
-            win32gui.BringWindowToTop(hwnd)
-            win32gui.SetForegroundWindow(hwnd)
-        finally:
-            if attached:
-                win32process.AttachThreadInput(
-                    current_thread, fg_thread, False
-                )
-
-        time.sleep(0.05)
-        return win32gui.GetForegroundWindow() == hwnd
+        if _try_set_foreground(hwnd):
+            return True
+        _tap_alt_key()
+        if _try_set_foreground(hwnd):
+            return True
+        _minimise_and_restore(hwnd)
+        time.sleep(0.15)
+        if _try_set_foreground(hwnd):
+            return True
+        logger.warning('Windows refused to focus window %s', hwnd)
+        return False
     except Exception as e:
         logger.warning('Could not focus window %s: %s', hwnd, e)
         return False

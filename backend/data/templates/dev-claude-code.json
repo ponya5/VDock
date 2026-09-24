@@ -69,10 +69,9 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_slash",
+            "type": "cc_prompt",
             "config": {
-              "command": "/code-review",
-              "output": "notify"
+              "text": "/code-review"
             }
           },
           "secondary_label": "/code-review"
@@ -100,10 +99,9 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_slash",
+            "type": "cc_prompt",
             "config": {
-              "command": "/commit",
-              "output": "notify"
+              "text": "/commit"
             }
           },
           "secondary_label": "/commit"
@@ -131,10 +129,9 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
+            "type": "cc_prompt",
             "config": {
-              "prompt": "Explain what this code does:\n\n{clipboard}",
-              "output": "both"
+              "text": "Explain what this code does:\n\n{clipboard}"
             }
           },
           "tooltip": "Explains whatever is on the clipboard"
@@ -162,19 +159,18 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
+            "type": "cc_prompt",
             "config": {
-              "prompt": "Write tests for this code:\n\n{clipboard}",
-              "output": "both"
+              "text": "Write tests for this code:\n\n{clipboard}"
             }
           }
         },
         {
           "id": "btn-claude_prompt-1-0",
-          "label": "Ask",
+          "label": "Submit",
           "icon": [
             "fas",
-            "comment-dots"
+            "paper-plane"
           ],
           "icon_type": "fontawesome",
           "position": {
@@ -192,11 +188,8 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
-            "config": {
-              "prompt": "In {project} on branch {branch}: ",
-              "output": "both"
-            }
+            "type": "cc_submit",
+            "config": {}
           }
         },
         {
@@ -222,10 +215,9 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
+            "type": "cc_prompt",
             "config": {
-              "prompt": "continue",
-              "continue_session": true
+              "text": "continue"
             }
           }
         },
@@ -252,10 +244,9 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
+            "type": "cc_prompt",
             "config": {
-              "prompt": "The tests are failing. Find and fix the cause.",
-              "output": "notify"
+              "text": "The tests are failing. Find and fix the cause."
             }
           }
         },
@@ -282,10 +273,9 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
+            "type": "cc_prompt",
             "config": {
-              "prompt": "Summarise the staged changes in {repo}.",
-              "output": "both"
+              "text": "Summarise the staged changes in {repo}."
             }
           }
         },

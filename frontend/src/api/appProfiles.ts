@@ -18,13 +18,26 @@ export interface AppCommandDto {
   requires_session: boolean
 }
 
+/** Agent state reported by hooks; 'unknown' = running but not reporting. */
+export type AgentStateName = 'ready' | 'working' | 'permission' | 'unknown'
+
+/** One agent action-bar entry: a command id, optionally relabelled for its state. */
+export interface StateActionDto {
+  id: string
+  label: string | null
+}
+
 export interface AppProfileDto {
   id: string
   label: string
   exes: string[]
   kind: 'editor' | 'terminal_agent'
+  /** Agent-state source key ('claude', 'cursor', 'devin'), or null. */
   status_source: string | null
   default_layout: string[][]
+  /** Plugin action types owned by the profile (e.g. claude_prompt). */
+  action_types?: string[]
+  state_actions?: Partial<Record<AgentStateName, StateActionDto[]>>
   commands: AppCommandDto[]
 }
 

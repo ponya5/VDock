@@ -491,6 +491,9 @@ def test_cc_host_window_reports_when_focus_fails(mocker):
         return_value=4321)
     mocker.patch('integrations.editor_base.window_focus.focus_hwnd',
                  return_value=False)
+    mocker.patch(
+        'integrations.editor_base.window_focus.interactive_desktop_blocked',
+        return_value=False)
     mocker.patch('integrations.editor_base.time.sleep')
     macro = mocker.patch('integrations.editor_base.MacroAction')
 
@@ -498,6 +501,26 @@ def test_cc_host_window_reports_when_focus_fails(mocker):
 
     assert result['success'] is False
     assert 'focus' in result['message'].lower()
+    macro.assert_not_called()
+
+
+def test_cc_focus_failure_names_the_lock_screen_or_screensaver(mocker):
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch(
+        'integrations.editor_base.window_focus.find_session_host_window',
+        return_value=4321)
+    mocker.patch('integrations.editor_base.window_focus.focus_hwnd',
+                 return_value=False)
+    mocker.patch(
+        'integrations.editor_base.window_focus.interactive_desktop_blocked',
+        return_value=True)
+    mocker.patch('integrations.editor_base.time.sleep')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_submit', {})
+
+    assert result['success'] is False
+    assert 'screensaver' in result['message']
     macro.assert_not_called()
 
 

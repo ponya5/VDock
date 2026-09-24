@@ -75,6 +75,18 @@ def _resolve_session_host(command: Command,
     )
 
 
+def _focus_failure(message: str, details: str) -> Dict[str, Any]:
+    if window_focus.interactive_desktop_blocked():
+        return {
+            'success': False,
+            'message': 'The PC is locked or its screensaver is on',
+            'details': 'Windows routes input to the lock screen / '
+                       'screensaver, so no app can receive keystrokes. '
+                       'Wake the PC and press again.',
+        }
+    return {'success': False, 'message': message, 'details': details}
+
+
 def send(command: Command, text_override: Optional[str] = None,
          enforce_focus: bool = True, focus_first: bool = True,
          allow_destructive: bool = False,
@@ -126,12 +138,11 @@ def send(command: Command, text_override: Optional[str] = None,
         if host_hwnd is not None:
             if focus_first:
                 if not window_focus.focus_hwnd(host_hwnd):
-                    return {
-                        'success': False,
-                        'message': 'Could not focus the session window',
-                        'details': 'The window hosting the session was found '
-                                   'but Windows would not bring it forward.',
-                    }
+                    return _focus_failure(
+                        'Could not focus the session window',
+                        'The window hosting the session was found but '
+                        'Windows would not bring it forward.',
+                    )
                 time.sleep(FOCUS_SETTLE_SECONDS)
             fg = window_focus.foreground_hwnd()
             if fg is not None and fg != host_hwnd:
@@ -163,12 +174,10 @@ def send(command: Command, text_override: Optional[str] = None,
 
             current = foreground_exe()
             if current is None:
-                return {
-                    'success': False,
-                    'message': 'Could not determine the focused window',
-                    'details': 'Refusing to send keystrokes when the target '
-                               'is unknown.',
-                }
+                return _focus_failure(
+                    'Could not determine the focused window',
+                    'Refusing to send keystrokes when the target is unknown.',
+                )
             if current not in command.target_exes:
                 expected = ' or '.join(command.target_exes)
                 return {

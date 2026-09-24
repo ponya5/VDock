@@ -1,4 +1,14 @@
 """Main Flask application for VDock backend."""
+import sys
+
+# `python app.py` runs this file as `__main__`. Routes that lazily
+# `from app import action_executor` would otherwise execute it a second time
+# as module `app` -- building a second, unserved SocketIO and re-pointing
+# every broadcaster (agent state, alerts, background-job results) at it, so
+# no server push would ever reach a client again.
+if __name__ == '__main__':
+    sys.modules.setdefault('app', sys.modules[__name__])
+
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit

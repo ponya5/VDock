@@ -57,6 +57,7 @@
       
       <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
         <template v-if="currentPage">
+          <AgentActionBar :scene="currentScene" />
           <DeckGrid
             :page="currentPage"
             :is-edit-mode="isEditMode"
@@ -205,6 +206,7 @@ import EditSidebar from '@/components/EditSidebar.vue'
 import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
 import RotateToLandscape from '@/components/RotateToLandscape.vue'
+import AgentActionBar from '@/components/AgentActionBar.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useTutorial } from '@/services/tutorial'

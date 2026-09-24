@@ -1243,9 +1243,9 @@
               <div class="panel-head">
                 <h2>Agent attention alerts</h2>
                 <span class="spacer"></span>
-                <span v-if="agentHookStatus" class="chip" :class="{ 'chip-ok': agentHookInstalled }">
-                  <FontAwesomeIcon :icon="['fas', agentHookInstalled ? 'circle-check' : 'circle-xmark']" />
-                  {{ agentHookInstalled ? 'Claude hook installed' : 'Hook not installed' }}
+                <span v-if="agentHooks.claude.known" class="chip" :class="{ 'chip-ok': agentHooks.claude.installed }">
+                  <FontAwesomeIcon :icon="['fas', agentHooks.claude.installed ? 'circle-check' : 'circle-xmark']" />
+                  {{ agentHooks.claude.installed ? 'Claude hook installed' : 'Hook not installed' }}
                 </span>
               </div>
               <div class="panel-body">
@@ -1258,15 +1258,15 @@
                     <label class="switch"><span class="sr-only">Agent attention alerts</span><input type="checkbox" :checked="settingsStore.agentAlertsEnabled" @change="toggleAgentAlerts" /><span class="track"></span></label>
                   </div>
                 </div>
-                <div class="row">
+                <div v-for="hookAgent in AGENT_HOOK_TARGETS" :key="hookAgent.id" class="row">
                   <div class="row-text">
-                    <span class="label">Claude Code hook</span>
-                    <p>Adds a Notification/Stop hook to <code class="kv-code">~/.claude/settings.json</code>. Other agents can POST <code class="kv-code">/api/agent-events</code> with <code class="kv-code">{source, event: "waiting"|"clear"}</code>.</p>
+                    <span class="label">{{ hookAgent.label }} hook</span>
+                    <p>Adds a state hook to <code class="kv-code">{{ hookAgent.settingsFile }}</code> so the deck knows when {{ hookAgent.label }} is ready for a prompt, working, or waiting for permission — and shows the matching buttons.</p>
                   </div>
                   <div class="row-control">
-                    <button type="button" class="btn sm" @click="installAgentHook" :disabled="installingHook">
-                      <FontAwesomeIcon :icon="['fas', installingHook ? 'spinner' : 'plug']" :spin="installingHook" />
-                      {{ agentHookInstalled ? 'Reinstall' : 'Install' }}
+                    <button type="button" class="btn sm" @click="installAgentHook(hookAgent.id)" :disabled="agentHooks[hookAgent.id].installing">
+                      <FontAwesomeIcon :icon="['fas', agentHooks[hookAgent.id].installing ? 'spinner' : 'plug']" :spin="agentHooks[hookAgent.id].installing" />
+                      {{ agentHookButtonLabel(hookAgent.id) }}
                     </button>
                   </div>
                 </div>
@@ -1482,7 +1482,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref, watch, nextTick } from 'vue'
+import { onMounted, computed, ref, reactive, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
@@ -2656,42 +2656,76 @@ function toggleAppScanning() {
 }
 
 // --- Agent attention alerts -------------------------------------------------
-const agentHookInstalled = ref(false)
-const agentHookStatus = ref(false) // whether we've asked the backend yet
-const installingHook = ref(false)
+type HookAgentId = 'claude' | 'cursor'
+
+interface AgentHookState {
+  /** Whether the backend has answered a status request yet. */
+  known: boolean
+  installed: boolean
+  /** An older install that hooks only some of the events. */
+  partial: boolean
+  installing: boolean
+}
+
+const AGENT_HOOK_TARGETS: ReadonlyArray<{ id: HookAgentId; label: string; settingsFile: string }> = [
+  { id: 'claude', label: 'Claude Code', settingsFile: '~/.claude/settings.json' },
+  { id: 'cursor', label: 'Cursor', settingsFile: '~/.cursor/hooks.json' },
+]
+
+function createAgentHookState(): AgentHookState {
+  return { known: false, installed: false, partial: false, installing: false }
+}
+
+const agentHooks = reactive<Record<HookAgentId, AgentHookState>>({
+  claude: createAgentHookState(),
+  cursor: createAgentHookState(),
+})
 
 function toggleAgentAlerts() {
   settingsStore.agentAlertsEnabled = !settingsStore.agentAlertsEnabled
 }
 
-async function fetchAgentHookStatus() {
-  try {
-    const res = await apiClient.get('/agent-events/hook-status')
-    agentHookInstalled.value = !!res.data?.installed
-    agentHookStatus.value = true
-  } catch {
-    agentHookStatus.value = false
-  }
+function agentHookButtonLabel(agent: HookAgentId): string {
+  const hookState = agentHooks[agent]
+  if (hookState.partial) return 'Update'
+  return hookState.installed ? 'Reinstall' : 'Install'
 }
 
-async function installAgentHook() {
-  installingHook.value = true
-  try {
-    const res = await apiClient.post('/agent-events/install-hook')
-    if (res.data?.success) {
-      agentHookInstalled.value = true
-      agentHookStatus.value = true
-      notificationsStore.success(
-        'Agent alerts enabled',
-        'Claude Code will pop an alert when it waits for you.'
-      )
-    } else {
-      notificationsStore.error('Hook install failed', res.data?.error || 'Unknown error')
+async function fetchAgentHookStatus() {
+  await Promise.all(AGENT_HOOK_TARGETS.map(async ({ id }) => {
+    try {
+      const res = await apiClient.get('/agent-events/hook-status', { params: { agent: id } })
+      agentHooks[id].installed = !!res.data?.installed
+      agentHooks[id].partial = !!res.data?.partial
+      agentHooks[id].known = true
+    } catch (error) {
+      console.error(`Failed to read ${id} hook status:`, error)
+      agentHooks[id].known = false
     }
+  }))
+}
+
+async function installAgentHook(agent: HookAgentId) {
+  const hookState = agentHooks[agent]
+  const agentLabel = AGENT_HOOK_TARGETS.find(target => target.id === agent)?.label ?? agent
+  hookState.installing = true
+  try {
+    const res = await apiClient.post('/agent-events/install-hook', null, { params: { agent } })
+    if (!res.data?.success) {
+      notificationsStore.error('Hook install failed', res.data?.error || 'Unknown error')
+      return
+    }
+    hookState.installed = true
+    hookState.partial = false
+    hookState.known = true
+    notificationsStore.success(
+      `${agentLabel} hook installed`,
+      `The deck now follows ${agentLabel}'s state. Restart running ${agentLabel} sessions to pick it up.`
+    )
   } catch (e: any) {
     notificationsStore.error('Hook install failed', e?.response?.data?.error || 'Backend unreachable')
   } finally {
-    installingHook.value = false
+    hookState.installing = false
   }
 }
 

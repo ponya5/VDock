@@ -86,6 +86,8 @@ const aiAssistants: AppTemplate[] = [
 const aiCoding: AppTemplate[] = [
   { id: "claude-code", name: "Claude Code", description: "Anthropic Claude Code CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/claudecode-color.png", color: "#d97757", buttons: [
     // Live-session controls: keystrokes into the terminal running Claude Code.
+    { label: "Submit", icon: ["fas","paper-plane"], action: { type: "cc_submit", config: {} }, tooltip: "Send the prompt you typed (Enter)" },
+    { label: "Continue", icon: ["fas","forward"], action: { type: "cc_prompt", config: { text: "continue" } }, tooltip: "Type \"continue\" and send it" },
     { label: "Interrupt", icon: ["fas","hand"], action: { type: "cc_interrupt", config: {} }, tooltip: "Stop the current response (Esc)" },
     { label: "New Session", icon: ["fas","plus"], action: { type: "cc_clear", config: {} }, tooltip: "/clear — fresh session" },
     { label: "Resume", icon: ["fas","rotate-right"], action: { type: "cc_resume", config: {} }, tooltip: "/resume — pick up a session" },

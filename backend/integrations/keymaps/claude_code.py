@@ -18,6 +18,7 @@ from .base import (
     RISK_INPUT,
     RISK_SAFE,
     TERMINAL_EXES,
+    state_actions_of,
 )
 
 _CLAUDE = {
@@ -28,6 +29,8 @@ _CLAUDE = {
     # tree, so these work inside Devin/Cursor/any terminal, not just exes in
     # TERMINAL_EXES.
     'session_marker': 'claude',
+    # Ctrl+J is Claude Code's newline: a multi-line prompt stays one prompt.
+    'newline_keys': ('ctrl', 'j'),
     'category': 'general',
 }
 
@@ -53,6 +56,14 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
                     'Defaults to "continue".',
         keys=(), icon='paper-plane', types_text='continue', submit=True,
         keywords=('claude', 'prompt', 'continue', 'send', 'ask', 'type'),
+        risk=RISK_INPUT, requires_session=True,
+        priority=10, **_CLAUDE,
+    ),
+    Command(
+        id='cc_submit', label='Submit',
+        description='Send the prompt you typed in the session (Enter).',
+        keys=('enter',), icon='paper-plane',
+        keywords=('claude', 'submit', 'send', 'enter', 'prompt', 'go'),
         risk=RISK_INPUT, requires_session=True,
         priority=10, **_CLAUDE,
     ),
@@ -368,8 +379,7 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
 CLAUDE_CODE_PROFILE = AppProfile(
     id='claude-code', label='Claude Code', exes=TERMINAL_EXES,
     commands=CLAUDE_CODE_COMMANDS, kind='terminal_agent',
-    # Hooks land in Phase 3; until then sessions are detected by process scan.
-    status_source=None,
+    status_source='claude',
     # claude_pack's plugin actions — a scene built of these still votes for
     # this profile even though none of its buttons carry a cc_* command id.
     action_types=(
@@ -380,5 +390,26 @@ CLAUDE_CODE_PROFILE = AppProfile(
         ('cc_prompt', 'cc_interrupt', 'cc_approve', 'cc_deny'),
         ('cc_clear', 'cc_mode', 'cc_rewind', 'cc_todos'),
         ('cc_resume', 'cc_compact', 'cc_add_file', 'cc_model'),
+    ),
+    # Permission dialogs are option lists: Enter takes the highlighted
+    # option (Yes by default), Esc declines -- correct across versions,
+    # unlike typed y/n.
+    state_actions=(
+        ('ready', state_actions_of(
+            'cc_submit', ('cc_prompt', 'Continue'), 'cc_newline',
+            ('cc_mode', 'Mode'), 'cc_clear', ('cc_compact', 'Compact'),
+        )),
+        ('working', state_actions_of(
+            ('cc_interrupt', 'Interrupt'), ('cc_queue', 'Queue'),
+            ('cc_background', 'Background'), ('cc_todos', 'To-dos'),
+        )),
+        ('permission', state_actions_of(
+            ('cc_accept', 'Approve'), ('cc_nav_up', 'Option ↑'),
+            ('cc_nav_down', 'Option ↓'), ('cc_interrupt', 'Deny'),
+        )),
+        ('unknown', state_actions_of(
+            'cc_submit', ('cc_prompt', 'Continue'),
+            ('cc_interrupt', 'Interrupt'), ('cc_accept', 'Enter'),
+        )),
     ),
 )

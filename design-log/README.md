@@ -37,6 +37,7 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-061](DL-061-mobile-control-surface.md) | Mobile = control surface only | Implemented — edit mode blocked, config buttons hidden, long-press edit gestures gated on phone viewports |
 | [DL-062](DL-062-mobile-layout-fit.md) | Mobile dashboard layout fit | Implemented — docked sidebar hidden, header overlay + slim, reveal pill off the buttons, slim footer |
 | [DL-063](DL-063-mobile-dedicated-surfaces.md) | Dedicated mobile chrome + screensaver | Implemented — MobileDeckChrome (scene rail, page steppers, ⋯ menu), screensaver = clock + world clock only |
+| [DL-064](DL-064-agent-state-aware-actions.md) | Agent state-aware actions | Implemented — hook-driven agent state (ready/working/permission), state-aware action bar, scene buttons type into the live CLI, Submit |
 
 **Status values:** Planned → In progress → Complete.
 

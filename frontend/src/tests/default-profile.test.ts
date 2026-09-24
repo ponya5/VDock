@@ -36,6 +36,7 @@ test('seeded buttons use only no-key action types', () => {
   const allowed = new Set([
     'url', 'hotkey', 'cross_platform', 'macro',
     'claude_continue', 'claude_slash', 'claude_prompt', 'claude_open',
+    'cc_submit', 'cc_prompt', 'cc_interrupt',
     'cursor_composer', 'cursor_chat', 'cursor_inline_edit', 'cursor_accept',
     'cursor_reject', 'cursor_toggle_terminal', 'cursor_quick_open',
     'cursor_command_palette'

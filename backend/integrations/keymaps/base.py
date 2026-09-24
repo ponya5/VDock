@@ -74,6 +74,10 @@ class Command:
     #: Ctrl+X Enter (queue submit): ``keys=('ctrl','x')`` plus
     #: ``after_keys=(('ctrl','k'),)``.
     after_keys: Tuple[Tuple[str, ...], ...] = ()
+    #: Chord that inserts a line break without submitting. When set, typed
+    #: text is split on newlines and each break sent as this chord -- in a
+    #: TUI a raw newline is Enter and would submit the first line alone.
+    newline_keys: Tuple[str, ...] = ()
     #: Mirrors the categories the frontend shortcut list used.
     category: str = 'general'
     #: Higher sorts earlier when auto-populating a deck.
@@ -98,13 +102,44 @@ class Command:
         if text:
             # The editor needs a moment to focus its input before typing.
             steps.append({'type': 'delay', 'delay': 350})
-            steps.append({'type': 'text', 'text': text})
+            steps.extend(self._text_steps(text))
 
         if self.submit and text:
             steps.append({'type': 'delay', 'delay': 120})
             steps.append({'type': 'hotkey', 'keys': ['enter']})
 
         return steps
+
+    def _text_steps(self, text: str) -> List[Dict[str, Any]]:
+        if not self.newline_keys:
+            return [{'type': 'text', 'text': text}]
+        steps: List[Dict[str, Any]] = []
+        lines = text.replace('\r\n', '\n').split('\n')
+        for line_index, line in enumerate(lines):
+            if line_index:
+                steps.append({'type': 'hotkey', 'keys': list(self.newline_keys)})
+            if line:
+                steps.append({'type': 'text', 'text': line})
+        return steps
+
+
+@dataclass(frozen=True)
+class StateAction:
+    """One agent action-bar entry: a command, optionally relabelled for the
+    state it appears in (Enter reads "Approve" in a permission prompt)."""
+    command_id: str
+    label: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {'id': self.command_id, 'label': self.label}
+
+
+def state_actions_of(*entries: Any) -> Tuple[StateAction, ...]:
+    """Build StateActions from command ids or (command_id, label) pairs."""
+    return tuple(
+        StateAction(*entry) if isinstance(entry, tuple) else StateAction(entry)
+        for entry in entries
+    )
 
 
 @dataclass(frozen=True)
@@ -122,13 +157,19 @@ class AppProfile:
     #: 'editor' focuses the app itself; 'terminal_agent' runs inside a terminal.
     kind: str = 'editor'
     default_layout: Tuple[Tuple[str, ...], ...] = ()
-    #: Where live status comes from, e.g. 'claude_hooks'. None means no status.
+    #: Agent-state source key reported by this app's hooks ('claude',
+    #: 'cursor', see integrations/agent_state). None means no live status.
     status_source: Optional[str] = None
     #: Action-type ids owned by this profile that are NOT keymap commands --
     #: plugin actions like claude_pack's `claude_prompt`. The frontend's
     #: scene→app vote maps these to the profile so a scene built purely of
     #: plugin buttons still resolves (DL-033 follow-up).
     action_types: Tuple[str, ...] = ()
+    #: Agent state ('ready' | 'working' | 'permission' | 'unknown') -> the
+    #: actions that fit it, in display order. Drives the dashboard's agent
+    #: action bar (DL-064). 'unknown' is used when the agent runs but
+    #: reports no state (no hook installed).
+    state_actions: Tuple[Tuple[str, Tuple[StateAction, ...]], ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialise for GET /api/app-profiles."""
@@ -140,6 +181,10 @@ class AppProfile:
             'status_source': self.status_source,
             'action_types': list(self.action_types),
             'default_layout': [list(row) for row in self.default_layout],
+            'state_actions': {
+                state: [action.to_dict() for action in actions]
+                for state, actions in self.state_actions
+            },
             'commands': [
                 {
                     'id': cmd.id,

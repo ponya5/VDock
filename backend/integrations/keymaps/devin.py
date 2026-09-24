@@ -14,6 +14,7 @@ from .base import (
     RISK_INPUT,
     RISK_SAFE,
     TERMINAL_EXES,
+    state_actions_of,
 )
 
 _DEVIN = {
@@ -53,6 +54,13 @@ DEVIN_COMMANDS: Tuple[Command, ...] = (
         risk=RISK_INPUT, requires_session=True, priority=10, **_DEVIN,
     ),
     Command(
+        id='devin_submit', label='Submit',
+        description='Send the prompt you typed in the session (Enter).',
+        keys=('enter',), icon='paper-plane',
+        keywords=('devin', 'submit', 'send', 'enter', 'prompt'),
+        risk=RISK_INPUT, requires_session=True, priority=10, **_DEVIN,
+    ),
+    Command(
         id='devin_exit', label='Quit Devin',
         description='Exit the session (Ctrl+C twice).',
         keys=('ctrl', 'c'), icon='power-off', repeat=2,
@@ -64,7 +72,14 @@ DEVIN_COMMANDS: Tuple[Command, ...] = (
 DEVIN_PROFILE = AppProfile(
     id='devin', label='Devin CLI', exes=TERMINAL_EXES,
     commands=DEVIN_COMMANDS, kind='terminal_agent',
+    status_source='devin',
     default_layout=(
         ('devin_prompt', 'devin_interrupt', 'devin_help', 'devin_exit'),
+    ),
+    state_actions=(
+        ('unknown', state_actions_of(
+            'devin_submit', ('devin_prompt', 'Continue'),
+            ('devin_interrupt', 'Interrupt'),
+        )),
     ),
 )

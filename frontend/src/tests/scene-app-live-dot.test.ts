@@ -47,7 +47,7 @@ describe('appDetection service', () => {
     const fnStart = service.indexOf('export function sceneAppIsLive')
     const body = service.slice(fnStart)
     const detectedRead = body.indexOf('detectedProfiles.value')
-    const firstBranch = body.indexOf('if (scene.appId)')
+    const firstBranch = body.indexOf('if (profileId)')
     expect(detectedRead).toBeGreaterThan(-1)
     expect(detectedRead).toBeLessThan(firstBranch)
   })
@@ -152,5 +152,15 @@ describe('sceneAppIsLive behavior', () => {
     expect(svc.sceneAppIsLive(sceneWith({ triggeredByApp: 'spotify.exe' }) as any)).toBe(false)
     // Unassociated scene → false.
     expect(svc.sceneAppIsLive(sceneWith({}) as any)).toBe(false)
+  })
+
+  it('resolves the full profile for a scene (agent action bar, DL-064)', async () => {
+    const svc = await loadService()
+    const claudeScene = sceneWith({
+      pages: [{ buttons: [{ action: { type: 'claude_continue' } }, { action: { type: 'cc_prompt' } }] }],
+    })
+    expect(svc.sceneAppProfile(claudeScene as any)?.id).toBe('claude-code')
+    expect(svc.sceneAppProfile(sceneWith({ triggeredByApp: 'Cursor.exe' }) as any)?.id).toBe('cursor')
+    expect(svc.sceneAppProfile(sceneWith({}) as any)).toBeNull()
   })
 })

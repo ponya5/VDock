@@ -1,9 +1,25 @@
 """Cursor keybindings."""
 from typing import Tuple
 
-from .base import AppProfile, Command, CURSOR_EXES
+from .base import AppProfile, Command, CURSOR_EXES, RISK_INPUT, state_actions_of
 
 CURSOR_COMMANDS: Tuple[Command, ...] = (
+    Command(
+        id='cursor_submit', label='Submit',
+        description='Send the message typed in the chat / agent input '
+                    '(Enter).',
+        keys=('enter',), icon='paper-plane',
+        keywords=('cursor', 'submit', 'send', 'enter', 'prompt'),
+        target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
+    ),
+    Command(
+        id='cursor_cancel', label='Stop Generating',
+        description='Cancel the running agent / chat generation '
+                    '(Ctrl+Shift+Backspace).',
+        keys=('ctrl', 'shift', 'backspace'), icon='hand',
+        keywords=('cursor', 'stop', 'cancel', 'interrupt', 'generation'),
+        target_exes=CURSOR_EXES,
+    ),
     Command(
         id='cursor_chat', label='Cursor Chat',
         description='Open the Cursor AI chat pane.',
@@ -84,6 +100,21 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
 CURSOR_PROFILE = AppProfile(
     id='cursor', label='Cursor', exes=CURSOR_EXES,
     commands=CURSOR_COMMANDS, kind='editor',
+    status_source='cursor',
+    state_actions=(
+        ('ready', state_actions_of(
+            'cursor_submit', ('cursor_new_chat', 'New Chat'),
+            ('cursor_accept', 'Accept'), ('cursor_reject', 'Reject'),
+        )),
+        ('working', state_actions_of(
+            'cursor_cancel', ('cursor_accept', 'Accept'),
+            ('cursor_reject', 'Reject'),
+        )),
+        ('unknown', state_actions_of(
+            'cursor_submit', ('cursor_accept', 'Accept'),
+            ('cursor_reject', 'Reject'), ('cursor_chat', 'Chat'),
+        )),
+    ),
     default_layout=(
         ('cursor_composer', 'cursor_chat', 'cursor_accept', 'cursor_reject'),
         ('cursor_inline_edit', 'cursor_new_chat', 'cursor_toggle_terminal', 'cursor_quick_open'),

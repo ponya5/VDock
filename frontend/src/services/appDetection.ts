@@ -20,12 +20,15 @@
  *
  * Module-level singleton: one poller no matter how many consumers.
  */
-import { ref, type Ref } from 'vue'
+import { ref, shallowRef, type Ref } from 'vue'
 import apiClient from '@/api/client'
+import type { AppProfileDto } from '@/api/appProfiles'
 import type { Scene, AppIntegration } from '@/types'
 
 const detectedProfiles: Ref<Set<string>> = ref(new Set())
 const runningExes: Ref<Set<string>> = ref(new Set())
+/** Full profile DTOs by id — reactive so consumers re-render once loaded. */
+const profilesById = shallowRef<Map<string, AppProfileDto>>(new Map())
 
 /** exe (lowercase) → profile id, command id → profile id — built from
  * /api/app-profiles. Last write wins, same rule the backend uses for shared
@@ -39,11 +42,15 @@ let profilesLoaded = false
 
 const POLL_MS = 10_000
 
-async function loadProfileMaps(): Promise<void> {
+/** Load /api/app-profiles once. Detection polling calls it too; consumers
+ * that need profiles while scanning is off (the agent bar) call it directly. */
+export async function loadProfileMaps(): Promise<void> {
   if (profilesLoaded) return
   try {
     const res = await apiClient.get('/app-profiles')
-    for (const p of res?.data?.profiles ?? []) {
+    const loadedProfiles: AppProfileDto[] = res?.data?.profiles ?? []
+    profilesById.value = new Map(loadedProfiles.map(profile => [profile.id, profile]))
+    for (const p of loadedProfiles) {
       for (const exe of p.exes ?? []) {
         profileIdByExe.set(String(exe).toLowerCase(), p.id)
       }
@@ -121,9 +128,29 @@ function profileIdBySceneCommands(
   return best
 }
 
+type SceneLink = Pick<Scene, 'id' | 'appId' | 'triggeredByApp' | 'pages'>
+
+function sceneExe(scene: SceneLink, integrations?: readonly AppIntegration[]): string | null {
+  const integ = integrations?.find(i => i.sceneId === scene.id && i.enabled)
+  const exe = scene.triggeredByApp ?? integ?.appExe
+  return exe ? exe.toLowerCase() : null
+}
+
+/** The app-profile id a scene belongs to, or null (see resolution order above). */
+function resolveSceneProfileId(
+  scene: SceneLink,
+  integrations?: readonly AppIntegration[],
+): string | null {
+  if (scene.appId) return scene.appId
+  const commandProfile = profileIdBySceneCommands(scene)
+  if (commandProfile) return commandProfile
+  const exe = sceneExe(scene, integrations)
+  return exe ? profileIdByExe.get(exe) ?? null : null
+}
+
 /** The app's live state for a scene, or false when it isn't app-linked. */
 export function sceneAppIsLive(
-  scene: Pick<Scene, 'id' | 'appId' | 'triggeredByApp' | 'pages'>,
+  scene: SceneLink,
   integrations?: readonly AppIntegration[],
 ): boolean {
   // Read both refs unconditionally — an early return before a `.value` read
@@ -132,20 +159,22 @@ export function sceneAppIsLive(
   const detected = detectedProfiles.value
   const running = runningExes.value
 
-  if (scene.appId) return detected.has(scene.appId)
-
-  const commandProfile = profileIdBySceneCommands(scene)
-  if (commandProfile) return detected.has(commandProfile)
-
-  const integ = integrations?.find(i => i.sceneId === scene.id && i.enabled)
-  const exe = scene.triggeredByApp ?? integ?.appExe
-  if (!exe) return false
-
-  const exeKey = exe.toLowerCase()
-  const profileId = profileIdByExe.get(exeKey)
+  const profileId = resolveSceneProfileId(scene, integrations)
   // Known app → trust the marker/exe-verified profile detection. Unknown
   // exe (custom integration, e.g. spotify.exe) → raw running check.
-  return profileId ? detected.has(profileId) : running.has(exeKey)
+  if (profileId) return detected.has(profileId)
+  const exe = sceneExe(scene, integrations)
+  return exe ? running.has(exe) : false
+}
+
+/** The full app profile a scene belongs to, once profiles have loaded. */
+export function sceneAppProfile(
+  scene: SceneLink,
+  integrations?: readonly AppIntegration[],
+): AppProfileDto | null {
+  const profiles = profilesById.value
+  const profileId = resolveSceneProfileId(scene, integrations)
+  return profileId ? profiles.get(profileId) ?? null : null
 }
 
 export { detectedProfiles, runningExes }
