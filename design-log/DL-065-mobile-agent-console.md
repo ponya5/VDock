@@ -269,3 +269,63 @@ agent surface mounts first pulls it in via `useAgentSession`'s `onMounted`:
 - Not yet re-verified live on the reporting user's physical device (no
   access to it from this session) — flagged for the user to confirm on
   their phone.
+
+## Follow-up 2: drop the composer entirely — actions/shortcuts only (2026-09-25)
+
+### Problem
+
+Live on a phone, the console's original design didn't hold up:
+
+1. The empty-state "conversation" card (`.mac-conversation` with no
+   messages yet) rendered as a huge, mostly-empty box — "Type below — your
+   message is typed into Claude Code on your PC and sent" — dominating the
+   screen above the actual controls.
+2. The user didn't want free-text prompting on mobile at all: a phone's
+   on-screen keyboard eating the screen for something typed one-handed is a
+   worse experience than just tapping a purpose-built action, and every
+   state-driven action (Submit, Continue, Interrupt, …) plus the scene's own
+   shortcuts (Open Claude, Review, Commit, Explain, Write Tests, Fix Tests,
+   …) already covers what a typed follow-up would have said.
+
+This directly reverses this entry's original problem statement #1 ("Say
+something — there is no way to write a prompt on the phone"): once live,
+that turned out to be solving a problem the user didn't actually have on a
+phone, where the state actions and per-scene shortcut buttons are enough.
+
+### Fix
+
+- Removed the entire `<form class="mac-composer">` (textarea + send button)
+  and every script/style piece that only existed to support it:
+  `hasComposer`, `composerPlaceholder`, `isComposerLocked`, `canSend`,
+  `resizeComposer`, `submitDraft`, the `draft`/`isSending`/`composerRef`
+  refs, the `sendPrompt` destructure from `useAgentSession`, and the
+  `.mac-composer`/`.mac-composer-input`/`.mac-send` styles (including their
+  landscape media-query overrides).
+- `emptyStateText` no longer branches on whether a composer exists — it
+  always reads "Use the buttons below to drive {agent} on your PC."
+- The empty-state card (`.mac-conversation--empty`) switched from `flex: 1`
+  (grow to fill all remaining space) to `flex: 0 0 auto` and a row layout
+  for its icon + text, so it claims only the room one line of text needs.
+  A conversation with real messages is unaffected — it still keeps
+  `flex: 1` to grow and scroll normally.
+- Free-text prompting (`sendPrompt`, `prompt_command`) remains fully intact
+  for desktop's `AgentActionBar` — this change is mobile-only.
+
+### Trade-offs
+
+- A phone can no longer send an arbitrary custom message to the agent —
+  only what a state action or scene shortcut already expresses. This is
+  the explicit, intentional trade the user asked for; genuinely novel
+  prompts still need the desktop.
+
+### Verification
+
+- `mobile-agent-console.test.ts`: replaced the four composer-specific tests
+  (typing/sending, failure handling, permission-lock, native-keyboard
+  attribute) with `never renders a text composer — actions and shortcuts
+  are the only controls`, and simplified the permission-state test to just
+  check the conversation card.
+- Full frontend suite: 59 files / 250 tests green; `vue-tsc --noEmit`
+  clean.
+- `frontend/dist/` rebuilt so the change reaches the backend-served path
+  too (see DL-069).

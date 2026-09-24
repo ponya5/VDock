@@ -15,7 +15,7 @@ import { resolve } from 'node:path'
  */
 function isLanAccessAllowed(): boolean {
   try {
-    const configPath = resolve(__dirname, '../backend/data/config.json')
+    const configPath = resolve(import.meta.dirname, '../backend/data/config.json')
     const config = JSON.parse(readFileSync(configPath, 'utf-8')) as { allow_lan?: boolean }
     return config.allow_lan === true
   } catch {

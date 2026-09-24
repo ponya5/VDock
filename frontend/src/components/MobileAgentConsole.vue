@@ -16,7 +16,7 @@
       </span>
     </header>
 
-    <div ref="conversationRef" class="mac-conversation">
+    <div ref="conversationRef" class="mac-conversation" :class="{ 'mac-conversation--empty': !hasConversation }">
       <template v-if="hasConversation">
         <article v-if="lastPrompt" class="mac-message from-user">
           <span class="mac-author">You</span>
@@ -86,31 +86,6 @@
         <span>{{ shortcut.label }}</span>
       </button>
     </div>
-
-    <form v-if="hasComposer" class="mac-composer" @submit.prevent="submitDraft">
-      <textarea
-        ref="composerRef"
-        v-model="draft"
-        class="mac-composer-input"
-        rows="1"
-        :placeholder="composerPlaceholder"
-        :disabled="isComposerLocked"
-        :aria-label="`Message ${agentName}`"
-        data-native-keyboard
-        enterkeyhint="enter"
-        @input="resizeComposer"
-        @keydown.enter.ctrl.prevent="submitDraft"
-        @keydown.enter.meta.prevent="submitDraft"
-      />
-      <button
-        type="submit"
-        class="mac-send"
-        :disabled="!canSend"
-        aria-label="Send"
-      >
-        <FontAwesomeIcon :icon="['fas', isSending ? 'spinner' : 'paper-plane']" :spin="isSending" />
-      </button>
-    </form>
   </section>
 </template>
 
@@ -127,8 +102,14 @@ import { vibrate } from '@/utils/haptics'
 /**
  * Mobile agent console (DL-065): a portrait phone surface for talking to a
  * coding agent running on the PC — its live state, the last prompt and
- * reply, the actions that fit the moment, the scene's shortcuts, and a
- * composer that types free text into the live session.
+ * reply, the actions that fit the moment, and the scene's shortcuts.
+ *
+ * There is deliberately no free-text composer here (DL-069 follow-up): a
+ * phone's on-screen keyboard eats most of the screen for a control surface
+ * that's meant to be a quick tap away, and every state-driven action
+ * (Submit, Continue, Interrupt, …) already covers what a follow-up message
+ * would have said. Free-text prompting stays a desktop-only affordance,
+ * driven from the scene's own buttons via `runShortcut` below.
  */
 
 interface ConsoleShortcut {
@@ -144,7 +125,6 @@ const props = defineProps<{ scene: Scene | null }>()
 const PAGE_NAVIGATION_ACTIONS = new Set(['next_page', 'previous_page', 'home_page', 'goto_page'])
 /** Scene buttons that start the agent — highlighted while it isn't running. */
 const LAUNCH_ACTIONS = new Set(['claude_continue', 'claude_open', 'program'])
-const COMPOSER_MAX_HEIGHT_PX = 140
 const CONVERSATION_SCROLL_MARGIN_PX = 12
 
 const dashboardStore = useDashboardStore()
@@ -158,13 +138,9 @@ const {
   visibleActions,
   runningActionId,
   runAction,
-  sendPrompt,
 } = useAgentSession(toRef(props, 'scene'))
 
 const conversationRef = ref<HTMLElement | null>(null)
-const composerRef = ref<HTMLTextAreaElement | null>(null)
-const draft = ref('')
-const isSending = ref(false)
 const runningShortcutId = ref<string | null>(null)
 
 const agentName = computed(() => profile.value?.label ?? props.scene?.name ?? 'Agent')
@@ -181,11 +157,11 @@ const hasConversation = computed(() =>
   currentState.value === 'permission'
 )
 
-const hasComposer = computed(() => Boolean(profile.value?.prompt_command))
-
 /**
  * Interrupt (working) and Approve (permission) are the one thing to press;
- * while the agent is ready the composer is the primary control instead.
+ * while the agent is ready, the actions/shortcuts below are the primary
+ * control instead of a composer (see the top-of-file note on why there
+ * isn't one).
  */
 const emphasizesPrimaryAction = computed(() =>
   currentState.value === 'working' || currentState.value === 'permission'
@@ -197,24 +173,8 @@ const emptyStateText = computed(() => {
   if (!isAgentPossiblyRunning.value) {
     return `${agentName.value} isn't running on your PC. Start it from a shortcut below.`
   }
-  if (!hasComposer.value) {
-    return `Use the buttons below to drive ${agentName.value} on your PC.`
-  }
-  return `Type below — your message is typed into ${agentName.value} on your PC and sent.`
+  return `Use the buttons below to drive ${agentName.value} on your PC.`
 })
-
-const isComposerLocked = computed(() =>
-  isSending.value || !isAgentPossiblyRunning.value || currentState.value === 'permission'
-)
-
-const composerPlaceholder = computed(() => {
-  if (!isAgentPossiblyRunning.value) return `Start ${agentName.value} first`
-  if (currentState.value === 'permission') return 'Answer the permission request first'
-  if (currentState.value === 'working') return 'Queue a follow-up…'
-  return `Message ${agentName.value}…`
-})
-
-const canSend = computed(() => !isComposerLocked.value && draft.value.trim().length > 0)
 
 function shortcutLabel(button: Button): string {
   return button.layers?.label?.text || button.label || button.tooltip || ''
@@ -250,31 +210,6 @@ async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
     }
   } finally {
     runningShortcutId.value = null
-  }
-}
-
-function resizeComposer(): void {
-  const composer = composerRef.value
-  if (!composer) return
-  composer.style.height = 'auto'
-  composer.style.height = `${Math.min(composer.scrollHeight, COMPOSER_MAX_HEIGHT_PX)}px`
-}
-
-async function submitDraft(): Promise<void> {
-  if (!canSend.value) return
-  vibrate(10)
-  isSending.value = true
-  try {
-    const result = await sendPrompt(draft.value.trim())
-    if (!result.success) {
-      notificationsStore.error('Message not sent', result.details || result.message || 'The agent did not receive it')
-      return
-    }
-    draft.value = ''
-    await nextTick()
-    resizeComposer()
-  } finally {
-    isSending.value = false
   }
 }
 
@@ -393,6 +328,16 @@ trackAgentSurfaceVisibility(
   -webkit-overflow-scrolling: touch;
 }
 
+/* With no composer to type into, there's nothing left to say about a card
+   that just repeats "isn't running" / "use the buttons below" — so unlike
+   a real conversation (which keeps flex: 1 to grow and scroll), the empty
+   state only claims the room its one line of text actually needs, leaving
+   the action buttons below as the visually dominant part of the screen. */
+.mac-conversation--empty {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
 .mac-message {
   display: flex;
   flex-direction: column;
@@ -444,23 +389,24 @@ trackAgentSurfaceVisibility(
 
 .mac-empty {
   margin: auto;
-  max-width: 300px;
+  max-width: 320px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
-  text-align: center;
+  text-align: left;
   color: rgba(255, 255, 255, 0.65);
 }
 
 .mac-empty p {
   margin: 0;
-  font-size: clamp(0.9rem, 0.85rem + 0.3vw, 1rem);
-  line-height: 1.5;
+  font-size: clamp(0.82rem, 0.78rem + 0.25vw, 0.92rem);
+  line-height: 1.4;
 }
 
 .mac-empty-icon {
-  font-size: clamp(1.8rem, 1.5rem + 1vw, 2.4rem);
+  flex-shrink: 0;
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
   color: var(--agent-accent);
 }
 
@@ -557,66 +503,8 @@ trackAgentSurfaceVisibility(
 .mac-shortcut:active:not(:disabled) { transform: scale(0.96); }
 .mac-shortcut:disabled { opacity: 0.6; cursor: default; }
 
-/* --- Composer ---------------------------------------------------------------- */
-.mac-composer {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 6px 6px 6px 14px;
-  border-radius: 24px;
-  background: rgba(15, 20, 28, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-}
-
-.mac-composer:focus-within {
-  border-color: var(--agent-accent);
-}
-
-.mac-composer-input {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  max-height: 140px;
-  padding: 11px 0;
-  border: none;
-  outline: none;
-  resize: none;
-  background: transparent;
-  color: inherit;
-  font-family: inherit;
-  /* 16px or more: iOS zooms the page into smaller focused inputs. */
-  font-size: clamp(16px, 1rem, 18px);
-  line-height: 1.4;
-}
-
-.mac-composer-input::placeholder { color: rgba(255, 255, 255, 0.45); }
-.mac-composer-input:disabled { cursor: not-allowed; }
-
-.mac-send {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: var(--agent-accent);
-  color: #0b1015;
-  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem);
-  touch-action: manipulation;
-  cursor: pointer;
-}
-
-.mac-send:disabled {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.4);
-  cursor: default;
-}
-
-/* Landscape phones (~390px tall): every row slims down so the composer
-   stays on screen and the conversation keeps a readable strip. */
+/* Landscape phones (~390px tall): every row slims down so the action
+   buttons and shortcuts stay comfortably reachable in a shorter viewport. */
 @media (max-height: 480px) {
   .mobile-agent-console {
     gap: 6px;
@@ -648,16 +536,6 @@ trackAgentSurfaceVisibility(
 
   .mac-shortcut {
     min-height: 40px;
-  }
-
-  .mac-composer-input {
-    min-height: 40px;
-    padding: 9px 0;
-  }
-
-  .mac-send {
-    width: 40px;
-    height: 40px;
   }
 }
 

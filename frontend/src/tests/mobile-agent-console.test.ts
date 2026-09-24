@@ -108,43 +108,16 @@ describe('MobileAgentConsole', () => {
     expect(labels).toEqual(['Open Claude', 'Review'])
   })
 
-  it('sends the draft through the profile prompt command and clears it', async () => {
-    sendPrompt.mockResolvedValue({ success: true })
-    const wrapper = mountConsole()
-    await wrapper.find('textarea').setValue('  Add a test for login  ')
-    await wrapper.find('form').trigger('submit')
-    await flushPromises()
-    expect(sendPrompt).toHaveBeenCalledWith('Add a test for login')
-    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('')
-  })
-
-  it('keeps the draft and reports when sending fails', async () => {
-    sendPrompt.mockResolvedValue({ success: false, message: 'No Claude session' })
-    const wrapper = mountConsole()
-    await wrapper.find('textarea').setValue('Hello')
-    await wrapper.find('form').trigger('submit')
-    await flushPromises()
-    expect(notifyError).toHaveBeenCalledWith('Message not sent', 'No Claude session')
-    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('Hello')
-  })
-
-  it('locks the composer while a permission request is open', async () => {
+  it('shows a permission request in the conversation', async () => {
     sessionState.currentState.value = 'permission'
     sessionState.stateEntry.value = { message: 'Claude needs your permission to use Bash', prompt: '', reply: '' }
     const wrapper = mountConsole()
-    const composer = wrapper.find('textarea')
-    expect(composer.attributes('disabled')).toBeDefined()
-    expect(composer.attributes('placeholder')).toBe('Answer the permission request first')
     expect(wrapper.find('.is-permission').text()).toContain('permission to use Bash')
   })
 
-  it('asks for the device keyboard instead of the on-screen keypad', () => {
-    expect(mountConsole().find('textarea').attributes()).toHaveProperty('data-native-keyboard')
-  })
-
-  it('hides the composer for agents without a prompt command', () => {
-    sessionState.profile.value = { id: 'cursor', label: 'Cursor', prompt_command: null, status_source: 'cursor' }
+  it('never renders a text composer — actions and shortcuts are the only controls', () => {
     expect(mountConsole().find('form').exists()).toBe(false)
+    expect(mountConsole().find('textarea').exists()).toBe(false)
   })
 
   it('points at the launch shortcut when the agent is not running', () => {
@@ -154,7 +127,6 @@ describe('MobileAgentConsole', () => {
     expect(wrapper.find('.mac-empty').text()).toContain("isn't running")
     expect(wrapper.find('.mac-actions').exists()).toBe(false)
     expect(wrapper.find('.mac-shortcut.highlighted').text()).toBe('Open Claude')
-    expect(wrapper.find('textarea').attributes('disabled')).toBeDefined()
   })
 
   it('runs a state action and a shortcut', async () => {
