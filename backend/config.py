@@ -2,8 +2,26 @@
 import os
 import json
 import socket
+import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+
+def _default_data_dir(base_dir: Path) -> Path:
+    """Where runtime data lives when DATA_DIR is not set.
+
+    Dev/source runs keep ``backend/data`` next to the code. A frozen
+    (PyInstaller) binary can land inside Program Files or another
+    read-only location, so it writes to the per-user app-data dir instead.
+    """
+    if not getattr(sys, 'frozen', False):
+        return base_dir / 'data'
+    if sys.platform == 'win32':
+        root = os.environ.get('APPDATA') or str(Path.home() / 'AppData' / 'Roaming')
+        return Path(root) / 'VDock'
+    if sys.platform == 'darwin':
+        return Path.home() / 'Library' / 'Application Support' / 'VDock'
+    return Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local' / 'share'))) / 'vdock'
 
 
 def lan_ip() -> Optional[str]:
@@ -75,7 +93,7 @@ class Config:
     
     # Data storage
     BASE_DIR = Path(__file__).resolve().parent
-    DATA_DIR = Path(os.environ.get('DATA_DIR', str(BASE_DIR / 'data')))
+    DATA_DIR = Path(os.environ.get('DATA_DIR', str(_default_data_dir(BASE_DIR))))
     PROFILES_DIR = DATA_DIR / 'profiles'
     UPLOADS_DIR = DATA_DIR / 'uploads'
     PLUGINS_DIR = DATA_DIR / 'plugins'

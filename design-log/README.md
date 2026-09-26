@@ -84,4 +84,4 @@ credentials and paths from the settings surface it creates.
 (commit `79eedbf`), which is the tree the running app serves
 (`.worktrees/unified-background`). New work lands there and flows back on
 the eventual merge into the main line.
-| [DL-072](DL-072-release-readiness-audit.md) | Release-readiness audit | Implemented — cross-platform spawn fix in electron main.js, NSIS/PowerShell installer fixes (missing install.bat, launcher path, user-writable install dir), tracked junk removed, secrets scan clean; electron-builder packaging documented as incomplete |
+| [DL-072](DL-072-release-readiness-audit.md) | Release-readiness audit | Implemented — cross-platform spawn fix in electron main.js, NSIS/PowerShell installer fixes (missing install.bat, launcher path, user-writable install dir), tracked junk removed, secrets scan clean; electron-builder packaging fixed in DL-073 |

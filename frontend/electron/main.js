@@ -80,20 +80,28 @@ function startBackend() {
       windowsHide: true
     })
   } else {
-    // Production: prefer a bundled interpreter, fall back to the system
-    // Python (python3 on macOS/Linux, python on Windows) — the resource
-    // bundle ships backend source, not a frozen binary.
-    const bundledPython = path.join(
-      process.resourcesPath, 'backend',
-      process.platform === 'win32' ? 'python.exe' : 'python'
+    // Production: the PyInstaller onedir bundle ships in extraResources as
+    // resources/backend/ — self-contained, no Python needed on the host.
+    const backendExe = path.join(
+      backendPath,
+      process.platform === 'win32' ? 'vdock-backend.exe' : 'vdock-backend'
     )
-    const pythonPath = require('fs').existsSync(bundledPython)
-      ? bundledPython
-      : (process.platform === 'win32' ? 'python' : 'python3')
-    backendProcess = spawn(pythonPath, [appPath], {
+
+    if (!require('fs').existsSync(backendExe)) {
+      console.error('Bundled backend not found at', backendExe)
+      return
+    }
+
+    // DATA_DIR lands under Electron's per-user writable dir — the install
+    // dir itself may be read-only (Program Files).
+    const dataDir = path.join(app.getPath('userData'), 'vdock-data')
+
+    backendProcess = spawn(backendExe, [], {
       cwd: backendPath,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      detached: false
+      env: { ...process.env, DATA_DIR: dataDir },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: false,
+      windowsHide: true
     })
   }
   

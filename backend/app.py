@@ -65,7 +65,20 @@ def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
+    # connect-src names the external APIs the widgets actually call
+    # (weather geocode + forecast, market prices, reverse-geocoding);
+    # style/font-src allow Google Fonts, which the UI requests at boot.
+    # Everything else stays 'self'.
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "connect-src 'self' ws: wss: "
+        "https://api.open-meteo.com https://geocoding-api.open-meteo.com "
+        "https://api.coingecko.com https://api.bigdatacloud.net;"
+    )
     if Config.USE_SSL:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return response

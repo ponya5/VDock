@@ -1,0 +1,3 @@
+# Build-time-only dependencies — never shipped, never installed by setup.
+# Keep PyInstaller pinned; hook behavior drifts between releases.
+pyinstaller==6.11.1

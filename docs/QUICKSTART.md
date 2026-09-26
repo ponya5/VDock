@@ -224,12 +224,24 @@ npm install
 npm start
 ```
 
-For production installer:
-```bash
-npm run build
+For a self-contained production installer (frozen Python backend bundled —
+no Python needed on the target machine), run the release pipeline from the
+repo root:
+
+```powershell
+# Windows
+.\scripts\build-release.ps1
 ```
 
-Installer will be in `frontend/electron/dist-electron/`.
+```bash
+# macOS / Linux
+./scripts/build-release.sh
+```
+
+This freezes the backend with PyInstaller (`dist/vdock-backend/`), builds
+the frontend, and packages everything with electron-builder. Installers
+land in `frontend/electron/dist-electron/` (NSIS setup + portable exe on
+Windows, dmg/zip on macOS, AppImage on Linux — build on the matching OS).
 
 ## Getting Help
 

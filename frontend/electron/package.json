@@ -25,22 +25,28 @@
     },
     "files": [
       "main.js",
-      "preload.js",
-      "../dist/**/*",
-      "../public/**/*",
-      "../../backend/**/*",
-      "!../../backend/venv/**/*",
-      "!../../backend/__pycache__/**/*",
-      "!../../backend/data/uploads/**/*"
+      "preload.js"
     ],
     "extraResources": [
       {
-        "from": "../../backend",
+        "from": "../../dist/vdock-backend",
         "to": "backend",
         "filter": [
-          "!venv/**/*",
-          "!__pycache__/**/*",
-          "!data/uploads/**/*"
+          "**/*"
+        ]
+      },
+      {
+        "from": "../dist",
+        "to": "backend/frontend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../public",
+        "to": "public",
+        "filter": [
+          "**/*"
         ]
       }
     ],
@@ -77,6 +83,21 @@
     },
     "portable": {
       "artifactName": "VDock-Portable.exe"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "../public/vdock-icon.png"
+    },
+    "linux": {
+      "category": "Utility",
+      "target": [
+        "AppImage"
+      ],
+      "icon": "../public/vdock-icon.png"
     }
   },
   "dependencies": {

@@ -16,9 +16,20 @@ from auth import require_auth
 # Create blueprint
 assets_bp = Blueprint('assets', __name__, url_prefix='/api/assets')
 
-# Asset directory paths
-FRONTEND_ASSETS_DIR = Path(__file__).parent.parent / 'frontend' / 'public' / 'assets'
-BACKEND_ASSETS_DIR = Path(__file__).parent.parent / 'Assets'
+# Asset directory paths. Three levels up lands on the same anchor in both
+# layouts: dev `backend/routes/assets.py` → repo root, frozen
+# `backend/_internal/routes/assets.py` → `resources/backend` — so
+# `frontend/...` resolves next to the app. The packaged app ships the
+# catalog once, inside frontend/dist (vite copies public/ there) — prefer
+# that copy and fall back to the source dir for dev runs without a build.
+_ROOT = Path(__file__).resolve().parent.parent.parent
+_dist_assets = _ROOT / 'frontend' / 'dist' / 'assets'
+FRONTEND_ASSETS_DIR = (
+    _dist_assets if _dist_assets.exists()
+    else _ROOT / 'frontend' / 'public' / 'assets'
+)
+# backend/Assets in dev, _internal/Assets frozen (spec datas → _internal).
+BACKEND_ASSETS_DIR = Path(__file__).resolve().parent.parent / 'Assets'
 
 def get_asset_path(asset_type: str, category: str = None, filename: str = None) -> Path:
     """Get the full path for an asset"""
