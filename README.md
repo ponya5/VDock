@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 **▶ [Download the 1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0.1-6ea8ff)](#whats-new-in-20)
+[![Version](https://img.shields.io/badge/Version-2.1.0-6ea8ff)](#whats-new-in-20)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#requirements)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)

@@ -5,6 +5,29 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] — 2026-09-26
+
+### Added
+- **Self-contained installers** — one-click Windows Setup + Portable exe (PyInstaller-frozen backend bundled into Electron; no Python needed); macOS `.dmg`/`.zip` and Linux `.AppImage`/`.deb` via the new per-OS release pipeline
+- **Agent session targeting** — pick and pin which Claude Code session a button drives (multi-window support), with session chips in the mobile console
+- **Agent state-aware actions** — hook-driven ready/working/permission states, action bar, and scene buttons that type into the live CLI
+- **Mobile agent console** — dedicated control surface on agent scenes: state card, last prompt/reply, action buttons, shortcut grid
+- **Dedicated mobile experience** — landscape-only deck gate, mobile chrome (scene rail, page steppers), sparse phone screensaver, portrait rotate prompt
+- **Guided first-run tour rewrite** — routed steps across dashboard/settings with conditional auto-skip; expanded in-app Help guide with Troubleshooting
+- **New app icon** — real 1024px keycap-grid art replacing the 32px placeholder; multi-size ico, tray PNG, and favicons
+
+### Fixed
+- Backend crash on macOS at startup (`pynput Key.insert` doesn't exist on darwin)
+- Linux/macOS tray + window icons not rendering (`.ico` → platform-aware PNG)
+- LAN/mobile devices stuck on stale frontend in dev mode; service-worker self-heal on open tabs
+- Save & Apply mass-applies key designs and surfaces real save errors
+- Installer lands in a user-writable dir (`%LOCALAPPDATA`), NSIS references real files
+- CI portability: backend tests no longer assume Windows paths/.exe suffixes
+
+### Changed
+- Tray menu trimmed to Show / Settings / Exit
+- Install dirs and release docs consolidated (`docs/RELEASING.md`)
+
 ## [Unreleased]
 
 ### Added

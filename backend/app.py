@@ -381,7 +381,7 @@ def health_check():
     """Health check endpoint."""
     return jsonify({
         'status': 'ok',
-        'version': '2.0.1',
+        'version': '2.1.0',
         'plugins_loaded': len(plugin_manager.plugins),
         'features': {
             'user_settings': True
