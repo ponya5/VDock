@@ -6,9 +6,9 @@
 
 **A free, open-source stream deck that runs on a screen you already own — and the only one that speaks fluent Claude Code.**
 
-<img src="docs/assets/vdock-readme.gif" alt="VDock — glass keys over a live animated background, the settings page with a live preview, VDock on two phones, and the ambient screensaver" width="880" />
+https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 
-**▶ [Watch the 65-second tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — 1080p, no sound
+**▶ [Download the 1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.0.1-6ea8ff)](#whats-new-in-20)
