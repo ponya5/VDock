@@ -2,13 +2,13 @@
 
 <img src="docs/assets/vdock-banner.svg" alt="VDock — Virtual Stream Deck" width="880" />
 
-### Your desktop. On real buttons.
+### Your desktop. On virtual buttons you design.
 
-**A free, open-source stream deck that runs on a screen you already own — and the only one that speaks fluent Claude Code.**
+**A free, open-source virtual stream deck: on-screen buttons you fully customize to your needs, on any screen you already own — and the only one that speaks fluent Claude Code.**
 
-<img src="docs/assets/vdock-readme.gif" alt="VDock — glass keys over a live animated background, the settings page with a live preview, VDock on two phones, and the ambient screensaver" width="880" />
+https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 
-**▶ [Watch the 65-second tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — 1080p, no sound
+**▶ [Download the 1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.0.1-6ea8ff)](#whats-new-in-20)
@@ -46,9 +46,9 @@
 
 ## What is VDock?
 
-A stream deck is a grid of physical buttons that fire the things you do all day — mute the mic, switch the scene, run the build. The good ones cost £150–£250 and lock you to one vendor's store.
+A traditional stream deck is a box of physical buttons that fire the things you do all day — mute the mic, switch the scene, run the build. The good ones cost £150–£250 and lock you to one vendor's store.
 
-**VDock is that deck, in software, for free.** Point any spare screen at it — a £30 USB touch panel, an old tablet, your phone, or just a browser tab — and you get a grid of buttons you design yourself.
+**VDock replaces the box with virtual buttons, in software, for free.** Point any spare screen at it — a £30 USB touch panel, an old tablet, your phone, or just a browser tab — and you get a grid of on-screen buttons you fully customize: what each one does, how it looks, and how many you need.
 
 <div align="center">
 <img src="docs/assets/screens/panel-on-desk.jpg" alt="A 7-inch touch panel above a keyboard showing VDock's ambient screensaver with clock, weather, headlines and market prices" width="760" />
@@ -70,7 +70,7 @@ Every scene is a grid you lay out yourself — any size, any mix of buttons, sli
 - **A living background.** Pick from 54 animated backgrounds (the one above is real footage), 5 gradients, or upload your own image — globally, per scene, or per app.
 - **See-through keys.** A transparency slider lets the background glow through every key, capped at 90% so buttons never disappear.
 - **Ten key designs.** Classic, Glass, Glow Glass, Gem, Neon Rim, Watermark, Deck Key, Status Key, Full Art and Folder — per button, or one tap to restyle every key at once. Add any of 16 overlay effects on top.
-- **Sliders that behave like hardware.** Drag or scroll for volume and brightness, or jump straight to mute / 25 / 50 / 75 / 100 with the preset chips.
+- **Smooth virtual sliders.** Drag or scroll for volume and brightness, or jump straight to mute / 25 / 50 / 75 / 100 with the preset chips.
 - **Your typography.** Modern Sans, Editorial (the screensaver's serif look) or Terminal Mono across the whole deck.
 
 <img src="docs/assets/screens/dashboard-deck-key.png" alt="The same Media scene with every key switched to the Deck Key design: dark recessed keycaps with blue glow, over a light animated background" width="820" />
