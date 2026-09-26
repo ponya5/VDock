@@ -12,19 +12,19 @@ believed at decision time rather than a tidied-up version of it.
 
 | Entry | Feature | Status |
 |---|---|---|
-| [DL-001](DL-001-unified-background.md) | Unified background setting | In progress — merged to `feat/unified-background`; manual browser verification outstanding |
-| [DL-002](DL-002-integrations-config.md) | Integrations configuration surface | Planned |
-| [DL-003](DL-003-screensaver.md) | Screensaver rework | In progress — Tasks 1–5 done (tappable headlines, touch-mode auto-scale); Task 6 manual verification pending |
-| [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | In progress — session-host window resolution + VS Code/JetBrains/Visual Studio/Devin packs shipped; Phase 3 hooks & context scene pending |
+| [DL-001](DL-001-unified-background.md) | Unified background setting | Implemented — shipped in product; featured in README screenshots/video |
+| [DL-002](DL-002-integrations-config.md) | Integrations configuration surface | Implemented — superseded by the shipped Integrations settings surface |
+| [DL-003](DL-003-screensaver.md) | Screensaver rework | Implemented — shipped in product; featured in README screenshots/video |
+| [DL-004](DL-004-ide-agent-control.md) | IDE & AI agent control | Implemented — session-host window resolution + all IDE packs ship (9 plugins load at boot); per-IDE hook installation tracked in DL-066 |
 | [DL-005](DL-005-screensaver-weather-size.md) | Screensaver weather widget size | Complete |
 | [DL-006](DL-006-dev-first-app-list.md) | Dev-first running-apps list + smart filter | Complete |
 | [DL-007](DL-007-port-configuration.md) | Port selection in Server settings | Complete |
-| [DL-008](DL-008-reactbits-backgrounds.md) | React Bits background import + scrollable picker | In progress — WebGPU pair needs hardware verification |
-| [DL-009](DL-009-small-panel-touch-chrome.md) | Touch-mode scaling for header & action sidebars | In progress — EditSidebar coverage added; manual 800×480 verification pending |
-| [DL-010](DL-010-app-scene-backgrounds.md) | Per-app default scene backgrounds | In progress |
-| [DL-011](DL-011-animated-avatars.md) | Animated GIF avatars | Implemented — tests green, manual upload check pending |
+| [DL-008](DL-008-reactbits-backgrounds.md) | React Bits background import + scrollable picker | Implemented — shipped; WebGPU backgrounds degrade gracefully via `reportFailure` by design |
+| [DL-009](DL-009-small-panel-touch-chrome.md) | Touch-mode scaling for header & action sidebars | Implemented — shipped; compact-display auto-fullscreen in electron main.js covers the small-panel case |
+| [DL-010](DL-010-app-scene-backgrounds.md) | Per-app default scene backgrounds | Implemented — shipped in product |
+| [DL-011](DL-011-animated-avatars.md) | Animated GIF avatars | Implemented — shipped in product |
 | [DL-012](DL-012-edit-mode-wiggle.md) | Edit-mode wiggle opt-in | Implemented — default off, tests green |
-| [DL-013](DL-013-screensaver-layout.md) | Screensaver layout, background & editor | Implemented — side-by-side default, drag/resize editor, own background; backend restart needed for server sync |
+| [DL-013](DL-013-screensaver-layout.md) | Screensaver layout, background & editor | Implemented — side-by-side default, drag/resize editor, own background; shipped |
 | [DL-052](DL-052-mergeable-slider-buttons.md) | Mergeable slider buttons + Sliders action category | Implemented — seam merge chips, Ctrl+Z/Y undo wiring, Sliders catalog category; wheel scroll + merge-failure toast + savebar fix + comtypes/3.13 volume fix + quick-jump preset chips |
 | [DL-053](DL-053-settings-accordion-animation.md) | Settings accordion expand/collapse animation | Implemented — reusable Collapse component, Templates + widget cards + picker |
 | [DL-054](DL-054-settings-sidebar-redesign.md) | Settings shell redesign: sidebar nav, row-based panels, preview rail | Implemented — mockup ported, all pages re-skinned, 231 tests green |
@@ -43,7 +43,7 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-067](DL-067-mobile-fullscreen-prominence.md) | Mobile fullscreen — promoted button + best-effort auto-trigger | Implemented — Fullscreen moved out of the `⋮` menu into an always-visible, pulsing chrome-bar button; best-effort auto-attempt on mount; 6-second "Tap for fullscreen" callout bubble for a phone's first visit; not yet live-verified on a physical phone |
 | [DL-068](DL-068-tutorial-persistence-launch-freshness.md) | Tutorial re-showing every launch + launcher frontend freshness | Implemented — settings-load race fixed (tour now waits for the real `tutorialCompleted` value instead of racing App.vue's fetch), launcher gained `ensure_fresh_frontend()` to detect/restart duplicate dev servers; not yet live-verified end to end |
 | [DL-069](DL-069-lan-dev-server-staleness.md) | Mobile/LAN devices frozen on stale code (dev mode) | Implemented — Connect-a-device QR now targets the live Vite dev server (LAN-gated `host`, `strictPort`) instead of the one-time-built backend dist/ in dev; `dist/` rebuilt; found 5 orphaned dev-server processes on the machine the agent cannot terminate — user must close them once via Task Manager |
-| [DL-070](DL-070-tray-menu-trim.md) | Tray menu trim | Implemented — Show/Settings/Exit only; Settings routes main window to `/settings` via `navigate-to` IPC; broken Fix Firewall + legacy settings modal deleted; live tray check pending one app restart |
+| [DL-070](DL-070-tray-menu-trim.md) | Tray menu trim | Implemented — Show/Settings/Exit only; Settings routes main window to `/settings` via `navigate-to` IPC; broken Fix Firewall + legacy settings modal deleted; tray verified live in DL-073's packaged-app launch |
 | [DL-071](DL-071-agent-session-targeting.md) | Agent session targeting (picker + pin) | Implemented — `prefer_pid` + `list_session_hosts`, pin registry, `/api/agent-sessions` + `/target` routes, action-bar picker; matcher hardened vs `chrome-native-host.exe` and `detected-profiles` aligned to `iter_session_pids` (fixed a live false-positive); follow-up: mobile session chip strip in the agent console (renders only with 2+ sessions); 864 backend + 251 frontend tests green |
 
 **Status values:** Planned → In progress → Complete.
