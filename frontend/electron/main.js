@@ -14,6 +14,9 @@ let kioskMode = false
 let backendProcess = null
 let autoLaunch = null
 
+// .ico only renders on Windows; Tray/BrowserWindow need PNG elsewhere.
+const iconFile = process.platform === 'win32' ? 'vdock-icon.ico' : 'vdock-icon.png'
+
 function findSmallestDisplay() {
   const displays = screen.getAllDisplays()
   return displays.reduce((smallest, display) => {
@@ -173,7 +176,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, '../public/vdock-icon.ico')
+    icon: path.join(__dirname, '../public', iconFile)
   })
 
   mainWindow.setBounds({
@@ -325,7 +328,7 @@ function createTrayMenu() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../public/vdock-icon.ico')
+  const iconPath = path.join(__dirname, '../public', iconFile)
   tray = new Tray(iconPath)
 
   tray.setToolTip('VDock - Virtual Stream Deck')

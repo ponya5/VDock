@@ -14,6 +14,8 @@
     "start": "cross-env NODE_ENV=development npx electron .",
     "build": "npx electron-builder",
     "build-win": "npx electron-builder --win",
+    "build-mac": "npx electron-builder --mac",
+    "build-linux": "npx electron-builder --linux",
     "build-all": "npx electron-builder --win --mac --linux",
     "dist": "npm run build && npx electron-builder"
   },
@@ -95,9 +97,12 @@
     "linux": {
       "category": "Utility",
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
-      "icon": "../public/vdock-icon.png"
+      "icon": "../public/vdock-icon.png",
+      "description": "Virtual Stream Deck — customizable on-screen buttons, scenes and agent controls",
+      "maintainer": "VDock Contributors"
     }
   },
   "dependencies": {

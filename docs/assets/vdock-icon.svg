@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="VDock app icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="45%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="key" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" fill="url(#bg)"/>
+  <circle cx="830" cy="180" r="240" fill="#6366f1" opacity="0.14"/>
+  <circle cx="170" cy="860" r="190" fill="#22d3ee" opacity="0.10"/>
+
+  <!-- 3x3 deck grid: accent keys on the diagonal like the banner mark -->
+  <g filter="url(#glow)">
+    <rect x="172" y="172" width="200" height="200" rx="48" fill="url(#accent)"/>
+    <rect x="412" y="172" width="200" height="200" rx="48" fill="url(#key)"/>
+    <rect x="652" y="172" width="200" height="200" rx="48" fill="url(#key)"/>
+
+    <rect x="172" y="412" width="200" height="200" rx="48" fill="url(#key)"/>
+    <rect x="412" y="412" width="200" height="200" rx="48" fill="url(#accent)"/>
+    <rect x="652" y="412" width="200" height="200" rx="48" fill="url(#key)"/>
+
+    <rect x="172" y="652" width="200" height="200" rx="48" fill="url(#key)"/>
+    <rect x="412" y="652" width="200" height="200" rx="48" fill="url(#key)"/>
+    <rect x="652" y="652" width="200" height="200" rx="48" fill="url(#key)"/>
+  </g>
+</svg>

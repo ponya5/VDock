@@ -1,0 +1,139 @@
+name: Release
+
+# Builds the self-contained installers on each OS's native runner —
+# the only way to produce a signed-capable macOS .dmg, a Linux
+# AppImage/.deb, and the Windows NSIS setup from one pipeline.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend deps into venv (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -m venv backend/venv
+          backend/venv/Scripts/python.exe -m pip install -r backend/requirements.txt -r backend/requirements-build.txt
+
+      - name: Install backend deps into venv (POSIX)
+        if: runner.os != 'Windows'
+        run: |
+          python -m venv backend/venv
+          backend/venv/bin/python -m pip install -r backend/requirements.txt -r backend/requirements-build.txt
+
+      - name: Freeze backend
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/build-backend.ps1
+
+      - name: Freeze backend
+        if: runner.os != 'Windows'
+        run: ./scripts/build-backend.sh
+
+      # Boots the frozen binary and hits the health endpoint — catches
+      # missing PyInstaller hiddenimports and POSIX/Win path bugs per-OS.
+      - name: Smoke-test frozen backend (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:DATA_DIR = "$env:RUNNER_TEMP\vdock-data"
+          $p = Start-Process -FilePath "dist/vdock-backend/vdock-backend.exe" -PassThru
+          Start-Sleep -Seconds 8
+          try {
+            $h = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/health" -TimeoutSec 10
+            if ($h.status -ne 'ok') { throw "health status: $($h.status)" }
+            $t = Invoke-WebRequest -Uri "http://127.0.0.1:5000/api/templates/list" -TimeoutSec 10
+            if ($t.StatusCode -ne 200) { throw "templates: $($t.StatusCode)" }
+            Write-Output "backend OK: $($h.plugins_loaded) plugins"
+          } finally {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Smoke-test frozen backend (POSIX)
+        if: runner.os != 'Windows'
+        run: |
+          export DATA_DIR="$RUNNER_TEMP/vdock-data"
+          ./dist/vdock-backend/vdock-backend &
+          BPID=$!
+          sleep 8
+          curl -fsS http://127.0.0.1:5000/api/health
+          curl -fsS -o /dev/null -w "templates: %{http_code}\n" http://127.0.0.1:5000/api/templates/list
+          kill $BPID || true
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Install electron deps
+        working-directory: frontend/electron
+        run: npm ci
+
+      - name: Package Electron app
+        working-directory: frontend/electron
+        env:
+          # Signing is opt-in: with these secrets unset, electron-builder
+          # produces unsigned (Windows) / ad-hoc-signed (macOS) artifacts.
+          # See docs/RELEASING.md for the cert setup that silences
+          # SmartScreen and Gatekeeper.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx electron-builder --publish never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vdock-${{ matrix.os }}
+          path: |
+            frontend/electron/dist-electron/*.exe
+            frontend/electron/dist-electron/*.dmg
+            frontend/electron/dist-electron/*.zip
+            frontend/electron/dist-electron/*.AppImage
+            frontend/electron/dist-electron/*.deb
+          if-no-files-found: error
+
+      - name: Attach artifacts to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd frontend/electron/dist-electron
+          shopt -s nullglob
+          files=( *.exe *.dmg *.zip *.AppImage *.deb )
+          gh release upload "${{ github.ref_name }}" "${files[@]}" \
+            --clobber 2>/dev/null || \
+          gh release create "${{ github.ref_name }}" "${files[@]}" \
+            --generate-notes
+        shell: bash
