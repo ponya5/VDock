@@ -49,50 +49,64 @@ except ImportError:
         media_previous = 'media_previous'
 
 
+# hotkey name -> pynput Key attribute. Resolved via getattr because
+# pynput's Key enum is platform-specific: e.g. macOS has no Insert key,
+# so `Key.insert` doesn't exist there and a bare attribute reference in
+# a dict literal crashes the whole backend at import.
+_KEY_ATTRS = {
+    'ctrl': 'ctrl',
+    'control': 'ctrl',
+    'alt': 'alt',
+    'shift': 'shift',
+    'win': 'cmd',
+    'windows': 'cmd',
+    'cmd': 'cmd',
+    'super': 'cmd',
+    'enter': 'enter',
+    'return': 'enter',
+    'tab': 'tab',
+    'space': 'space',
+    'backspace': 'backspace',
+    'delete': 'delete',
+    'escape': 'esc',
+    'esc': 'esc',
+    'up': 'up',
+    'down': 'down',
+    'left': 'left',
+    'right': 'right',
+    'home': 'home',
+    'end': 'end',
+    'pageup': 'page_up',
+    'pagedown': 'page_down',
+    'f1': 'f1', 'f2': 'f2', 'f3': 'f3', 'f4': 'f4',
+    'f5': 'f5', 'f6': 'f6', 'f7': 'f7', 'f8': 'f8',
+    'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12',
+    'insert': 'insert',
+    'volume_up': 'media_volume_up',
+    'volume_down': 'media_volume_down',
+    'volume_mute': 'media_volume_mute',
+    'media_play_pause': 'media_play_pause',
+    'media_next': 'media_next',
+    'media_next_track': 'media_next',
+    'media_previous': 'media_previous',
+    'media_previous_track': 'media_previous',
+}
+
+
+def _build_key_map():
+    return {
+        name: getattr(Key, attr)
+        for name, attr in _KEY_ATTRS.items()
+        if hasattr(Key, attr)
+    }
+
+
 class HotkeyAction(BaseAction):
     """Sends keyboard hotkey combinations."""
 
-    # Map of common key names to pynput Key enum
-    KEY_MAP = {
-        'ctrl': Key.ctrl,
-        'control': Key.ctrl,
-        'alt': Key.alt,
-        'shift': Key.shift,
-        'win': Key.cmd,
-        'windows': Key.cmd,
-        'cmd': Key.cmd,
-        'super': Key.cmd,
-        'enter': Key.enter,
-        'return': Key.enter,
-        'tab': Key.tab,
-        'space': Key.space,
-        'backspace': Key.backspace,
-        'delete': Key.delete,
-        'escape': Key.esc,
-        'esc': Key.esc,
-        'up': Key.up,
-        'down': Key.down,
-        'left': Key.left,
-        'right': Key.right,
-        'home': Key.home,
-        'end': Key.end,
-        'pageup': Key.page_up,
-        'pagedown': Key.page_down,
-        'f1': Key.f1, 'f2': Key.f2, 'f3': Key.f3, 'f4': Key.f4,
-        'f5': Key.f5, 'f6': Key.f6, 'f7': Key.f7, 'f8': Key.f8,
-        'f9': Key.f9, 'f10': Key.f10, 'f11': Key.f11, 'f12': Key.f12,
-        # Additional keys
-        'insert': Key.insert,
-        # Media and volume keys
-        'volume_up': Key.media_volume_up,
-        'volume_down': Key.media_volume_down,
-        'volume_mute': Key.media_volume_mute,
-        'media_play_pause': Key.media_play_pause,
-        'media_next': Key.media_next,
-        'media_next_track': Key.media_next,
-        'media_previous': Key.media_previous,
-        'media_previous_track': Key.media_previous,
-    }
+    # Map of common key names to pynput Key enum — keys the host
+    # platform doesn't have simply drop out of the map.
+    KEY_MAP = _build_key_map()
 
     def __init__(self, config: Dict[str, Any]):
         """Initialize hotkey action."""
