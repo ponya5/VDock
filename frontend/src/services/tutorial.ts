@@ -29,100 +29,88 @@ export interface TutorialStep {
   text: string
   /** Preferred bubble side relative to the target. */
   placement?: 'top' | 'bottom' | 'left' | 'right'
-  /** Route the step needs before measuring ('/' dashboard, '/settings'). */
+  /** Route the step needs before measuring ('/' dashboard, '/settings').
+      Always set this when the step's target lives on a specific view —
+      otherwise a Next/Back click (or the user navigating away mid-tour)
+      leaves the bubble floating over the wrong screen. */
   route?: string
   /** Selector clicked before measuring — e.g. to open a settings sub-tab. */
   activate?: string
   /** Auto-advance when the app navigates to this path (e.g. user loads a
       profile and lands on '/'). */
   advanceOnPath?: string
+  /** Target may legitimately be absent (conditional UI like the agent
+      bar or docked sidebar). When it never appears, auto-advance
+      instead of showing a dead centered card. Ignored on the last step. */
+  optional?: boolean
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     route: '/profiles',
     title: 'Welcome to VDock',
-    text: 'A quick tour of the main features — tap Next to walk through, or Skip to explore on your own.',
+    text: 'A quick tour — tap Next to walk through the essentials, or Skip to explore on your own.',
   },
   {
     route: '/profiles',
     target: '.profiles-grid',
-    title: 'Your First Profile',
-    text: 'Profiles hold your scenes and buttons. Tap ▶ on "My VDock" to load the starter profile — or "+ New Profile" to create your own. The tour continues on your dashboard.',
+    title: 'Pick a Profile',
+    text: 'A profile is a full deck: scenes, pages, buttons. Tap ▶ on "My VDock" to load the starter — or "+ New Profile" to start blank and customize later.',
     placement: 'bottom',
     advanceOnPath: '/',
   },
   {
-    target: '.enhanced-scene-nav',
-    title: 'Scenes',
-    text: 'Each scene is a page of buttons for a context — media, Claude Code, Cursor, websites. Tap a pill to switch, or swipe up/down on the deck.',
+    route: '/',
+    // Desktop scene pills; the mobile/touch chrome swaps in a rail.
+    target: '.enhanced-scene-nav, .mc-scene-rail',
+    title: 'Scenes & Pages',
+    text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch; swipe up/down on the deck works too.',
     placement: 'bottom',
+    optional: true,
   },
   {
+    route: '/',
     target: '.deck-grid',
     title: 'Your Deck',
-    text: 'Tap a button to run its action — media controls, hotkeys, websites, system commands. Swipe left/right for more pages.',
+    text: 'Tap a button to run its action — media controls, hotkeys, websites, agent commands. Swipe left/right for more pages.',
     placement: 'top',
+    optional: true,
   },
   {
+    route: '/',
+    // Phones render the deck read-only — no edit affordance there.
     target: '[aria-label="Toggle Edit Mode"]',
     title: 'Edit Mode',
     text: 'Tap the pencil to customize: add buttons to empty slots, drag to rearrange, resize, and pick actions from the sidebar.',
     placement: 'bottom',
+    optional: true,
   },
   {
-    target: '.docked-sidebar',
-    title: 'Docked Sidebar',
-    text: 'Buttons here stay visible on every scene — perfect for volume, weather, or a clock. Toggle it in Settings → Appearance.',
-    placement: 'right',
+    route: '/',
+    target: '.agent-action-bar',
+    title: 'Agent Sessions',
+    text: 'Running Claude Code or other agents? This bar shows their state — and with multiple sessions open, the chip lets you pick exactly which terminal your button taps control.',
+    placement: 'top',
+    optional: true,
   },
   {
-    target: '[aria-label="Settings"]',
+    route: '/settings',
+    target: '.nav',
     title: 'Settings',
-    text: 'Everything is configured here — backgrounds, widgets, touch mode, integrations. Let\'s take a look inside.',
-    placement: 'bottom',
-  },
-  {
-    route: '/settings',
-    target: '.settings-nav-rail',
-    title: 'Settings Sections',
-    text: 'Appearance, Templates, Server, Integrations, Logs, About — each rail item opens a group of related options.',
+    text: 'Everything is configured from this rail — appearance & key design, templates, server, integrations, connect a device, logs.',
     placement: 'right',
   },
   {
     route: '/settings',
-    target: '.settings-search',
+    target: '.nav-search',
     title: 'Find a Setting',
     text: 'Not sure where something lives? Type it — "screensaver", "touch", "port" — and jump straight to the right card.',
-    placement: 'bottom',
-  },
-  {
-    route: '/settings',
-    target: '[data-tour="appearance-tabs"]',
-    title: 'Appearance Tabs',
-    text: 'Button Behaviour, Layout & Behavior, Background and Screen Saver — the deck\'s look and feel is tuned across these tabs.',
-    placement: 'bottom',
-  },
-  {
-    route: '/settings',
-    activate: '[data-tour="subtab-screensaver"]',
-    target: '[data-tour="screensaver-picker"]',
-    title: 'Screensaver Widgets',
-    text: 'Free widgets — weather, news, sports, markets, world clock. Toggle them on, then tap a card below to configure it.',
-    placement: 'bottom',
-  },
-  {
-    route: '/settings',
-    activate: '[data-tour="nav-about"]',
-    target: '[data-tour="about-help"]',
-    title: 'Help & Tutorial',
-    text: 'Re-open the Help & Guide or re-run this tour anytime from the About section.',
-    placement: 'left',
+    placement: 'right',
   },
   {
     route: '/',
     title: 'You\'re all set',
-    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. Enjoy your deck!',
+    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Help & Guide lives in Settings → About — re-run this tour anytime from there.',
   },
 ]
 

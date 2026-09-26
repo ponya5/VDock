@@ -83,10 +83,30 @@
                 </ul>
               </section>
 
+              <section class="guide-section">
+                <h2><FontAwesomeIcon :icon="['fas', 'robot']" /> Agent Sessions</h2>
+                <p>When Claude Code (or another supported agent) is running, the agent bar above the deck shows its live state — idle, working, waiting for input.</p>
+                <ul>
+                  <li><strong>Multiple sessions:</strong> With several agent terminals open, the session chip next to the state pill lists them all. Pick one to pin it — every agent button then targets that terminal.</li>
+                  <li><strong>Which window is which?</strong> Click the eye icon on a session row (or tap its chip on mobile) — the real terminal's taskbar button flashes so you can see it.</li>
+                  <li><strong>Auto mode:</strong> Leave it unpinned and VDock targets the focused project, else the newest session.</li>
+                </ul>
+              </section>
+
+              <section class="guide-section">
+                <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Idle & Screensaver</h2>
+                <p>Leave the deck untouched and the screensaver takes over with live widgets — weather, news, sports, markets, world clocks. Pick and configure them in <strong>Settings → Appearance → Screen Saver</strong>.</p>
+              </section>
+
+              <section class="guide-section">
+                <h2><FontAwesomeIcon :icon="['fas', 'mobile-screen']" /> Phone & Tablet</h2>
+                <p>Open VDock on any device on your network: enable <strong>Allow LAN</strong> in Settings → Server, then browse to your PC's address shown in <strong>Settings → Connect</strong> (QR code included). On mobile you get the same deck plus a compact agent console — session chips at top, action buttons below, no chat clutter.</p>
+              </section>
+
               <section class="guide-section card accent-card">
                 <h3><FontAwesomeIcon :icon="['fas', 'keyboard']" /> Keyboard Shortcuts</h3>
                 <div class="shortcut-list">
-                  <div class="shortcut-item"><span>Show/Hide VDock</span> <kbd>Ctrl+Shift+D</kbd></div>
+                  <div class="shortcut-item"><span>Quick Deck / Show-Hide VDock</span> <kbd>Ctrl+Shift+D</kbd></div>
                   <div class="shortcut-item"><span>Toggle Edit Mode</span> <kbd>Ctrl+E</kbd></div>
                   <div class="shortcut-item"><span>Next Page</span> <kbd>Ctrl+Right</kbd></div>
                   <div class="shortcut-item"><span>Previous Page</span> <kbd>Ctrl+Left</kbd></div>
@@ -99,10 +119,11 @@
             <div v-if="activeTab === 'config'" class="tab-content">
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'palette']" /> Appearance</h2>
-                <p>Personalize your dashboard in the <strong>Settings</strong> menu:</p>
+                <p>Personalize your dashboard in <strong>Settings → Appearance</strong>:</p>
                 <ul>
+                  <li><strong>Key Design:</strong> Pick a button style (glass, neon, flat…) — <em>Save &amp; Apply to all keys</em> restyles every existing key at once.</li>
                   <li><strong>Global Backgrounds:</strong> Choose from 20+ animated effects or upload your own custom image.</li>
-                  <li><strong>Button Styling:</strong> Set global button sizes, rounded corners (using Button Shapes), and enable/disable tooltips.</li>
+                  <li><strong>Grid &amp; Layout:</strong> Resize the deck grid per page (the In Context preview card has live −/+ steppers), dock a persistent sidebar, adjust button size and transparency.</li>
                   <li><strong>Brightness & UI Scale:</strong> Use the UI Brightness slider to match your room lighting, and UI Scale for high-DPI displays.</li>
                 </ul>
               </section>
@@ -110,15 +131,15 @@
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'server']" /> Server & System</h2>
                 <ul>
-                  <li><strong>Auto-start:</strong> Enable "Launch on Startup" to have VDock ready the moment you log in to Windows.</li>
-                  <li><strong>Server Port:</strong> Default is 5000. If you have port conflicts, you can change this in the backend <code>config.json</code>.</li>
-                  <li><strong>Remote Access:</strong> Point any device on your local network to your PC's IP address (e.g. <code>192.168.1.10:3000</code>) to use your phone or tablet as a controller.</li>
+                  <li><strong>Auto-start:</strong> Enable "Launch on Startup" to have VDock ready the moment you log in.</li>
+                  <li><strong>Server Port:</strong> Default is 5000. If you have port conflicts, change it under Settings → Server.</li>
+                  <li><strong>Remote Access:</strong> Turn on <strong>Allow LAN</strong> (Settings → Server), then point any device on your network to your PC's address — the Settings → Connect page shows it with a QR code.</li>
                 </ul>
               </section>
 
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'shield-alt']" /> Security</h2>
-                <p>Protect your dashboard with a PIN or password in <strong>Settings → Security</strong>. This is highly recommended when using the Remote Access (LAN) feature.</p>
+                <p>Require authentication in <strong>Settings → Server</strong> — highly recommended when LAN access is on. Set the password via <code>AUTH_PASSWORD</code> in your <code>.env</code> or config.</p>
               </section>
             </div>
 
@@ -189,7 +210,44 @@
 
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'cubes']" /> Templates</h2>
-                <p>Don't want to start from scratch? Use the <strong>Template Gallery</strong> to import pre-configured decks for OBS, Discord, Windows Productivity, and more.</p>
+                <p>Don't want to start from scratch? Use the <strong>Template Gallery</strong> (Settings → Templates) to import pre-configured decks for Claude Code, Cursor, GitHub workflows, meetings, and more.</p>
+              </section>
+            </div>
+
+            <!-- Troubleshooting Tab -->
+            <div v-if="activeTab === 'trouble'" class="tab-content">
+              <section class="guide-section">
+                <h2><FontAwesomeIcon :icon="['fas', 'wrench']" /> Troubleshooting</h2>
+                <div class="trouble-list">
+                  <div class="trouble-item">
+                    <h4>Buttons don't do anything when tapped</h4>
+                    <p>You're probably in Edit Mode — the pencil icon in the footer is highlighted. Tap it again (or <kbd>Ctrl+E</kbd>) to exit; buttons only fire actions in run mode.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>Session picker says "No session"</h4>
+                    <p>VDock finds agent CLIs by their terminal windows. Make sure the CLI is actually running in a visible terminal window (not minimized to a tray host or an editor-integrated terminal that hides its title). Refresh the app after starting the CLI.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>"Too Many Requests" popups</h4>
+                    <p>The rate limiter is enabled with a tight cap in <code>.env</code> (<code>RATELIMIT_*</code>). Raise the limits or set <code>RATELIMIT_ENABLED=False</code> — it's off by default for local use.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>Phone/tablet can't reach the deck</h4>
+                    <p>Enable <strong>Allow LAN</strong> in Settings → Server and restart. If it still fails, check Windows Firewall — allow the backend port (default 5000) on private networks.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>Dashboard is blank or stuck loading</h4>
+                    <p>The backend may not be running — look for the VDock tray icon and check Settings → Logs (or <code>vdock.log</code> in the data folder). A port conflict on 5000 is the usual cause; change the port in Settings → Server.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>Windows warns about the installer</h4>
+                    <p>VDock isn't code-signed, so SmartScreen shows a warning — click <em>More info → Run anyway</em>. This is expected for unsigned releases.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>Agent buttons press keys in the wrong window</h4>
+                    <p>Pin the target session first (session chip → pick the terminal). The eye icon flashes the real window so you can confirm before sending.</p>
+                  </div>
+                </div>
               </section>
             </div>
           </div>
@@ -219,7 +277,8 @@ const tabs = [
   { id: 'usage', label: 'How to Use', icon: ['fas', 'rocket'] },
   { id: 'screens', label: 'Screens', icon: ['fas', 'image'] },
   { id: 'config', label: 'Configuration', icon: ['fas', 'cog'] },
-  { id: 'features', label: 'Features & Actions', icon: ['fas', 'star'] }
+  { id: 'features', label: 'Features & Actions', icon: ['fas', 'star'] },
+  { id: 'trouble', label: 'Troubleshooting', icon: ['fas', 'wrench'] }
 ]
 
 const activeTabLabel = computed(() => {
@@ -513,6 +572,33 @@ kbd {
 .action-card p {
   font-size: 0.8rem;
   margin: 0;
+}
+
+/* Troubleshooting list — Q&A rows rather than a card grid */
+.trouble-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.trouble-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.trouble-item h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.trouble-item p {
+  font-size: 0.85rem;
+  margin: 0;
+  color: var(--color-text-secondary);
 }
 
 .main-footer {

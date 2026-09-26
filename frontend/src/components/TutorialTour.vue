@@ -60,23 +60,35 @@ const viewport = ref({ w: window.innerWidth, h: window.innerHeight })
 const PAD = 10
 const BUBBLE_GAP = 14
 
+/** First visible match for the selector — comma fallbacks can resolve a
+    hidden variant before the real one (e.g. desktop nav vs mobile rail). */
+function firstVisible(sel: string): Element | null {
+  for (const el of document.querySelectorAll(sel)) {
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 || r.height > 0) return el
+  }
+  return document.querySelector(sel)
+}
+
 function measure() {
   viewport.value = { w: window.innerWidth, h: window.innerHeight }
   const sel = step.value?.target
-  const el = sel ? document.querySelector(sel) : null
-  targetRect.value = el ? el.getBoundingClientRect() : null
+  const el = sel ? firstVisible(sel) : null
+  const r = el?.getBoundingClientRect()
+  targetRect.value = r && (r.width > 0 || r.height > 0) ? r : null
   if (bubbleEl.value) {
-    const r = bubbleEl.value.getBoundingClientRect()
-    bubbleSize.value = { w: r.width, h: r.height }
+    const b = bubbleEl.value.getBoundingClientRect()
+    bubbleSize.value = { w: b.width, h: b.height }
   }
 }
 
-/** Poll for a selector to appear (view mounts async after a route push). */
+/** Poll for a selector to appear (view mounts async after a route push).
+    Uses firstVisible so comma fallbacks resolve the rendered variant. */
 function waitForEl(sel: string, timeout = 2500): Promise<Element | null> {
   return new Promise((resolve) => {
     const t0 = performance.now()
     const tick = () => {
-      const el = document.querySelector(sel)
+      const el = firstVisible(sel)
       if (el || performance.now() - t0 > timeout) resolve(el)
       else setTimeout(tick, 60)
     }
@@ -101,7 +113,19 @@ async function prepareStep() {
     await nextTick()
   }
   if (token !== prepareToken) return
-  if (s.target) await waitForEl(s.target)
+  if (s.target) {
+    const el = await waitForEl(s.target)
+    // Conditional UI (agent bar, mobile chrome swaps) may be absent or
+    // zero-sized (display:none still resolves querySelector) — treat both
+    // as missing so optional steps skip instead of spotlighting a void.
+    const box = el?.getBoundingClientRect()
+    const missing = !el || !box || (box.width === 0 && box.height === 0)
+    if (missing && s.optional && !tour.isLast.value) {
+      tour.next()
+      return
+    }
+    if (missing) targetRect.value = null
+  }
   if (token !== prepareToken) return
   measure()
   // Re-measure once more after the bubble settles at its new spot
