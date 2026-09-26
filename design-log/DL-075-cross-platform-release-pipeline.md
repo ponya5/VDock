@@ -120,3 +120,16 @@ ubuntu 4m8s). Each produced real artifacts — `vdock-windows-latest`
 479MB (Setup + Portable), `vdock-ubuntu-latest` 466MB (AppImage +
 deb), `vdock-macos-latest` 524MB (dmg + zip) — and the frozen backend
 passed its live smoke test on all three OSes.
+
+## Follow-up 2: first real release — v2.1.0 published
+
+Tagged `v2.1.0` (37 commits since v2.0.1 — minor bump; bumped
+README badge, both package.jsons, `/api/health`, added a real
+CHANGELOG section). The tag-triggered run built all three OSes but
+the attach step 403'd: default `GITHUB_TOKEN` is read-only here —
+added `permissions: contents: write` to the workflow for future
+releases. For this release the artifacts were downloaded from the
+run and attached via `gh release create` directly — same files,
+same result: https://github.com/ponya5/VDock2/releases/tag/v2.1.0
+(Setup 240MB, Portable 239MB, dmg 263MB, mac.zip 263MB, AppImage
+218MB, deb 248MB; notes include the unsigned-installer UX lines).
