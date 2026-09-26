@@ -17,7 +17,7 @@ class SocketClient {
     // The socket lives on the backend port, not necessarily the page's origin:
     // dev serves the app from Vite (:5173/:4444) while the API stays on the
     // backend. Deriving the host from location.hostname is what makes a second
-    // device work — a phone loading http://192.168.1.173:5000 must dial that
+    // device work — a phone loading http://192.168.1.100:5000 must dial that
     // same LAN address, not 127.0.0.1 (which would be the phone itself).
     const backendPort = import.meta.env.VITE_BACKEND_PORT || '5000'
     const url = import.meta.env.VITE_WS_URL

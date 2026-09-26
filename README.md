@@ -231,7 +231,24 @@ Tablet touch mode, 44px minimum targets, and a first-run tour mean you can hand 
 
 ## Quick start
 
-### Requirements
+### Install the app (recommended)
+
+Grab the installer for your OS from the [latest release](https://github.com/ponya5/VDock2/releases/latest):
+
+| OS | Download | Install |
+|---|---|---|
+| **Windows** | `VDock Setup x.y.z.exe` | Run it → install → launch VDock from the shortcut. No installer? `VDock-Portable.exe` runs standalone |
+| **macOS** (Apple Silicon) | `VDock-x.y.z-arm64.dmg` | Open → drag VDock to Applications |
+| **Linux** | `VDock-x.y.z.AppImage` | `chmod +x` and run — or `sudo apt install ./vdock-electron_x.y.z_amd64.deb` on Debian/Ubuntu |
+
+> **First-launch warning (expected):** the builds aren't code-signed yet, so your OS will warn once.
+> Windows SmartScreen → **More info → Run anyway**. macOS → right-click → **Open**
+> (or `xattr -d com.apple.quarantine /Applications/VDock.app`).
+
+### Build from source
+
+<details>
+<summary><strong>Requirements</strong> (source install only)</summary>
 
 | Required | Version | Get it |
 |---|---|---|
@@ -246,7 +263,9 @@ Everything else is optional. VDock runs fully with none of the tools below insta
 | [GitHub CLI](https://cli.github.com) | PRs, issues, CI checks, live badges | `winget install GitHub.cli` → `gh auth login` |
 | Git | Repo-aware actions | [git-scm.com](https://git-scm.com/) |
 
-### Install
+</details>
+
+#### Install
 
 ```bash
 git clone https://github.com/ponya5/VDock2.git
