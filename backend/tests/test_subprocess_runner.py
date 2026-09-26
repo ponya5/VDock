@@ -122,7 +122,7 @@ def test_cmd_shim_is_unwrapped_and_args_arrive_verbatim(tmp_path, monkeypatch):
 def test_non_shim_binary_is_returned_unchanged():
     binary = sr.find_binary(os.path.basename(PY))
     assert binary is not None
-    assert binary.lower().endswith('.exe')
+    assert binary.lower().endswith(os.path.basename(PY).lower())
 
 
 # --- resolution and failure reporting ----------------------------------------

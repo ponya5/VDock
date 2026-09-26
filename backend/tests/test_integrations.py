@@ -763,15 +763,18 @@ def test_session_host_window_tiebreaks_to_newest_session(mocker):
 
 def test_cwd_tier_orders_exact_then_ancestor_then_nested():
     from utils import window_focus
-    assert window_focus._cwd_tier(r'C:\proj', r'C:\proj') == 0
+    proj = os.path.join(os.sep, 'proj')
+    sub = os.path.join(proj, 'sub')
+    other = os.path.join(os.sep, 'other')
+    assert window_focus._cwd_tier(proj, proj) == 0
     # Session at the repo root, button resolved a subdirectory.
-    assert window_focus._cwd_tier(r'C:\proj', r'C:\proj\sub') == 1
+    assert window_focus._cwd_tier(proj, sub) == 1
     # Session nested inside the preferred directory.
-    assert window_focus._cwd_tier(r'C:\proj\sub', r'C:\proj') == 2
-    assert window_focus._cwd_tier(r'C:\other', r'C:\proj') == 3
-    # A shared prefix is not nesting: C:\project2 is not inside C:\proj.
-    assert window_focus._cwd_tier(r'C:\project2', r'C:\proj') == 3
-    assert window_focus._cwd_tier(None, r'C:\proj') == 3
+    assert window_focus._cwd_tier(sub, proj) == 2
+    assert window_focus._cwd_tier(other, proj) == 3
+    # A shared prefix is not nesting: project2 is not inside proj.
+    assert window_focus._cwd_tier(os.path.join(os.sep, 'project2'), proj) == 3
+    assert window_focus._cwd_tier(None, proj) == 3
 
 
 def test_session_match_counts_real_cli_processes():

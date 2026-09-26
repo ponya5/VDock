@@ -59,3 +59,20 @@ mode 100755; `bash -n`, `py_compile`, `node --check` all pass.
 - macOS has no `.app` bundle — install is source + `VDock.command`
   desktop launcher.
 - `.devin/` skills are tracked (agent tooling, no secrets) — kept.
+
+## Follow-up: CI-green fix — Windows-only test assumptions (2026-09-26)
+
+Two backend tests failed on the Linux CI runners (both py3.9/3.12)
+while passing locally on Windows — test bugs, not app bugs:
+
+- `test_cwd_tier_orders_exact_then_ancestor_then_nested` used literal
+  `C:\proj` paths; `_cwd_tier` compares with host `os.sep`, so the
+  nesting assertions could never hold on POSIX. Rewritten to build
+  paths via `os.path.join(os.sep, ...)` — now verifies the same tier
+  logic on both platforms instead of being skipped.
+- `test_non_shim_binary_is_returned_unchanged` asserted the resolved
+  binary ends in `.exe`. Now asserts it ends with
+  `os.path.basename(sys.executable)` — same check, either OS.
+
+Verified: 867/867 backend tests pass locally; the two rewritten tests
+are platform-agnostic so CI should go green on the next push.
