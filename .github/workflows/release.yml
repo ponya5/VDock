@@ -56,7 +56,7 @@ jobs:
 
       - name: Freeze backend
         if: runner.os != 'Windows'
-        run: ./scripts/build-backend.sh
+        run: bash scripts/build-backend.sh
 
       # Boots the frozen binary and hits the health endpoint — catches
       # missing PyInstaller hiddenimports and POSIX/Win path bugs per-OS.
