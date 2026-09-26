@@ -32,10 +32,9 @@ $copyItems = @(
     "docs",
     "scripts",
     "launch.bat",
-    "launch.ps1",
     "launch.sh",
-    "install.bat",
-    "install.sh",
+    "setup.bat",
+    "setup.sh",
     "README.md",
     "LICENSE",
     "docker-compose.yml"
@@ -147,7 +146,7 @@ if errorlevel 1 (
 REM Check virtual environment
 if not exist "!SCRIPT_DIR!backend\venv\Scripts\activate.bat" (
     echo ERROR: Virtual environment not found
-    echo Please run install.bat first
+    echo Please run setup.bat first
     pause
     exit /b 1
 )
@@ -194,7 +193,7 @@ $setupGuide = @"
 ## Quick Start
 
 1. **Extract the installer files** to your desired location
-2. **Run `install.bat`** to set up dependencies
+2. **Run `setup.bat`** to set up dependencies
 3. **Run `Launch-VDock.bat`** or `Launch-VDock.ps1`** to start VDock
 
 ## System Requirements
@@ -225,7 +224,7 @@ If ports 3000 or 5000 are busy, modify the configuration in:
 - Frontend: `frontend/vite.config.js`
 
 ### Permission denied
-Run the install.bat as Administrator (right-click > Run as administrator)
+Run setup.bat again (right-click > Run as administrator)
 
 ## Support
 For issues, check the README.md or visit the project repository.
@@ -269,7 +268,7 @@ Write-Host "Distribution files available at:" -ForegroundColor Cyan
 Write-Host "  $DistDir" -ForegroundColor White
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
-Write-Host "1. Run install.bat in the VDock-Portable folder" -ForegroundColor Gray
+Write-Host "1. Run setup.bat in the VDock-Portable folder" -ForegroundColor Gray
 Write-Host "2. Run Launch-VDock.bat to start the application" -ForegroundColor Gray
 Write-Host ""
 Read-Host "Press Enter to exit"

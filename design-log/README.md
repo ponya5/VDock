@@ -43,6 +43,8 @@ believed at decision time rather than a tidied-up version of it.
 | [DL-067](DL-067-mobile-fullscreen-prominence.md) | Mobile fullscreen — promoted button + best-effort auto-trigger | Implemented — Fullscreen moved out of the `⋮` menu into an always-visible, pulsing chrome-bar button; best-effort auto-attempt on mount; 6-second "Tap for fullscreen" callout bubble for a phone's first visit; not yet live-verified on a physical phone |
 | [DL-068](DL-068-tutorial-persistence-launch-freshness.md) | Tutorial re-showing every launch + launcher frontend freshness | Implemented — settings-load race fixed (tour now waits for the real `tutorialCompleted` value instead of racing App.vue's fetch), launcher gained `ensure_fresh_frontend()` to detect/restart duplicate dev servers; not yet live-verified end to end |
 | [DL-069](DL-069-lan-dev-server-staleness.md) | Mobile/LAN devices frozen on stale code (dev mode) | Implemented — Connect-a-device QR now targets the live Vite dev server (LAN-gated `host`, `strictPort`) instead of the one-time-built backend dist/ in dev; `dist/` rebuilt; found 5 orphaned dev-server processes on the machine the agent cannot terminate — user must close them once via Task Manager |
+| [DL-070](DL-070-tray-menu-trim.md) | Tray menu trim | Implemented — Show/Settings/Exit only; Settings routes main window to `/settings` via `navigate-to` IPC; broken Fix Firewall + legacy settings modal deleted; live tray check pending one app restart |
+| [DL-071](DL-071-agent-session-targeting.md) | Agent session targeting (picker + pin) | Implemented — `prefer_pid` + `list_session_hosts`, pin registry, `/api/agent-sessions` + `/target` routes, action-bar picker; matcher hardened vs `chrome-native-host.exe` and `detected-profiles` aligned to `iter_session_pids` (fixed a live false-positive); follow-up: mobile session chip strip in the agent console (renders only with 2+ sessions); 864 backend + 251 frontend tests green |
 
 **Status values:** Planned → In progress → Complete.
 
@@ -82,3 +84,4 @@ credentials and paths from the settings surface it creates.
 (commit `79eedbf`), which is the tree the running app serves
 (`.worktrees/unified-background`). New work lands there and flows back on
 the eventual merge into the main line.
+| [DL-072](DL-072-release-readiness-audit.md) | Release-readiness audit | Implemented — cross-platform spawn fix in electron main.js, NSIS/PowerShell installer fixes (missing install.bat, launcher path, user-writable install dir), tracked junk removed, secrets scan clean; electron-builder packaging documented as incomplete |

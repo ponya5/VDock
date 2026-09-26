@@ -179,11 +179,12 @@ async function fetchWeather() {
   error.value = null
   
   try {
+    // apiClient.get's second arg is the params object already — wrapping it
+    // in `{ params: … }` nested the query under `params[...]` so the backend
+    // never received location/unit.
     const response = await apiClient.get('/weather', {
-      params: {
-        location: props.location,
-        unit: props.unit || 'C'
-      }
+      location: props.location,
+      unit: props.unit || 'C'
     })
     
     weatherData.value = response.data.data

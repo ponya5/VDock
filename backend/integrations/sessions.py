@@ -22,7 +22,8 @@ Not named ``*_pack`` on purpose: PluginManager only scans that suffix.
 """
 import logging
 import os
-from typing import List, Optional
+import threading
+from typing import Dict, List, Optional
 
 import psutil
 
@@ -34,18 +35,27 @@ logger = logging.getLogger('vdock')
 _INVOCABLE_EXTS = ('.exe', '.cmd', '.bat', '.com', '.js', '.mjs', '.cjs',
                    '.py', '.ps1', '.sh')
 
-#: Install locations of the Claude desktop app: it is named ``claude.exe``
-#: just like the CLI but is not a session.
-_DESKTOP_APP_DIRS = ('anthropicclaude', 'windowsapps')
+#: Install locations of the Claude desktop app and its helpers: they are named
+#: or pathed like the CLI but are not sessions. ``packages\claude_`` is the
+#: MSIX package family (``Packages\Claude_pzs8sxrjxfjjc\...``) — it also holds
+#: helpers like ``chrome-native-host.exe`` whose name never mentions claude,
+#: so the path check must not require the marker in the process name.
+_DESKTOP_APP_DIRS = ('anthropicclaude', 'windowsapps', r'packages\claude_',
+                     'chromenativehost')
 
 
 def _is_desktop_app(info: dict, needle: str) -> bool:
-    """True when the process is a desktop app sharing the marker's name."""
-    name = (info.get('name') or '').lower()
-    if needle not in name:
-        return False
+    """True when the process lives under the desktop app's install dirs.
+
+    Checks the exe path and argv[0] rather than the process name: helper
+    processes (the Chrome native-messaging bridge, updaters) carry the
+    marker only in their path, and matching those would aim keystrokes at a
+    browser window.
+    """
     exe = (info.get('exe') or '').lower()
-    return any(d in exe for d in _DESKTOP_APP_DIRS)
+    cmdline = info.get('cmdline') or []
+    argv0 = str(cmdline[0]).lower() if cmdline else ''
+    return any(d in exe or d in argv0 for d in _DESKTOP_APP_DIRS)
 
 
 def _invocable_token(token: str, needle: str) -> bool:
@@ -102,3 +112,68 @@ def find_session_process(marker: str) -> Optional[int]:
     """PID of the first matching process, or None. Diagnostic helper."""
     pids = iter_session_pids(marker)
     return pids[0] if pids else None
+
+
+# ---------------------------------------------------------------------------
+# Pinned target (DL-071)
+#
+# The deck-level "control THIS session" choice, picked from the session list
+# in the agent action bar. Pinned by pid: the host window is re-resolved from
+# the pid on every press, so a window handle going stale can never mistarget
+# the pin. In-memory only — a pin is meaningless once the session dies or the
+# backend restarts.
+# ---------------------------------------------------------------------------
+
+_pins: Dict[str, int] = {}
+_pins_lock = threading.Lock()
+
+
+def pin_session(marker: str, pid: int) -> bool:
+    """Pin ``pid`` as ``marker``'s target session.
+
+    Returns False when the pid is not a live session for the marker — a pin
+    can only ever point at a real session, so a stale or forged pin cannot
+    redirect keystrokes.
+    """
+    needle = (marker or '').lower().strip()
+    if not needle:
+        return False
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid not in iter_session_pids(needle):
+        return False
+    with _pins_lock:
+        _pins[needle] = pid
+    return True
+
+
+def unpin_session(marker: str) -> None:
+    """Clear ``marker``'s pin — resolution falls back to auto."""
+    with _pins_lock:
+        _pins.pop((marker or '').lower().strip(), None)
+
+
+def pinned_pid(marker: str) -> Optional[int]:
+    """``marker``'s pinned pid, or None when unpinned or the session died.
+
+    A dead pin clears itself here so every press after the session ends falls
+    back to normal resolution instead of failing forever.
+    """
+    needle = (marker or '').lower().strip()
+    with _pins_lock:
+        pid = _pins.get(needle)
+    if pid is None:
+        return None
+    if pid not in iter_session_pids(needle):
+        with _pins_lock:
+            _pins.pop(needle, None)
+        return None
+    return pid
+
+
+def reset_pins() -> None:
+    """Drop all pins (tests)."""
+    with _pins_lock:
+        _pins.clear()

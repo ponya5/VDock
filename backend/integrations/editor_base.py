@@ -58,6 +58,19 @@ def _resolve_session_host(command: Command,
     """
     if not command.session_marker:
         return None
+    # A pinned deck target (DL-071) beats every other resolution signal --
+    # the user explicitly picked this session in the action bar.
+    pinned = sessions.pinned_pid(command.session_marker)
+    if pinned is not None:
+        hwnd = window_focus.find_session_host_window(
+            command.session_marker,
+            prefer_title=command.window_title_hint,
+            prefer_pid=pinned,
+        )
+        if hwnd is not None:
+            return hwnd
+        # Pinned session has no window right now -- fall through to normal
+        # resolution rather than dead-ending the press.
     prefer_cwd: Optional[str] = None
     if configured_cwd:
         path = Path(str(configured_cwd)).expanduser()

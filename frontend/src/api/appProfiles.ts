@@ -16,6 +16,8 @@ export interface AppCommandDto {
   priority: number
   risk: 'safe' | 'input' | 'destructive'
   requires_session: boolean
+  /** Process marker for terminal-agent commands ('claude', 'devin'). */
+  session_marker?: string | null
 }
 
 /** Agent state reported by hooks; 'unknown' = running but not reporting. */

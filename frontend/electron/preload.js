@@ -23,6 +23,11 @@ const electronBridge = {
     ipcRenderer.on('quick-deck-toggle', () => handler())
   },
 
+  // Tray "Settings" → in-app route navigation without a page reload.
+  onNavigate: (handler) => {
+    ipcRenderer.on('navigate-to', (_event, path) => handler(path))
+  },
+
   // Platform info
   platform: process.platform,
   isElectron: true

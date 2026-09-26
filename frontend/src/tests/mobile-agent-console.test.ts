@@ -39,6 +39,36 @@ vi.mock('@/composables/useAgentSession', () => ({
   trackAgentSurfaceVisibility: vi.fn(),
 }))
 
+// DL-071 session targeting — stubbed so each test controls the session list.
+const targetState = {
+  sessions: ref<{ pid: number; hwnd: number; title: string; cwd: string | null; project: string; state: string | null }[]>([]),
+  pinnedPid: ref<number | null>(null),
+  resolvedPid: ref<number | null>(null),
+}
+const setTargetMock = vi.fn()
+const identifyMock = vi.fn()
+
+vi.mock('@/composables/useAgentTargets', () => ({
+  useAgentTargets: () => ({
+    sessions: computed(() => targetState.sessions.value),
+    sessionRows: computed(() =>
+      targetState.sessions.value.map(s => ({
+        ...s,
+        label: s.project || s.title || `pid ${s.pid}`,
+      }))
+    ),
+    pinnedPid: computed(() => targetState.pinnedPid.value),
+    resolvedPid: computed(() => targetState.resolvedPid.value),
+    effectiveSession: computed(() => null),
+    targetLabel: computed(() => 'Auto'),
+    refresh: vi.fn(),
+    setTarget: setTargetMock,
+    identify: identifyMock,
+  }),
+  profileSessionMarker: (p: any) =>
+    p?.commands?.find((c: any) => c.session_marker)?.session_marker ?? null,
+}))
+
 vi.mock('@/stores/dashboard', () => ({
   useDashboardStore: () => ({ executeButtonAction }),
 }))
@@ -87,6 +117,11 @@ beforeEach(() => {
   sessionState.stateEntry.value = { prompt: 'Fix the tests', reply: 'All 12 tests pass now.', project: 'VDock2', message: '' }
   sessionState.currentState.value = 'ready'
   sessionState.isAgentPossiblyRunning.value = true
+  targetState.sessions.value = []
+  targetState.pinnedPid.value = null
+  targetState.resolvedPid.value = null
+  setTargetMock.mockReset()
+  identifyMock.mockReset()
   sendPrompt.mockReset()
   runAction.mockReset()
   executeButtonAction.mockReset()
@@ -94,12 +129,11 @@ beforeEach(() => {
 })
 
 describe('MobileAgentConsole', () => {
-  it('shows the last prompt and reply as plain text', () => {
+  it('never renders a conversation card — the deck is control-only', () => {
     sessionState.stateEntry.value = { prompt: 'Fix it', reply: '<b>done</b>', project: 'VDock2', message: '' }
     const wrapper = mountConsole()
-    const messages = wrapper.findAll('.mac-message-text').map(node => node.text())
-    expect(messages).toEqual(['Fix it', '<b>done</b>'])
-    expect(wrapper.find('.mac-message b').exists()).toBe(false)
+    expect(wrapper.find('.mac-conversation').exists()).toBe(false)
+    expect(wrapper.find('.mac-message').exists()).toBe(false)
     expect(wrapper.find('.mac-project').text()).toContain('VDock2')
   })
 
@@ -108,21 +142,16 @@ describe('MobileAgentConsole', () => {
     expect(labels).toEqual(['Open Claude', 'Review'])
   })
 
-  it('shows a permission request in the conversation', async () => {
+  it('shows the hook detail message in the status line on a permission prompt', () => {
     sessionState.currentState.value = 'permission'
     sessionState.stateEntry.value = { message: 'Claude needs your permission to use Bash', prompt: '', reply: '' }
     const wrapper = mountConsole()
-    expect(wrapper.find('.is-permission').text()).toContain('permission to use Bash')
+    expect(wrapper.find('.mac-state-label').text()).toContain('permission to use Bash')
   })
 
   it('never renders a text composer — actions and shortcuts are the only controls', () => {
     expect(mountConsole().find('form').exists()).toBe(false)
     expect(mountConsole().find('textarea').exists()).toBe(false)
-  })
-
-  it('renders no conversation card at all when there is nothing to show', () => {
-    sessionState.stateEntry.value = { prompt: '', reply: '', project: '', message: '' }
-    expect(mountConsole().find('.mac-conversation').exists()).toBe(false)
   })
 
   it('points at the launch shortcut when the agent is not running, with no filler card', () => {
@@ -142,5 +171,76 @@ describe('MobileAgentConsole', () => {
     await wrapper.findAll('.mac-shortcut')[1].trigger('click')
     await flushPromises()
     expect(executeButtonAction).toHaveBeenCalledWith(expect.objectContaining({ id: 'review' }))
+  })
+
+  // --- DL-071: session target strip ---------------------------------------
+
+  const TWO_SESSIONS = [
+    { pid: 100, hwnd: 9001, title: 'wt A', cwd: 'C:\\repos\\projA', project: 'projA', state: 'working' },
+    { pid: 200, hwnd: 9002, title: 'wt B', cwd: 'C:\\repos\\projB', project: 'projB', state: 'ready' },
+  ]
+
+  it('hides the session strip only when no sessions exist', () => {
+    sessionState.profile.value = {
+      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
+      status_source: 'claude', commands: [{ session_marker: 'claude' }],
+    } as AppProfileDto
+    // Zero sessions → hidden; one session → strip shows the current target.
+    expect(mountConsole().find('.mac-sessions').exists()).toBe(false)
+    targetState.sessions.value = [TWO_SESSIONS[0]]
+    expect(mountConsole().find('.mac-sessions').exists()).toBe(true)
+  })
+
+  it('lists sessions and pins the tapped one', async () => {
+    sessionState.profile.value = {
+      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
+      status_source: 'claude', commands: [{ session_marker: 'claude' }],
+    } as AppProfileDto
+    targetState.sessions.value = TWO_SESSIONS
+    targetState.resolvedPid.value = 200
+
+    const wrapper = mountConsole()
+    const chips = wrapper.findAll('.mac-session')
+    expect(chips).toHaveLength(3) // Auto + 2 sessions
+    expect(chips[0].text()).toContain('Auto')
+    expect(chips[1].text()).toContain('projA')
+    expect(chips[2].text()).toContain('projB')
+
+    await chips[2].trigger('click')
+    expect(setTargetMock).toHaveBeenCalledWith(200)
+    // Pinning flashes the real window — "this one" made visible.
+    expect(identifyMock).toHaveBeenCalledWith(200)
+  })
+
+  it('tapping the pinned session releases back to Auto', async () => {
+    sessionState.profile.value = {
+      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
+      status_source: 'claude', commands: [{ session_marker: 'claude' }],
+    } as AppProfileDto
+    targetState.sessions.value = TWO_SESSIONS
+    targetState.pinnedPid.value = 100
+
+    const wrapper = mountConsole()
+    const pinned = wrapper.findAll('.mac-session')[1]
+    expect(pinned.classes()).toContain('active')
+
+    await pinned.trigger('click')
+    expect(setTargetMock).toHaveBeenCalledWith(null)
+    // Releasing to Auto doesn't flash anything — nothing was armed.
+    expect(identifyMock).not.toHaveBeenCalled()
+  })
+
+  it('tapping Auto unpins without flashing', async () => {
+    sessionState.profile.value = {
+      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
+      status_source: 'claude', commands: [{ session_marker: 'claude' }],
+    } as AppProfileDto
+    targetState.sessions.value = TWO_SESSIONS
+    targetState.pinnedPid.value = 100
+
+    const wrapper = mountConsole()
+    await wrapper.findAll('.mac-session')[0].trigger('click')
+    expect(setTargetMock).toHaveBeenCalledWith(null)
+    expect(identifyMock).not.toHaveBeenCalled()
   })
 })

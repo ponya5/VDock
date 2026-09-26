@@ -95,7 +95,8 @@ class ApiClient {
         if (
           config?.url?.includes('/config') ||
           config?.url?.includes('/profiles') ||
-          config?.url?.includes('/user-settings')
+          config?.url?.includes('/user-settings') ||
+          config?.url?.includes('/agent-sessions')
         ) {
           console.warn('Resource not found (expected):', config?.url)
           return

@@ -367,8 +367,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return currentPage.value.buttons.find(b => b.id === buttonId) || null
   }
 
-  async function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }) {
-    if (!currentProfile.value) return
+  async function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }): Promise<boolean> {
+    if (!currentProfile.value) return false
 
     const applyToButton = (button: Button) => {
       if (updates.animation !== undefined) {
@@ -422,8 +422,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // this store) so callers can safely tell other open VDock windows to
     // refresh only once the change has actually reached the backend —
     // otherwise a same-tick refresh request could race the PUT and pull
-    // back stale data.
-    await saveProfile()
+    // back stale data. Returned so a failed save can't masquerade as
+    // "applied" in the caller's toast.
+    return await saveProfile()
   }
 
   function toggleEditMode() {
@@ -435,14 +436,25 @@ export const useDashboardStore = defineStore('dashboard', () => {
     isEditMode.value = !isEditMode.value
   }
 
+  // Last save failure, surfaced by callers that report save errors — the
+  // boolean alone can't distinguish "backend down" from a 500.
+  const lastProfileSaveError = ref<string | null>(null)
+
   async function saveProfile(): Promise<boolean> {
     if (!currentProfile.value) return false
-    
+
+    lastProfileSaveError.value = null
     try {
             const response = await apiClient.put(`/profiles/${currentProfile.value.id}`, currentProfile.value)
+            if (!response.data.success) {
+              lastProfileSaveError.value = response.data.error || 'The server reported the save as failed.'
+            }
             return response.data.success
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save profile:', error)
+      const status = error?.response?.status
+      const detail = error?.response?.data?.error || error?.message
+      lastProfileSaveError.value = status ? `HTTP ${status}${detail ? ` — ${detail}` : ''}` : (detail || 'Server unreachable')
       return false
     }
   }
@@ -839,6 +851,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     applyGlobalButtonStyle,
     toggleEditMode,
     saveProfile,
+    lastProfileSaveError,
     executeButtonAction,
     executeAction
   }

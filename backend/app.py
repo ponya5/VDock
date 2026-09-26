@@ -48,6 +48,7 @@ from routes.user_settings import user_settings_bp
 from routes.app_profiles import app_profiles_bp
 from routes.logs import logs_bp
 from routes.agent_events import agent_events_bp, set_emitter as set_agent_events_emitter
+from routes.agent_sessions import agent_sessions_bp
 from routes.actions import set_emitter as set_actions_emitter
 
 # Initialize Flask app
@@ -132,6 +133,7 @@ app.register_blueprint(user_settings_bp)
 app.register_blueprint(app_profiles_bp)
 app.register_blueprint(logs_bp)
 app.register_blueprint(agent_events_bp)
+app.register_blueprint(agent_sessions_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
@@ -164,6 +166,10 @@ limiter.exempt(app_profiles_bp)
 # Agent hooks are localhost-only local calls — a 429 must never swallow an
 # "agent is waiting" alert.
 limiter.exempt(agent_events_bp)
+# The session picker polls every 4 s (DL-071) — under a modest daily/hourly
+# cap that alone exhausts the quota, after which the picker silently shows
+# "No session" while real sessions run. Localhost enumeration, not abuse.
+limiter.exempt(agent_sessions_bp)
 
 
 # ============================================================================

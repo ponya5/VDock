@@ -8,7 +8,7 @@
       <span class="mac-status-dot" aria-hidden="true" />
       <div class="mac-status-text">
         <strong class="mac-agent-name">{{ agentName }}</strong>
-        <span class="mac-state-label">{{ stateLabel }}</span>
+        <span class="mac-state-label">{{ statusLine }}</span>
       </div>
       <span v-if="projectName" class="mac-project" :title="stateEntry?.cwd">
         <FontAwesomeIcon :icon="['fas', 'folder-open']" />
@@ -16,31 +16,48 @@
       </span>
     </header>
 
-    <!-- No filler card when there's nothing to show (DL-069 follow-up): a
-         "use the buttons below" hint just repeated what the buttons below
-         already say for themselves, and cost the biggest chunk of the
-         screen doing it. The card only appears once there's an actual
-         prompt, reply, working/permission state to display. -->
-    <div v-if="hasConversation" ref="conversationRef" class="mac-conversation">
-      <article v-if="lastPrompt" class="mac-message from-user">
-        <span class="mac-author">You</span>
-        <p class="mac-message-text">{{ lastPrompt }}</p>
-      </article>
-      <article v-if="currentState === 'working'" class="mac-message from-agent is-working">
-        <span class="mac-author">{{ agentName }}</span>
-        <p class="mac-message-text">
-          <FontAwesomeIcon :icon="['fas', 'spinner']" spin />
-          {{ workingMessage }}
-        </p>
-      </article>
-      <article v-else-if="lastReply" class="mac-message from-agent">
-        <span class="mac-author">{{ agentName }}</span>
-        <p class="mac-message-text">{{ lastReply }}</p>
-      </article>
-      <article v-if="currentState === 'permission'" class="mac-message from-agent is-permission">
-        <span class="mac-author">{{ agentName }} is asking</span>
-        <p class="mac-message-text">{{ stateEntry?.message || 'Needs your permission' }}</p>
-      </article>
+    <!-- Session targeting (DL-071): shown whenever ≥1 live session is
+         detected, so the current target is always visible. Chips wrap
+         instead of scrolling, same rule as the shortcuts grid below. -->
+    <div
+      v-if="showSessionPicker"
+      class="mac-sessions"
+      role="radiogroup"
+      aria-label="Target session"
+    >
+      <button
+        type="button"
+        class="mac-session"
+        :class="{ active: pinnedPid === null }"
+        role="radio"
+        :aria-checked="pinnedPid === null"
+        @click="chooseTarget(null)"
+      >
+        <FontAwesomeIcon :icon="['fas', 'wand-magic-sparkles']" class="mac-session-auto" />
+        <span class="mac-session-label">Auto</span>
+      </button>
+      <button
+        v-for="s in targetRows"
+        :key="s.pid"
+        type="button"
+        class="mac-session"
+        :class="{
+          active: s.pid === pinnedPid,
+          'is-resolved': s.pid === resolvedPid && pinnedPid === null,
+        }"
+        role="radio"
+        :aria-checked="s.pid === pinnedPid"
+        :title="s.cwd || s.title"
+        @click="chooseTarget(s.pid)"
+      >
+        <span class="mac-session-dot" :class="`dot-${s.state || 'idle'}`" aria-hidden="true" />
+        <span class="mac-session-label">{{ s.label }}</span>
+        <FontAwesomeIcon
+          v-if="s.pid === pinnedPid"
+          :icon="['fas', 'thumbtack']"
+          class="mac-session-pin"
+        />
+      </button>
     </div>
 
     <div
@@ -90,26 +107,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, toRef, watch } from 'vue'
+import { computed, ref, toRef } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Button, Scene } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
+import { profileSessionMarker, useAgentTargets } from '@/composables/useAgentTargets'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 
 /**
- * Mobile agent console (DL-065): a portrait phone surface for talking to a
- * coding agent running on the PC — its live state, the last prompt and
- * reply, the actions that fit the moment, and the scene's shortcuts.
+ * Mobile agent console (DL-065): a portrait phone surface for driving a
+ * coding agent running on the PC — its live state, the actions that fit the
+ * moment, the target-session chips (DL-071), and the scene's shortcuts.
  *
- * There is deliberately no free-text composer here (DL-069 follow-up): a
+ * There is deliberately no free-text composer and no conversation card: a
  * phone's on-screen keyboard eats most of the screen for a control surface
- * that's meant to be a quick tap away, and every state-driven action
- * (Submit, Continue, Interrupt, …) already covers what a follow-up message
- * would have said. Free-text prompting stays a desktop-only affordance,
- * driven from the scene's own buttons via `runShortcut` below.
+ * that's meant to be a quick tap away (DL-069 follow-up), and nobody reads
+ * agent replies on the deck — the hook's detail line ("needs permission to
+ * use Bash") shows in the status card instead. Free-text prompting stays a
+ * desktop-only affordance, driven from the scene's own buttons via
+ * `runShortcut` below.
  */
 
 interface ConsoleShortcut {
@@ -125,7 +144,6 @@ const props = defineProps<{ scene: Scene | null }>()
 const PAGE_NAVIGATION_ACTIONS = new Set(['next_page', 'previous_page', 'home_page', 'goto_page'])
 /** Scene buttons that start the agent — highlighted while it isn't running. */
 const LAUNCH_ACTIONS = new Set(['claude_continue', 'claude_open', 'program'])
-const CONVERSATION_SCROLL_MARGIN_PX = 12
 
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
@@ -140,22 +158,42 @@ const {
   runAction,
 } = useAgentSession(toRef(props, 'scene'))
 
-const conversationRef = ref<HTMLElement | null>(null)
 const runningShortcutId = ref<string | null>(null)
+
+// DL-071: which live CLI session the actions/shortcuts drive. The chip strip
+// shows whenever at least one session is detected (or a pin is set) so the
+// current target is always visible — it only vanishes with zero sessions.
+const sessionMarker = computed(() => profileSessionMarker(profile.value))
+const {
+  sessionRows: targetRows,
+  pinnedPid,
+  resolvedPid,
+  setTarget,
+  identify,
+} = useAgentTargets(sessionMarker)
+
+const showSessionPicker = computed(() =>
+  Boolean(sessionMarker.value) &&
+  (targetRows.value.length > 0 || pinnedPid.value !== null)
+)
+
+async function chooseTarget(pid: number | null): Promise<void> {
+  vibrate(10)
+  // Arming a session flashes its real window — on a phone there's no room
+  // to *describe* which terminal a chip is, so the terminal itself waves.
+  if (pid !== null && pid !== pinnedPid.value) void identify(pid)
+  // Tapping the pinned session releases it — same as tapping Auto.
+  await setTarget(pid === pinnedPid.value ? null : pid)
+}
 
 const agentName = computed(() => profile.value?.label ?? props.scene?.name ?? 'Agent')
 const projectName = computed(() => stateEntry.value?.project ?? '')
-const lastPrompt = computed(() => stateEntry.value?.prompt ?? '')
-const lastReply = computed(() => stateEntry.value?.reply ?? '')
-const workingMessage = computed(() => stateEntry.value?.message || 'Working…')
+
+/** Status line: the hook's detail message when it has one ("needs permission
+    to use Bash", the current task), else the generic state label. */
+const statusLine = computed(() => stateEntry.value?.message || stateLabel.value)
 
 const displayState = computed(() => (isAgentPossiblyRunning.value ? currentState.value : 'offline'))
-
-const hasConversation = computed(() =>
-  Boolean(lastPrompt.value || lastReply.value) ||
-  currentState.value === 'working' ||
-  currentState.value === 'permission'
-)
 
 /**
  * Interrupt (working) and Approve (permission) are the one thing to press;
@@ -203,18 +241,6 @@ async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
     runningShortcutId.value = null
   }
 }
-
-/** Brings the newest message's first line into view, so a long reply reads from its start. */
-async function scrollToNewestMessage(): Promise<void> {
-  await nextTick()
-  const conversation = conversationRef.value
-  const newestMessage = conversation?.querySelector<HTMLElement>('.mac-message:last-of-type')
-  if (!conversation || !newestMessage) return
-  conversation.scrollTop = newestMessage.offsetTop - CONVERSATION_SCROLL_MARGIN_PX
-}
-
-watch([lastPrompt, lastReply, currentState], scrollToNewestMessage)
-onMounted(scrollToNewestMessage)
 
 trackAgentSurfaceVisibility(
   computed(() => profile.value?.status_source),
@@ -302,75 +328,78 @@ trackAgentSurfaceVisibility(
   white-space: nowrap;
 }
 
-/* --- Conversation ------------------------------------------------------------ */
-.mac-conversation {
-  position: relative;
-  flex: 1;
-  min-height: 96px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+/* --- Session targeting (DL-071) --------------------------------------------- */
+/* A wrap-visible chip strip — DL-069's rule applies here too: no horizontal
+   scroll row hiding sessions. Chips render whenever ≥1 live session exists
+   (or a pin is set), so the current target is always on screen. */
+.mac-sessions {
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 18px;
-  background: rgba(10, 14, 20, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  -webkit-overflow-scrolling: touch;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.mac-message {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 92%;
-  padding: 10px 12px;
-  border-radius: 16px;
+.mac-session {
+  min-height: 44px;
+  max-width: 48%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 20, 28, 0.78);
+  color: inherit;
+  font-size: clamp(0.78rem, 0.74rem + 0.3vw, 0.92rem);
+  font-weight: 600;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
-.mac-message.from-user {
-  align-self: flex-end;
-  background: #1f6fd1;
-  border-bottom-right-radius: 6px;
+/* The session auto-resolution would pick right now (no pin set). */
+.mac-session.is-resolved {
+  border-color: color-mix(in srgb, var(--agent-accent) 40%, transparent);
 }
 
-.mac-message.from-agent {
-  align-self: flex-start;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom-left-radius: 6px;
+.mac-session.active {
+  border-color: var(--agent-accent);
+  background: color-mix(in srgb, var(--agent-accent) 24%, transparent);
 }
 
-.mac-message.is-working {
-  color: #bae6fd;
+.mac-session:active:not(:disabled) { transform: scale(0.96); }
+
+.mac-session-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #6b7280;
 }
 
-.mac-message.is-permission {
-  border-color: rgba(245, 158, 11, 0.55);
-  background: rgba(245, 158, 11, 0.12);
+.mac-session-dot.dot-ready { background: #22c55e; }
+.mac-session-dot.dot-working { background: #38bdf8; }
+.mac-session-dot.dot-permission { background: #f59e0b; }
+
+.mac-session-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.mac-author {
-  font-size: clamp(0.68rem, 0.64rem + 0.2vw, 0.78rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  opacity: 0.7;
+.mac-session-auto {
+  color: var(--agent-accent);
+  font-size: 0.9em;
 }
 
-.mac-message-text {
-  margin: 0;
-  font-size: clamp(0.9rem, 0.85rem + 0.3vw, 1rem);
-  line-height: 1.45;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  user-select: text;
-  -webkit-user-select: text;
+.mac-session-pin {
+  color: var(--agent-accent);
+  font-size: 0.8em;
+  flex-shrink: 0;
 }
 
 /* --- State actions ------------------------------------------------------------ */
-/* One compact row of icon-over-label buttons, so the conversation keeps
-   the height; an urgent primary action gets a full-width row of its own. */
+/* One compact row of icon-over-label buttons; an urgent primary action
+   gets a full-width row of its own. */
 .mac-actions {
   flex-shrink: 0;
   display: grid;
@@ -490,11 +519,6 @@ trackAgentSurfaceVisibility(
     flex-direction: row;
     align-items: baseline;
     gap: 10px;
-  }
-
-  .mac-conversation {
-    min-height: 56px;
-    padding: 8px;
   }
 
   .mac-action {

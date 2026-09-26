@@ -10,8 +10,11 @@ Write-Host "VDock Launcher Builder" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$LauncherScript = Join-Path $ProjectRoot "VDock-Launcher.py"
+# Two levels up would escape the repo entirely; the launcher lives in
+# scripts/ next to this build script.
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = Split-Path -Parent $ScriptDir
+$LauncherScript = Join-Path $ScriptDir "VDock-Launcher.py"
 $OutputDir = Join-Path $ProjectRoot "dist"
 $IconPath = Join-Path $ProjectRoot "frontend\public\vdock-icon.ico"
 

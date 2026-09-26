@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useDashboardStore } from '@/stores/dashboard'
@@ -45,6 +45,7 @@ import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import type { AppIntegration } from '@/types'
 
 const route = useRoute()
+const router = useRouter()
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 const dashboardStore = useDashboardStore()
@@ -129,6 +130,10 @@ function handleSummonKey(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleSummonKey)
+  // Tray "Settings" — navigate in place instead of reloading the SPA.
+  ;(window as any).electron?.onNavigate?.((path: string) => {
+    if (typeof path === 'string' && path.startsWith('/')) router.push(path)
+  })
 })
 
 onUnmounted(() => {

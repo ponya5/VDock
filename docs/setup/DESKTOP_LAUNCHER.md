@@ -42,7 +42,7 @@ When you double-click the launcher:
 Before first launch, make sure you've run:
 
 ```cmd
-install.bat
+setup.bat
 ```
 
 This sets up all dependencies.
@@ -82,7 +82,7 @@ This sets up all dependencies.
 - Install Node.js from https://nodejs.org
 
 ### "Virtual environment not found"
-- Run `install.bat` first to set up dependencies
+- Run `setup.bat` first to set up dependencies
 
 ### Port already in use
 - Close any apps using ports 3000 or 5000

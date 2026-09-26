@@ -7,9 +7,12 @@
 ; Basic settings
 Name "VDock"
 OutFile "VDock-Installer.exe"
-InstallDir "$PROGRAMFILES\VDock"
+; Per-user install: the backend writes profiles/uploads/logs to
+; backend\data under the install dir, so the target must be user-writable —
+; $PROGRAMFILES + admin would leave the app unable to save anything.
+InstallDir "$LOCALAPPDATA\VDock"
 InstallDirRegKey HKCU "Software\VDock" ""
-RequestExecutionLevel admin
+RequestExecutionLevel user
 
 ; Appearance
 !insertmacro MUI_PAGE_WELCOME
@@ -30,14 +33,16 @@ Section "Install VDock"
   File "README.md"
   File "LICENSE"
   File "launch.bat"
-  File "install.bat"
+  File "setup.bat"
 
-  ; Create shortcuts
+  ; Create shortcuts — launch.bat is the supported entry point (it runs the
+  ; same VDock-Launcher.py the PyInstaller exe wraps, without requiring a
+  ; separate exe build).
   SetOutPath "$INSTDIR"
   CreateDirectory "$SMPROGRAMS\VDock"
-  CreateShortcut "$SMPROGRAMS\VDock\VDock.lnk" "$INSTDIR\VDock-Launcher.exe"
+  CreateShortcut "$SMPROGRAMS\VDock\VDock.lnk" "$INSTDIR\launch.bat"
   CreateShortcut "$SMPROGRAMS\VDock\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$DESKTOP\VDock.lnk" "$INSTDIR\VDock-Launcher.exe"
+  CreateShortcut "$DESKTOP\VDock.lnk" "$INSTDIR\launch.bat"
 
   ; Store installation folder
   WriteRegStr HKCU "Software\VDock" "" $INSTDIR

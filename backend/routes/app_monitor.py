@@ -112,21 +112,17 @@ def detected_profiles():
     """
     import logging
     import psutil
+    from integrations import sessions
     from integrations.keymaps import ALL_PROFILES
 
     logger = logging.getLogger('vdock')
     try:
         names = set()
-        haystacks = []
-        for proc in psutil.process_iter(['name', 'cmdline']):
+        for proc in psutil.process_iter(['name']):
             try:
                 name = (proc.info.get('name') or '').lower()
-                if not name:
-                    continue
-                names.add(name)
-                cmdline = proc.info.get('cmdline')
-                if cmdline:
-                    haystacks.append(' '.join(cmdline).lower())
+                if name:
+                    names.add(name)
             except (psutil.NoSuchProcess, psutil.AccessDenied,
                     psutil.ZombieProcess):
                 continue
@@ -136,8 +132,10 @@ def detected_profiles():
             markers = {c.session_marker for c in profile.commands
                        if c.session_marker}
             if profile.kind == 'terminal_agent':
-                if any(m in name for m in markers for name in names) or \
-                   any(m in h for m in markers for h in haystacks):
+                # Same matcher the liveness gate and window resolver use —
+                # a substring scan here reported desktop-app helpers like
+                # chrome-native-host.exe as live sessions.
+                if any(sessions.iter_session_pids(m) for m in markers):
                     detected.append(profile.id)
             elif any(exe.lower() in names for exe in profile.exes):
                 detected.append(profile.id)

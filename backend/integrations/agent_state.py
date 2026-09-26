@@ -15,7 +15,7 @@ Pure state, no Flask: the route owns HTTP and broadcasting.
 """
 import threading
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 STATE_READY = 'ready'
 STATE_WORKING = 'working'
@@ -125,6 +125,18 @@ def snapshot() -> Dict[str, Dict[str, Any]]:
 
 def get(source: str) -> Optional[Dict[str, Any]]:
     return snapshot().get(source)
+
+
+def session_entries(source: str) -> List[Dict[str, Any]]:
+    """The raw per-session entries for ``source`` (DL-071).
+
+    ``snapshot()`` only exposes the combined per-source view; the session
+    picker needs each session's own cwd/state to label the choices.
+    """
+    now = time.time()
+    with _lock:
+        _drop_expired(now)
+        return [dict(e) for e in _sessions_by_source.get(source, {}).values()]
 
 
 def reset() -> None:

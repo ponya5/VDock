@@ -199,3 +199,7 @@ backend/data/backups/
 # Personal development playbook — private, not for the public repo
 DEVELOPMENT-GUIDELINES.md
 SKILL.md
+
+# Build/cache artifacts and stray debug dumps
+*.tsbuildinfo
+_diff*.txt

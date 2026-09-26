@@ -22,10 +22,16 @@ describe('button behaviour page (DL-054 merged panels)', () => {
     expect(view).toContain('Touch mode')
   })
 
-  it('keeps the save/apply actions', () => {
-    expect(view).toContain('saveAndApplyButtonSettings')
+  it('keeps the save/apply action — one button that applies to all keys', () => {
+    // DL-031 follow-up: Save & Apply IS the mass-apply — the old
+    // draft-only savebar path looked identical, so picks never landed.
+    expect(view).not.toContain('saveAndApplyButtonSettings')
     expect(view).toContain('applyButtonBehaviourToAll')
     expect(view).toContain('requestVdockRefresh()')
+    expect(view).toContain('await ensureProfileLoaded()')
+    // BroadcastChannel never reaches the sender's own window — the apply
+    // must refresh the current window itself, not only other tabs.
+    expect(view).toContain('await refreshVdock()')
   })
 
   it('routes settings search through deepTab anchors', () => {

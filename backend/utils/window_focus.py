@@ -234,6 +234,41 @@ def foreground_hwnd() -> Optional[int]:
     return win32gui.GetForegroundWindow()
 
 
+def flash_window(hwnd: int, count: int = 4) -> bool:
+    """Blink a window's titlebar + taskbar button ``count`` times.
+
+    The session picker's "which one is this" affordance (DL-071): a human
+    can't map a pid to a physical terminal, but a flashing window is
+    unambiguous. Doesn't steal focus. False off Windows or on API failure.
+    """
+    if platform.system() != 'Windows':
+        return False
+    import ctypes
+
+    class FLASHWINFO(ctypes.Structure):
+        _fields_ = [
+            ('cbSize', ctypes.c_uint),
+            ('hwnd', ctypes.c_void_p),
+            ('dwFlags', ctypes.c_uint),
+            ('uCount', ctypes.c_uint),
+            ('dwTimeout', ctypes.c_uint),
+        ]
+
+    FLASHW_ALL = 0x00000003  # titlebar caption + taskbar button
+    try:
+        info = FLASHWINFO(
+            cbSize=ctypes.sizeof(FLASHWINFO),
+            hwnd=hwnd,
+            dwFlags=FLASHW_ALL,
+            uCount=count,
+            dwTimeout=0,
+        )
+        return bool(ctypes.windll.user32.FlashWindowEx(ctypes.byref(info)))
+    except Exception as e:  # noqa: BLE001 - cosmetic affordance, never fatal
+        logger.debug('FlashWindowEx failed for %s: %s', hwnd, e)
+        return False
+
+
 def foreground_exe_live() -> Optional[str]:
     """Exe of the foreground window, read fresh -- not the monitor's cache.
 
@@ -321,12 +356,11 @@ def _cwd_tier(session_cwd: Optional[str], prefer_cwd: Optional[str]) -> int:
 _NON_HOST_ANCESTORS = {'explorer.exe'}
 
 
-def find_session_host_window(
+def _session_host_candidates(
     marker: str,
-    prefer_title: Optional[str] = None,
     prefer_cwd: Optional[str] = None,
-) -> Optional[int]:
-    """HWND of the top-level window hosting a ``marker`` session process.
+) -> List[Tuple[int, int, str, bool, int, float]]:
+    """(pid, hwnd, title, self_owned, cwd_tier, create_time) per host window.
 
     Finds processes matching the marker, then walks each one's ancestor chain
     (checking each ancestor's children too) until a PID owns a visible window.
@@ -335,26 +369,15 @@ def find_session_host_window(
     one in Windows Terminal resolves to the wt window, and one in a classic
     console resolves to its conhost window -- no exe list needed.
 
-    Windows whose owner IS the session process itself (e.g. the Claude desktop
-    app matching 'claude') sort last: a deck button means the hosted terminal
-    session, not a standalone app that happens to share the name.
-
-    With several sessions running, ``prefer_cwd`` picks the one whose working
-    directory matches (or nests inside) the button's project; remaining ties
-    break toward the most recently started session rather than process
-    enumeration order.
+    Several windows can share one session (a process and its children can own
+    more than one), and several sessions can share one window (two agent tabs
+    in the same terminal map both pids to the same hwnd).
     """
-    if platform.system() != 'Windows':
-        return None
     import psutil
 
-    needle = (marker or '').lower().strip()
-    if not needle:
-        return None
-
-    session_pids = _session_pids(needle)
+    session_pids = _session_pids(marker)
     if not session_pids:
-        return None
+        return []
 
     win_by_pid = _visible_windows_by_pid()
 
@@ -370,8 +393,7 @@ def find_session_host_window(
         except Exception:
             continue
 
-    # (hwnd, title, self_owned, cwd_tier, create_time)
-    candidates: List[Tuple[int, str, bool, int, float]] = []
+    candidates: List[Tuple[int, int, str, bool, int, float]] = []
     for pid in session_pids:
         sess_cwd: Optional[str] = None
         create_time = 0.0
@@ -407,16 +429,55 @@ def find_session_host_window(
             for owner in [anc] + children_of.get(anc, []):
                 for hwnd, title in win_by_pid.get(owner, ()):
                     candidates.append(
-                        (hwnd, title, owner == pid, tier, create_time))
+                        (pid, hwnd, title, owner == pid, tier, create_time))
                     found = True
             if found:
                 break
 
+    return candidates
+
+
+def find_session_host_window(
+    marker: str,
+    prefer_title: Optional[str] = None,
+    prefer_cwd: Optional[str] = None,
+    prefer_pid: Optional[int] = None,
+) -> Optional[int]:
+    """HWND of the top-level window hosting a ``marker`` session process.
+
+    Windows whose owner IS the session process itself (e.g. the Claude desktop
+    app matching 'claude') sort last: a deck button means the hosted terminal
+    session, not a standalone app that happens to share the name.
+
+    With several sessions running, ``prefer_cwd`` picks the one whose working
+    directory matches (or nests inside) the button's project; remaining ties
+    break toward the most recently started session rather than process
+    enumeration order.
+
+    ``prefer_pid`` (DL-071: the pinned deck target) beats every ranking
+    signal -- when that session owns a host window it wins outright; a pinned
+    session without a window (minimised host gone, headless job) falls back
+    to normal ranking instead of dead-ending the press.
+    """
+    if platform.system() != 'Windows':
+        return None
+
+    needle = (marker or '').lower().strip()
+    if not needle:
+        return None
+
+    candidates = _session_host_candidates(needle, prefer_cwd)
+
     if not candidates:
         return None
 
-    def _rank(item: Tuple[int, str, bool, int, float]) -> tuple:
-        hwnd, title, self_owned, cwd_tier, create_time = item
+    if prefer_pid is not None:
+        for pid, hwnd, _title, _self_owned, _tier, _created in candidates:
+            if pid == prefer_pid:
+                return hwnd
+
+    def _rank(item: Tuple[int, int, str, bool, int, float]) -> tuple:
+        _pid, _hwnd, title, self_owned, cwd_tier, create_time = item
         title_miss = bool(
             prefer_title and prefer_title.lower() not in title.lower()
         )
@@ -425,4 +486,44 @@ def find_session_host_window(
         return (cwd_tier, self_owned, title_miss, -create_time)
 
     candidates.sort(key=_rank)
-    return candidates[0][0]
+    return candidates[0][1]
+
+
+def list_session_hosts(marker: str) -> List[dict]:
+    """One row per live ``marker`` session that owns a host window.
+
+    Powers the deck's session picker (DL-071). Windowless sessions --
+    headless ``claude -p`` jobs and friends -- are excluded: nothing can be
+    typed into them. Newest session first.
+    """
+    if platform.system() != 'Windows':
+        return []
+
+    needle = (marker or '').lower().strip()
+    if not needle:
+        return []
+
+    by_pid: dict = {}
+    for pid, hwnd, title, self_owned, _tier, create_time in _session_host_candidates(needle):
+        row = by_pid.setdefault(pid, {
+            'pid': pid,
+            'hwnd': hwnd,
+            'title': title,
+            'self_owned': self_owned,
+            'create_time': create_time,
+        })
+        # A self-owned window would mean the process IS an app (desktop app
+        # shape); a hosted terminal window is the better row to show.
+        if row['self_owned'] and not self_owned:
+            row.update({'hwnd': hwnd, 'title': title, 'self_owned': False})
+
+    # Per-session cwd rides along for display and hook matching; it was
+    # already read during candidate enumeration, so re-read just it here.
+    import psutil
+    for pid, row in by_pid.items():
+        try:
+            row['cwd'] = psutil.Process(pid).cwd()
+        except Exception:
+            row['cwd'] = None
+
+    return sorted(by_pid.values(), key=lambda r: -r['create_time'])

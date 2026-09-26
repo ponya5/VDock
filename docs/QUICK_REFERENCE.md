@@ -162,7 +162,7 @@ VDock/
 ├── Launch-VDock.ps1              ← PowerShell launcher
 ├── VDock-Launcher.py             ← Python launcher
 ├── VDock.nsi                     ← NSIS installer
-├── install.bat                   ← Initial setup
+├── setup.bat                   ← Initial setup
 │
 ├── backend/
 │   ├── app.py                    ← Main Flask app
@@ -193,7 +193,7 @@ VDock/
 
 ## ✅ Setup Checklist
 
-- [ ] Run `install.bat` (one-time setup)
+- [ ] Run `setup.bat` (one-time setup)
 - [ ] Test with `Launch-VDock.bat`
 - [ ] Access http://localhost:3000
 - [ ] Login with admin/admin
@@ -232,7 +232,7 @@ type backend\data\vdock.log
 
 ### First Time Setup
 ```cmd
-install.bat
+setup.bat
 Launch-VDock.bat
 ```
 

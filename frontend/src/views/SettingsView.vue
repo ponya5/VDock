@@ -419,12 +419,8 @@
             <div class="note warn">
               <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
               <div>
-                Animation, icon motion and key design are drafts until <b>Save &amp; Apply</b>.
-                <button type="button" class="btn sm warn-apply" :disabled="applyingButtonBehaviour" @click="applyButtonBehaviourToAll">
-                  <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'wand-magic-sparkles']" :spin="applyingButtonBehaviour" />
-                  {{ applyingButtonBehaviour ? 'Applying…' : 'Apply to every existing key' }}
-                </button>
-                rewrites all buttons, including per-key customisation.
+                Animation, icon motion and key design are drafts until <b>Save &amp; Apply</b>,
+                which rewrites every existing key — including per-key customisation.
               </div>
             </div>
           </div>
@@ -446,11 +442,28 @@
             <div class="preview">
               <div class="preview-head">In context</div>
               <div class="preview-stage preview-stage-grid">
-                <div class="mock-grid">
-                  <span v-for="i in 12" :key="i" class="mock-key" :style="{ transform: `scale(${Math.min(settings.buttonSize * settingsStore.touchModeMultiplier, 1)})`, opacity: String(1 - settings.buttonTransparency / 130) }"></span>
+                <div class="mock-grid" :style="{ gridTemplateColumns: `repeat(${previewGridCols}, 1fr)` }">
+                  <span v-for="i in previewGridCols * previewGridRows" :key="i" class="mock-key" :style="{ transform: `scale(${Math.min(settings.buttonSize * settingsStore.touchModeMultiplier, 1)})`, opacity: String(1 - settings.buttonTransparency / 130) }"></span>
                 </div>
               </div>
-              <div class="preview-foot">4 × 3 grid at the current size and transparency.</div>
+              <div class="preview-foot grid-foot">
+                <div class="grid-steppers">
+                  <span class="grid-ctl">
+                    Cols
+                    <button type="button" :disabled="!canStepGrid || previewGridCols <= GRID_COLS_MIN" @click="stepPreviewGrid('cols', -1)">−</button>
+                    <b>{{ previewGridCols }}</b>
+                    <button type="button" :disabled="!canStepGrid || previewGridCols >= GRID_COLS_MAX" @click="stepPreviewGrid('cols', 1)">+</button>
+                  </span>
+                  ×
+                  <span class="grid-ctl">
+                    Rows
+                    <button type="button" :disabled="!canStepGrid || previewGridRows <= GRID_ROWS_MIN" @click="stepPreviewGrid('rows', -1)">−</button>
+                    <b>{{ previewGridRows }}</b>
+                    <button type="button" :disabled="!canStepGrid || previewGridRows >= GRID_ROWS_MAX" @click="stepPreviewGrid('rows', 1)">+</button>
+                  </span>
+                </div>
+                <span>{{ canStepGrid ? 'Resizes the current page — saved to your profile.' : 'Open the dashboard once to load a profile, then resize the grid here.' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1448,8 +1461,9 @@
         <span class="grow">
           <template v-if="isButtonsPage">
             <button type="button" class="btn ghost" :disabled="!buttonPageDirty" @click="revertButtonDefaults">Revert</button>
-            <button type="button" class="btn primary" :disabled="applyingButtonBehaviour" @click="saveAndApplyButtonSettings">
-              <FontAwesomeIcon :icon="['fas', 'floppy-disk']" /> Save &amp; Apply
+            <button type="button" class="btn primary" :disabled="applyingButtonBehaviour" @click="applyButtonBehaviourToAll">
+              <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
+              {{ applyingButtonBehaviour ? 'Applying…' : 'Save & Apply to all keys' }}
             </button>
           </template>
           <button v-else type="button" class="btn primary" @click="applyToDashboard">
@@ -2165,19 +2179,11 @@ const removeScreensaverBackground = () => {
 
 const applyingButtonBehaviour = ref(false)
 
-// Settings autosave via the store's deep watch — this explicit action makes
-// the apply visible and covers Settings open in a second window, where the
-// dashboard wouldn't see the change until manually refreshed. It also commits
-// the local design draft (preview refs) to the persisted defaults.
-function saveAndApplyButtonSettings() {
-  settingsStore.buttonDefaultAnimation = previewAnimation.value
-  settingsStore.buttonDefaultIconLoop = previewIconLoop.value
-  settingsStore.buttonDefaultEffect = previewEffect.value
-  settingsStore.saveSettings()
-  requestVdockRefresh()
-  notificationsStore.success('Applied', 'Button settings saved and applied to the dashboard.')
-}
-
+// "Save & Apply to all keys" — commits the draft (preview refs) as the
+// persisted defaults AND rewrites every existing key (DL-031 follow-up:
+// the draft-only savebar path looked identical to a real apply, so picks
+// never reached the deck). The warn note above states the per-key
+// customisation cost.
 async function applyButtonBehaviourToAll() {
   applyingButtonBehaviour.value = true
   try {
@@ -2186,16 +2192,33 @@ async function applyButtonBehaviourToAll() {
     settingsStore.buttonDefaultEffect = previewEffect.value
     settingsStore.saveSettings()
 
-    await dashboardStore.applyGlobalButtonStyle({
+    // Standalone Settings windows start with no profile in the dashboard
+    // store — without this, applyGlobalButtonStyle silently no-ops while
+    // the toast claims success.
+    await ensureProfileLoaded()
+    if (!dashboardStore.currentProfile) {
+      notificationsStore.error('Failed to apply', 'No profile is loaded — nothing to apply the design to.')
+      return
+    }
+
+    const saved = await dashboardStore.applyGlobalButtonStyle({
       animation: previewAnimation.value,
       iconLoop: previewIconLoop.value,
       effect: previewEffect.value
     })
+    if (!saved) {
+      notificationsStore.error('Failed to apply', dashboardStore.lastProfileSaveError || 'The profile could not be saved — your buttons were not changed.')
+      return
+    }
 
-    // applyGlobalButtonStyle mutates the dashboard/profile store, which — unlike
-    // the settings store — has no live cross-window sync. If Settings is open in
-    // a separate window/tab (e.g. via "Open in browser"), the actual dashboard
-    // window wouldn't otherwise see this until it was manually refreshed.
+    // Refresh THIS window first: BroadcastChannel never delivers to its own
+    // sender, so requestVdockRefresh alone leaves a same-window dashboard on
+    // whatever object it renders (stale profile ref = old design). The
+    // reload below re-fetches the just-saved profile, so there's no race.
+    await refreshVdock()
+
+    // If Settings is open in a separate window/tab (e.g. via "Open in
+    // browser"), tell the dashboard window to refresh itself as well.
     requestVdockRefresh()
 
     notificationsStore.success('Button style applied', 'Animation, icon motion, and effect applied to every button on your dashboard.')
@@ -2205,6 +2228,35 @@ async function applyButtonBehaviourToAll() {
     applyingButtonBehaviour.value = false
   }
 }
+
+// In-context grid control — resizes the CURRENT page's grid_config (the same
+// field the deck footer edits), persisted via a debounced profile save so
+// rapid +/- clicks coalesce into one PUT.
+const GRID_COLS_MIN = 2, GRID_COLS_MAX = 10, GRID_ROWS_MIN = 1, GRID_ROWS_MAX = 6
+const previewGridCols = computed(() => dashboardStore.currentPage?.grid_config?.cols ?? 4)
+const previewGridRows = computed(() => dashboardStore.currentPage?.grid_config?.rows ?? 3)
+const canStepGrid = computed(() => !!dashboardStore.currentPage)
+
+let previewGridSaveTimer: ReturnType<typeof setTimeout> | null = null
+function stepPreviewGrid(axis: 'cols' | 'rows', delta: number) {
+  const page = dashboardStore.currentPage
+  if (!page) return
+  const [min, max] = axis === 'cols' ? [GRID_COLS_MIN, GRID_COLS_MAX] : [GRID_ROWS_MIN, GRID_ROWS_MAX]
+  const next = Math.min(max, Math.max(min, page.grid_config[axis] + delta))
+  if (next === page.grid_config[axis]) return
+  page.grid_config[axis] = next
+  if (previewGridSaveTimer) clearTimeout(previewGridSaveTimer)
+  previewGridSaveTimer = setTimeout(() => {
+    previewGridSaveTimer = null
+    void dashboardStore.saveProfile().then(ok => { if (ok) requestVdockRefresh() })
+  }, 500)
+}
+
+// The grid stepper needs a loaded profile — standalone Settings windows start
+// with none, so fetch it when the Buttons tab is opened (or already active).
+watch(appearanceSubTab, (sub) => {
+  if (sub === 'buttons') void ensureProfileLoaded()
+}, { immediate: true })
 
 const screensaverWidgetOptions = [
   { id: 'weather', label: 'Weather', description: 'Current temperature and conditions' },
@@ -2700,7 +2752,10 @@ function agentHookButtonLabel(agent: HookAgentId): string {
 async function fetchAgentHookStatus() {
   await Promise.all(AGENT_HOOK_TARGETS.map(async ({ id }) => {
     try {
-      const res = await apiClient.get('/agent-events/hook-status', { params: { agent: id } })
+      // apiClient.get's second arg is the params object already — wrapping
+      // it in `{ params: … }` nested `agent` so the backend never saw it and
+      // silently defaulted to 'claude' for every tile.
+      const res = await apiClient.get('/agent-events/hook-status', { agent: id })
       agentHooks[id].installed = !!res.data?.installed
       agentHooks[id].partial = !!res.data?.partial
       agentHooks[id].known = true
@@ -4123,7 +4178,7 @@ onMounted(async () => {
 .note code { font-family: var(--mono); color: var(--text); font-size: var(--fs-sm); }
 .note.warn { border-color: #4a3a18; background: #261e0d; color: #e7cd9a; }
 .note.warn svg { color: var(--warn); }
-.warn-apply { margin: 2px 4px; }
+
 
 /* ==========================================================================
    Pickers (fonts, backgrounds, uploads)
@@ -4247,6 +4302,26 @@ onMounted(async () => {
 .mock-key.side { aspect-ratio: auto; }
 .mock-grid-ghost .mock-key { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); }
 .preview-stage-grid .mock-grid { grid-template-columns: repeat(4, 1fr); max-width: 240px; }
+
+/* In-context grid steppers — resize the real page grid from the preview */
+.grid-foot { display: flex; flex-direction: column; gap: 8px; }
+.grid-steppers { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--text-2); }
+.grid-ctl { display: inline-flex; align-items: center; gap: 6px; }
+.grid-ctl button {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.grid-ctl button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.grid-ctl button:disabled { opacity: 0.35; cursor: default; }
+.grid-ctl b { min-width: 1.4ch; text-align: center; }
 
 /* mini dashboard mock (Layout & sidebar preview rail) */
 .mock-dash { display: flex; gap: 12px; width: 100%; max-width: 300px; align-items: stretch; }

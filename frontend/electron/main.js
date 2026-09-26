@@ -62,9 +62,14 @@ function startBackend() {
   console.log('App path:', appPath)
   console.log('========================================')
 
-  // In development, run the venv Python directly (no shell activation chain)
+  // In development, run the venv Python directly (no shell activation chain).
+  // The venv layout differs by OS: Windows uses venv\Scripts\python.exe,
+  // macOS/Linux use venv/bin/python.
   if (isDev) {
-    const venvPython = path.join(backendPath, 'venv', 'Scripts', 'python.exe')
+    const venvPython = path.join(
+      backendPath, 'venv',
+      process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'
+    )
 
     console.log('Using venv Python:', venvPython)
 
@@ -75,8 +80,16 @@ function startBackend() {
       windowsHide: true
     })
   } else {
-    // In production, use bundled python
-    const pythonPath = path.join(process.resourcesPath, 'backend', 'python.exe')
+    // Production: prefer a bundled interpreter, fall back to the system
+    // Python (python3 on macOS/Linux, python on Windows) — the resource
+    // bundle ships backend source, not a frozen binary.
+    const bundledPython = path.join(
+      process.resourcesPath, 'backend',
+      process.platform === 'win32' ? 'python.exe' : 'python'
+    )
+    const pythonPath = require('fs').existsSync(bundledPython)
+      ? bundledPython
+      : (process.platform === 'win32' ? 'python' : 'python3')
     backendProcess = spawn(pythonPath, [appPath], {
       cwd: backendPath,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -266,143 +279,16 @@ function quitApplication() {
   })
 }
 
-function fixFirewall() {
-  const { dialog } = require('electron')
-  const { exec } = require('child_process')
-
-  // Show confirmation dialog
-  dialog.showMessageBox(mainWindow, {
-    type: 'question',
-    buttons: ['Yes', 'Cancel'],
-    defaultId: 0,
-    title: 'Fix Windows Firewall',
-    message: 'Add VDock to Windows Firewall exclusions?',
-    detail: 'This will add VDock launcher files to Windows Firewall exceptions to prevent connection issues.\n\nThis requires administrator privileges.'
-  }).then(result => {
-    if (result.response === 0) {
-      // User clicked Yes
-      const launcherPath = process.execPath
-      const pythonPath = path.join(__dirname, '../../backend/venv/Scripts/python.exe')
-
-      // Add firewall rules
-      const commands = [
-        `netsh advfirewall firewall add rule name="VDock Electron" dir=in action=allow program="${launcherPath}" enable=yes`,
-        `netsh advfirewall firewall add rule name="VDock Python Backend" dir=in action=allow program="${pythonPath}" enable=yes`
-      ]
-
-      // Execute firewall commands with admin privileges
-      const psCommand = commands.map(cmd => `Start-Process -Verb RunAs -FilePath "cmd" -ArgumentList "/c", "${cmd.replace(/"/g, '\\"')}" -Wait`).join('; ')
-
-      exec(`powershell -Command "${psCommand}"`, (error, stdout, stderr) => {
-        if (error) {
-          dialog.showErrorBox('Firewall Fix Failed', `Failed to add firewall rules:\n${error.message}\n\nPlease run VDock as administrator or add the rules manually.`)
-        } else {
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Firewall Fixed',
-            message: 'VDock has been added to Windows Firewall exclusions successfully!',
-            detail: 'You should no longer experience connection issues.'
-          })
-        }
-      })
-    }
-  })
+function openSettingsPage() {
+  // Route the existing main window to the in-app settings — the old modal
+  // settings window was a dead duplicate of the real settings surface.
+  if (!mainWindow) return
+  mainWindow.show()
+  mainWindow.focus()
+  mainWindow.webContents.send('navigate-to', '/settings')
 }
 
-async function openSettings() {
-  // Get current auto-launch status
-  const isAutoLaunchEnabled = await autoLaunch.isEnabled().catch(() => false)
-
-  // Create a simple settings window
-  const settingsWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
-    parent: mainWindow,
-    modal: true,
-    show: false,
-    frame: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    },
-    icon: path.join(__dirname, '../public/vdock-icon.ico')
-  })
-
-  // Create HTML content for settings
-  const settingsHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>VDock Settings</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-        .setting { margin: 15px 0; }
-        .setting label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .setting input[type="checkbox"] { margin-right: 8px; }
-        button { padding: 8px 16px; margin: 10px 5px 0 0; border: none; border-radius: 4px; cursor: pointer; }
-        .save { background: #007acc; color: white; }
-        .cancel { background: #ccc; color: black; }
-      </style>
-    </head>
-    <body>
-      <h2>VDock Settings</h2>
-
-      <div class="setting">
-        <label>
-          <input type="checkbox" id="alwaysOnTop" ${alwaysOnTop ? 'checked' : ''}>
-          Always on Top
-        </label>
-      </div>
-
-      <div class="setting">
-        <label>
-          <input type="checkbox" id="startWithWindows" ${isAutoLaunchEnabled ? 'checked' : ''}>
-          Start with Windows
-        </label>
-      </div>
-
-      <div class="setting">
-        <label for="theme">Theme:</label>
-        <select id="theme">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </div>
-
-      <button class="save" onclick="saveSettings()">Save</button>
-      <button class="cancel" onclick="closeSettings()">Cancel</button>
-
-      <script>
-        function saveSettings() {
-          const alwaysOnTop = document.getElementById('alwaysOnTop').checked;
-          const startWithWindows = document.getElementById('startWithWindows').checked;
-
-          // Send settings to main process
-          window.postMessage({
-            type: 'settings-update',
-            alwaysOnTop: alwaysOnTop,
-            startWithWindows: startWithWindows
-          }, '*');
-
-          window.close();
-        }
-
-        function closeSettings() {
-          window.close();
-        }
-      </script>
-    </body>
-    </html>
-  `
-
-  settingsWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(settingsHtml)}`)
-  settingsWindow.show()
-}
-
-async function createTrayMenu() {
-  const isAutoLaunchEnabled = await autoLaunch.isEnabled().catch(() => false)
-
+function createTrayMenu() {
   return Menu.buildFromTemplate([
     {
       label: 'Show VDock',
@@ -417,14 +303,7 @@ async function createTrayMenu() {
     {
       label: 'Settings',
       click: () => {
-        // Open settings window or dialog
-        openSettings()
-      }
-    },
-    {
-      label: 'Fix Firewall',
-      click: () => {
-        fixFirewall()
+        openSettingsPage()
       }
     },
     { type: 'separator' },
@@ -443,10 +322,7 @@ function createTray() {
 
   tray.setToolTip('VDock - Virtual Stream Deck')
 
-  // Set initial menu
-  createTrayMenu().then(menu => {
-    tray.setContextMenu(menu)
-  })
+  tray.setContextMenu(createTrayMenu())
 
   // Double-click to show/hide
   tray.on('double-click', () => {
@@ -459,13 +335,6 @@ function createTray() {
       }
     }
   })
-}
-
-async function updateTrayMenu() {
-  if (tray) {
-    const menu = await createTrayMenu()
-    tray.setContextMenu(menu)
-  }
 }
 
 function registerGlobalShortcuts() {
@@ -498,29 +367,6 @@ ipcMain.handle('window-pin', (event, pinned) => {
   windowPinned = pinned
   // Implement pin logic (prevent window from being moved)
   return windowPinned
-})
-
-ipcMain.handle('settings-update', async (event, settings) => {
-  try {
-    alwaysOnTop = settings.alwaysOnTop
-    if (mainWindow) {
-      mainWindow.setAlwaysOnTop(alwaysOnTop)
-    }
-
-    if (settings.startWithWindows) {
-      await autoLaunch.enable()
-    } else {
-      await autoLaunch.disable()
-    }
-
-    // Update tray menu to reflect changes
-    updateTrayMenu()
-
-    return true
-  } catch (err) {
-    console.error('Failed to update settings:', err)
-    return false
-  }
 })
 
 ipcMain.handle('window-dock', (event, side) => {

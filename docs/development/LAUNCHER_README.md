@@ -87,7 +87,7 @@ When you run VDock-Launcher.exe, it:
 - Restart the launcher
 
 ### "Virtual environment not found" error
-1. Run `install.bat` first to set up dependencies
+1. Run `setup.bat` first to set up dependencies
 2. Wait for installation to complete
 3. Then launch the app
 
@@ -102,7 +102,7 @@ When you run VDock-Launcher.exe, it:
    cmd /k VDock-Launcher.exe
    ```
 2. Check error output to diagnose issue
-3. Ensure install.bat was run successfully
+3. Ensure setup.bat was run successfully
 
 ## Building the Full Installer
 
@@ -140,7 +140,7 @@ VDock/
 ├── VDock-Launcher.py           ← Source code for launcher
 ├── Launch-VDock.bat            ← Alternative batch launcher
 ├── Launch-VDock.ps1            ← Alternative PowerShell launcher
-├── install.bat                 ← Run once for setup
+├── setup.bat                 ← Run once for setup
 ├── backend/                    ← Flask server
 ├── frontend/                   ← Vue.js application
 ├── docs/                       ← Documentation
@@ -181,7 +181,7 @@ For production distribution:
 
 2. Test in clean environment:
    - Extract to new folder
-   - Run install.bat
+   - Run setup.bat
    - Run launcher
 
 3. Create installer with NSIS (optional):
