@@ -112,7 +112,16 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --publish never
+        shell: bash
+        run: |
+          # electron-builder resolves even an *empty* CSC_* var as a cert
+          # file path ("" -> cwd -> "not a file") — unset them when the
+          # secrets aren't configured so unsigned builds still work.
+          for v in CSC_LINK CSC_KEY_PASSWORD WIN_CSC_LINK WIN_CSC_KEY_PASSWORD \
+                   APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -z "${!v:-}" ] && unset "$v"
+          done
+          npx electron-builder --publish never
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
