@@ -87,3 +87,36 @@ favicon set (`16/32/apple-touch`) — which `index.html` referenced but
 time on the GitHub runners (that's the point of the pipeline).
 Electron-builder mac/linux config is standard; first `workflow_dispatch`
 will confirm. Signing is inert until secrets are added — by design.
+
+## Follow-up: first pipeline run — 3 real bugs found and fixed
+
+The first `workflow_dispatch` run proved the pipeline's value: all
+three legs surfaced real portability bugs that Windows dev hid:
+
+1. **POSIX exec bits** — `build-backend.sh`/`build-release.sh`/
+   `deploy.sh` were committed `100644`; freeze died with exit 126 on
+   both POSIX runners. Set `100755` in the index (matching
+   `setup.sh`/`launch.sh`) and invoke via `bash` in the workflow so a
+   lost bit can't recur.
+
+2. **`Key.insert` crashes macOS backend at import** —
+   `HotkeyAction.KEY_MAP` was a class-body literal referencing
+   `Key.insert`; pynput's Key enum is platform-specific and darwin has
+   no Insert key → `AttributeError` killed `app.py` before Flask even
+   bound. Map is now getattr-driven via a module-level
+   `_KEY_ATTRS`/`_build_key_map()` — platform-missing keys drop out.
+   Verified: 45 entries on Windows, simulated darwin-Key drops insert
+   cleanly, 281 action tests pass.
+
+3. **Empty `CSC_*` env vars break electron-builder** — passing
+   `CSC_LINK: ${{ secrets.CSC_LINK }}` with the secret unset exports
+   an *empty* var, which electron-builder resolves as a cert file path
+   ("" → cwd → "⨯ ... not a file"). Step now unsets any empty signing
+   vars before invoking, so unsigned builds work and signing activates
+   automatically once secrets exist.
+
+**Second run: all three legs green** (win 3m24s, mac 2m42s,
+ubuntu 4m8s). Each produced real artifacts — `vdock-windows-latest`
+479MB (Setup + Portable), `vdock-ubuntu-latest` 466MB (AppImage +
+deb), `vdock-macos-latest` 524MB (dmg + zip) — and the frozen backend
+passed its live smoke test on all three OSes.
