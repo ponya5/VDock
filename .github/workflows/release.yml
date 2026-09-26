@@ -12,6 +12,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The attach-to-release step needs write access — the default
+# GITHUB_TOKEN is read-only in this repo and 403s without this.
+permissions:
+  contents: write
+
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
