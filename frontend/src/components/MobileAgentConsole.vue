@@ -10,56 +10,57 @@
         <strong class="mac-agent-name">{{ agentName }}</strong>
         <span class="mac-state-label">{{ statusLine }}</span>
       </div>
-      <span v-if="projectName" class="mac-project" :title="stateEntry?.cwd">
+      <!-- Session targeting (DL-071) merged into this row — saves a whole
+           stacked row on the phone. flex-wrap still lets the chips fall
+           to a second line inside the card on narrow widths. -->
+      <div
+        v-if="showSessionPicker"
+        class="mac-sessions"
+        role="radiogroup"
+        aria-label="Target session"
+      >
+        <button
+          type="button"
+          class="mac-session"
+          :class="{ active: pinnedPid === null }"
+          role="radio"
+          :aria-checked="pinnedPid === null"
+          @click="chooseTarget(null)"
+        >
+          <FontAwesomeIcon :icon="['fas', 'wand-magic-sparkles']" class="mac-session-auto" />
+          <span class="mac-session-label">Auto</span>
+        </button>
+        <button
+          v-for="s in targetRows"
+          :key="s.pid"
+          type="button"
+          class="mac-session"
+          :class="{
+            active: s.pid === pinnedPid,
+            'is-resolved': s.pid === resolvedPid && pinnedPid === null,
+            waiting: waitingGlowOn && s.state === 'ready',
+          }"
+          role="radio"
+          :aria-checked="s.pid === pinnedPid"
+          :title="s.cwd || s.title"
+          @click="chooseTarget(s.pid)"
+        >
+          <span class="mac-session-dot" :class="`dot-${s.state || 'idle'}`" aria-hidden="true" />
+          <span class="mac-session-label">{{ s.label }}</span>
+          <FontAwesomeIcon
+            v-if="s.pid === pinnedPid"
+            :icon="['fas', 'thumbtack']"
+            class="mac-session-pin"
+          />
+        </button>
+      </div>
+      <!-- Only when the picker is absent — otherwise it duplicates the
+           session chip's label (both read the project dir name). -->
+      <span v-else-if="projectName" class="mac-project" :title="stateEntry?.cwd">
         <FontAwesomeIcon :icon="['fas', 'folder-open']" />
         {{ projectName }}
       </span>
     </header>
-
-    <!-- Session targeting (DL-071): shown whenever ≥1 live session is
-         detected, so the current target is always visible. Chips wrap
-         instead of scrolling, same rule as the shortcuts grid below. -->
-    <div
-      v-if="showSessionPicker"
-      class="mac-sessions"
-      role="radiogroup"
-      aria-label="Target session"
-    >
-      <button
-        type="button"
-        class="mac-session"
-        :class="{ active: pinnedPid === null }"
-        role="radio"
-        :aria-checked="pinnedPid === null"
-        @click="chooseTarget(null)"
-      >
-        <FontAwesomeIcon :icon="['fas', 'wand-magic-sparkles']" class="mac-session-auto" />
-        <span class="mac-session-label">Auto</span>
-      </button>
-      <button
-        v-for="s in targetRows"
-        :key="s.pid"
-        type="button"
-        class="mac-session"
-        :class="{
-          active: s.pid === pinnedPid,
-          'is-resolved': s.pid === resolvedPid && pinnedPid === null,
-          waiting: waitingGlowOn && s.state === 'ready',
-        }"
-        role="radio"
-        :aria-checked="s.pid === pinnedPid"
-        :title="s.cwd || s.title"
-        @click="chooseTarget(s.pid)"
-      >
-        <span class="mac-session-dot" :class="`dot-${s.state || 'idle'}`" aria-hidden="true" />
-        <span class="mac-session-label">{{ s.label }}</span>
-        <FontAwesomeIcon
-          v-if="s.pid === pinnedPid"
-          :icon="['fas', 'thumbtack']"
-          class="mac-session-pin"
-        />
-      </button>
-    </div>
 
     <div
       v-if="isAgentPossiblyRunning && visibleActions.length > 0"
@@ -85,9 +86,9 @@
       </button>
     </div>
 
-    <div v-if="shortcuts.length > 0" class="mac-shortcuts" aria-label="Shortcuts">
+    <div v-if="shortcutTiles.length > 0" class="mac-shortcuts" aria-label="Shortcuts">
       <button
-        v-for="shortcut in shortcuts"
+        v-for="shortcut in shortcutTiles"
         :key="shortcut.button.id"
         type="button"
         class="mac-shortcut"
@@ -102,6 +103,28 @@
           class="mac-shortcut-icon"
         />
         <span class="mac-shortcut-label">{{ shortcut.label }}</span>
+      </button>
+    </div>
+
+    <!-- Web links (url-type buttons like claude.ai): they open a browser,
+         they do not drive the session — kept aside from the action tiles
+         and styled as quiet outline pills so they can't be mistaken for
+         one. Rendered last so actions never reflow around them. -->
+    <div v-if="linkShortcuts.length > 0" class="mac-links" aria-label="Web links">
+      <button
+        v-for="link in linkShortcuts"
+        :key="link.button.id"
+        type="button"
+        class="mac-link"
+        :disabled="runningShortcutId !== null"
+        :title="link.button.tooltip || link.label"
+        @click="runShortcut(link)"
+      >
+        <FontAwesomeIcon
+          :icon="runningShortcutId === link.button.id ? ['fas', 'spinner'] : link.icon"
+          :spin="runningShortcutId === link.button.id"
+        />
+        <span>{{ link.label }}</span>
       </button>
     </div>
   </section>
@@ -139,6 +162,7 @@ interface ConsoleShortcut {
   label: string
   icon: [string, string]
   isHighlighted: boolean
+  isLink: boolean
 }
 
 const props = defineProps<{ scene: Scene | null }>()
@@ -146,7 +170,11 @@ const props = defineProps<{ scene: Scene | null }>()
 /** Page navigation means nothing on a surface without pages. */
 const PAGE_NAVIGATION_ACTIONS = new Set(['next_page', 'previous_page', 'home_page', 'goto_page'])
 /** Scene buttons that start the agent — highlighted while it isn't running. */
-const LAUNCH_ACTIONS = new Set(['claude_continue', 'claude_open', 'program'])
+const LAUNCH_ACTIONS = new Set(['claude_continue', 'program'])
+/** Buttons that open something OUTSIDE the session — web pages (url) and
+    app/web launchers (claude_open → claude.ai / desktop app). They render
+    in the links strip, not among session-driving action tiles. */
+const WEB_LINK_ACTIONS = new Set(['url', 'claude_open'])
 
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
@@ -156,6 +184,7 @@ const {
   stateEntry,
   currentState,
   stateLabel,
+  isAgentDetected,
   isAgentPossiblyRunning,
   visibleActions,
   runningActionId,
@@ -203,7 +232,15 @@ const projectName = computed(() => stateEntry.value?.project ?? '')
 
 /** Status line: the hook's detail message when it has one ("needs permission
     to use Bash", the current task), else the generic state label. */
-const statusLine = computed(() => stateEntry.value?.message || stateLabel.value)
+// "No open session" whenever nothing about the agent is observable — no
+// detected process AND no hook state entry. Deliberately stronger than
+// isAgentPossiblyRunning: with app scanning off the label is a guess
+// anyway, and "Status unavailable" read as broken rather than "nothing
+// to drive" (mobile-only wording; the desktop bar keeps its own).
+const statusLine = computed(() => {
+  if (profile.value && !stateEntry.value && !isAgentDetected.value) return 'No open session'
+  return stateEntry.value?.message || stateLabel.value
+})
 
 const displayState = computed(() => (isAgentPossiblyRunning.value ? currentState.value : 'offline'))
 
@@ -237,8 +274,14 @@ const shortcuts = computed<ConsoleShortcut[]>(() => {
       icon: normalizeFaIcon(button.layers?.icon?.value ?? button.icon),
       isHighlighted:
         !isAgentPossiblyRunning.value && LAUNCH_ACTIONS.has(button.action?.type ?? ''),
+      isLink: WEB_LINK_ACTIONS.has(button.action?.type ?? ''),
     }))
 })
+
+/** Session-driving scene buttons — the tile grid. */
+const shortcutTiles = computed(() => shortcuts.value.filter(s => !s.isLink))
+/** Web links (claude.ai & friends) — rendered apart, styled differently. */
+const linkShortcuts = computed(() => shortcuts.value.filter(s => s.isLink))
 
 async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
   if (runningShortcutId.value) return
@@ -282,7 +325,10 @@ trackAgentSurfaceVisibility(
 .mac-status {
   display: flex;
   align-items: center;
-  gap: 12px;
+  /* Session chips live inside this row now — wrap lets them fall to a
+     second line inside the same card instead of forcing one long line. */
+  flex-wrap: wrap;
+  gap: 10px 12px;
   flex-shrink: 0;
   padding: 12px 14px;
   border-radius: 18px;
@@ -343,15 +389,20 @@ trackAgentSurfaceVisibility(
 /* --- Session targeting (DL-071) --------------------------------------------- */
 /* A wrap-visible chip strip — DL-069's rule applies here too: no horizontal
    scroll row hiding sessions. Chips render whenever ≥1 live session exists
-   (or a pin is set), so the current target is always on screen. */
+   (or a pin is set), so the current target is always on screen. The strip
+   sits inside .mac-status: margin-left:auto hugs the right edge when it
+   shares the status line; on a wrapped second line it right-aligns there,
+   which reads fine as a trailing control group. */
 .mac-sessions {
-  flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-left: auto;
 }
 
 .mac-session {
+  -webkit-user-select: none;
+  user-select: none;
   min-height: 44px;
   max-width: 48%;
   display: inline-flex;
@@ -440,6 +491,8 @@ trackAgentSurfaceVisibility(
 }
 
 .mac-action {
+  -webkit-user-select: none;
+  user-select: none;
   min-height: 60px;
   display: inline-flex;
   flex-direction: column;
@@ -498,6 +551,8 @@ trackAgentSurfaceVisibility(
 }
 
 .mac-shortcut {
+  -webkit-user-select: none;
+  user-select: none;
   min-height: 68px;
   display: flex;
   flex-direction: column;
@@ -533,6 +588,38 @@ trackAgentSurfaceVisibility(
 .mac-shortcut:active:not(:disabled) { transform: scale(0.96); }
 .mac-shortcut:disabled { opacity: 0.6; cursor: default; }
 
+/* --- Web links (claude.ai & friends) ----------------------------------------
+   url-type scene buttons open a browser — they don't touch the session, so
+   they render apart from the action tiles as quiet outline pills: dashed
+   slate border, dimmed label, no accent fill. */
+.mac-links {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mac-link {
+  -webkit-user-select: none;
+  user-select: none;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  background: rgba(148, 163, 184, 0.08);
+  color: #a8b3c7;
+  font-size: clamp(0.74rem, 0.7rem + 0.3vw, 0.88rem);
+  font-weight: 600;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.mac-link:active:not(:disabled) { transform: scale(0.96); }
+.mac-link:disabled { opacity: 0.6; cursor: default; }
+
 /* Landscape phones (~390px tall): every row slims down so the action
    buttons and shortcuts stay comfortably reachable in a shorter viewport. */
 @media (max-height: 480px) {
@@ -545,6 +632,14 @@ trackAgentSurfaceVisibility(
   .mac-status {
     padding: 6px 12px;
     border-radius: 14px;
+    gap: 6px 10px;
+  }
+
+  /* Chips share the status row now — slim them so the merged line stays
+     one compact band in landscape. */
+  .mac-session {
+    min-height: 36px;
+    padding: 4px 10px;
   }
 
   .mac-status-text {

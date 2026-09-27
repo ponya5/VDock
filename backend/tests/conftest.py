@@ -26,6 +26,8 @@ _GUARDED_SETTINGS = (
     'RATELIMIT_ENABLED',
     'ALLOW_LAN',
     'HOST',
+    'DECK_HOST',
+    'APP_PATHS',
 )
 
 

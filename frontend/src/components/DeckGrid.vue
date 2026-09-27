@@ -108,7 +108,7 @@ import type { Button, Page } from '@/types'
 import DeckButton from './DeckButton.vue'
 import DeckOverlay from './DeckOverlay.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useSwipe, useLongPress } from '@/composables/useGestures'
+import { useLongPress } from '@/composables/useGestures'
 import { useParallax } from '@/composables/useParallax'
 import { useGridTransition } from '@/composables/useGridTransition'
 import { useDashboardStore } from '@/stores/dashboard'
@@ -140,10 +140,6 @@ const emit = defineEmits<{
   buttonEdit: [button: Button]
   buttonCopy: [button: Button]
   buttonDelete: [buttonId: string]
-  swipeLeft: []
-  swipeRight: []
-  swipeUp: []
-  swipeDown: []
   actionDrop: [action: any, position: { row: number; col: number }]
   placeholderClick: [position: { row: number; col: number }]
   placeholderLongPress: [position: { row: number; col: number }]
@@ -189,15 +185,10 @@ const { tiltX, tiltY } = useParallax(gridRef, {
   enabled: computed(() => settingsStore.tiltEffectEnabled)
 })
 
-useSwipe(gridRef, {
-  threshold: 50,
-  onSwipeEnd: (direction) => {
-    if (direction === 'LEFT') emit('swipeLeft')
-    if (direction === 'RIGHT') emit('swipeRight')
-    if (direction === 'UP') emit('swipeUp')
-    if (direction === 'DOWN') emit('swipeDown')
-  }
-})
+/* Swipe gestures moved up to DashboardView's .main-content listener
+   (DL-082): a single source covers the grid, the agent action bar, and
+   the mobile agent console — and left/right now means "switch scene",
+   not "flip page". */
 
 // DL-057/DL-059: on tall narrow viewports (portrait phones) the 1fr rows
 // stretch cells into slivers; on short wide ones (landscape phones) they

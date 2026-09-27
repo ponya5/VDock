@@ -55,41 +55,47 @@
         @placeholder-click="onDockedPlaceholderClick"
       />
       
-      <div class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
-        <MobileAgentConsole v-if="currentPage && showsMobileAgentConsole" :scene="currentScene" />
-        <template v-else-if="currentPage">
-          <AgentActionBar :scene="currentScene" />
-          <div class="deck-grid-host">
-            <DeckGrid
-              :page="currentPage"
-              :is-edit-mode="isEditMode"
-              :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
-              :show-labels="settingsStore.showLabels"
-              :show-tooltips="settingsStore.showTooltips"
-              :compact="shouldUseCompactMode"
-              @button-click="handleButtonClick"
-              @button-press="handleButtonPress"
-              @button-release="handleButtonRelease"
-              @button-edit="handleButtonEdit"
-              @button-copy="handleButtonCopy"
-              @button-delete="handleButtonDelete"
-              @swipe-left="nextPage"
-              @swipe-right="previousPage"
-              @action-drop="handleActionDrop"
-              @placeholder-click="onPlaceholderClick"
-              @placeholder-long-press="handlePlaceholderLongPress"
-              @button-move="handleButtonMove"
-              @button-swap="handleButtonSwap"
-              @slider-expand="handleSliderExpand"
-              @slider-shrink="handleSliderShrink"
-              @swipe-up="nextScene"
-              @swipe-down="previousScene"
-              @long-press="handleDeckButtonLongPress"
-              @double-tap="handleButtonClick"
-              @exit-edit-mode="dashboardStore.toggleEditMode"
-            />
+      <div ref="mainContentRef" class="main-content" :class="{ 'with-sidebar': isEditMode, 'with-docked-sidebar': settingsStore.dockedSidebarEnabled && !isMobileViewport }">
+        <!-- DL-082: the pane is keyed on the scene id, so a scene change
+             remounts this subtree inside the wipe Transition — the old
+             scene cross-dissolves out while the new one dissolves in,
+             both live during the swap. Page flips keep the same key, so
+             DeckGrid's own staggered transition still runs for those
+             (and a fresh mount never double-fires it on a scene switch). -->
+        <Transition :name="sceneTransitionName">
+          <div v-if="currentPage" :key="currentScene?.id" class="scene-pane">
+            <MobileAgentConsole v-if="showsMobileAgentConsole" :scene="currentScene" />
+            <template v-else>
+              <AgentActionBar :scene="currentScene" />
+              <div class="deck-grid-host">
+                <DeckGrid
+                  :page="currentPage"
+                  :is-edit-mode="isEditMode"
+                  :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
+                  :show-labels="settingsStore.showLabels"
+                  :show-tooltips="settingsStore.showTooltips"
+                  :compact="shouldUseCompactMode"
+                  @button-click="handleButtonClick"
+                  @button-press="handleButtonPress"
+                  @button-release="handleButtonRelease"
+                  @button-edit="handleButtonEdit"
+                  @button-copy="handleButtonCopy"
+                  @button-delete="handleButtonDelete"
+                  @action-drop="handleActionDrop"
+                  @placeholder-click="onPlaceholderClick"
+                  @placeholder-long-press="handlePlaceholderLongPress"
+                  @button-move="handleButtonMove"
+                  @button-swap="handleButtonSwap"
+                  @slider-expand="handleSliderExpand"
+                  @slider-shrink="handleSliderShrink"
+                  @long-press="handleDeckButtonLongPress"
+                  @double-tap="handleButtonClick"
+                  @exit-edit-mode="dashboardStore.toggleEditMode"
+                />
+              </div>
+            </template>
           </div>
-        </template>
+        </Transition>
         <AgentWaitingGlow />
 
         <div v-if="!currentPage" class="no-profile">
@@ -136,14 +142,18 @@
       @update-cols="updateGridCols"
     />
 
-    <!-- Screen Saver overlay -->
-    <ScreenSaver
-      v-if="screensaverVisible"
-      :visible="screensaverVisible"
-      :layout-edit="screensaverLayoutEdit"
-      @dismiss="dismissScreensaver"
-      @save-layout="saveScreensaverLayout"
-    />
+    <!-- Screen Saver overlay — wrapped in a dissolve Transition (DL-003
+         follow-up): it blooms in from center on idle, and evaporates
+         edges-in back to the deck on dismiss. -->
+    <Transition name="saver-dissolve">
+      <ScreenSaver
+        v-if="screensaverVisible"
+        :visible="screensaverVisible"
+        :layout-edit="screensaverLayoutEdit"
+        @dismiss="dismissScreensaver"
+        @save-layout="saveScreensaverLayout"
+      />
+    </Transition>
 
     <!-- Quick Add Picker Modal -->
     <QuickAddPicker
@@ -231,6 +241,8 @@ import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
 import { confirmDialog } from '@/composables/useConfirm'
 import { useMobileViewport } from '@/utils/mobileViewport'
+import { useSwipe } from '@/composables/useGestures'
+import { sceneSwipe } from '@/services/sceneSwipe'
 import type { ScreensaverLayout } from '@/utils/screensaverLayout'
 
 const router = useRouter()
@@ -773,6 +785,14 @@ function handleNavigateSettings() {
 function setScene(sceneId: string) {
   const idx = currentProfile.value?.scenes.findIndex(s => s.id === sceneId)
   if (idx !== undefined && idx >= 0) {
+    // DL-082: pick the dissolve direction from the shortest path between
+    // indexes so rail clicks, steppers, and swipes all wipe the right way.
+    const n = currentProfile.value?.scenes.length ?? 0
+    if (n > 1 && idx !== currentSceneIndex.value) {
+      const forward = (idx - currentSceneIndex.value + n) % n
+      sceneTransitionName.value =
+        forward <= n - forward ? 'scene-wipe-next' : 'scene-wipe-prev'
+    }
     dashboardStore.setScene(idx)
   }
 }
@@ -915,6 +935,83 @@ function previousScene() {
   setScene(currentProfile.value.scenes[prevIdx].id)
 }
 
+// DL-082 — horizontal (and vertical) swipes anywhere over the content area
+// switch scenes: the single listener covers the deck grid, the agent action
+// bar, and the mobile agent console, which had no swipe surface at all.
+// While a horizontal swipe tracks, the shared `sceneSwipe` state lets the
+// scene rails dissolve the active segment 1:1 under the finger.
+const mainContentRef = ref<HTMLElement | null>(null)
+const sceneTransitionName = ref('scene-wipe-next')
+let sceneSwipeArmed = false
+let swipeAxisBlocked = { horizontal: false, vertical: false }
+
+/** Whether the swipe's start target can natively scroll on an axis — if
+    so the gesture on that axis belongs to the scroller, not to scene
+    switching (e.g. an overflowing compact grid or a scrollable pane). */
+function scrollableAxes(el0: HTMLElement | null): { horizontal: boolean; vertical: boolean } {
+  const blocked = { horizontal: false, vertical: false }
+  let el = el0
+  while (el && el !== mainContentRef.value && !(blocked.horizontal && blocked.vertical)) {
+    const style = getComputedStyle(el)
+    if ((style.overflowX === 'auto' || style.overflowX === 'scroll') && el.scrollWidth > el.clientWidth)
+      blocked.horizontal = true
+    if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight)
+      blocked.vertical = true
+    el = el.parentElement
+  }
+  return blocked
+}
+
+useSwipe(mainContentRef, {
+  threshold: 50,
+  onSwipeStart: (e) => {
+    sceneSwipeArmed =
+      !isEditMode.value &&
+      (currentProfile.value?.scenes.length ?? 0) > 1 &&
+      !(e.target as HTMLElement).closest(
+        'input, textarea, select, [contenteditable="true"], .agent-target-popover, .onscreen-keypad'
+      )
+    swipeAxisBlocked = sceneSwipeArmed
+      ? scrollableAxes(e.target as HTMLElement)
+      : { horizontal: true, vertical: true }
+    sceneSwipe.dragging = false
+    sceneSwipe.progress = 0
+  },
+  onSwipe: (direction, progress) => {
+    const horizontal = direction === 'LEFT' || direction === 'RIGHT'
+    if (!sceneSwipeArmed || !horizontal || swipeAxisBlocked.horizontal) {
+      if (sceneSwipe.dragging) { sceneSwipe.dragging = false; sceneSwipe.progress = 0 }
+      return
+    }
+    sceneSwipe.dragging = true
+    sceneSwipe.dir = direction === 'LEFT' ? 'next' : 'prev'
+    sceneSwipe.progress = progress
+  },
+  onSwipeEnd: (direction) => {
+    const horizontal = direction === 'LEFT' || direction === 'RIGHT'
+    const blocked = horizontal ? swipeAxisBlocked.horizontal : swipeAxisBlocked.vertical
+    if (sceneSwipeArmed && !blocked) {
+      if (horizontal) {
+        sceneSwipe.justSwiped = true
+        if (direction === 'LEFT') nextScene()
+        else previousScene()
+      } else if (direction === 'UP') {
+        nextScene()
+      } else if (direction === 'DOWN') {
+        previousScene()
+      }
+    }
+    sceneSwipe.dragging = false
+    sceneSwipeArmed = false
+  },
+  onSwipeCancel: () => {
+    // Below-threshold release / pointercancel: the rails read
+    // `dragging=false` and transition the segment back to full opacity.
+    sceneSwipe.dragging = false
+    sceneSwipeArmed = false
+  }
+})
+
 function handleKeyDown(event: KeyboardEvent) {
   if (event.ctrlKey || event.metaKey) {
     if (event.key === 'v' && clipboardButton.value) {
@@ -1051,6 +1148,9 @@ onUnmounted(() => {
   position: relative; /* anchor for the mobile overlay header */
   width: 100vw;
   height: 100vh;
+  /* iOS Safari: 100vh covers the collapsing URL bar, hiding bottom
+     chrome; dvh tracks the real visible height (ignored pre-15.4). */
+  height: 100dvh;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -1067,7 +1167,202 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative; /* anchors the leaving scene-pane during a wipe */
+  /* Scene swipes live here (DL-082): vertical pans stay native scroll,
+     horizontal is ours; contain stops Chrome-Android pull-to-refresh
+     from stealing the gesture mid-swipe. */
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
   transition: all 0.3s var(--ease-io);
+}
+
+/* DL-082 — keyed scene pane + directional dissolve.
+   The wipe is a travelling soft mask edge: mask-image is a 250%-wide
+   gradient (transparent band on one side, opaque on the other) and
+   mask-position sweeps across, combined with an opacity fade and a small
+   translateX drift in the travel direction. "next" (swipe-left / index+)
+   sweeps L→R — the outgoing scene dissolves from its leading left edge;
+   "prev" sweeps R→L. Both panes run simultaneously (default mode): the
+   leaving pane goes absolute + topmost so its dissolve reads over the
+   incoming scene. */
+.scene-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scene-wipe-next-enter-active,
+.scene-wipe-next-leave-active,
+.scene-wipe-prev-enter-active,
+.scene-wipe-prev-leave-active {
+  transition:
+    -webkit-mask-position 0.42s var(--ease-io),
+    mask-position 0.42s var(--ease-io),
+    opacity 0.42s var(--ease-io),
+    transform 0.42s var(--ease-io);
+  will-change: transform, opacity;
+}
+
+.scene-wipe-next-leave-active,
+.scene-wipe-prev-leave-active {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* next: wave travels L→R */
+.scene-wipe-next-enter-active {
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+  -webkit-mask-size: 250% 100%;
+  mask-size: 250% 100%;
+}
+.scene-wipe-next-enter-from {
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+  opacity: 0.4;
+  transform: translateX(28px);
+}
+.scene-wipe-next-enter-to {
+  -webkit-mask-position: 0% 0;
+  mask-position: 0% 0;
+}
+.scene-wipe-next-leave-active {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+  -webkit-mask-size: 250% 100%;
+  mask-size: 250% 100%;
+}
+.scene-wipe-next-leave-from {
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+.scene-wipe-next-leave-to {
+  -webkit-mask-position: 0% 0;
+  mask-position: 0% 0;
+  opacity: 0;
+  transform: translateX(-28px);
+}
+
+/* prev: wave travels R→L (mirrored gradients, reversed sweep) */
+.scene-wipe-prev-enter-active {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+  -webkit-mask-size: 250% 100%;
+  mask-size: 250% 100%;
+}
+.scene-wipe-prev-enter-from {
+  -webkit-mask-position: 0% 0;
+  mask-position: 0% 0;
+  opacity: 0.4;
+  transform: translateX(-28px);
+}
+.scene-wipe-prev-enter-to {
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+.scene-wipe-prev-leave-active {
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+  -webkit-mask-size: 250% 100%;
+  mask-size: 250% 100%;
+}
+.scene-wipe-prev-leave-from {
+  -webkit-mask-position: 0% 0;
+  mask-position: 0% 0;
+}
+.scene-wipe-prev-leave-to {
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+  opacity: 0;
+  transform: translateX(28px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-wipe-next-enter-active,
+  .scene-wipe-next-leave-active,
+  .scene-wipe-prev-enter-active,
+  .scene-wipe-prev-leave-active {
+    transition: opacity 0.2s ease;
+    -webkit-mask-image: none;
+    mask-image: none;
+    transform: none;
+  }
+  .scene-wipe-next-enter-from,
+  .scene-wipe-prev-enter-from {
+    transform: none;
+    opacity: 0.4;
+  }
+}
+
+/* DL-003 follow-up — screensaver dissolve. No gesture direction to follow,
+   so it materializes radially: a fixed ellipse mask (black center →
+   transparent at 70%) whose mask-size animates. Enter blooms the saver
+   center-out; leave is the time-reverse — edges evaporate inward while it
+   lifts with a faint 1.03 zoom. Keyframes instead of class transitions:
+   Chromium won't interpolate mask-size from a fresh element's never-painted
+   from-state, which truncated the enter — @keyframes always play. */
+.saver-dissolve-enter-active,
+.saver-dissolve-leave-active {
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, #000 45%, transparent 70%);
+  mask-image: radial-gradient(ellipse at center, #000 0%, #000 45%, transparent 70%);
+}
+.saver-dissolve-enter-active {
+  animation: saver-bloom 0.55s var(--ease-out) both;
+}
+.saver-dissolve-leave-active {
+  pointer-events: none; /* a dissolving saver must not eat the tap's follow-ups */
+  animation: saver-evaporate 0.5s var(--ease-io) both;
+}
+@keyframes saver-bloom {
+  from {
+    -webkit-mask-size: 20% 20%;
+    mask-size: 20% 20%;
+    opacity: 0.25;
+    transform: scale(1.03);
+  }
+  to {
+    -webkit-mask-size: 300% 300%;
+    mask-size: 300% 300%;
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes saver-evaporate {
+  from {
+    -webkit-mask-size: 300% 300%;
+    mask-size: 300% 300%;
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    -webkit-mask-size: 20% 20%;
+    mask-size: 20% 20%;
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saver-dissolve-enter-active,
+  .saver-dissolve-leave-active {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .saver-dissolve-enter-active {
+    animation: saver-fade-in 0.25s ease both;
+  }
+  .saver-dissolve-leave-active {
+    animation: saver-fade-out 0.25s ease both;
+  }
+}
+@keyframes saver-fade-in {
+  from { opacity: 0; }
+}
+@keyframes saver-fade-out {
+  to { opacity: 0; }
 }
 
 /* The grid is height: 100% of its parent; this host gives it only the space
@@ -1192,6 +1487,7 @@ onUnmounted(() => {
   grid-template-columns: auto 1fr;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 

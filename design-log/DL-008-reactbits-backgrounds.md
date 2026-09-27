@@ -108,3 +108,34 @@ the panel.
 - Manual check of the two WebGPU backgrounds on real hardware.
 - Some ports may benefit from prop exposure in the picker later (colors,
   intensity) — currently all use upstream defaults.
+
+### Follow-up (2026-09-28): cap panel height to real viewport room
+
+Bug: on the screensaver settings panel the open picker ran past the
+bottom of the viewport — options below the fold were unreachable.
+`positionPanel` capped `maxHeight` at `min(320, innerHeight - 16)` but
+never subtracted the space actually left under the trigger. The panel is
+`position: fixed`, so page scrolling cannot reveal the overflow, and the
+panel's own `clientHeight` included the off-screen region — even its
+internal scroll left the last items below the fold.
+
+Fix: `positionPanel` now measures the real room on the side it opens to
+(`spaceBelow` / `spaceAbove`, minus the 4 px gap + 8 px viewport margin)
+and caps `maxHeight` at `min(320, room)` — floor of 120 px so a cramped
+window still shows a usable list. The internal scroll + fades then cover
+the rest. Applies to both pickers (dashboard + screensaver background).
+
+#### Implementation results (2026-09-28)
+
+`BackgroundPicker.positionPanel` rewritten: measures `spaceBelow` /
+`spaceAbove` (trigger edge → viewport edge, minus the 4 px anchor gap and
+8 px margin), opens up when below-room < 180 px and above is roomier, and
+caps `maxHeight` at `min(320, room)` with a 120 px floor.
+
+Verified live at 1024×800, screensaver sub-tab, trigger near the fold:
+panel top 543 → bottom 771 inside an 800 px viewport
+(`clippedBottom: false`), `scrollHeight` 2489 vs `clientHeight` 226 — all
+options reachable via the panel's internal scroll + bottom fade/chevron
+hint. Screenshot: `design-log/refs/bg-picker-capped-*.png`.
+
+`vue-tsc` clean, `npm run build` rebuilt `dist` for the panel.

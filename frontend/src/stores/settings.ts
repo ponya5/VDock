@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
-import { DEFAULT_BACKGROUND_ID } from '@/data/backgrounds'
+import { DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
 import {
   defaultScreensaverLayout,
   normalizeScreensaverLayout,
@@ -59,7 +59,7 @@ export const SETTINGS_DEFAULTS = {
   screensaverWidgets: ['weather', 'news', 'sports', 'market', 'worldclock'],
   screensaverWeatherSize: 100,
   screensaverWidgetSize: 100,
-  screensaverBackground: DEFAULT_BACKGROUND_ID,
+  screensaverBackground: DEFAULT_SCREENSAVER_BACKGROUND_ID,
   dashboardFont: 'default' as const,
   appScanningEnabled: false,
   agentAlertsEnabled: true,
@@ -229,7 +229,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const screensaverWidgetSize = ref(100)
   // 'default' keeps the classic dark look; any other catalog id or uploaded
   // image URL paints behind the screensaver widgets.
-  const screensaverBackground = ref<string>(DEFAULT_BACKGROUND_ID)
+  const screensaverBackground = ref<string>(DEFAULT_SCREENSAVER_BACKGROUND_ID)
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   const appScanningEnabled = ref(false)
   const agentAlertsEnabled = ref(true)
@@ -503,7 +503,7 @@ export const useSettingsStore = defineStore('settings', () => {
         marketTickers: settings.marketTickers ?? '',
         worldClockTimezones: settings.worldClockTimezones ?? '',
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
-        screensaverBackground: settings.screensaverBackground ?? DEFAULT_BACKGROUND_ID,
+        screensaverBackground: settings.screensaverBackground ?? DEFAULT_SCREENSAVER_BACKGROUND_ID,
         dashboardFont: settings.dashboardFont ?? 'default',
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,

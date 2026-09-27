@@ -55,6 +55,7 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
   background: rgba(46, 32, 8, 0.97);
   border: 2px solid #f5a524;
   box-shadow: 0 0 0 5px rgba(245, 165, 36, 0.2), 0 18px 56px rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   color: #ffd89e;
 }

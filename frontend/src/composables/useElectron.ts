@@ -13,6 +13,7 @@ interface ElectronAPI {
   toggleAutoLaunch: (enabled: boolean) => Promise<boolean>
   isAutoLaunchEnabled: () => Promise<boolean>
   quitApp: () => Promise<void>
+  pickExecutable?: () => Promise<string | null>
   platform: string
   isElectron: boolean
 }
@@ -96,6 +97,15 @@ export function useElectron() {
     return getElectronApi()?.platform || 'web'
   }
 
+  /** Native file picker for an executable (Electron only). `null` = cancelled
+   *  or running in a browser, where no system picker exists — callers fall
+   *  back to the backend probe or manual typing. */
+  const pickExecutable = async (): Promise<string | null> => {
+    const electronApi = getElectronApi()
+    if (!electronApi?.pickExecutable) return null
+    return await electronApi.pickExecutable()
+  }
+
   /**
    * Attempts to quit the app. Returns `true` when running inside the
    * Electron shell (where quitting is guaranteed to work), or `false` when
@@ -124,6 +134,7 @@ export function useElectron() {
     isFullscreen,
     setKioskMode,
     getPlatform,
+    pickExecutable,
     quitApp,
   }
 }

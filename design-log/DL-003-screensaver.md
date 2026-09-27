@@ -277,3 +277,111 @@ the article" — the tap must not dismiss the screensaver.
   assertions for the tappable rows (the old transform tests guarded a
   carousel that no longer exists). vitest 46 files / 153 tests; `vue-tsc`
   clean.
+
+### Follow-up (2026-09-27): dissolve transition in/out
+
+User request: "add dissolve animation into the screensaver or out of the
+screensaver — a nice flow transition when entering or going out."
+
+Design: the saver is a full-viewport fixed overlay with no gesture
+direction, so the wipe direction used by scene transitions doesn't apply.
+Instead it **materializes from the center**: a radial mask
+(`radial-gradient(ellipse at center, black 0–45%, transparent 70%)`,
+`mask-size` animating 20%→300%) blooms the saver in like a condensing
+surface, with a light opacity ramp + 1.03→1 settle. Exit mirrors it
+(mask shrinks 300%→20%, opacity→0, scale→1.03) — the saver evaporates
+edges-in, the symmetric reverse of entry. 0.55s, `--ease-out` entering /
+`--ease-io` leaving. Reduced-motion collapses to an opacity crossfade.
+
+Structural note: the component's internal `v-if="visible"` root is
+removed — the parent's `v-if` already owns mount, and a prop-driven
+internal v-if would strip the DOM out from under the leave transition.
+The drift-reset watcher keeps `visible` as its trigger (fires on the
+prop flip; mount itself initializes drift to 0 anyway).
+
+#### Implementation results (2026-09-27, dissolve follow-up)
+
+- `DashboardView.vue`: `<ScreenSaver>` wrapped in
+  `<Transition name="saver-dissolve">` — enter blooms the saver in
+  center-out, leave evaporates it edges-in back to the deck.
+- `ScreenSaver.vue`: dropped the internal `v-if="visible"` on the root.
+  The parent's `v-if` already owns mount; a prop-driven v-if would strip
+  the DOM out from under the leave animation the instant the prop flipped.
+  `visible` remains the drift-reset watcher trigger (mount initializes
+  `driftTick = 0` anyway, so behavior is unchanged). The Settings layout
+  editor mount (`v-if` + `:visible="true"`) is unaffected.
+- Animation built as `@keyframes saver-bloom` / `saver-evaporate` rather
+  than class-driven transitions. **Deviation from the design note:** a
+  `transition` on `mask-size` never started on the freshly-mounted
+  element — Chromium would not interpolate from the enter-from state, and
+  Vue resolved the transition early (classes dropped ~100 ms in with the
+  mask pinned at 20 %). Verified live, then switched to keyframes, which
+  always play their timeline regardless of first-paint state. The leave
+  transition had worked fine either way; keyframes keep both directions
+  symmetric.
+- `saver-dissolve-leave-active` sets `pointer-events: none` so a tap's
+  event stream passes through while the saver dissolves.
+- Reduced-motion: the mask keyframes are swapped for 0.25 s opacity-only
+  fades (`saver-fade-in/out`), mask-image removed.
+
+Verified live (1280×800, Playwright + animationstart/end timing):
+
+- Enter: `saver-bloom` fired on `show_screensaver`; sampled mask-size
+  20 % → 295.7 % mid-flight, opacity 0.25 → 0.99.
+- Leave (tap): `saver-evaporate` ran its full ~0.5 s (measured 474 ms
+  animationstart→animationend), mask-size swept 300 % → 21 %,
+  opacity → 0, scale → 1.03; element unmounted only after the animation.
+- Mid-bloom frame: `design-log/refs/screensaver-bloom-mid-*.png`.
+
+`vue-tsc` clean; screensaver/news/layout focused tests 40/40; `npm run
+build` rebuilt `dist` (needed for the panel, which serves the packaged
+bundle).
+
+## Follow-up — feed-style transitions for rotating headlines
+
+**Problem.** The headlines grid and sports list swap their whole window
+every rotation — items pop in/out instantly, which reads as a flicker
+rather than a feed.
+
+**Design.** Both lists become `<TransitionGroup name="ss-feed">`: a
+vertical conveyor — leavers slide up + fade, enterers rise from below +
+fade, staggered `55ms` per slot via an inline `--ss-i`. Keys drop the
+`i-` prefix so an article that survives into the next window *moves* to
+its new slot (TransitionGroup FLIP) instead of remounting. Leavers go
+`position: absolute` so the conveyor doesn't wait on layout; enter 0.45s
+/ leave 0.3s, `--ease-out`, transform+opacity only. Reduced motion:
+opacity-only swap, no stagger — rotation itself is already disabled
+under reduced motion, so this only fires on refresh taps.
+
+**Implementation results.** `ss-article-grid` and `ss-article-list` are
+`TransitionGroup`s keyed by article identity. Verified live in WebKit:
+8 articles coexisted mid-swap, enter/leave classes fired, transforms
+non-none; leaver geometry debugged — an abspos grid child resolves
+grid-line placement as its containing block but sizes to content, so
+leavers pin `grid-column: var(--ss-col)/span 1` + `width:100%` (measured
+4×199px cell-exact) while list leavers use `inset-inline:0`. Enterer
+from-state `translateY(16px)` sampled mid-flight; stagger 55ms/slot.
+Mid-swap frame: `design-log/refs/ss-feed-mid-swap-*.png`. Property 8
+flagged the Safari pass's bare `font-size:16px` on `.input` — re-expressed
+as `clamp(16px, 1rem + 0.4vw, 18px)` (still ≥16px, so iOS won't zoom).
+291/291 green, `vue-tsc` clean, `dist` rebuilt.
+
+## Follow-up — Prismatic Burst as the out-of-the-box background
+
+New installs default `screensaverBackground` to `prismatic-burst`
+(`DEFAULT_SCREENSAVER_BACKGROUND_ID` in `data/backgrounds.ts`, consumed at
+the ref default, the `SETTINGS_DEFAULTS` seed, and the fetch-fallback in
+`stores/settings.ts`; `ScreenSaver.ssBgId` empty-string fallback updated
+to match). Existing users keep their persisted choice — only the default
+changed, so nothing moves under anyone's feet. Picking "Default" in the
+picker still restores the classic dark look.
+
+**Verified:** fresh-context load (no persisted `screensaverBackground`)
+mounted `.ss-bg-component` (canvas) under the saver and painted the burst;
+screenshot `design-log/refs/ss-default-prismatic-*.png`.
+`screensaver-layout.test.ts` source assertion updated to the new const.
+
+**Panel order (settings):** Screensaver background now sits directly under
+the Activation box — order is Activation → Background → Widgets, so the
+backdrop choice lands next to "what turns it on" instead of below the
+widget list.

@@ -173,12 +173,29 @@ def send(command: Command, text_override: Optional[str] = None,
                     prefer_title=command.window_title_hint,
                 )
                 if focused is False:
+                    # DL-084: the app may simply not be running. When the
+                    # user configured its path (Templates → gear / App
+                    # launch paths), launch it and retry the focus once —
+                    # this is what turns "can't find cursor.exe" into a
+                    # working button.
+                    from services import app_paths
+                    override = app_paths.override_for(*command.target_exes)
+                    if override and app_paths.launch_app(override):
+                        time.sleep(4)
+                        focused = window_focus.focus_app_window(
+                            command.target_exes,
+                            prefer_title=command.window_title_hint,
+                        )
+                if focused is False:
                     expected = ' or '.join(command.target_exes)
+                    hint = (' Set the app\'s path under Templates → '
+                            'app settings (the gear on its card) or '
+                            'App launch paths.')
                     return {
                         'success': False,
                         'message': f'No {expected} window found',
                         'details': 'The app is not running, so there is '
-                                   'nowhere to send these keystrokes.',
+                                   'nowhere to send these keystrokes.' + hint,
                     }
                 if focused:
                     time.sleep(FOCUS_SETTLE_SECONDS)

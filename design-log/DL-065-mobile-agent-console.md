@@ -371,3 +371,57 @@ not for an easy thumb target.
   clean.
 - `frontend/dist/` rebuilt again so this reaches the LAN-served path too
   (see DL-069).
+
+### Follow-up (2026-09-28): merged top row, web-link split, empty state
+
+User report (mobile view only):
+
+1. Two elements both read "backend" — the status card's `.mac-project`
+   chip (the session's cwd folder name) and the `.mac-session` target
+   chip (which terminal the actions drive). Duplication explained and
+   resolved: `.mac-project` now renders only when the session picker is
+   absent — the session chip already carries the name.
+2. Status card + session chips were two stacked rows. The chips moved
+   inside the status card's flex row (`flex-wrap` keeps them wrapping to
+   a second line on narrow widths) — one card, one line saved.
+3. `url`-type scene buttons (claude.ai) are web links, not session
+   actions — they split out of `.mac-shortcuts` into a `.mac-links`
+   strip rendered last, styled as small dashed-border slate pills
+   (neutral, reads "opens a browser") instead of the shortcut tile look.
+4. No live session: `statusLine` now shows "No open session" when the
+   scene has an agent profile but `isAgentPossiblyRunning` is false
+   (scanning on + no process + no hook entry). Mobile-only wording —
+   the shared `NOT_RUNNING_STATE_LABEL` stays for the desktop bar.
+
+#### Implementation results (2026-09-28)
+
+- `.mac-status` is now the merged top row: dot + name/status text +
+  `.mac-sessions` chips inside the same card (`flex-wrap` drops chips to
+  a second line on narrow widths; `margin-left:auto` keeps them
+  right-aligned). Measured 41 px tall in landscape vs ~110 px stacked.
+  Landscape media query slims chips to 36 px so the merged line stays a
+  compact band.
+- `.mac-project` moved to `v-else-if` — shown only when the session
+  picker is absent, killing the duplicated "backend" labels (the project
+  chip and the session chip both printed the cwd folder name).
+- Links split: `WEB_LINK_ACTIONS = {'url', 'claude_open'}` — claude.ai
+  and web/app launchers leave the `.mac-shortcuts` tile grid for a
+  `.mac-links` strip rendered last: small dashed-border slate pills,
+  clearly "opens something else", not a session action. `claude_open`
+  removed from `LAUNCH_ACTIONS` (a link pill never uses the launch
+  highlight; it doesn't start a session anyway).
+- Empty state: `statusLine` → "No open session" when the scene's agent
+  has no hook entry AND no detected process — covers Claude, Cursor,
+  every IDE scene. Deliberately stronger than `isAgentPossiblyRunning`
+  (documented in code): with scanning off the label was a guess either
+  way, and "Status unavailable" read as broken.
+
+Verified live on Pixel 7 landscape (863×360): `claude.ai` renders in
+`.mac-links`, tiles carry only session actions; "No open session" shows
+when nothing is detected; fabricated `.mac-sessions` inside the card
+confirms the one-line merge (screenshots: `mac-links-strip-*`,
+`mac-merged-row-*`). Session chips need a live detected window to
+appear, which this headless box doesn't have — the markup path is the
+same one verified earlier with real sessions.
+
+`vue-tsc` clean; `mobile-agent-console.test.ts` 11/11; `dist` rebuilt.

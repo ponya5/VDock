@@ -160,6 +160,7 @@ body {
 #app {
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* iOS Safari dynamic toolbar — see DashboardView */
   overflow: hidden;
   background: var(--color-background);
   background-image: var(--app-backdrop);

@@ -16,8 +16,8 @@ test('Property 10: pinch scale bounds between 0.5 and 2.0', () => {
 });
 
 test('Property 13 & 14: Swipe maps to correct navigation directions', () => {
-    // Left/Right -> Page navigation (Property 13)
-    // Up/Down -> Scene navigation (Property 14)
+    // Left/Right + Up/Down -> Scene navigation (DL-082; page flips
+    // moved to the chrome steppers)
     fc.assert(
         fc.property(
             fc.constantFrom('LEFT', 'RIGHT', 'UP', 'DOWN'),

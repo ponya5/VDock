@@ -1,6 +1,5 @@
 <template>
   <div
-    v-if="visible"
     ref="rootEl"
     class="screensaver"
     :class="{ 'ss-edit-mode': layoutEdit, 'ss-mobile': isMobileViewport }"
@@ -112,11 +111,12 @@
           <h2>Headlines</h2>
           <span class="ss-hairline"></span>
         </div>
-        <div class="ss-article-grid" aria-live="polite">
+        <TransitionGroup tag="div" name="ss-feed" class="ss-article-grid" aria-live="polite">
           <article
             v-for="(item, i) in visibleNewsItems"
-            :key="`${i}-${item.url || item.title}`"
+            :key="item.url || item.title || i"
             class="ss-article"
+            :style="{ '--ss-i': i, '--ss-col': (i % 2) + 1, '--ss-row': Math.floor(i / 2) + 1 }"
             :title="item.url"
             @click.stop="openArticle(item, pauseRotation)"
           >
@@ -139,10 +139,10 @@
             <h3 class="ss-article-title">{{ item.title }}</h3>
           </article>
 
-          <div v-if="!newsWindow.length" class="ss-empty">
+          <div v-if="!newsWindow.length" key="empty" class="ss-empty">
             {{ newsError || 'Loading headlines…' }}
           </div>
-        </div>
+        </TransitionGroup>
       </section>
       <span
         v-if="layoutEdit"
@@ -168,11 +168,12 @@
           <h2>Sports</h2>
           <span class="ss-hairline"></span>
         </div>
-        <div class="ss-article-list" aria-live="polite">
+        <TransitionGroup tag="div" name="ss-feed" class="ss-article-list" aria-live="polite">
           <article
             v-for="(item, i) in sportsWindow"
-            :key="`${i}-${item.url || item.title}`"
+            :key="item.url || item.title || i"
             class="ss-article"
+            :style="{ '--ss-i': i }"
             :title="item.url"
             @click.stop="openArticle(item, pauseSports)"
           >
@@ -195,10 +196,10 @@
             <h3 class="ss-article-title">{{ item.title }}</h3>
           </article>
 
-          <div v-if="!sportsWindow.length" class="ss-empty">
+          <div v-if="!sportsWindow.length" key="empty" class="ss-empty">
             {{ sportsError || 'Loading sports…' }}
           </div>
-        </div>
+        </TransitionGroup>
       </section>
       <span
         v-if="layoutEdit"
@@ -281,7 +282,7 @@ import {
 } from '@/services/newsService'
 import { useMarket } from '@/composables/useMarket'
 import { useSettingsStore } from '@/stores/settings'
-import { resolveBackground, DEFAULT_BACKGROUND_ID } from '@/data/backgrounds'
+import { resolveBackground, DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import {
   defaultScreensaverLayout,
@@ -411,7 +412,7 @@ const widgetScaleNum = computed(() =>
 // --- Screensaver background --------------------------------------------------
 // 'default' keeps the classic dark look; anything else paints the .ss-bg
 // layer (catalog CSS/image) or mounts the component directly.
-const ssBgId = computed(() => settingsStore.screensaverBackground || DEFAULT_BACKGROUND_ID)
+const ssBgId = computed(() => settingsStore.screensaverBackground || DEFAULT_SCREENSAVER_BACKGROUND_ID)
 const hasCustomBg = computed(() => ssBgId.value !== DEFAULT_BACKGROUND_ID)
 const ssBgClass = computed(() => (hasCustomBg.value ? backgroundClassFor(ssBgId.value) : ''))
 const ssBgStyle = computed(() => (hasCustomBg.value ? backgroundStyleFor(ssBgId.value) : {}))
@@ -970,6 +971,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   overflow: hidden;
 }
@@ -1220,6 +1222,70 @@ onUnmounted(() => {
 .ss-article:focus-visible {
   outline: 2px solid var(--ss-accent, #f2b040);
   outline-offset: -2px;
+}
+
+/* DL-003 — feed-style window rotation: a vertical conveyor. Leavers lift
+   up and fade while enterers rise from below, staggered by slot so the
+   swap reads as a wave rather than a snap. Keys are stable per article,
+   so an item surviving into the next window slides to its new slot. */
+.ss-article-grid,
+.ss-article-list {
+  position: relative; /* anchor absolutely-positioned leavers */
+}
+.ss-feed-enter-active {
+  transition:
+    transform 0.45s var(--ease-out),
+    opacity 0.45s var(--ease-out);
+  transition-delay: calc(var(--ss-i, 0) * 55ms);
+}
+.ss-feed-leave-active {
+  position: absolute;
+  transition:
+    transform 0.3s var(--ease-out),
+    opacity 0.3s var(--ease-out);
+  transition-delay: calc(var(--ss-i, 0) * 25ms);
+  pointer-events: none; /* a lifting row must not eat taps */
+  z-index: 1;
+}
+/* Out-of-flow placement differs per container: the flex column keeps its
+   width via inset-inline (static top = its former row); in the grid an
+   abspos child resolves grid-column/-row against the tracks, so its own
+   slot becomes the containing block — same cell, same size. */
+.ss-article-list > .ss-feed-leave-active {
+  inset-inline: 0;
+}
+.ss-article-grid > .ss-feed-leave-active {
+  /* Abspos grid children resolve grid lines as their containing block, so
+     the item's own cell anchors it. Both lines are needed — `N` alone
+     (end: auto) stretches to the grid edge — and width:100% because an
+     abspos box sizes to content, not to its grid area. */
+  grid-column: var(--ss-col, 1) / span 1;
+  grid-row: var(--ss-row, 1) / span 1;
+  width: 100%;
+}
+.ss-feed-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.ss-feed-leave-to {
+  opacity: 0;
+  transform: translateY(-16px);
+}
+.ss-feed-move {
+  transition: transform 0.45s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-feed-enter-active,
+  .ss-feed-leave-active,
+  .ss-feed-move {
+    transition: opacity 0.2s ease;
+    transition-delay: 0s;
+  }
+  .ss-feed-enter-from,
+  .ss-feed-leave-to {
+    transform: none;
+  }
 }
 
 .ss-article-meta {

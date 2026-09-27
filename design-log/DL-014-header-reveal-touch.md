@@ -123,3 +123,55 @@ more invisible full-width strip. Consequences:
 - The pill stays under the screensaver (z 110 < 500) — first tap dismisses
   the saver, then the pill is reachable; matches its previous layering.
 - Screenshot: `design-log/refs/header-reveal-bottom-left.png`.
+
+### Addendum #2 (2026-09-27): Uiverse ripple-button restyle
+
+Per user request the reveal pill now uses the Uiverse "mi-series" ripple
+button look: solid `#40B3A2` teal, `border-radius: 4px`, uppercase label
+(`letter-spacing: 1.2px`), flanked by two `.reveal-ripple` dots emitting
+expanding box-shadow rings (0.6s loop, clipped inside the pill by
+`overflow: hidden`). Touch scaling kept: `min-width` 200px and padding/
+font multiply by `min(--touch-multiplier, 1.6)` — 320×83px at tm=2.
+Hover is `opacity: .92 + scale(1.04)`; reduced-motion freezes the ripple.
+Chevron-down icon kept inside the label for the expand affordance.
+Verified live at 1280×900 (tm=2): `bg rgb(64,179,162)`, radius 4px,
+font 19.2px, 2 ripple dots animating. Screenshot:
+`design-log/refs/header-reveal-teal-ripple2-*.png`. `npm run build`
+(vue-tsc + vite) clean; dist rebuilt for the panel.
+
+### Addendum #3 design (2026-09-27): shared-direction slide choreography
+
+Reveal: header slides **down** into place while the Show Header button
+slides **down** off the bottom edge. Collapse: header slides **up** away
+while the button rises **up** back into place — both elements always move
+in the same direction, so the motion reads as one handoff. Implemented as
+a single `<Transition name="hdr-reveal">` wrapping the trigger/header
+v-if/v-else pair (simultaneous enter+leave); 0.55s `--ease-io`; the
+leaving header relies on `.header-hidden`'s `height:0; overflow:visible`
+so the grid reclaims space immediately with no end-of-leave jump.
+Reduced-motion disables the transition.
+
+### Implementation Results (addendum #3, 2026-09-27)
+
+- `DeckHeader.vue`: trigger + header wrapped in
+  `<Transition name="hdr-reveal">` (default simultaneous mode — both
+  elements animate together; no `mode="out-in"` gap). New classes:
+  `hdr-reveal-enter-active/-leave-active` apply
+  `transform 0.55s var(--ease-io)`; `.deck-header` goes `translateY(-102%)`
+  at enter-from/leave-to, `.header-reveal-trigger` `translateY(140%)` at
+  enter-from/leave-to — so both travel the same direction per gesture.
+- `.deck-header.hdr-reveal-leave-active { z-index: 100 }` — during
+  collapse `.header-hidden` zeroes the wrapper immediately, so the
+  sliding header needs to paint above the grid reclaiming its space.
+- Transform composition: the pill's hover/active `scale(1.04)` lives on
+  `.reveal-pill` (inner), the transition transform sits on
+  `.header-reveal-trigger` (outer) — no conflict; ripple animation
+  untouched.
+- Verified live (Playwright, 1280×900): open = header `-164px → 0` while
+  button `0 → +113px` (down off-screen); close = header `0 → -159px`
+  while button `+116 → 0` (rises into bottom-left). Autohide collapse
+  exercises the same path; trigger settles at x:10, bottom:10, 320×83.
+- Reduced-motion: `hdr-reveal-*` classes collapse to `transition:none`,
+  restoring the previous instant swap.
+- `vue-tsc --noEmit` clean; 37/37 focused vitest green; `npm run build`
+  clean — dist rebuilt for the panel.

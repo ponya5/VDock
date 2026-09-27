@@ -23,9 +23,15 @@ class ProgramAction(BaseAction):
         working_dir = self.config.get('working_dir')
         
         try:
-            # Check if path exists
+            # Check if path exists; a bare app name (e.g. "cursor") falls
+            # back to the app_paths override (DL-084), then PATH.
             if not Path(path).exists():
-                return ActionResult(False, f'Path does not exist: {path}')
+                import shutil
+                from services import app_paths
+                resolved = app_paths.override_for(path) or shutil.which(path)
+                if resolved is None:
+                    return ActionResult(False, f'Path does not exist: {path}')
+                path = resolved
             
             # Build command
             cmd = [path] + (args if isinstance(args, list) else [])
