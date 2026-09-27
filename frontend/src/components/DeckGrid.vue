@@ -114,6 +114,7 @@ import { useGridTransition } from '@/composables/useGridTransition'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { vibrate } from '@/utils/haptics'
+import { useMobileViewport } from '@/utils/mobileViewport'
 
 interface Props {
   page: Page
@@ -207,6 +208,15 @@ useSwipe(gridRef, {
 const hostSize = ref({ w: 0, h: 0 })
 let hostObserver: ResizeObserver | undefined
 
+// A phone's landscape aspect (post-DL-060, mobile is landscape-only) often
+// lands inside the [0.7, 1.3] window below even though its cells are
+// smaller than a desktop window's — a scene sized for a wide desktop grid
+// (e.g. Media's 3x5) then renders each cell near its raw 1fr size, with
+// icon/label sized for a much bigger button and overflowing into an
+// ellipsis. Forcing the fit-to-screen sizing on every mobile viewport
+// (regardless of aspect) keeps every scene's buttons legible there.
+const { isMobileViewport } = useMobileViewport()
+
 const GRID_PAD = 8
 const GRID_GAP = 8
 
@@ -220,7 +230,8 @@ const cellMetrics = computed(() => {
   const fitH = (h - GRID_PAD * 2 - GRID_GAP * (rows - 1)) / rows
   const cellPx = Math.max(36, Math.floor(Math.min(fitW, fitH)))
   const aspect = cellH / cellW
-  return { cellW, cellH, cellPx, compact: aspect > 1.3 || aspect < 0.7 }
+  const compact = isMobileViewport.value || aspect > 1.3 || aspect < 0.7
+  return { cellW, cellH, cellPx, compact }
 })
 
 const compactCells = computed(() => cellMetrics.value?.compact === true)

@@ -166,3 +166,50 @@ for the live COM path — it can't run in CI without a real Windows audio
 device). Full backend suite: 854 passed. Frontend: `vue-tsc` shows no new
 errors from `SliderButtonFace.vue`/`ButtonEditor.vue`; the four touched
 test files (44 tests) pass.
+
+## Follow-up: slider failures were silent again (2026-09-27)
+
+### Problem
+
+The user reported a volume slider that "doesn't control the volume like
+volume up/down/mute" — the same class of symptom the comtypes fix above
+addressed once already (face updates locally, real `volume_set` fails
+silently). This session's direct check of `CrossPlatformAction._volume_set`
+against the pycaw/comtypes versions installed in this repo's environment
+succeeded (get → 50%, set → 65%, get → 65%, confirmed on the real Windows
+mixer), so the dependency-pin fix above still holds *here* — but that only
+proves this specific interpreter's environment is fine; it says nothing
+about whatever environment the user's own running backend (dev venv, or a
+packaged build's bundled interpreter) actually has.
+
+### Root cause
+
+Whichever the exact cause on the user's machine, `SliderButtonFace.apply()`
+had no failure path at all: on `dashboardStore.executeAction()` resolving
+with `success: false`, or rejecting outright, nothing happened — no toast,
+no console-visible-to-the-user signal, nothing. Every other button on the
+deck surfaces a failure via `useButtonActions.ts`'s "Action Failed" toast;
+the slider was the one control that could fail completely silently, which
+is indistinguishable from "not implemented" from the user's seat regardless
+of what's actually wrong underneath.
+
+### Fix
+
+`SliderButtonFace.vue`'s `apply()` now reports a failure via
+`notificationsStore.error()` — but only on a `force`-dispatched call (the
+pointer-release, a wheel settling, or a preset tap), not on every
+120ms-throttled intermediate drag tick, so a real failure surfaces roughly
+once per gesture instead of spamming a toast per frame while dragging.
+This doesn't fix a bad environment on its own, but it turns "the slider
+does nothing, no idea why" into an actual error message pointing at the
+real cause (e.g. "pycaw not installed", "No audio session for spotify.exe")
+next time it happens to the user or anyone else.
+
+### Verification
+
+- Frontend: 59 files / 254 tests green; `vue-tsc --noEmit` clean.
+- Backend: 867/867 tests green (no backend change from this follow-up).
+- Not verified against the user's actual failing environment — no access
+  to their running backend or saved profile from this session. If the
+  slider still doesn't move the real volume after this, the toast it now
+  shows is the next diagnostic step.

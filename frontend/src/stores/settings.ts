@@ -50,7 +50,7 @@ export const SETTINGS_DEFAULTS = {
   dockedSidebarWidth: 190,
   dockedButtonHeight: 84,
   background: DEFAULT_BACKGROUND_ID,
-  toastLevel: 'all' as const,
+  toastLevel: 'errors-only' as const,
   touchMode: 'normal' as const,
   buttonDefaultAnimation: 'none',
   buttonDefaultIconLoop: 'swing',
@@ -64,6 +64,7 @@ export const SETTINGS_DEFAULTS = {
   appScanningEnabled: false,
   agentAlertsEnabled: true,
   tutorialCompleted: false,
+  activeProfileId: null as string | null,
   pressSoundEnabled: true,
   pressSoundStyle: 'click' as const,
   newsFeeds: '',
@@ -116,6 +117,14 @@ export interface PersistedUserSettings {
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
   tutorialCompleted: boolean
+  /**
+   * Id of the profile most recently loaded on ANY window/device connected to
+   * this backend — server-persisted (not localStorage) so a phone that
+   * connects for the first time lands on the same profile the desktop is
+   * already using instead of falling back to "first profile in the list"
+   * or, worse, bootstrapping a brand new one. See DL-061 follow-up.
+   */
+  activeProfileId: string | null
   pressSoundEnabled: boolean
   pressSoundStyle: 'click' | 'blip' | 'pop' | 'none'
   screensaverLayout: ScreensaverLayout
@@ -155,7 +164,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // or server persistence, otherwise one window's auto-hide timer would force
   // the header closed (and unable to reopen) in every other connected window.
   const showHeader = ref(true)
-  const toastLevel = ref<'all' | 'errors-only' | 'off'>('all')
+  const toastLevel = ref<'all' | 'errors-only' | 'off'>('errors-only')
   
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
   const minimumTouchTargetSize = ref(44)
@@ -224,6 +233,9 @@ export const useSettingsStore = defineStore('settings', () => {
   // Server-backed (not localStorage) so it survives cache clears and is
   // shared by every window/device on this backend.
   const tutorialCompleted = ref(false)
+  // Server-persisted so every window/device loads the same profile — see
+  // the `PersistedUserSettings.activeProfileId` doc comment above.
+  const activeProfileId = ref<string | null>(null)
   // Physical-feel feedback: a WebAudio tick on every button press.
   // 'none' keeps the toggle semantics (enabled but silent) simple.
   const pressSoundEnabled = ref(true)
@@ -363,6 +375,7 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
       tutorialCompleted: tutorialCompleted.value,
+      activeProfileId: activeProfileId.value,
       pressSoundEnabled: pressSoundEnabled.value,
       pressSoundStyle: pressSoundStyle.value,
       // Deep copy for the same structured-clone reason as recentActions above.
@@ -419,6 +432,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
     if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
+    if (settings.activeProfileId !== undefined) activeProfileId.value = settings.activeProfileId
     if (settings.pressSoundEnabled !== undefined) pressSoundEnabled.value = settings.pressSoundEnabled
     if (settings.pressSoundStyle !== undefined) pressSoundStyle.value = settings.pressSoundStyle
     if (settings.screensaverLayout !== undefined) {
@@ -481,6 +495,7 @@ export const useSettingsStore = defineStore('settings', () => {
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
+        activeProfileId: settings.activeProfileId ?? null,
         pressSoundEnabled: settings.pressSoundEnabled ?? true,
         pressSoundStyle: settings.pressSoundStyle ?? 'click',
         screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
@@ -642,6 +657,7 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled,
       agentAlertsEnabled,
       tutorialCompleted,
+      activeProfileId,
       pressSoundEnabled,
       pressSoundStyle,
     ],
@@ -851,6 +867,7 @@ export const useSettingsStore = defineStore('settings', () => {
     appScanningEnabled,
     agentAlertsEnabled,
     tutorialCompleted,
+    activeProfileId,
     pressSoundEnabled,
     pressSoundStyle,
     screensaverLayout,

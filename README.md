@@ -118,6 +118,11 @@ Three things make it pleasant to live with: **Find a setting** jumps straight to
 
 ## Control it from your phone
 
+<div align="center">
+<img src="docs/assets/screens/mobile-devices.jpg" alt="Two phones side by side, one showing the Media scene with volume controls and a slider, the other showing the Claude Code scene with Submit, Continue and Interrupt" width="760" />
+<br /><em>Media on one phone, Claude Code on another — the same VDock, scanned off the same QR code.</em>
+</div>
+
 <table>
 <tr>
 <td width="50%"><img src="docs/assets/screens/mobile-media.jpg" alt="VDock on a phone in landscape: Media scene with mute, volume, a volume slider with preset chips, and transport keys" /></td>
@@ -226,6 +231,21 @@ Scan the QR code in **Settings → Connect a device** and your phone is a second
 ### 6. A kiosk or workshop panel
 
 Tablet touch mode, 44px minimum targets, and a first-run tour mean you can hand a panel to someone who has never seen it.
+
+### Using a touchscreen as a second monitor (Windows)
+
+If you've got a spare touchscreen monitor to run VDock on, Windows will often route every tap to your *primary* display instead of the touchscreen itself — you touch the VDock panel and the click lands on your main monitor.
+
+Fix it in two steps:
+
+1. Open **Tablet PC Settings** (search for it in the Start menu) → **Display** tab → **Setup**, then tap the touchscreen monitor when Windows prompts you to identify it.
+2. If that setting doesn't stick after a reboot or a display change, open a Command Prompt and run the built-in Windows digitizer-to-monitor mapping tool directly:
+
+   ```
+   multidigimon -touch
+   ```
+
+   `MultiDigiMon.exe` ships with Windows (`C:\Windows\System32`) and re-maps the touch digitizer to the correct screen. Run the Command Prompt as Administrator if it appears to do nothing.
 
 ---
 
@@ -417,6 +437,7 @@ Secrets never reach the frontend — the action list exposes only *whether* an i
 | Claude / GitHub buttons greyed out | Hover for the reason — usually the CLI isn't installed or `gh auth login` hasn't run |
 | Keystroke actions do nothing | They only fire when the target editor is focused. Deliberate |
 | Phone can't reach VDock | **Settings → Connect a device**: allow LAN access, **relaunch**, allow the Windows firewall prompt for `python.exe`, and check both devices are on the same Wi-Fi |
+| Touch lands on the wrong monitor | See [Using a touchscreen as a second monitor](#using-a-touchscreen-as-a-second-monitor-windows) — Windows is routing touch to the wrong display, not a VDock bug |
 | UI looks like an old build | It self-heals on reload; if not, hard-refresh once |
 | Something else | **Settings → Logs** — tail backend and frontend logs, or export them with your issue |
 

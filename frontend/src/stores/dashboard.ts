@@ -77,6 +77,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // navigating to '/' must not be undone by DashboardView's onMounted
     // reloading a stale profile id from localStorage.
     localStorage.setItem(LAST_PROFILE_STORAGE_KEY, migratedProfile.id)
+
+    // Also mirrored into the server-persisted setting (DL-061 follow-up):
+    // localStorage alone is per-browser, so a phone connecting for the
+    // first time had no way to know which profile the desktop was already
+    // using. Every device now converges on whichever one loaded last.
+    useSettingsStore().activeProfileId = migratedProfile.id
   }
 
   /**
