@@ -1,7 +1,13 @@
 <template>
   <div class="glass-pill-scene-selector">
     <!-- pill container -->
-    <div role="radiogroup" aria-label="Scene selector" class="pill-container" :class="{ 'pill-edit': isEditMode }" ref="pillRef">
+    <div
+      role="radiogroup"
+      aria-label="Scene selector"
+      class="pill-container"
+      :class="{ 'pill-edit': isEditMode, 'wipe-next': wipeDir === 'next', 'wipe-prev': wipeDir === 'prev' }"
+      ref="pillRef"
+    >
       <!-- glider (absolute positioned, behind segments) -->
       <div class="glider" :style="gliderStyle"></div>
 
@@ -14,7 +20,14 @@
         :aria-checked="i === currentSceneIndex ? 'true' : 'false'"
         :tabindex="i === focusedIndex ? 0 : -1"
         class="segment"
-        :class="{ 'is-active': i === currentSceneIndex, 'agent-waiting': sceneWaiting(scene) }"
+        :class="{
+          'is-active': i === currentSceneIndex,
+          'agent-waiting': sceneWaiting(scene),
+          'seg-sweep-out': sweep?.out === i,
+          'seg-sweep-in': sweep?.in === i,
+          'seg-sweep-back': sweepBack?.idx === i,
+        }"
+        :style="segmentSwipeStyle(i)"
         @click="selectScene(i)"
         @keydown="onKeyDown($event, i)"
       >
@@ -67,6 +80,7 @@ import { vibrate } from '@/utils/haptics'
 import { startAppDetection, stopAppDetection, sceneAppIsLive, loadProfileMaps } from '@/services/appDetection'
 import { initAgentState } from '@/services/agentState'
 import { sceneAgentIsWaiting } from '@/services/agentWaiting'
+import { sceneSwipe } from '@/services/sceneSwipe'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -166,6 +180,127 @@ watch(() => props.scenes.length, () => {
   disableAnimation.value = true
   nextTick(() => { disableAnimation.value = false })
 })
+
+/* --- DL-082: directional dissolve on scene switch -------------------------
+   Two phases sharing one mask technique: the gradient is 250% wide so
+   animating mask-position sweeps a soft edge across the segment.
+   - While the user drags a horizontal scene swipe, the ACTIVE segment
+     dissolves 1:1 with the finger (inline style, transition:none).
+   - On commit the outgoing segment finishes the sweep via a keyframe that
+     resumes from the finger's release position (`--sweep-from`), then
+     re-reveals in place as a now-inactive button; the incoming segment
+     dissolves in. On cancel a short keyframe wipes the mask back.
+   Mask gradients: "out" dissolves the wave-front edge first; "in" reveals
+   it — both travel the sweep direction (next = L→R, prev = R→L). */
+interface SegSweep {
+  out: number
+  in: number
+  dir: 'next' | 'prev'
+  fromPos: number
+  fromOp: number
+}
+const sweep = ref<SegSweep | null>(null)
+const sweepBack = ref<{ idx: number; dir: 'next' | 'prev'; fromPos: number; fromOp: number } | null>(null)
+let sweepTimer: ReturnType<typeof setTimeout> | null = null
+let sweepBackTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Drag progress → the mask-position the live dissolve left the segment at
+    (matches the keyframes' 100→0 / 0→100 travel, capped mid-way so the
+    button never fully vanishes before the swipe commits). */
+function dragMaskPos(dir: 'next' | 'prev', progress: number): number {
+  const travel = 55 * Math.min(progress, 1)
+  return dir === 'next' ? 100 - travel : travel
+}
+function dragOpacity(progress: number): number {
+  return 1 - 0.5 * Math.min(progress, 1)
+}
+
+/** Outgoing-wave gradient — the edge the wave reaches first is
+    transparent: transparent-left sweeps L→R, black-left sweeps R→L. */
+const WIPE_GRADIENTS = {
+  next: 'linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%)',
+  prev: 'linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%)',
+} as const
+
+/** Direction class for the container — the committed sweep wins, then a
+    cancel recovery, then the live drag. */
+const wipeDir = computed(() =>
+  sweep.value?.dir ?? sweepBack.value?.dir ?? (sceneSwipe.dragging ? sceneSwipe.dir : null),
+)
+
+const reduceMotion =
+  typeof window !== 'undefined' &&
+  (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+
+/** Live dissolve style while a horizontal scene swipe tracks the finger. */
+function segmentSwipeStyle(i: number): Record<string, string> | undefined {
+  if (sweep.value && sweep.value.out === i) {
+    return {
+      '--sweep-from': `${sweep.value.fromPos}%`,
+      '--sweep-from-op': String(sweep.value.fromOp),
+    } as Record<string, string>
+  }
+  if (sweepBack.value && sweepBack.value.idx === i) {
+    return {
+      '--sweep-from': `${sweepBack.value.fromPos}%`,
+      '--sweep-from-op': String(sweepBack.value.fromOp),
+    } as Record<string, string>
+  }
+  if (!sceneSwipe.dragging || i !== props.currentSceneIndex) return undefined
+  // Reduced motion keeps the fade, drops the travelling mask edge.
+  if (reduceMotion) {
+    return { opacity: String(dragOpacity(sceneSwipe.progress)), transition: 'none' }
+  }
+  const grad = WIPE_GRADIENTS[sceneSwipe.dir]
+  return {
+    '-webkit-mask-image': grad,
+    'mask-image': grad,
+    '-webkit-mask-size': '250% 100%',
+    'mask-size': '250% 100%',
+    '-webkit-mask-position': `${dragMaskPos(sceneSwipe.dir, sceneSwipe.progress)}% 0`,
+    'mask-position': `${dragMaskPos(sceneSwipe.dir, sceneSwipe.progress)}% 0`,
+    opacity: String(dragOpacity(sceneSwipe.progress)),
+    transition: 'none',
+  }
+}
+
+watch(() => props.currentSceneIndex, (newIdx, oldIdx) => {
+  if (newIdx === oldIdx) return
+  const n = props.scenes.length
+  const forward = (newIdx - oldIdx + n) % n
+  const dir = forward <= n - forward ? 'next' : 'prev'
+  // A committed swipe keeps `progress` at its release value, so the sweep
+  // keyframe resumes the dissolve right where the finger left off.
+  const p = sceneSwipe.justSwiped ? Math.min(sceneSwipe.progress, 1) : 0
+  sceneSwipe.justSwiped = false
+  sweepBack.value = null
+  sweep.value = {
+    out: oldIdx,
+    in: newIdx,
+    dir,
+    fromPos: dragMaskPos(dir, p),
+    fromOp: dragOpacity(p),
+  }
+  if (sweepTimer) clearTimeout(sweepTimer)
+  sweepTimer = setTimeout(() => { sweep.value = null }, 620)
+})
+
+watch(() => sceneSwipe.dragging, (dragging) => {
+  // Gesture released below the commit threshold → `justSwiped` stays false
+  // and no index change follows: play the wipe backwards so the segment
+  // re-forms instead of snapping back to full opacity.
+  if (dragging || sceneSwipe.justSwiped || sceneSwipe.progress === 0) return
+  const i = props.currentSceneIndex
+  const dir = sceneSwipe.dir
+  sweepBack.value = {
+    idx: i,
+    dir,
+    fromPos: dragMaskPos(dir, sceneSwipe.progress),
+    fromOp: dragOpacity(sceneSwipe.progress),
+  }
+  if (sweepBackTimer) clearTimeout(sweepBackTimer)
+  sweepBackTimer = setTimeout(() => { sweepBack.value = null }, 320)
+})
 </script>
 
 <style scoped>
@@ -185,6 +320,7 @@ watch(() => props.scenes.length, () => {
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
   backdrop-filter: blur(var(--glass-blur, 14px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -224,6 +360,8 @@ watch(() => props.scenes.length, () => {
 }
 
 .segment {
+  -webkit-user-select: none;
+  user-select: none;
   position: relative;
   z-index: 2;
   display: flex;
@@ -399,9 +537,164 @@ watch(() => props.scenes.length, () => {
   50% { opacity: 0.75; transform: scale(1.5); }
 }
 
+/* DL-082 — directional dissolve on the scene buttons. The mask gradient is
+   250% wide: sweeping mask-position carries a soft transparent band across
+   the segment. `next` (swipe-left / index forward) travels L→R, `prev`
+   R→L. The outgoing segment dissolves out then re-forms in place as the
+   now-inactive button — starting from `--sweep-from` so a committed swipe
+   continues seamlessly from the drag-tracked position. */
+.pill-container.wipe-next .segment.seg-sweep-out {
+  animation: seg-wipe-out-next 0.55s var(--ease-io) both;
+}
+.pill-container.wipe-next .segment.seg-sweep-in {
+  animation: seg-wipe-in-next 0.4s var(--ease-out) 0.05s both;
+}
+.pill-container.wipe-next .segment.seg-sweep-back {
+  animation: seg-wipe-back-next 0.28s var(--ease-out) both;
+}
+.pill-container.wipe-prev .segment.seg-sweep-out {
+  animation: seg-wipe-out-prev 0.55s var(--ease-io) both;
+}
+.pill-container.wipe-prev .segment.seg-sweep-in {
+  animation: seg-wipe-in-prev 0.4s var(--ease-out) 0.05s both;
+}
+.pill-container.wipe-prev .segment.seg-sweep-back {
+  animation: seg-wipe-back-prev 0.28s var(--ease-out) both;
+}
+
+/* next — wave travels L→R: out uses the transparent-left gradient
+   (position 100%→0% dissolves the left edge first), the re-form and the
+   incoming segment use the black-left gradient (same sweep reveals the
+   left edge first). */
+@keyframes seg-wipe-out-next {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 100%) 0;
+    mask-position: var(--sweep-from, 100%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  42% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0;
+  }
+  55% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-in-next {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-back-next {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 100%) 0;
+    mask-position: var(--sweep-from, 100%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  100% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 1;
+  }
+}
+
+/* prev — wave travels R→L: mirrored gradients, position sweep 0%→100%. */
+@keyframes seg-wipe-out-prev {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 0%) 0;
+    mask-position: var(--sweep-from, 0%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  42% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 0;
+  }
+  55% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-in-prev {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-back-prev {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 0%) 0;
+    mask-position: var(--sweep-from, 0%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  100% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-live-dot { animation: none; }
   .segment.agent-waiting { animation: none; }
   .app-live-dot.agent-waiting-dot { animation: none; }
+  .segment.seg-sweep-out,
+  .segment.seg-sweep-in,
+  .segment.seg-sweep-back { animation: none; }
 }
 </style>

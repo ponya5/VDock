@@ -62,3 +62,55 @@ two more layers would have failed underneath.
 - If it still won't load, check the Windows Firewall prompt for
   `python.exe` on private networks — binding `0.0.0.0` exposes the port
   but the firewall rule must allow it.
+
+### Follow-up (2026-09-28): configurable deck address
+
+User request: "is it possible to be able to configure the deck address?"
+
+The auto-detected `lan_ip()` (UDP-connect probe) picks the *primary* NIC —
+wrong on multi-NIC/VPN machines — and shows a raw IP where a hostname
+like `deck.local` would be friendlier. Since `ALLOW_LAN` binds 0.0.0.0,
+the server answers on every interface, so the displayed address is purely
+informational and a host override is safe.
+
+Design: `deck_host` — an optional persisted override (config.json +
+`DECK_HOST` env seed), validated as a bare hostname/IPv4 (no scheme,
+port, or path). Empty/null restores auto-detect. `GET /api/config`
+returns it alongside `lan_ip`; the frontend's `lanUrl` prefers it. The
+QR + Copy follow automatically. `socket_origins()` whitelists BOTH the
+auto IP and the override — otherwise a phone loading
+`http://deck.local:PORT` gets its Socket.IO handshake rejected. Port
+stays the real bind port; an override doesn't change what the server
+listens on.
+
+#### Implementation results (2026-09-28, deck_host follow-up)
+
+- `backend/config.py`: `DECK_HOST` env seed + `DECK_HOST_RE` (bare
+  hostname/IPv4, no scheme/port/path); `apply_saved_toggles` re-applies a
+  regex-clean `deck_host` from config.json; `socket_origins()` whitelists
+  BOTH `lan_ip()` and `DECK_HOST` so a phone on the override host keeps
+  its Socket.IO handshake.
+- `backend/routes/config.py`: GET returns `deck_host` (null = auto);
+  PUT accepts `deck_host` — null/'' clears, non-string or non-hostname
+  (e.g. 'http://x:4444', 'a b', 'h/p') → 400; persists to config.json
+  and updates `Config.DECK_HOST` live.
+- `frontend/src/types/index.ts`: `ServerConfig.deck_host?: string | null`.
+- `SettingsView.vue`: `lanUrl` prefers `deck_host` over `lan_ip`; new
+  "Custom address" row under Deck address — input (placeholder shows the
+  auto IP), Apply enabled only when dirty, Enter or click saves via the
+  existing `updateServerConfig`, toast on success/failure, QR re-renders
+  through the `lanUrl` watcher.
+- `conftest.py`: added `DECK_HOST` to `_GUARDED_SETTINGS` — the override
+  mutates class state, same leak class the fixture exists to prevent.
+- Tests: 3 new cases in `test_security_hardening.py` — set + GET echo,
+  reject full URLs/non-strings, clear restores auto. 19/19 file green.
+
+Verified live: PUT deck.local → GET echoes it → address row shows
+http://deck.local:4444; clear → back to http://192.168.1.173:4444.
+Screenshot: `design-log/refs/deck-host-row-*.png`. `vue-tsc` clean,
+`dist` rebuilt. Backend restarted (no reloader under DEBUG=False) —
+socket clients reconnected automatically.
+
+Note: the bind itself is unchanged — the override only changes what the
+QR/address advertises. That is the correct scope: the server already
+answers on every interface when ALLOW_LAN is on.

@@ -22,7 +22,7 @@
       <div v-if="isWaiting" class="agent-waiting-snooze">
         <FontAwesomeIcon :icon="['fas', 'robot']" class="snooze-icon" />
         <span class="snooze-label">{{ waitingLabel }} is waiting for input</span>
-        <button type="button" class="snooze-btn" @click="snooze">Snooze</button>
+        <button type="button" class="snooze-btn" @click="snooze">Snooze 3m</button>
       </div>
     </Transition>
   </Teleport>
@@ -204,6 +204,7 @@ function snooze() {
   background: rgba(8, 26, 14, 0.92);
   border: 1.5px solid rgba(34, 197, 94, 0.7);
   box-shadow: 0 0 24px rgba(34, 197, 94, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   color: #bbf7d0;
   font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.6));

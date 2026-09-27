@@ -1,6 +1,7 @@
 """Configuration management for VDock backend."""
 import os
 import json
+import re
 import socket
 import sys
 from pathlib import Path
@@ -44,6 +45,12 @@ def lan_ip() -> Optional[str]:
             return None
 
 
+# Bare hostname or IPv4 — the 'Connect a device' deck-address override.
+# No scheme, port, path, or whitespace; the port shown is the real bind
+# port, so a value like 'http://host:4444' must be rejected, not carried.
+DECK_HOST_RE = re.compile(r'^[A-Za-z0-9]([A-Za-z0-9.\-]{0,251}[A-Za-z0-9])?$')
+
+
 def _read_env_port(env_file: Path, key: str, default: int) -> int:
     """Pull a PORT-style value out of a .env file (same parse as the launcher)."""
     try:
@@ -84,6 +91,16 @@ class Config:
     # Network settings
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001').split(',')
     ALLOW_LAN = os.environ.get('ALLOW_LAN', 'False').lower() == 'true'
+    # 'Connect a device' address override — a bare hostname/IPv4 shown in
+    # the QR card instead of the auto-detected NIC address (multi-NIC/VPN
+    # boxes, or a friendly name like deck.local). Empty = auto.
+    DECK_HOST = os.environ.get('DECK_HOST', '')
+
+    # Per-app executable overrides (DL-084): { appKey: absolutePath } for
+    # apps installed off-PATH — Cursor's default install is the motivating
+    # case. Persisted in config.json; consumed by find_binary / open_app /
+    # the keymap launch-on-missing-window retry.
+    APP_PATHS = {}
     
     # SSL/TLS settings
     USE_SSL = os.environ.get('USE_SSL', 'False').lower() == 'true'
@@ -152,6 +169,20 @@ class Config:
         ):
             if isinstance(saved.get(key), bool):
                 setattr(cls, attr, saved[key])
+        # deck_host is a string override — only DECK_HOST_RE-clean values
+        # that already survived the PUT validation can land here, but a
+        # hand-edited config.json gets the same check.
+        saved_deck_host = saved.get('deck_host')
+        if isinstance(saved_deck_host, str) and DECK_HOST_RE.fullmatch(saved_deck_host):
+            cls.DECK_HOST = saved_deck_host
+        # app_paths — str→str map; only clean entries that already survived
+        # PUT validation can land here.
+        saved_paths = saved.get('app_paths')
+        if isinstance(saved_paths, dict):
+            cls.APP_PATHS = {
+                str(k): str(v) for k, v in saved_paths.items()
+                if isinstance(v, str) and v.strip()
+            }
 
     @classmethod
     def init_app(cls):
@@ -198,10 +229,13 @@ class Config:
             origins.add(f'http://{host}:{cls.PORT}')       # backend serves dist
             origins.add(f'http://{host}:{frontend_port}')  # vite dev
         if cls.ALLOW_LAN:
-            ip = lan_ip()
-            if ip:
-                origins.add(f'http://{ip}:{cls.PORT}')
-                origins.add(f'http://{ip}:{frontend_port}')
+            # Whitelist every host a device may legitimately load: the
+            # auto-detected NIC address AND the deck_host override — a
+            # phone on http://deck.local:PORT must not lose its socket.
+            for host in {lan_ip(), cls.DECK_HOST or None}:
+                if host:
+                    origins.add(f'http://{host}:{cls.PORT}')
+                    origins.add(f'http://{host}:{frontend_port}')
         return sorted(origins)
 
     @classmethod

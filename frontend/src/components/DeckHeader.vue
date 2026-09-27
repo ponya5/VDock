@@ -3,22 +3,29 @@
     <!-- Reveal trigger (visible when header is hidden). A compact pill
          pinned to the bottom-left corner — tap or swipe-down on it to
          reveal. Kept off the top edge so it can't overlap the scene
-         rail or console rows. -->
-    <div
-      v-if="!settingsStore.showHeader"
-      ref="triggerRef"
-      class="header-reveal-trigger"
-      @click="revealHeader"
-      title="Swipe down or tap to show header"
-    >
-      <div class="reveal-pill">
-        <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
-        <span>Show Header</span>
+         rail or console rows. The Transition swap choreographs the
+         handoff: header slides down in while the button slides down out;
+         on collapse both move up (DL-014 addendum #3). -->
+    <Transition name="hdr-reveal">
+      <div
+        v-if="!settingsStore.showHeader"
+        ref="triggerRef"
+        class="header-reveal-trigger"
+        @click="revealHeader"
+        title="Swipe down or tap to show header"
+      >
+        <div class="reveal-pill">
+          <span class="reveal-ripple" aria-hidden="true"></span>
+          <span class="reveal-pill-label">
+            <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
+            <span>Show Header</span>
+          </span>
+          <span class="reveal-ripple" aria-hidden="true"></span>
+        </div>
       </div>
-    </div>
 
-    <!-- Main Header -->
-    <header v-else ref="headerRef" class="deck-header dashboard-header">
+      <!-- Main Header -->
+      <header v-else ref="headerRef" class="deck-header dashboard-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
@@ -121,6 +128,7 @@
         <div class="reveal-handle"></div>
       </button>
     </header>
+    </Transition>
 
     <!-- Confirmation modal for exiting the app -->
     <Teleport to="body">
@@ -364,6 +372,8 @@ onUnmounted(() => {
 }
 
 .header-reveal-trigger {
+  -webkit-user-select: none;
+  user-select: none;
   position: fixed;
   /* Bottom-left corner, sized to the pill itself — a top-anchored hit
      strip overlapped the scene rail/console rows both visually and for
@@ -393,36 +403,114 @@ onUnmounted(() => {
 
 /* Visible tap affordance inside the transparent trigger — a labelled pill
    reads as a button on touchscreens, where the bare handle bar did not.
-   Now that it floats free in the bottom-left corner (DL-014 follow-up)
-   instead of living in an 84px top strip, it can afford a larger,
-   finger-first size: 52px base, scaled by the touch multiplier. */
+   Styled on the Uiverse "ripple button" (DL-014 follow-up, 2026-09-27):
+   solid teal, square-ish corners, uppercase tracked label flanked by two
+   ripple dots. It floats free in the bottom-left corner, so it carries a
+   finger-first size scaled by the touch multiplier. */
 .reveal-pill {
-  display: flex;
+  -webkit-user-select: none;
+  user-select: none;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  height: 52px;
-  min-height: 52px;
+  justify-content: space-between;
+  gap: calc(14px * min(var(--touch-multiplier, 1), 1.6));
+  min-width: calc(200px * min(var(--touch-multiplier, 1), 1.6));
   min-height: max(var(--min-touch-target, 48px), calc(52px * min(var(--touch-multiplier, 1), 1.6)));
-  padding: 0 calc(26px * min(var(--touch-multiplier, 1), 1.6));
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: calc(1rem * min(var(--touch-multiplier, 1), 1.6));
+  padding:
+    calc(16px * min(var(--touch-multiplier, 1), 1.6))
+    calc(20px * min(var(--touch-multiplier, 1), 1.6));
+  background: #40B3A2;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: calc(0.75rem * min(var(--touch-multiplier, 1), 1.6));
   font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
   white-space: nowrap;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.reveal-pill-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Ripple dots — expanding box-shadow rings, clipped inside the button. */
+.reveal-ripple {
+  width: 10px;
+  height: 10px;
+  border-radius: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+  animation: reveal-ripple 0.6s linear infinite;
+}
+
+@keyframes reveal-ripple {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(255, 255, 255, 0.1),
+      0 0 0 20px rgba(255, 255, 255, 0.1),
+      0 0 0 40px rgba(255, 255, 255, 0.1),
+      0 0 0 60px rgba(255, 255, 255, 0.1);
+  }
+  100% {
+    box-shadow:
+      0 0 0 20px rgba(255, 255, 255, 0.1),
+      0 0 0 40px rgba(255, 255, 255, 0.1),
+      0 0 0 60px rgba(255, 255, 255, 0.1),
+      0 0 0 80px rgba(255, 255, 255, 0);
+  }
 }
 
 .header-reveal-trigger:hover .reveal-pill,
 .header-reveal-trigger:active .reveal-pill {
-  background: var(--color-primary, #007aff);
-  border-color: var(--color-primary, #007aff);
-  transform: scale(1.06);
+  opacity: 0.92;
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ripple { animation: none; }
+}
+
+/* Show/hide choreography (DL-014 addendum #3): one Transition swaps the
+   reveal trigger and the header, so both move in the same direction —
+   header slides down in while the button slides down out; on hide the
+   header slides up away while the button rises back up into place.
+   The leaving header rides on .header-hidden's height:0 +
+   overflow:visible — the grid reclaims the space instantly, no
+   end-of-leave jump. */
+.hdr-reveal-enter-active,
+.hdr-reveal-leave-active {
+  transition: transform 0.55s var(--ease-io, cubic-bezier(0.4, 0, 0.2, 1));
+  will-change: transform;
+}
+
+/* While leaving, the grid has already reclaimed the header's space
+   (.header-hidden → height:0) — keep the sliding header above it. */
+.deck-header.hdr-reveal-leave-active {
+  z-index: 100;
+}
+
+.deck-header.hdr-reveal-enter-from,
+.deck-header.hdr-reveal-leave-to {
+  transform: translateY(-102%);
+}
+
+.header-reveal-trigger.hdr-reveal-enter-from,
+.header-reveal-trigger.hdr-reveal-leave-to {
+  transform: translateY(140%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hdr-reveal-enter-active,
+  .hdr-reveal-leave-active {
+    transition: none;
+  }
 }
 
 .header-collapse-handle {
@@ -468,6 +556,7 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   background: rgba(10, 8, 32, 0.66);
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
@@ -669,6 +758,7 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;

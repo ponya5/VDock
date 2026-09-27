@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen, shell } = require('electron')
+const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen, shell, dialog } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
 const AutoLaunch = require('auto-launch')
@@ -505,6 +505,25 @@ ipcMain.handle('open-external-url', async (_event, url) => {
 
 ipcMain.handle('quit-app', async () => {
   quitApplication()
+})
+
+// Native file picker for per-app executable overrides (DL-084). Returns the
+// chosen absolute path, or null when cancelled. Filters are platform-aware:
+// .app is a directory bundle, so macOS needs it as an explicit filter.
+ipcMain.handle('pick-executable', async () => {
+  const filters = process.platform === 'win32'
+    ? [{ name: 'Executables', extensions: ['exe', 'cmd', 'bat', 'com'] },
+       { name: 'All files', extensions: ['*'] }]
+    : process.platform === 'darwin'
+      ? [{ name: 'Applications', extensions: ['app'] },
+         { name: 'All files', extensions: ['*'] }]
+      : [{ name: 'All files', extensions: ['*'] }]
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose application executable',
+    properties: ['openFile'],
+    filters,
+  })
+  return result.canceled ? null : (result.filePaths[0] ?? null)
 })
 
 // App event handlers

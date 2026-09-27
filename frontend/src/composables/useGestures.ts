@@ -3,8 +3,11 @@ import { ref, unref, watch, type MaybeRef } from 'vue';
 export interface SwipeOptions {
   threshold?: number;
   onSwipeEnd?: (direction: 'LEFT' | 'RIGHT' | 'UP' | 'DOWN', progress: number) => void;
-  onSwipeStart?: () => void;
+  onSwipeStart?: (e: PointerEvent) => void;
   onSwipe?: (direction: 'LEFT' | 'RIGHT' | 'UP' | 'DOWN', progress: number) => void;
+  // DL-082: fired when the pointer is released/cancelled below the commit
+  // threshold — lets live-tracking (drag-dissolve) clean up on abandon.
+  onSwipeCancel?: () => void;
 }
 
 export function useSwipe(target: MaybeRef<HTMLElement | null | undefined>, options: SwipeOptions = {}) {
@@ -23,7 +26,7 @@ export function useSwipe(target: MaybeRef<HTMLElement | null | undefined>, optio
     isSwiping.value = true;
     direction.value = null;
     progress.value = 0;
-    options.onSwipeStart?.();
+    options.onSwipeStart?.(e);
   };
 
   const onPointerMove = (e: PointerEvent) => {
@@ -50,8 +53,17 @@ export function useSwipe(target: MaybeRef<HTMLElement | null | undefined>, optio
     isSwiping.value = false;
     if (direction.value && progress.value >= 1) {
       options.onSwipeEnd?.(direction.value, progress.value);
+    } else {
+      options.onSwipeCancel?.();
     }
     progress.value = 0;
+  };
+
+  const onPointerCancel = () => {
+    if (!isSwiping.value) return;
+    isSwiping.value = false;
+    progress.value = 0;
+    options.onSwipeCancel?.();
   };
 
   const cleanup = () => {
@@ -60,7 +72,7 @@ export function useSwipe(target: MaybeRef<HTMLElement | null | undefined>, optio
     el.removeEventListener('pointerdown', onPointerDown as EventListener);
     el.removeEventListener('pointermove', onPointerMove as EventListener);
     el.removeEventListener('pointerup', onPointerUp as EventListener);
-    el.removeEventListener('pointercancel', onPointerUp as EventListener);
+    el.removeEventListener('pointercancel', onPointerCancel as EventListener);
   };
 
   watch(() => unref(target), (el, _, onCleanup) => {
@@ -69,7 +81,7 @@ export function useSwipe(target: MaybeRef<HTMLElement | null | undefined>, optio
       el.addEventListener('pointerdown', onPointerDown as EventListener);
       el.addEventListener('pointermove', onPointerMove as EventListener);
       el.addEventListener('pointerup', onPointerUp as EventListener);
-      el.addEventListener('pointercancel', onPointerUp as EventListener);
+      el.addEventListener('pointercancel', onPointerCancel as EventListener);
     }
     onCleanup(cleanup);
   }, { immediate: true });

@@ -735,6 +735,48 @@
               </div>
             </section>
 
+            <section class="panel" id="ss-background">
+              <div class="panel-head">
+                <h2>Screensaver background</h2>
+                <span class="hint">Shown only while the screensaver is on — the dashboard keeps its own.</span>
+                <span class="spacer"></span>
+                <SettingResetButton label="Screensaver background" :at-default="settings.screensaverBackground === SETTINGS_DEFAULTS.screensaverBackground" @reset="settings.screensaverBackground = SETTINGS_DEFAULTS.screensaverBackground" />
+              </div>
+              <div class="panel-body">
+                <div class="row stack picker-row">
+                  <BackgroundPicker
+                    v-model="settings.screensaverBackground"
+                    :groups="screensaverPickerGroups"
+                  />
+                </div>
+                <div class="row stack">
+                  <div class="row-head">
+                    <div class="row-text">
+                      <span class="label">Custom image or GIF</span>
+                      <p>Replaces the style above while the screensaver is on.</p>
+                    </div>
+                  </div>
+                  <div class="row-control">
+                    <div class="drop">
+                      <FontAwesomeIcon :icon="['fas', 'upload']" />
+                      <span>{{ isCustomScreensaverBackground ? 'A custom image is active.' : 'Drop a file here, or browse.' }}</span>
+                      <input ref="screensaverBgFileInput" type="file" accept="image/*,.gif" @change="handleScreensaverBackgroundUpload" style="display:none" />
+                      <button type="button" class="btn sm" :disabled="uploadingScreensaverBackground" @click="($refs.screensaverBgFileInput as HTMLInputElement).click()">
+                        <FontAwesomeIcon :icon="uploadingScreensaverBackground ? ['fas', 'spinner'] : ['fas', 'upload']" :spin="uploadingScreensaverBackground" />
+                        {{ uploadingScreensaverBackground ? 'Uploading…' : 'Choose file…' }}
+                      </button>
+                      <button v-if="isCustomScreensaverBackground" type="button" class="btn danger sm" @click="removeScreensaverBackground">
+                        <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="isCustomScreensaverBackground" class="bg-thumb">
+                    <img :src="settings.screensaverBackground" alt="Screensaver background" />
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section class="panel" id="ss-widgets" data-tour="screensaver-picker">
               <div class="panel-head">
                 <h2>Widgets</h2>
@@ -893,47 +935,6 @@
               </div>
             </section>
 
-            <section class="panel" id="ss-background">
-              <div class="panel-head">
-                <h2>Screensaver background</h2>
-                <span class="hint">Shown only while the screensaver is on — the dashboard keeps its own.</span>
-                <span class="spacer"></span>
-                <SettingResetButton label="Screensaver background" :at-default="settings.screensaverBackground === SETTINGS_DEFAULTS.screensaverBackground" @reset="settings.screensaverBackground = SETTINGS_DEFAULTS.screensaverBackground" />
-              </div>
-              <div class="panel-body">
-                <div class="row stack picker-row">
-                  <BackgroundPicker
-                    v-model="settings.screensaverBackground"
-                    :groups="screensaverPickerGroups"
-                  />
-                </div>
-                <div class="row stack">
-                  <div class="row-head">
-                    <div class="row-text">
-                      <span class="label">Custom image or GIF</span>
-                      <p>Replaces the style above while the screensaver is on.</p>
-                    </div>
-                  </div>
-                  <div class="row-control">
-                    <div class="drop">
-                      <FontAwesomeIcon :icon="['fas', 'upload']" />
-                      <span>{{ isCustomScreensaverBackground ? 'A custom image is active.' : 'Drop a file here, or browse.' }}</span>
-                      <input ref="screensaverBgFileInput" type="file" accept="image/*,.gif" @change="handleScreensaverBackgroundUpload" style="display:none" />
-                      <button type="button" class="btn sm" :disabled="uploadingScreensaverBackground" @click="($refs.screensaverBgFileInput as HTMLInputElement).click()">
-                        <FontAwesomeIcon :icon="uploadingScreensaverBackground ? ['fas', 'spinner'] : ['fas', 'upload']" :spin="uploadingScreensaverBackground" />
-                        {{ uploadingScreensaverBackground ? 'Uploading…' : 'Choose file…' }}
-                      </button>
-                      <button v-if="isCustomScreensaverBackground" type="button" class="btn danger sm" @click="removeScreensaverBackground">
-                        <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
-                      </button>
-                    </div>
-                  </div>
-                  <div v-if="isCustomScreensaverBackground" class="bg-thumb">
-                    <img :src="settings.screensaverBackground" alt="Screensaver background" />
-                  </div>
-                </div>
-              </div>
-            </section>
           </div>
 
           <div class="rail">
@@ -1040,6 +1041,42 @@
         <!-- ── Templates ── -->
         <div v-if="activeTab === 'templates'" class="content">
           <div class="col">
+            <section class="panel" id="app-paths">
+              <div class="panel-head">
+                <h2><FontAwesomeIcon :icon="['fas', 'folder-open']" class="category-icon" /> App launch paths</h2>
+                <span class="hint">Point the deck at apps installed outside PATH — used by “New agent” and app-launch buttons.</span>
+              </div>
+              <div class="panel-body">
+                <div v-for="app in appPathRows" :key="app.key" class="app-path-item">
+                  <div class="row">
+                    <div class="row-text">
+                      <span class="label">{{ app.label }}</span>
+                      <p class="app-path-current" :class="{ 'is-set': appPaths[app.key] }">
+                        {{ appPaths[app.key] || 'Auto-detect (PATH + usual install folders)' }}
+                      </p>
+                    </div>
+                    <div class="row-control">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        :aria-expanded="openAppPathRow === app.key"
+                        @click="openAppPathRow = openAppPathRow === app.key ? '' : app.key"
+                      >
+                        <FontAwesomeIcon :icon="['fas', 'cog']" />
+                        {{ appPaths[app.key] ? 'Change' : 'Set path' }}
+                      </button>
+                    </div>
+                  </div>
+                  <AppPathEditor
+                    v-if="openAppPathRow === app.key"
+                    :app-key="app.key"
+                    :label="app.label"
+                    class="app-path-editor-wrap"
+                    @close="openAppPathRow = ''"
+                  />
+                </div>
+              </div>
+            </section>
             <section
               v-for="category in templateCategories"
               :key="category.id"
@@ -1064,11 +1101,28 @@
                           <span class="template-name">{{ template.name }}</span>
                           <span class="template-desc">{{ template.description }}</span>
                         </div>
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-sm template-path-btn"
+                          :class="{ 'path-set': appPaths[templateAppKey(template)] }"
+                          :title="appPaths[templateAppKey(template)] ? `Executable: ${appPaths[templateAppKey(template)]}` : 'Set the app executable path'"
+                          :aria-expanded="openPathEditor === template.id"
+                          @click="openPathEditor = openPathEditor === template.id ? '' : template.id"
+                        >
+                          <FontAwesomeIcon :icon="['fas', 'cog']" />
+                        </button>
                         <button class="btn primary sm template-add-btn" :disabled="addingTemplate === template.id" @click="addTemplateAsScene(template)">
                           <FontAwesomeIcon :icon="addingTemplate === template.id ? ['fas', 'spinner'] : ['fas', 'plus']" :spin="addingTemplate === template.id" />
                           {{ addingTemplate === template.id ? 'Adding…' : 'Add Scene' }}
                         </button>
                       </div>
+                      <AppPathEditor
+                        v-if="openPathEditor === template.id"
+                        :app-key="templateAppKey(template)"
+                        :label="template.name"
+                        class="template-path-editor"
+                        @close="openPathEditor = ''"
+                      />
                       <div class="template-buttons-preview">
                         <span v-for="btn in template.buttons.slice(0, 8)" :key="btn.label" class="template-btn-chip"
                           :style="{ background: btn.style?.backgroundColor ? btn.style.backgroundColor + '33' : template.color + '22', borderColor: btn.style?.backgroundColor ?? template.color }">
@@ -1211,6 +1265,24 @@
                     <code class="kv-code kv-accent">{{ lanUrl }}</code>
                     <button type="button" class="btn sm" @click="copyLanUrl">
                       <FontAwesomeIcon :icon="['fas', 'copy']" /> Copy
+                    </button>
+                  </div>
+                </div>
+                <div class="row" v-if="lanUrl">
+                  <div class="row-text">
+                    <span class="label">Custom address</span>
+                    <p>Hostname or IPv4 for the code above — e.g. <code>deck.local</code>. Handy with multiple network cards, or when the auto-detected one is wrong. Leave empty for auto.</p>
+                  </div>
+                  <div class="row-control">
+                    <input
+                      v-model="deckHostInput"
+                      type="text"
+                      class="input"
+                      :placeholder="serverConfig?.lan_ip ? `Auto: ${serverConfig.lan_ip}` : 'Auto-detect'"
+                      @keyup.enter="saveDeckHost"
+                    />
+                    <button type="button" class="btn sm" :disabled="!deckHostDirty" @click="saveDeckHost">
+                      Apply
                     </button>
                   </div>
                 </div>
@@ -1569,6 +1641,8 @@ import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgr
 import { appForScene, appIdForExe } from '@/data/appBackgrounds'
 import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
+import AppPathEditor from '@/components/AppPathEditor.vue'
+import { appPaths, loadAppPaths, launchApps, templateAppKey } from '@/api/appPaths'
 
 const router = useRouter()
 const route = useRoute()
@@ -1661,12 +1735,12 @@ const serverConfig = computed(() => settingsStore.serverConfig)
 // last time someone ran `npm run build` (see DL-069).
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
 const lanUrl = computed(() => {
-  const ip = serverConfig.value?.lan_ip
+  const host = serverConfig.value?.deck_host || serverConfig.value?.lan_ip
   const port = import.meta.env.DEV
     ? Number(import.meta.env.VITE_PORT) || 3000
     : serverConfig.value?.port
-  if (!ip || !port) return null
-  return `http://${ip}:${port}`
+  if (!host || !port) return null
+  return `http://${host}:${port}`
 })
 
 async function renderQr() {
@@ -1695,11 +1769,52 @@ async function toggleAllowLan(event: Event) {
   renderQr()
 }
 
+// Custom deck address (deck_host): bare hostname/IPv4 shown in the QR
+// card instead of the auto-detected NIC. Empty restores auto-detect.
+const deckHostInput = ref('')
+watch(() => serverConfig.value?.deck_host, v => { deckHostInput.value = v ?? '' }, { immediate: true })
+const deckHostDirty = computed(() => deckHostInput.value.trim() !== (serverConfig.value?.deck_host ?? ''))
+
+async function saveDeckHost() {
+  const value = deckHostInput.value.trim()
+  const ok = await settingsStore.updateServerConfig({ deck_host: value || null })
+  notificationsStore[ok ? 'success' : 'error'](
+    ok
+      ? (value ? `Deck address set to ${value}` : 'Deck address back to auto-detect')
+      : 'Could not save — use a bare hostname or IPv4 (no http://, port, or path).'
+  )
+  if (ok) { await nextTick(); renderQr() }
+}
+
 function copyLanUrl() {
   if (!lanUrl.value) return
-  navigator.clipboard?.writeText(lanUrl.value)
-    .then(() => notificationsStore.success('Copied', lanUrl.value ?? ''))
-    .catch(() => notificationsStore.info('Copy failed', lanUrl.value ?? ''))
+  // navigator.clipboard needs a secure context — the LAN deck URL is
+  // http://, so on phones hitting it the API is undefined entirely.
+  // Fall back to the legacy textarea+execCommand path.
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(lanUrl.value)
+      .then(() => notificationsStore.success('Copied', lanUrl.value ?? ''))
+      .catch(() => copyLanUrlLegacy())
+  } else {
+    copyLanUrlLegacy()
+  }
+}
+
+function copyLanUrlLegacy() {
+  const ta = document.createElement('textarea')
+  ta.value = lanUrl.value ?? ''
+  ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none'
+  document.body.appendChild(ta)
+  ta.select()
+  ta.setSelectionRange(0, ta.value.length) // iOS needs an explicit range
+  try {
+    const ok = document.execCommand('copy')
+    notificationsStore[ok ? 'success' : 'info'](ok ? 'Copied' : 'Copy failed', lanUrl.value ?? '')
+  } catch {
+    notificationsStore.info('Copy failed', lanUrl.value ?? '')
+  } finally {
+    ta.remove()
+  }
 }
 
 // Ports are written to the .env files and bind at process start — the UI
@@ -2014,6 +2129,20 @@ function resetAppearanceSection() {
 
 const expandedCategories = ref<string[]>([])
 const addingTemplate = ref<string | null>(null)
+
+// DL-084 app-path editors — which card / launch-paths row is open.
+const openPathEditor = ref('')
+const openAppPathRow = ref('')
+// Curated launch apps + any override keys the user saved that aren't listed
+// (e.g. a key set from a template card), so nothing saved is orphaned.
+const appPathRows = computed(() => {
+  const known = new Set(launchApps.map((a) => a.key))
+  const extras = Object.keys(appPaths)
+    .filter((k) => !known.has(k))
+    .sort()
+    .map((k) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1) }))
+  return [...launchApps, ...extras]
+})
 
 const aboutFeatures = [
   { icon: ['fas', 'table-cells-large'], label: 'Customizable touch button grid', desc: 'Scenes, pages, sliders and folders on a drag-and-drop deck.' },
@@ -3022,6 +3151,7 @@ onMounted(async () => {
   await ensureProfileLoaded()
   await syncStartOnBootFromSystem()
   settingsStore.loadServerConfig().then(() => renderQr())
+  void loadAppPaths()
   loadPorts()
   loadAppIntegrations()
   if (activeTab.value === 'integration') { await refreshRunningApps(); void fetchAgentHookStatus() }
@@ -3601,6 +3731,44 @@ onMounted(async () => {
 }
 
 .template-add-btn { flex-shrink: 0; min-height: 32px; }
+
+/* DL-084 — per-card executable-path gear + inline editor */
+.template-path-btn {
+  flex-shrink: 0;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 8px;
+}
+
+.template-path-btn.path-set {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.template-path-editor {
+  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);
+  border-top: 1px solid var(--glass-border, var(--color-border));
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* App launch paths panel (DL-084) */
+.app-path-item + .app-path-item {
+  border-top: 1px solid var(--glass-border, var(--color-border));
+}
+
+.app-path-current {
+  font-family: ui-monospace, monospace;
+  font-size: clamp(10px, 0.5vw + 8px, 12px);
+  word-break: break-all;
+}
+
+.app-path-current.is-set {
+  color: #34d399;
+}
+
+.app-path-editor-wrap {
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
 
 .template-buttons-preview {
   display: flex;

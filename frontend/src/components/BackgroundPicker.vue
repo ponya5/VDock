@@ -112,16 +112,24 @@ const positionPanel = () => {
   const trigger = triggerRef.value
   if (!trigger) return
   const rect = trigger.getBoundingClientRect()
-  const maxHeight = Math.min(320, window.innerHeight - 16)
-  const spaceBelow = window.innerHeight - rect.bottom - 8
-  const openUp = spaceBelow < 180 && rect.top > spaceBelow
+  // The panel is position:fixed — anything past the viewport edge is
+  // unreachable (page scroll can't reveal it, and its own clientHeight
+  // would include the off-screen part), so the height must fit the real
+  // room on the side it opens to.
+  const gap = 4
+  const margin = 8
+  const spaceBelow = window.innerHeight - rect.bottom - gap - margin
+  const spaceAbove = rect.top - gap - margin
+  const openUp = spaceBelow < 180 && spaceAbove > spaceBelow
+  const room = openUp ? spaceAbove : spaceBelow
+  const maxHeight = Math.min(320, Math.max(120, room))
   panelStyle.value = {
     left: `${rect.left}px`,
     width: `${rect.width}px`,
     maxHeight: `${maxHeight}px`,
     ...(openUp
-      ? { bottom: `${window.innerHeight - rect.top + 4}px` }
-      : { top: `${rect.bottom + 4}px` })
+      ? { bottom: `${window.innerHeight - rect.top + gap}px` }
+      : { top: `${rect.bottom + gap}px` })
   }
 }
 
@@ -254,6 +262,8 @@ onBeforeUnmount(() => {
 }
 
 .bg-picker__trigger {
+  -webkit-user-select: none;
+  user-select: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -393,10 +403,13 @@ onBeforeUnmount(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #9aa0b0);
+  -webkit-user-select: none;
   user-select: none;
 }
 
 .bg-picker__option {
+  -webkit-user-select: none;
+  user-select: none;
   display: flex;
   align-items: center;
   gap: 8px;

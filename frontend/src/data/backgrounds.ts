@@ -61,6 +61,9 @@ export interface BackgroundOption {
 }
 
 export const DEFAULT_BACKGROUND_ID = 'default'
+/** The screensaver's out-of-the-box look (DL-003 follow-up): new installs
+    greet with Prismatic Burst; existing users keep their saved choice. */
+export const DEFAULT_SCREENSAVER_BACKGROUND_ID = 'prismatic-burst'
 
 /**
  * Every background VDock offers, declared once.

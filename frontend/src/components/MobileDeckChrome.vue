@@ -4,7 +4,13 @@
        one tap away, with everything else behind an overflow menu. No
        configuration affordances on this surface (DL-061). -->
   <header class="mobile-chrome">
-    <div ref="railRef" class="mc-scene-rail" role="radiogroup" aria-label="Scene selector">
+    <div
+      ref="railRef"
+      class="mc-scene-rail"
+      :class="{ 'wipe-next': wipeDir === 'next', 'wipe-prev': wipeDir === 'prev' }"
+      role="radiogroup"
+      aria-label="Scene selector"
+    >
       <!-- Measured glider: sized from the active segment's real box so it
            stays aligned once the rail scrolls (a %-of-container glider
            misplaces under overflow). -->
@@ -18,7 +24,14 @@
         :aria-checked="i === currentSceneIndex ? 'true' : 'false'"
         :tabindex="i === currentSceneIndex ? 0 : -1"
         class="mc-seg"
-        :class="{ 'is-active': i === currentSceneIndex, 'agent-waiting': sceneWaiting(scene) }"
+        :class="{
+          'is-active': i === currentSceneIndex,
+          'agent-waiting': sceneWaiting(scene),
+          'seg-sweep-out': sweep?.out === i,
+          'seg-sweep-in': sweep?.in === i,
+          'seg-sweep-back': sweepBack?.idx === i,
+        }"
+        :style="segmentSwipeStyle(i)"
         @click="selectScene(i)"
       >
         <FontAwesomeIcon v-if="scene.icon" :icon="parseIcon(scene.icon)" class="mc-seg-icon" />
@@ -125,6 +138,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { startAppDetection, stopAppDetection, sceneAppIsLive, loadProfileMaps } from '@/services/appDetection'
 import { initAgentState } from '@/services/agentState'
 import { sceneAgentIsWaiting, sceneWaitingAgent } from '@/services/agentWaiting'
+import { sceneSwipe } from '@/services/sceneSwipe'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSupport'
@@ -259,6 +273,107 @@ function scrollWaitingIntoView() {
 }
 
 watch(waitingRailKey, () => void nextTick().then(scrollWaitingIntoView))
+
+/* --- DL-082: directional dissolve on scene switch -------------------------
+   Same mechanism as the desktop GlassPillSceneSelector — see that file for
+   the full technique. While a horizontal scene swipe tracks, the active
+   segment dissolves 1:1 under the finger; on commit the outgoing segment
+   finishes the wave (resuming from `--sweep-from`) and re-forms inactive,
+   the incoming one dissolves in; on cancel the wipe reverses. */
+interface SegSweep {
+  out: number
+  in: number
+  dir: 'next' | 'prev'
+  fromPos: number
+  fromOp: number
+}
+const sweep = ref<SegSweep | null>(null)
+const sweepBack = ref<{ idx: number; dir: 'next' | 'prev'; fromPos: number; fromOp: number } | null>(null)
+let sweepTimer: ReturnType<typeof setTimeout> | null = null
+let sweepBackTimer: ReturnType<typeof setTimeout> | null = null
+
+function dragMaskPos(dir: 'next' | 'prev', progress: number): number {
+  const travel = 55 * Math.min(progress, 1)
+  return dir === 'next' ? 100 - travel : travel
+}
+function dragOpacity(progress: number): number {
+  return 1 - 0.5 * Math.min(progress, 1)
+}
+
+const WIPE_GRADIENTS = {
+  next: 'linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%)',
+  prev: 'linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%)',
+} as const
+
+const wipeDir = computed(() =>
+  sweep.value?.dir ?? sweepBack.value?.dir ?? (sceneSwipe.dragging ? sceneSwipe.dir : null),
+)
+
+const reduceMotion =
+  typeof window !== 'undefined' &&
+  (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+
+function segmentSwipeStyle(i: number): Record<string, string> | undefined {
+  if (sweep.value && sweep.value.out === i) {
+    return {
+      '--sweep-from': `${sweep.value.fromPos}%`,
+      '--sweep-from-op': String(sweep.value.fromOp),
+    } as Record<string, string>
+  }
+  if (sweepBack.value && sweepBack.value.idx === i) {
+    return {
+      '--sweep-from': `${sweepBack.value.fromPos}%`,
+      '--sweep-from-op': String(sweepBack.value.fromOp),
+    } as Record<string, string>
+  }
+  if (!sceneSwipe.dragging || i !== props.currentSceneIndex) return undefined
+  if (reduceMotion) {
+    return { opacity: String(dragOpacity(sceneSwipe.progress)), transition: 'none' }
+  }
+  const grad = WIPE_GRADIENTS[sceneSwipe.dir]
+  return {
+    '-webkit-mask-image': grad,
+    'mask-image': grad,
+    '-webkit-mask-size': '250% 100%',
+    'mask-size': '250% 100%',
+    '-webkit-mask-position': `${dragMaskPos(sceneSwipe.dir, sceneSwipe.progress)}% 0`,
+    'mask-position': `${dragMaskPos(sceneSwipe.dir, sceneSwipe.progress)}% 0`,
+    opacity: String(dragOpacity(sceneSwipe.progress)),
+    transition: 'none',
+  }
+}
+
+watch(() => props.currentSceneIndex, (newIdx, oldIdx) => {
+  if (newIdx === oldIdx) return
+  const n = props.scenes.length
+  const forward = (newIdx - oldIdx + n) % n
+  const dir = forward <= n - forward ? 'next' : 'prev'
+  const p = sceneSwipe.justSwiped ? Math.min(sceneSwipe.progress, 1) : 0
+  sceneSwipe.justSwiped = false
+  sweepBack.value = null
+  sweep.value = {
+    out: oldIdx,
+    in: newIdx,
+    dir,
+    fromPos: dragMaskPos(dir, p),
+    fromOp: dragOpacity(p),
+  }
+  if (sweepTimer) clearTimeout(sweepTimer)
+  sweepTimer = setTimeout(() => { sweep.value = null }, 620)
+})
+
+watch(() => sceneSwipe.dragging, (dragging) => {
+  if (dragging || sceneSwipe.justSwiped || sceneSwipe.progress === 0) return
+  const dir = sceneSwipe.dir
+  sweepBack.value = {
+    idx: props.currentSceneIndex,
+    dir,
+    fromPos: dragMaskPos(dir, sceneSwipe.progress),
+    fromOp: dragOpacity(sceneSwipe.progress),
+  }
+  if (sweepBackTimer) clearTimeout(sweepBackTimer)
+  sweepBackTimer = setTimeout(() => { sweepBack.value = null }, 320)
+})
 
 // --- Overflow menu --------------------------------------------------------------
 const menuOpen = ref(false)
@@ -421,6 +536,7 @@ onUnmounted(() => {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   overflow-x: auto;
@@ -446,6 +562,8 @@ onUnmounted(() => {
 }
 
 .mc-seg {
+  -webkit-user-select: none;
+  user-select: none;
   position: relative;
   z-index: 2;
   flex: 0 0 auto;
@@ -529,9 +647,156 @@ onUnmounted(() => {
   50% { opacity: 0.75; transform: scale(1.5); }
 }
 
+/* DL-082 — directional dissolve on the scene segments (same technique as
+   the desktop pill rail): 250%-wide mask gradients swept via
+   mask-position; `next` travels L→R, `prev` R→L; the outgoing segment
+   re-forms as the now-inactive button, cancelled swipes wipe back. */
+.mc-scene-rail.wipe-next .mc-seg.seg-sweep-out {
+  animation: seg-wipe-out-next 0.55s var(--ease-io) both;
+}
+.mc-scene-rail.wipe-next .mc-seg.seg-sweep-in {
+  animation: seg-wipe-in-next 0.4s var(--ease-out) 0.05s both;
+}
+.mc-scene-rail.wipe-next .mc-seg.seg-sweep-back {
+  animation: seg-wipe-back-next 0.28s var(--ease-out) both;
+}
+.mc-scene-rail.wipe-prev .mc-seg.seg-sweep-out {
+  animation: seg-wipe-out-prev 0.55s var(--ease-io) both;
+}
+.mc-scene-rail.wipe-prev .mc-seg.seg-sweep-in {
+  animation: seg-wipe-in-prev 0.4s var(--ease-out) 0.05s both;
+}
+.mc-scene-rail.wipe-prev .mc-seg.seg-sweep-back {
+  animation: seg-wipe-back-prev 0.28s var(--ease-out) both;
+}
+
+@keyframes seg-wipe-out-next {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 100%) 0;
+    mask-position: var(--sweep-from, 100%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  42% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0;
+  }
+  55% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-in-next {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-back-next {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 100%) 0;
+    mask-position: var(--sweep-from, 100%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  100% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-out-prev {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 0%) 0;
+    mask-position: var(--sweep-from, 0%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  42% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 0;
+  }
+  55% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-in-prev {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, transparent 42%, #000 58%, #000 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0;
+  }
+  100% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    opacity: 1;
+  }
+}
+@keyframes seg-wipe-back-prev {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 0%, #000 42%, transparent 58%, transparent 100%);
+    -webkit-mask-size: 250% 100%;
+    mask-size: 250% 100%;
+    -webkit-mask-position: var(--sweep-from, 0%) 0;
+    mask-position: var(--sweep-from, 0%) 0;
+    opacity: var(--sweep-from-op, 1);
+  }
+  100% {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mc-seg.agent-waiting { animation: none; }
   .mc-live.agent-waiting { animation: none; }
+  .mc-seg.seg-sweep-out,
+  .mc-seg.seg-sweep-in,
+  .mc-seg.seg-sweep-back { animation: none; }
 }
 
 /* --- Page steppers --------------------------------------------------------- */
@@ -664,6 +929,7 @@ onUnmounted(() => {
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(24, 24, 40, 0.92);
+  -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
@@ -699,6 +965,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .mc-confirm-dialog {

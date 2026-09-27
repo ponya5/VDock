@@ -178,3 +178,30 @@ def test_config_rejects_non_boolean_toggles(client):
     assert resp.status_code == 400
     resp = client.put('/api/config', json={'enable_plugins': True})
     assert resp.status_code == 200
+
+
+def test_config_deck_host_override(client):
+    resp = client.put('/api/config', json={'deck_host': 'deck.local'})
+    assert resp.status_code == 200
+    assert Config.DECK_HOST == 'deck.local'
+    resp = client.get('/api/config')
+    assert resp.get_json()['config']['deck_host'] == 'deck.local'
+    client.put('/api/config', json={'deck_host': ''})
+
+
+def test_config_deck_host_rejects_full_urls(client):
+    """The QR already prepends http:// and appends the bind port — a value
+    carrying either would double them up, so only bare hostnames/IPs pass."""
+    for bad in ('http://deck.local', 'deck.local:4444', 'de ck', 'host/path', 123):
+        resp = client.put('/api/config', json={'deck_host': bad})
+        assert resp.status_code == 400, bad
+    resp = client.get('/api/config')
+    assert resp.get_json()['config']['deck_host'] is None
+
+
+def test_config_deck_host_clear_restores_auto(client):
+    assert client.put('/api/config', json={'deck_host': '192.168.9.9'}).status_code == 200
+    assert client.put('/api/config', json={'deck_host': ''}).status_code == 200
+    assert Config.DECK_HOST == ''
+    resp = client.get('/api/config')
+    assert resp.get_json()['config']['deck_host'] is None

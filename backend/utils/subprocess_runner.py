@@ -100,6 +100,10 @@ def _unwrap_cmd_shim(binary: str) -> str:
 def find_binary(name: str) -> Optional[str]:
     """Absolute path to ``name`` on PATH, or None.
 
+    A configured ``app_paths`` override (DL-084) wins over PATH — apps
+    installed off-PATH (``%LOCALAPPDATA%\\Programs\\cursor`` et al.) work
+    once the user points the deck at the real binary.
+
     On Windows an npm ``.cmd``/``.bat`` shim is unwrapped to the binary it
     forwards to, so callers get the real executable rather than a batch
     file whose arguments would transit cmd.exe.
@@ -107,6 +111,10 @@ def find_binary(name: str) -> Optional[str]:
     Packs call this at init so they can mark themselves unavailable with a
     useful reason instead of failing when a button is pressed.
     """
+    from services import app_paths
+    override = app_paths.override_for(name)
+    if override:
+        return _unwrap_cmd_shim(override)
     binary = shutil.which(name)
     if binary is None:
         return None

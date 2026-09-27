@@ -297,6 +297,8 @@ export interface ServerConfig {
   enable_plugins: boolean
   /** Primary LAN IPv4 — target of the 'Connect a device' QR. */
   lan_ip?: string | null
+  /** Optional override for the QR-card host (hostname or IPv4). Null = auto lan_ip. */
+  deck_host?: string | null
   /** True when the server binds broadly enough for LAN devices to reach it. */
   lan_reachable?: boolean
 }

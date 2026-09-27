@@ -399,3 +399,35 @@ multiply, `.snooze-btn` gets `min-height: max(36px, --min-touch-target×0.8)`
 and 0.9rem×1.6 text (≈53px tall, 23px font). The 520px compaction keeps a
 0.85rem floor + `max-width: 100vw-16px` so it can't clip. Measured live:
 599×87px chip at tm=2. Screenshot: `design-log/refs/snooze-chip-bigger-*.png`.
+
+## Follow-up #3 — timed snooze (3 minutes)
+
+**Problem.** Follow-up #2's snooze silenced the alert for the rest of the
+waiting episode — effectively forever when the agent sits idle for a long
+stretch. The user asked for a 3-minute mute: quiet now, re-alert later if
+the session is *still* waiting.
+
+**Design.** `dismissedReadyTs[source]` upgrades from a bare episode `ts`
+to `{ ts, until }`. `isAgentWaitingDismissed` requires the same episode
+**and** `Date.now() < until` — so three independent exit paths exist:
+
+1. Timer expiry (~3 min): a per-source `setTimeout` deletes the reactive
+   record; `Date.now()` isn't reactive, so the deletion is what wakes the
+   `sceneAgentIsWaiting` computeds to re-fire the alert.
+2. New episode: a fresh `ready` event stamps a new `entry.ts`, which
+   fails the `d.ts === entry.ts` check regardless of time left — a NEW
+   waiting episode is a new thing to alert about and re-arms instantly.
+3. Agent leaves `ready` mid-snooze: entry check fails; the pending timer
+   just deletes a stale record later.
+
+Re-snoozing inside the window extends to a fresh 3 minutes
+(`clearTimeout` + new `until`). The snooze chip reads "Snooze 3m" so the
+duration is discoverable at the moment of decision.
+
+**Implementation results (follow-up #3).** `dismissedReadyTs[source]` now
+stores `{ ts, until }`; a per-source `setTimeout` deletes the record at
+`AGENT_SNOOZE_MS + 250ms` — the deletion is the reactive poke that wakes
+the waiting computeds. Snooze chip reads "Snooze 3m". Verified: unit
+coverage for expire/re-arm/clear/extend paths (`agent-waiting.test.ts`,
+4 new tests, fake timers); live in WebKit — snooze hid the frame, a fresh
+`ready` event re-armed instantly; 291/291 green, `dist` rebuilt.

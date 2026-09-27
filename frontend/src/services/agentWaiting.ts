@@ -39,21 +39,32 @@ export function sceneWaitingAgent(
 }
 
 /**
- * Snooze bookkeeping (DL-080 follow-up #2): keying the dismissal on the
- * `ready` entry's `ts` means the alert stays silent for exactly this waiting
- * episode — the backend stamps a fresh `ts` on every hook event, so a new
- * `ready` report (the next episode) re-arms the frame without a reset API.
+ * Snooze bookkeeping (DL-080 follow-ups #2/#3): each dismissal records the
+ * `ready` entry's `ts` plus an expiry. Same-episode + inside the window =
+ * silenced; a fresh `ready` event stamps a new `entry.ts` and re-arms the
+ * frame without a reset API; after `SNOOZE_MS` the timer deletes the record
+ * (reactive deletion re-runs the computeds — `Date.now()` itself can't) so
+ * a still-idle session alerts again.
  */
-const dismissedReadyTs = reactive<Record<string, number>>({})
+export const AGENT_SNOOZE_MS = 3 * 60 * 1000
+
+const dismissedReadyTs = reactive<Record<string, { ts: number; until: number }>>({})
+const snoozeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 export function dismissAgentWaiting(source: string | null | undefined): void {
   const entry = agentStateEntry(source)
   if (!source || !entry) return
-  dismissedReadyTs[source] = entry.ts
+  dismissedReadyTs[source] = { ts: entry.ts, until: Date.now() + AGENT_SNOOZE_MS }
+  clearTimeout(snoozeTimers.get(source))
+  snoozeTimers.set(source, setTimeout(() => {
+    const d = dismissedReadyTs[source]
+    if (d && d.until <= Date.now()) delete dismissedReadyTs[source]
+  }, AGENT_SNOOZE_MS + 250))
 }
 
 export function isAgentWaitingDismissed(source: string | null | undefined): boolean {
   const entry = agentStateEntry(source)
   if (!source || !entry || entry.state !== 'ready') return false
-  return dismissedReadyTs[source] === entry.ts
+  const d = dismissedReadyTs[source]
+  return !!d && d.ts === entry.ts && Date.now() < d.until
 }

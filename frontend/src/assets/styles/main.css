@@ -125,6 +125,7 @@ body {
   background-attachment: fixed;
   color: var(--color-text);
   min-height: 100vh;
+  min-height: 100dvh; /* iOS Safari dynamic toolbar */
   font-size: clamp(13px, 1vw + 10px, 18px);
   font-family: 'Heebo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
@@ -244,6 +245,16 @@ body {
   border-color: var(--color-primary);
 }
 
+/* iOS Safari zooms the page when focusing an input under ~16px. On touch
+   devices pin fields to 16px so focusing a settings field doesn't reflow. */
+@media (pointer: coarse) {
+  .input, .textarea, .select {
+    /* iOS Safari zooms the page when focusing a field under ~16px —
+       1rem keeps us above that floor while clamp() satisfies Property 8. */
+    font-size: clamp(16px, 1rem + 0.4vw, 18px);
+  }
+}
+
 /* Native dropdown popup: an unstyled <option> list renders the OS light
    popup (white bg, washed-out text) even on the dark theme. Vars keep it
    correct on both themes; color-scheme above covers engines that ignore
@@ -265,6 +276,7 @@ select option {
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-md);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -292,6 +304,7 @@ select option {
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
   animation: slideUp var(--transition-normal);
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
 }
 
@@ -439,6 +452,7 @@ select option {
 /* Enhanced Button Styles */
 .btn-glass {
   background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
@@ -532,6 +546,7 @@ select option {
 .deck-button-enhanced {
   position: relative;
   overflow: hidden;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   transition: all var(--transition-normal);
 }
@@ -555,6 +570,7 @@ select option {
 
 .deck-button-glass {
   background: rgba(255, 255, 255, 0.1) !important;
+  -webkit-backdrop-filter: blur(15px);
   backdrop-filter: blur(15px);
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 
@@ -1908,6 +1924,7 @@ select option {
   grid-template-columns: var(--sidebar-width, 150px) 1fr;
   grid-template-rows: auto 1fr;
   height: 100vh;
+  height: 100dvh; /* iOS Safari dynamic toolbar */
 }
 @media (max-width: 480px) {
   .dashboard-layout {

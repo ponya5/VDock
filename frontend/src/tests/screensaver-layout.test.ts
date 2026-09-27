@@ -71,7 +71,7 @@ describe('screensaver layout wiring', () => {
     expect(store).toContain('screensaverBackground.value = settings.screensaverBackground')
     expect(store).toContain('screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value))')
     expect(store).toContain('normalizeScreensaverLayout(settings.screensaverLayout)')
-    expect(store).toContain('screensaverBackground = ref<string>(DEFAULT_BACKGROUND_ID)')
+    expect(store).toContain('screensaverBackground = ref<string>(DEFAULT_SCREENSAVER_BACKGROUND_ID)')
   })
 
   it('is allowlisted for server persistence', () => {
