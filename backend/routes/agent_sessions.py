@@ -91,9 +91,20 @@ def list_agent_sessions():
     hosts = window_focus.list_session_hosts(marker)
     hook_by_cwd = _hook_state_by_cwd(marker)
 
+    # One live window + one recorded hook session can't be ambiguous —
+    # pair them even when the cwd join misses (hook reported a stale or
+    # moved directory). Two+ of either keep the strict join (DL-071
+    # follow-up 10): a wrong guess would flag the wrong terminal.
+    hook_entries = agent_state.session_entries(marker)
+    lone_entry = (
+        hook_entries[0]
+        if len(hosts) == 1 and len(hook_entries) == 1
+        else None
+    )
+
     rows = []
     for host in hosts:
-        hook = hook_by_cwd.get(_norm_cwd(host.get('cwd')))
+        hook = hook_by_cwd.get(_norm_cwd(host.get('cwd'))) or lone_entry
         cwd = host.get('cwd')
         rows.append({
             'pid': host['pid'],

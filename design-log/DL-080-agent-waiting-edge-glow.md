@@ -389,3 +389,13 @@ waiting episode:
 - `vue-tsc --noEmit` clean. No unit test — jsdom has no layout
   (`offsetLeft`/`scrollIntoView` unstubbed = always "not clipped");
   behavior verified live.
+
+### Addendum (2026-09-27): bigger snooze chip on touch panels
+
+`.agent-waiting-snooze` was fixed-size (0.85rem, ~8px padding) — it ignored
+`--touch-multiplier`, so the 7" panel got a desktop-mouse-sized chip.
+Now scales: font 0.95rem×min(tm,1.6) (≈24px at tm=2), padding and gap
+multiply, `.snooze-btn` gets `min-height: max(36px, --min-touch-target×0.8)`
+and 0.9rem×1.6 text (≈53px tall, 23px font). The 520px compaction keeps a
+0.85rem floor + `max-width: 100vw-16px` so it can't clip. Measured live:
+599×87px chip at tm=2. Screenshot: `design-log/refs/snooze-chip-bigger-*.png`.

@@ -393,21 +393,23 @@ onUnmounted(() => {
 
 /* Visible tap affordance inside the transparent trigger — a labelled pill
    reads as a button on touchscreens, where the bare handle bar did not.
-   Height is capped so it always fits inside the 84px trigger strip. */
+   Now that it floats free in the bottom-left corner (DL-014 follow-up)
+   instead of living in an 84px top strip, it can afford a larger,
+   finger-first size: 52px base, scaled by the touch multiplier. */
 .reveal-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  height: 40px;
-  min-height: 40px;
-  min-height: max(var(--min-touch-target, 40px), calc(40px * min(var(--touch-multiplier, 1), 1.5)));
-  padding: 0 calc(18px * min(var(--touch-multiplier, 1), 1.5));
+  gap: 0.6rem;
+  height: 52px;
+  min-height: 52px;
+  min-height: max(var(--min-touch-target, 48px), calc(52px * min(var(--touch-multiplier, 1), 1.6)));
+  padding: 0 calc(26px * min(var(--touch-multiplier, 1), 1.6));
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
   color: rgba(255, 255, 255, 0.92);
-  font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.5));
+  font-size: calc(1rem * min(var(--touch-multiplier, 1), 1.6));
   font-weight: 600;
   white-space: nowrap;
   backdrop-filter: blur(8px);

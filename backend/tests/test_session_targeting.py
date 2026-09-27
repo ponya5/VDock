@@ -233,3 +233,49 @@ def test_list_sessions_exposes_detail_and_started(client, mocker):
     assert row['detail'] == 'Running the test suite'
     assert row['started'] == 1234.0
     assert row['state'] == 'working'
+
+
+def test_list_sessions_single_host_pairs_on_cwd_mismatch(client, mocker):
+    """One live window + one hook entry can't be ambiguous — the pair
+    survives a stale/moved hook cwd (DL-071 follow-up 10)."""
+    mocker.patch.object(sessions, 'iter_session_pids', return_value=[100])
+    mocker.patch.object(
+        window_focus, 'list_session_hosts', return_value=[
+            {'pid': 100, 'hwnd': 9001, 'title': 'wt A', 'self_owned': False,
+             'create_time': 1234.0, 'cwd': r'C:\repos\projA'},
+        ])
+    mocker.patch.object(
+        window_focus, 'find_session_host_window', return_value=9001)
+    mocker.patch.object(
+        agent_state, 'session_entries', return_value=[
+            {'cwd': r'C:\other\moved', 'state': 'ready',
+             'message': 'Ready for your prompt', 'project': 'projA'},
+        ])
+
+    resp = client.get('/api/agent-sessions?source=claude')
+    row = resp.get_json()['sessions'][0]
+    assert row['state'] == 'ready'
+    assert row['detail'] == 'Ready for your prompt'
+
+
+def test_list_sessions_no_fallback_with_multiple_hosts(client, mocker):
+    """Ambiguity stays strict: two hosts can't share one hook entry."""
+    mocker.patch.object(sessions, 'iter_session_pids', return_value=[100, 200])
+    mocker.patch.object(
+        window_focus, 'list_session_hosts', return_value=[
+            {'pid': 200, 'hwnd': 9002, 'title': 'wt B', 'self_owned': False,
+             'create_time': 200.0, 'cwd': r'C:\repos\projB'},
+            {'pid': 100, 'hwnd': 9001, 'title': 'wt A', 'self_owned': False,
+             'create_time': 100.0, 'cwd': r'C:\repos\projA'},
+        ])
+    mocker.patch.object(
+        window_focus, 'find_session_host_window', return_value=9001)
+    mocker.patch.object(
+        agent_state, 'session_entries', return_value=[
+            {'cwd': r'C:\other\moved', 'state': 'ready',
+             'message': 'Ready for your prompt', 'project': 'projX'},
+        ])
+
+    resp = client.get('/api/agent-sessions?source=claude')
+    rows = resp.get_json()['sessions']
+    assert all(r['state'] is None for r in rows)
