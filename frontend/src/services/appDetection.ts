@@ -8,7 +8,11 @@
  * point at arbitrary exes).
  *
  * Scene → app resolution, most specific first:
- *   1. `scene.appId` (stamped by template adds / auto-create)
+ *   1. `scene.appId` (stamped by template adds / auto-create), normalized
+ *      through `canonicalAppId` — 'claude' and friends are plugin/template
+ *      ids, not profile ids. A stamped id is trusted until profiles have
+ *      loaded to verify it (or if the load failed); afterwards an id naming
+ *      no profile falls through instead of shadowing the weaker signals.
  *   2. button command ids — a scene whose buttons invoke `cc_prompt`,
  *      `cursor_chat`, … belongs to the profile that owns those commands.
  *      This is the strongest signal on real profiles: saved scenes rarely
@@ -16,13 +20,16 @@
  *   3. `triggeredByApp` / integration exe → profile id via /api/app-profiles.
  *      Host terminal exes must resolve through the marker-verified profile,
  *      never the running-exe list (an open cmd.exe is not a Claude session).
- *   4. unknown custom exe → raw running-exe check.
+ *   4. scene name equal to a profile id/label — a hand-built scene named
+ *      "Cursor" or "Claude Code" resolves like a stamped one.
+ *   5. unknown custom exe → raw running-exe check.
  *
  * Module-level singleton: one poller no matter how many consumers.
  */
 import { ref, shallowRef, type Ref } from 'vue'
 import apiClient from '@/api/client'
 import type { AppProfileDto } from '@/api/appProfiles'
+import { canonicalAppId, normalizeAppKey } from '@/data/appBackgrounds'
 import type { Scene, AppIntegration } from '@/types'
 
 const detectedProfiles: Ref<Set<string>> = ref(new Set())
@@ -155,7 +162,23 @@ function profileIdBySceneCommands(
   return best
 }
 
-type SceneLink = Pick<Scene, 'id' | 'appId' | 'triggeredByApp' | 'pages'>
+/** Weakest signal: the scene's own name. Only exact normalized equality with
+ * a profile id/label (or an alias key — a scene literally called "Claude" is
+ * the Claude Code surface as far as the deck is concerned) counts, so "My
+ * Cursor tricks" never resolves. */
+function profileIdBySceneName(name?: string): string | null {
+  const key = normalizeAppKey(name)
+  if (!key) return null
+  const aliasTarget = canonicalAppId(key)
+  for (const [id, profile] of profilesById.value) {
+    if (key === normalizeAppKey(id) || key === normalizeAppKey(profile.label) || aliasTarget === id) {
+      return id
+    }
+  }
+  return null
+}
+
+type SceneLink = Pick<Scene, 'id' | 'name' | 'appId' | 'triggeredByApp' | 'pages'>
 
 function sceneExe(scene: SceneLink, integrations?: readonly AppIntegration[]): string | null {
   const integ = integrations?.find(i => i.sceneId === scene.id && i.enabled)
@@ -168,11 +191,16 @@ function resolveSceneProfileId(
   scene: SceneLink,
   integrations?: readonly AppIntegration[],
 ): string | null {
-  if (scene.appId) return scene.appId
+  const stampedId = canonicalAppId(scene.appId)
+  // Trusted until profiles load (they're the verifier) — or when the load
+  // ultimately failed, in which case the raw stamp is the best guess anyway.
+  if (stampedId && (!profilesLoaded || profilesById.value.has(stampedId))) return stampedId
   const commandProfile = profileIdBySceneCommands(scene)
   if (commandProfile) return commandProfile
   const exe = sceneExe(scene, integrations)
-  return exe ? profileIdByExe.get(exe) ?? null : null
+  const byExe = exe ? profileIdByExe.get(exe) : undefined
+  if (byExe) return byExe
+  return profileIdBySceneName(scene.name)
 }
 
 /** The app's live state for a scene, or false when it isn't app-linked. */

@@ -40,7 +40,10 @@ test('setProfile appends a default scene, keeping the original scene at index 0'
   const scenes = store.currentProfile!.scenes
   expect(scenes[0].id).toBe('scene-custom')
   expect(scenes.filter((s) => s.isDefault)).toHaveLength(1)
-  expect(scenes[scenes.length - 1].isDefault).toBe(true)
+  // DL-079: backfilled factory seeds now sit after the appended default
+  // scene — the invariant is "index 0 untouched, exactly one isDefault",
+  // not "default is last".
+  expect(scenes[1].isDefault).toBe(true)
 })
 
 test('setProfile does not insert a second default scene on reload', () => {
@@ -55,6 +58,55 @@ test('setProfile does not insert a second default scene on reload', () => {
 
   expect(store.currentProfile!.scenes).toHaveLength(firstLoadSceneCount)
   expect(store.currentProfile!.scenes.filter((s) => s.isDefault)).toHaveLength(1)
+})
+
+// DL-079: profiles created before a factory scene existed get it appended on
+// load — once. The factorySeedsApplied marker makes it one-shot so a deleted
+// seed stays deleted, and a same-named scene counts as present.
+test('setProfile backfills missing factory scenes exactly once', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+
+  store.setProfile(makeProfile())
+
+  const names = store.currentProfile!.scenes.map((s) => s.name)
+  expect(names).toEqual(['Custom Scene', 'Media', 'Claude Code', 'Cursor', 'Websites'])
+  expect(store.currentProfile!.factorySeedsApplied).toEqual(
+    expect.arrayContaining(['claude-code', 'cursor', 'websites'])
+  )
+
+  store.setProfile(JSON.parse(JSON.stringify(store.currentProfile)))
+  expect(store.currentProfile!.scenes.map((s) => s.name)).toEqual(names)
+})
+
+test('a factory scene deleted by the user stays deleted', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  store.setProfile(makeProfile())
+
+  const websites = store.currentProfile!.scenes.find((s) => s.name === 'Websites')!
+  store.removeScene(websites.id)
+
+  store.setProfile(JSON.parse(JSON.stringify(store.currentProfile)))
+  expect(store.currentProfile!.scenes.some((s) => s.name === 'Websites')).toBe(false)
+})
+
+test('a same-named custom scene counts as the factory seed already present', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  const profile = makeProfile()
+  profile.scenes.push({
+    id: 'scene-myclaude',
+    name: 'Claude Code',
+    pages: [{ id: 'p1', name: 'P1', buttons: [], grid_config: { rows: 1, cols: 1 } }]
+  } as any)
+
+  store.setProfile(profile)
+
+  const claudeScenes = store.currentProfile!.scenes.filter((s) => s.name === 'Claude Code')
+  expect(claudeScenes).toHaveLength(1)
+  expect(claudeScenes[0].id).toBe('scene-myclaude')
+  expect(store.currentProfile!.factorySeedsApplied).toContain('claude-code')
 })
 
 test('resetScene restores a mutated default scene to the factory layout', () => {

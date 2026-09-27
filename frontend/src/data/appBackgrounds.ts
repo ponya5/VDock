@@ -49,9 +49,37 @@ const BY_EXE = new Map(
   APP_SCENE_BACKGROUNDS.flatMap(entry => entry.exes.map(exe => [exe, entry] as const)),
 )
 
+/**
+ * Ids that denote a profiled app without matching the profile id, keyed by
+ * normalized form (see normalizeAppKey): 'claude' is stamped on scenes added
+ * from the Claude assistant template (it's the claude_pack *plugin* id),
+ * 'github-copilot' comes from that template. Only entries that have a backend
+ * app profile belong here — a template with no profile gains nothing by
+ * aliasing.
+ */
+const APP_ID_ALIASES: Record<string, string> = {
+  claude: 'claude-code',
+  'github-copilot': 'copilot',
+}
+
+/** Lowercase alphanumeric key for app ids and scene names ('VS Code' → 'vscode'). */
+export function normalizeAppKey(value?: string | null): string {
+  return (value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+const NORMALIZED_ALIASES = new Map(
+  Object.entries(APP_ID_ALIASES).map(([alias, target]) => [normalizeAppKey(alias), target] as const),
+)
+
+/** The app-profile id a stamped app/template/plugin id refers to (unaliased ids pass through). */
+export function canonicalAppId(appId?: string | null): string | undefined {
+  return appId ? NORMALIZED_ALIASES.get(normalizeAppKey(appId)) ?? appId : undefined
+}
+
 /** The registry entry for an app id, if one exists. */
 export function appBackgroundById(appId?: string | null): AppSceneBackground | undefined {
-  return appId ? BY_ID.get(appId) : undefined
+  const canonical = canonicalAppId(appId)
+  return canonical ? BY_ID.get(canonical) : undefined
 }
 
 /** The registry entry for a process name, if one exists. */
