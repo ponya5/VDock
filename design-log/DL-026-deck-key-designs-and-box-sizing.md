@@ -135,3 +135,27 @@ the box itself resizes.
   Verified live at 1024×600: all four designs visually distinct on the grid,
   picker shows in Button Editor (pinned footer intact) and Settings →
   Buttons; pick→save persists; folder badge = "9" on a goto_page button.
+
+## Follow-up: note that the dashboard may need a manual refresh (2026-09-27)
+
+### Problem
+
+The global default design set in Settings → Buttons → Key design only
+applies to *new* buttons and existing ones without their own `layers.effect`
+override — an already-open dashboard tab doesn't always repaint itself the
+instant the setting changes, and there was nothing on the page telling the
+user that the dashboard's own **Refresh** button (`DeckHeader.vue`'s
+`title="Refresh VDock"` circular-arrow icon) is the way to force it through.
+
+### Fix
+
+Added a `.note` info box (the same pattern already used elsewhere on this
+page, e.g. the screensaver-background pointer) directly under the Key
+design picker in `SettingsView.vue`, pointing at the dashboard's Refresh
+button by name and location.
+
+### Verification
+
+- Frontend: 59 files / 254 tests green; `vue-tsc --noEmit` clean.
+- Confirmed live via a browser screenshot against the running dev server —
+  note renders directly under the design swatches, above Motion.

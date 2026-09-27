@@ -286,6 +286,13 @@
                 <div class="row stack design-row">
                   <ButtonDesignPicker v-model="previewEffect" />
                 </div>
+                <div class="note">
+                  <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+                  <div>
+                    Don't see the change on the dashboard? Click the <strong>Refresh</strong> button there
+                    (the circular arrow icon in the header) to push it through.
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -4372,14 +4379,18 @@ onMounted(async () => {
 }
 .connect-steps b { color: var(--text); }
 
-.qr-row { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+.qr-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .qr-code-col, .qr-preview-col { display: flex; flex-direction: column; gap: 8px; flex: none; }
 .qr-canvas { width: 128px; height: 128px; border-radius: var(--r-md); background: #fff; padding: 6px; flex: none; }
 /* Thumbnail beside the QR code showing the mobile chrome the scanned link
    opens into — the QR itself only proves the link works, not what the
-   phone will actually look like once it's on the other end. */
+   phone will actually look like once it's on the other end. Pushed to the
+   right edge of the row (margin-left: auto) and sized well past the QR box
+   so it reads as the payoff, not an afterthought next to it. */
+.qr-preview-col { margin-left: auto; }
 .qr-preview-img {
-  width: 180px;
+  width: 380px;
+  max-width: 100%;
   border-radius: var(--r-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--line-soft);

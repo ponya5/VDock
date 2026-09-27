@@ -140,3 +140,30 @@ to get before they do.
 
 - Frontend: 59 files / 254 tests green; `vue-tsc --noEmit` clean.
 - Not yet viewed live in the running Settings page from this session.
+
+## Follow-up 3: size up and right-align the mobile preview thumbnail (2026-09-27)
+
+### Problem
+
+The preview thumbnail added in Follow-up 2 was too small to read at a
+glance (180px, sitting immediately next to the QR code) — the user asked
+for it much bigger and pushed to the right edge of the row, level with
+the QR code, without touching the "CONNECT A DEVICE" instruction box above
+it.
+
+### Fix
+
+`.qr-preview-img` grew from 180px to 380px wide (capped at `max-width:
+100%` so it never overflows on narrow panels). `.qr-preview-col` got
+`margin-left: auto` so it hugs the right edge of `.qr-row` instead of
+sitting flush against the QR code, and `.qr-row`'s `align-items` changed
+from `flex-start` to `center` so the two columns line up in the middle
+now that they're very different heights. `.connect-steps` (the numbered
+instruction box) is a separate element entirely and was untouched.
+
+### Verification
+
+- Frontend: 59 files / 254 tests green; `vue-tsc --noEmit` clean.
+- Confirmed live via a browser screenshot against the running dev
+  server — QR code and instruction box unchanged, preview image now
+  large and right-aligned at the same vertical position as the QR.
