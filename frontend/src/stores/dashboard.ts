@@ -8,7 +8,8 @@ import {
   createDefaultScene,
   createFactoryIdeScene,
   isFactoryIdeSceneName,
-  isUntouchedLegacyCursorScene
+  isUntouchedLegacyCursorScene,
+  FACTORY_SEED_SCENES
 } from '@/utils/defaultProfile'
 import { useMobileViewport } from '@/utils/mobileViewport'
 
@@ -61,6 +62,22 @@ export const useDashboardStore = defineStore('dashboard', () => {
       if (!fresh) return scene
       return { ...scene, pages: fresh.pages, icon: fresh.icon, color: fresh.color }
     })
+
+    // DL-079: backfill factory scenes this profile never received — profiles
+    // predating a seed never got it (only Media rides the isDefault rule).
+    // One-shot via factorySeedsApplied: a deliberately deleted seed stays
+    // deleted. A scene already carrying the factory name counts as present —
+    // same name-based convention as resetScene, so a user's custom "Cursor"
+    // scene doesn't get a factory duplicate.
+    const applied = new Set(migratedProfile.factorySeedsApplied ?? [])
+    const existingNames = new Set(migratedProfile.scenes.map((s) => s.name))
+    for (const seed of FACTORY_SEED_SCENES) {
+      if (!applied.has(seed.key) && !existingNames.has(seed.name)) {
+        migratedProfile.scenes = [...migratedProfile.scenes, seed.build(Date.now())]
+      }
+      applied.add(seed.key)
+    }
+    migratedProfile.factorySeedsApplied = [...applied]
 
     currentProfile.value = migratedProfile
     currentSceneIndex.value = 0

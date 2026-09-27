@@ -134,13 +134,15 @@ function seedScene(
   icon: string,
   color: string,
   buttons: Button[],
-  gridConfig: { rows: number; cols: number } = DEFAULT_SCENE_GRID
+  gridConfig: { rows: number; cols: number } = DEFAULT_SCENE_GRID,
+  appId?: string
 ): Scene {
   return {
     id: `scene-${ts}-${suffix}`,
     name,
     icon,
     color,
+    appId,
     pages: [
       {
         id: `page-${ts}-${suffix}`,
@@ -245,7 +247,11 @@ export function createClaudeCodeScene(ts: number = Date.now()): Scene {
       position: { row: 1, col: 2 }
     })
   ]
-  return seedScene(ts, 'claude', 'Claude Code', 'robot', brand, buttons, { rows: 2, cols: 4 })
+  // appId stamped: scene→profile resolution relies on button command votes
+  // alone otherwise, so deleting every button would orphan the agent bar
+  // (and `appForScene` never consults votes, so the bundled wallpaper only
+  // appears with a stamp). Same for the Cursor scene below.
+  return seedScene(ts, 'claude', 'Claude Code', 'robot', brand, buttons, { rows: 2, cols: 4 }, 'claude-code')
 }
 
 /**
@@ -339,7 +345,7 @@ function createCursorScene(ts: number = Date.now()): Scene {
       position: { row: 1, col: 3 }
     })
   ]
-  return seedScene(ts, 'cursor', 'Cursor', 'i-cursor', brand, buttons, { rows: 2, cols: 4 })
+  return seedScene(ts, 'cursor', 'Cursor', 'i-cursor', brand, buttons, { rows: 2, cols: 4 }, 'cursor')
 }
 
 /**
@@ -422,6 +428,25 @@ function createWebsitesScene(ts: number): Scene {
 }
 
 /**
+ * The non-Media factory scenes every profile should end up with (DL-079) —
+ * ordered, one entry each. `createDefaultProfile` builds the first-run scene
+ * list from this and `setProfile`'s backfill walks it to append whatever an
+ * older profile never received, so the seed set has a single source of truth.
+ * Media isn't listed: it's governed by the `isDefault` invariant instead.
+ */
+export const FACTORY_SEED_SCENES: ReadonlyArray<{
+  /** Stable key recorded in `profile.factorySeedsApplied`. */
+  key: string
+  /** A scene already carrying this name counts as present. */
+  name: string
+  build: (ts?: number) => Scene
+}> = [
+  { key: 'claude-code', name: 'Claude Code', build: createClaudeCodeScene },
+  { key: 'cursor', name: 'Cursor', build: createCursorScene },
+  { key: 'websites', name: 'Websites', build: createWebsitesScene },
+]
+
+/**
  * Creates a minimal default profile for first-time users, seeded with the
  * out-of-box scenes: Media, Claude Code, Cursor, Websites.
  */
@@ -433,7 +458,7 @@ export function createDefaultProfile(): Profile {
     id: profileId,
     name: 'My VDock',
     description: 'Media controls, Claude Code and Cursor actions, and quick website links to get you started.',
-    scenes: [createDefaultScene(), createClaudeCodeScene(ts), createCursorScene(ts), createWebsitesScene(ts)],
+    scenes: [createDefaultScene(), ...FACTORY_SEED_SCENES.map((seed) => seed.build(ts))],
     dockedButtons: [],
     theme: 'default',
     settings: {
