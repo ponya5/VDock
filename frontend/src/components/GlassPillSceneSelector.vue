@@ -14,7 +14,7 @@
         :aria-checked="i === currentSceneIndex ? 'true' : 'false'"
         :tabindex="i === focusedIndex ? 0 : -1"
         class="segment"
-        :class="{ 'is-active': i === currentSceneIndex }"
+        :class="{ 'is-active': i === currentSceneIndex, 'agent-waiting': sceneWaiting(scene) }"
         @click="selectScene(i)"
         @keydown="onKeyDown($event, i)"
       >
@@ -22,11 +22,14 @@
         <span class="segment-label">{{ scene.name }}</span>
         <!-- Green dot when the scene's app is actually running — so a Claude
              scene pill means "buttons will reach a live session", not just
-             "this scene exists". -->
+             "this scene exists". A waiting agent upgrades it to a brighter
+             pulse and rings the whole pill, so a session idle on another
+             scene still reaches the user (DL-080 follow-up). -->
         <span
-          v-if="sceneAppIsLive(scene, appIntegrations)"
+          v-if="sceneAppIsLive(scene, appIntegrations) || sceneWaiting(scene)"
           class="app-live-dot"
-          :title="`${scene.name}'s app is running`"
+          :class="{ 'agent-waiting-dot': sceneWaiting(scene) }"
+          :title="sceneWaiting(scene) ? `${scene.name}'s agent is waiting for input` : `${scene.name}'s app is running`"
         ></span>
         <!-- Edit pencil on the ACTIVE pill only, parked in a lane reserved by
              its edit-mode padding-right — anchored to the real segment edge,
@@ -56,12 +59,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
-import { startAppDetection, stopAppDetection, sceneAppIsLive } from '@/services/appDetection'
+import { startAppDetection, stopAppDetection, sceneAppIsLive, loadProfileMaps } from '@/services/appDetection'
+import { initAgentState } from '@/services/agentState'
+import { sceneAgentIsWaiting } from '@/services/agentWaiting'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -89,6 +94,25 @@ const emit = defineEmits<{
   'add-scene': []
   'edit-scene': [scene: Scene]
 }>()
+
+// The waiting-state feed is wired up here too (both calls are idempotent):
+// the rail must flag waiting scenes even when no agent surface is mounted,
+// which is exactly the off-scene case this cue exists for.
+onMounted(() => {
+  initAgentState()
+  void loadProfileMaps()
+})
+
+/** DL-080 follow-up: does this scene's agent sit idle, waiting for input?
+    Hidden in edit mode and with the waiting-glow setting, same as the
+    viewport frame. */
+const waitingAlertsOn = computed(() =>
+  settingsStore.agentWaitingGlowEnabled !== false && !props.isEditMode
+)
+
+function sceneWaiting(scene: Scene): boolean {
+  return waitingAlertsOn.value && sceneAgentIsWaiting(scene, appIntegrations.value)
+}
 
 const pillRef = ref<HTMLElement | null>(null)
 const segmentRefs = ref<HTMLElement[]>([])
@@ -336,7 +360,48 @@ watch(() => props.scenes.length, () => {
   50% { opacity: 0.55; }
 }
 
+/* Agent waiting for input — a FILLED, pulsing segment says WHICH scene's
+   agent wants a prompt while the user sits on another scene. Outlines
+   alone were invisible on a 7" panel (DL-080 follow-up #3). */
+.segment.agent-waiting {
+  background: rgba(34, 197, 94, 0.16);
+  box-shadow:
+    inset 0 0 0 3px rgba(34, 197, 94, 0.95),
+    0 0 14px rgba(34, 197, 94, 0.5);
+  animation: segment-waiting-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes segment-waiting-pulse {
+  0%, 100% {
+    background: rgba(34, 197, 94, 0.16);
+    box-shadow:
+      inset 0 0 0 3px rgba(34, 197, 94, 0.95),
+      0 0 12px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.38);
+    box-shadow:
+      inset 0 0 0 3px #86efac,
+      0 0 26px rgba(34, 197, 94, 0.85),
+      0 0 6px rgba(134, 239, 172, 0.7);
+  }
+}
+
+.app-live-dot.agent-waiting-dot {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.9), 0 0 0 3px rgba(34, 197, 94, 0.35);
+  animation: app-live-waiting-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes app-live-waiting-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.5); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-live-dot { animation: none; }
+  .segment.agent-waiting { animation: none; }
+  .app-live-dot.agent-waiting-dot { animation: none; }
 }
 </style>

@@ -1,8 +1,9 @@
 <template>
   <div class="deck-header-wrapper" :class="{ 'header-hidden': !settingsStore.showHeader }">
-    <!-- Reveal trigger area (visible when header is hidden). Large + mostly
-         transparent hit-target so it's easy to grab with a swipe or tap
-         without needing pixel-perfect precision. -->
+    <!-- Reveal trigger (visible when header is hidden). A compact pill
+         pinned to the bottom-left corner — tap or swipe-down on it to
+         reveal. Kept off the top edge so it can't overlap the scene
+         rail or console rows. -->
     <div
       v-if="!settingsStore.showHeader"
       ref="triggerRef"
@@ -364,13 +365,14 @@ onUnmounted(() => {
 
 .header-reveal-trigger {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  /* Large, fully-transparent hit area so a swipe-down or tap from anywhere
-     near the top edge reliably reveals the header, without needing to hit a
-     thin sliver of the screen. Only the small handle pill is ever visible. */
-  height: 84px;
+  /* Bottom-left corner, sized to the pill itself — a top-anchored hit
+     strip overlapped the scene rail/console rows both visually and for
+     touches. The corner is free on both chromes (the waiting-alert snooze
+     chip sits bottom-center). Swipe-down on the pill still reveals. */
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  width: auto;
+  height: auto;
   background: transparent;
   display: flex;
   justify-content: center;
@@ -401,7 +403,6 @@ onUnmounted(() => {
   min-height: 40px;
   min-height: max(var(--min-touch-target, 40px), calc(40px * min(var(--touch-multiplier, 1), 1.5)));
   padding: 0 calc(18px * min(var(--touch-multiplier, 1), 1.5));
-  margin-top: 6px;
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;

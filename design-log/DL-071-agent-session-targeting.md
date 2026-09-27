@@ -300,3 +300,39 @@ more metadata.
   skips the inline `left` on narrow viewports so the media query owns
   placement. Rows stay ≥52 px and the locate button 44 px for thumbs.
 
+
+## Follow-up 8 — picker still tiny on a 1024×600 7" landscape panel
+
+- **Bug (user report):** on the 7" bottom screen the session picker is
+  "very very small". Two causes: the sheet breakpoint only fires at
+  `max-width: 720px` — a landscape 1024×600 panel misses it and gets the
+  320 px floating dropdown — and none of the popover sizes consume the
+  `--touch-multiplier` / `--min-touch-target` vars that touch mode sets
+  (convention: `calc(<base> * var(--touch-multiplier, 1))`, per
+  `ButtonActionsSidebar`/`DeckFooter`).
+- **Design:** the sheet condition becomes `(max-width: 720px),
+  (max-height: 700px)` — short viewports of any width get the full-width
+  sheet. `toggleTargetPicker` stops writing the inline `left` when
+  `innerHeight <= 700` too, so the media query owns placement (inline
+  style would beat the stylesheet). Popover + row sizes scale with
+  `var(--touch-multiplier)`/`var(--min-touch-target)`; row text uses a
+  `vh`-driven clamp so it grows on short screens.
+- **Landed:** sheet breakpoint is `(max-width: 720px), (max-height: 800px),
+  (pointer: coarse)` — covers landscape 7" panels (600/720/800 tall) and
+  touch-first devices regardless of size; the sheet centers itself via
+  `margin-inline: auto` + `max-width: 560px × --touch-multiplier` instead of
+  stretching edge to edge. `toggleTargetPicker` mirrors the same conditions
+  (incl. `navigator.maxTouchPoints` for touch-as-secondary-pointer) before
+  writing the inline `left`. Structural sizes (row min-height, locate
+  button, dot, padding) scale with `--touch-multiplier` /
+  `--min-touch-target`; text follows a `vh` clamp only — tablet mode (×2)
+  doubled row text to 44.8 px against a 17.6 px chip label, so the
+  multiplier was removed from font rules.
+- **Bug fixed in passing:** the "Auto" row was a bare
+  `button.agent-target-row` that never received `.row-pick` sizing — it
+  rendered as a squished pill next to the tall session rows. Now wrapped in
+  the same `.agent-target-row > .row-pick` structure.
+- **Verified live (1280×800, tm=2):** sheet 1120 px centered, rows 75 px,
+  main 22.4 px / sub 20.6 px, locate 52×52 px; Auto row identical to
+  session rows. Suite: 60 files / 287 tests green, `vue-tsc` clean.
+  Screenshot: `design-log/refs/picker-sheet-fixed-*.png`.

@@ -44,6 +44,7 @@
         :class="{
           active: s.pid === pinnedPid,
           'is-resolved': s.pid === resolvedPid && pinnedPid === null,
+          waiting: waitingGlowOn && s.state === 'ready',
         }"
         role="radio"
         :aria-checked="s.pid === pinnedPid"
@@ -112,8 +113,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Button, Scene } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSettingsStore } from '@/stores/settings'
 import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
 import { profileSessionMarker, useAgentTargets } from '@/composables/useAgentTargets'
+import { isAgentWaitingDismissed } from '@/services/agentWaiting'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 
@@ -147,6 +150,7 @@ const LAUNCH_ACTIONS = new Set(['claude_continue', 'claude_open', 'program'])
 
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
+const settingsStore = useSettingsStore()
 const {
   profile,
   stateEntry,
@@ -175,6 +179,14 @@ const {
 const showSessionPicker = computed(() =>
   Boolean(sessionMarker.value) &&
   (targetRows.value.length > 0 || pinnedPid.value !== null)
+)
+
+// DL-080: idle sessions get the same waiting cue the desktop bar gives —
+// the phone's chip strip is where the "which session wants me" lands. A
+// snoozed episode quiets the ring until the next ready event.
+const waitingGlowOn = computed(() =>
+  settingsStore.agentWaitingGlowEnabled !== false &&
+  !isAgentWaitingDismissed(profile.value?.status_source)
 )
 
 async function chooseTarget(pid: number | null): Promise<void> {
@@ -366,6 +378,26 @@ trackAgentSurfaceVisibility(
   background: color-mix(in srgb, var(--agent-accent) 24%, transparent);
 }
 
+/* Idle session waiting for a prompt — filled + thick ring like the desktop
+   picker rows; a thin border was invisible on the 7" panel (DL-080 #3). */
+.mac-session.waiting {
+  border-color: #4ade80;
+  border-width: 2px;
+  background: rgba(34, 197, 94, 0.25);
+  animation: mac-session-waiting-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mac-session-waiting-pulse {
+  0%, 100% {
+    background: rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.45), 0 0 10px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.38);
+    box-shadow: 0 0 0 4px rgba(134, 239, 172, 0.8), 0 0 24px rgba(34, 197, 94, 0.85);
+  }
+}
+
 .mac-session:active:not(:disabled) { transform: scale(0.96); }
 
 .mac-session-dot {
@@ -546,5 +578,6 @@ trackAgentSurfaceVisibility(
 
 @media (prefers-reduced-motion: reduce) {
   .mac-status-dot { animation: none !important; }
+  .mac-session.waiting { animation: none; }
 }
 </style>
