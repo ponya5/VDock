@@ -3,10 +3,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { computed, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { AgentStateName, AppProfileDto } from '@/api/appProfiles'
 import type { Scene } from '@/types'
 import AgentWaitingGlow from '@/components/AgentWaitingGlow.vue'
 import AgentActionBar from '@/components/AgentActionBar.vue'
+import GlassPillSceneSelector from '@/components/GlassPillSceneSelector.vue'
 import { SETTINGS_DEFAULTS } from '@/stores/settings'
 
 const sessionState = {
@@ -15,10 +18,12 @@ const sessionState = {
 }
 const settingsState = {
   agentWaitingGlowEnabled: ref<boolean | undefined>(true),
+  agentWaitingGlowStyle: ref<'flash' | 'pulse' | 'orbit'>('flash'),
   animationsEnabled: ref(true),
 }
 const dashboardState = {
   isEditMode: ref(false),
+  profileScenes: ref<Scene[]>([]),
 }
 const effectiveSession = ref<{ state: string | null } | null>(null)
 const sessionRowsState = ref<Array<{ pid: number; label: string; state: string | null }>>([])
@@ -69,6 +74,7 @@ vi.mock('@/stores/settings', async importOriginal => {
     ...mod,
     useSettingsStore: () => ({
       agentWaitingGlowEnabled: settingsState.agentWaitingGlowEnabled.value,
+      agentWaitingGlowStyle: settingsState.agentWaitingGlowStyle.value,
       animationsEnabled: settingsState.animationsEnabled.value,
     }),
   }
@@ -77,6 +83,7 @@ vi.mock('@/stores/settings', async importOriginal => {
 vi.mock('@/stores/dashboard', () => ({
   useDashboardStore: () => ({
     isEditMode: dashboardState.isEditMode.value,
+    currentProfile: { scenes: dashboardState.profileScenes.value },
     executeAction: vi.fn(async () => ({ success: true })),
   }),
 }))
@@ -85,35 +92,100 @@ vi.mock('@/stores/notifications', () => ({
   useNotificationsStore: () => ({ error: vi.fn() }),
 }))
 
+// DL-080 follow-up — the scene rail asks a dedicated service whether each
+// scene's agent sits idle; the sets below control the answer per test.
+// `dismissedSources` simulates the snooze path end-to-end through the seam.
+const waitingSceneIds = ref<Set<string>>(new Set())
+const dismissedSources = ref<Set<string>>(new Set())
+const dismissCalls: string[] = []
+
+const fakeWaiting = (scene: Scene) =>
+  waitingSceneIds.value.has(scene.id) && !dismissedSources.value.has('claude')
+    ? {
+        profile: { id: 'claude-code', label: 'Claude Code', status_source: 'claude' },
+        entry: { source: 'claude', state: 'ready', ts: 1 },
+      }
+    : null
+
+vi.mock('@/services/agentWaiting', () => ({
+  sceneAgentIsWaiting: (scene: Scene) => fakeWaiting(scene) !== null,
+  sceneWaitingAgent: (scene: Scene) => fakeWaiting(scene),
+  dismissAgentWaiting: (source: string) => {
+    dismissCalls.push(source)
+    dismissedSources.value.add(source)
+  },
+  isAgentWaitingDismissed: (source: string) => dismissedSources.value.has(source),
+}))
+
+vi.mock('@/services/agentState', async importOriginal => {
+  const mod = await importOriginal<typeof import('@/services/agentState')>()
+  return {
+    ...mod,
+    initAgentState: vi.fn(),
+    agentStateEntry: () => undefined,
+    agentStateFor: () => 'unknown' as const,
+  }
+})
+
+vi.mock('@/services/appDetection', () => ({
+  startAppDetection: vi.fn(),
+  stopAppDetection: vi.fn(),
+  sceneAppIsLive: () => false,
+  loadProfileMaps: vi.fn(async () => {}),
+  sceneAppProfile: () => null,
+}))
+
+vi.mock('@/composables/useAppIntegrations', () => ({
+  useAppIntegrations: () => ref([]),
+}))
+
+vi.mock('@/utils/haptics', () => ({ vibrate: vi.fn() }))
+
 const CLAUDE_SCENE = { id: 's1', name: 'Claude Code', pages: [] } as unknown as Scene
 
 beforeEach(() => {
   sessionState.currentState.value = 'ready'
   sessionState.isAgentPossiblyRunning.value = true
   settingsState.agentWaitingGlowEnabled.value = true
+  settingsState.agentWaitingGlowStyle.value = 'flash'
   settingsState.animationsEnabled.value = true
   dashboardState.isEditMode.value = false
+  dashboardState.profileScenes.value = [CLAUDE_SCENE]
   effectiveSession.value = null
   sessionRowsState.value = []
+  waitingSceneIds.value = new Set(['s1'])
+  dismissedSources.value = new Set()
+  dismissCalls.length = 0
 })
 
 function mountGlow() {
   return mount(AgentWaitingGlow, {
-    props: { scene: CLAUDE_SCENE },
     global: { stubs: { teleport: true, FontAwesomeIcon: true } },
   })
 }
 
 describe('AgentWaitingGlow', () => {
-  it('renders the edge glow while the agent waits for input', () => {
+  it('flashes the whole frame while any scene in the profile waits', () => {
+    const wrapper = mountGlow()
+    const glow = wrapper.find('.agent-waiting-glow')
+    expect(glow.exists()).toBe(true)
+    expect(glow.classes()).toContain('style-flash')
+    expect(glow.attributes('aria-label')).toContain('Claude Code')
+  })
+
+  it('alerts from any scene — the waiting scene does not have to be current', () => {
+    // The profile has a non-agent scene too; the frame must fire on the
+    // waiting one regardless of which scene the user is looking at.
+    dashboardState.profileScenes.value = [
+      { id: 's-media', name: 'Media', pages: [] },
+      { id: 's1', name: 'Claude Code', pages: [] },
+    ] as unknown as Scene[]
     expect(mountGlow().find('.agent-waiting-glow').exists()).toBe(true)
   })
 
-  it('stays dark for working/permission/unknown states', () => {
-    for (const state of ['working', 'permission', 'unknown'] as const) {
-      sessionState.currentState.value = state
-      expect(mountGlow().find('.agent-waiting-glow').exists()).toBe(false)
-    }
+  it('stays dark when no scene has a waiting agent', () => {
+    waitingSceneIds.value = new Set()
+    expect(mountGlow().find('.agent-waiting-glow').exists()).toBe(false)
   })
 
   it('hides when the setting is off and shows when unset (default on)', () => {
@@ -123,21 +195,76 @@ describe('AgentWaitingGlow', () => {
     expect(mountGlow().find('.agent-waiting-glow').exists()).toBe(true)
   })
 
-  it('hides in edit mode and when no agent is possibly running', () => {
+  it('hides in edit mode', () => {
     dashboardState.isEditMode.value = true
-    expect(mountGlow().find('.agent-waiting-glow').exists()).toBe(false)
-    dashboardState.isEditMode.value = false
-    sessionState.isAgentPossiblyRunning.value = false
     expect(mountGlow().find('.agent-waiting-glow').exists()).toBe(false)
   })
 
-  it('drops the pulse animation when animations are disabled', () => {
+  it('drops the animation when animations are disabled', () => {
     settingsState.animationsEnabled.value = false
     expect(mountGlow().find('.agent-waiting-glow').classes()).toContain('no-anim')
   })
 
-  it('defaults the setting to enabled', () => {
+  it('defaults the setting to enabled and the style to flash', () => {
     expect(SETTINGS_DEFAULTS.agentWaitingGlowEnabled).toBe(true)
+    expect(SETTINGS_DEFAULTS.agentWaitingGlowStyle).toBe('flash')
+  })
+
+  it('switches frame styles with the configured style', () => {
+    settingsState.agentWaitingGlowStyle.value = 'pulse'
+    const wrapper = mountGlow()
+    const glow = wrapper.find('.agent-waiting-glow')
+    expect(glow.classes()).toContain('style-pulse')
+    expect(wrapper.find('.agent-waiting-orbit').exists()).toBe(false)
+  })
+
+  // --- DL-080 follow-up #2: snooze ----------------------------------------
+
+  it('offers a snooze chip naming the waiting agent', () => {
+    const chip = mountGlow().find('.agent-waiting-snooze')
+    expect(chip.exists()).toBe(true)
+    expect(chip.text()).toContain('Claude Code is waiting for input')
+  })
+
+  it('snoozing dismisses the alert for this waiting episode', async () => {
+    const wrapper = mountGlow()
+    await wrapper.find('.snooze-btn').trigger('click')
+    expect(dismissCalls).toEqual(['claude'])
+    expect(wrapper.find('.agent-waiting-glow').exists()).toBe(false)
+    expect(wrapper.find('.agent-waiting-snooze').exists()).toBe(false)
+  })
+
+  // --- Orbit style ---------------------------------------------------------
+
+  it('runs the comet frame only for the orbit style', () => {
+    settingsState.agentWaitingGlowStyle.value = 'orbit'
+    expect(mountGlow().find('.agent-waiting-orbit').exists()).toBe(true)
+  })
+
+  it('drops the comet when animations are disabled but keeps the static glow', () => {
+    settingsState.agentWaitingGlowStyle.value = 'orbit'
+    settingsState.animationsEnabled.value = false
+    const wrapper = mountGlow()
+    expect(wrapper.find('.agent-waiting-glow').exists()).toBe(true)
+    expect(wrapper.find('.agent-waiting-orbit').exists()).toBe(false)
+  })
+
+  it('animates a registered angle through a conic-gradient ring', () => {
+    const source = readFileSync(resolve(__dirname, '../components/AgentWaitingGlow.vue'), 'utf-8')
+    expect(source).toContain("@property --agent-orbit")
+    expect(source).toContain("syntax: '<angle>'")
+    expect(source).toContain('conic-gradient')
+    expect(source).toContain('@keyframes agent-waiting-orbit')
+    expect(source).toContain('mask-composite')
+    expect(source).toContain('linear infinite')
+  })
+
+  it('flashes the whole frame with a heartbeat double-blink', () => {
+    const source = readFileSync(resolve(__dirname, '../components/AgentWaitingGlow.vue'), 'utf-8')
+    expect(source).toContain('@keyframes agent-waiting-flash')
+    expect(source).toContain('style-flash')
+    expect(source).toContain('style-pulse')
+    expect(source).toContain('agent-waiting-snooze')
   })
 })
 
@@ -175,5 +302,164 @@ describe('AgentActionBar waiting highlight', () => {
     expect(rows[1].classes()).not.toContain('waiting')
     expect(rows[2].classes()).toContain('waiting')
     expect(rows[2].text()).toContain('waiting')
+  })
+
+  // --- DL-080 follow-up: chip tag + other-session nudge --------------------
+
+  it('spells out "waiting" on the chip when the target session is idle', () => {
+    effectiveSession.value = { state: 'ready' }
+    const chip = mountBar().find('.agent-target-chip')
+    expect(chip.find('.chip-tag').exists()).toBe(true)
+    expect(chip.find('.chip-tag').text()).toBe('waiting')
+    expect(chip.find('.chip-waiting-nudge').exists()).toBe(false)
+  })
+
+  it('nudges the chip when a session other than the target sits idle', () => {
+    effectiveSession.value = { state: 'working', pid: 100 }
+    sessionRowsState.value = [
+      { pid: 100, label: 'projA', state: 'working' },
+      { pid: 200, label: 'projB', state: 'ready' },
+    ]
+    const chip = mountBar().find('.agent-target-chip')
+    expect(chip.classes()).not.toContain('waiting')
+    expect(chip.find('.chip-waiting-nudge').exists()).toBe(true)
+  })
+})
+
+// --- DL-080 follow-up: scene-level guidance ----------------------------------
+// Off the agent scene, the rail rings the pill whose agent sits idle.
+
+describe('GlassPillSceneSelector waiting highlight', () => {
+  const SCENES = [
+    { id: 's-media', name: 'Media', pages: [] },
+    { id: 's-claude', name: 'Claude Code', pages: [] },
+  ] as unknown as Scene[]
+
+  function mountSelector(isEditMode = false) {
+    return mount(GlassPillSceneSelector, {
+      props: { scenes: SCENES, currentSceneIndex: 0, isEditMode },
+      global: { stubs: { FontAwesomeIcon: true } },
+    })
+  }
+
+  it('rings the scene pill whose agent is idle', () => {
+    waitingSceneIds.value = new Set(['s-claude'])
+    const segments = mountSelector().findAll('.segment')
+    expect(segments[0].classes()).not.toContain('agent-waiting')
+    expect(segments[1].classes()).toContain('agent-waiting')
+    expect(segments[1].find('.app-live-dot').classes()).toContain('agent-waiting-dot')
+  })
+
+  it('shows the waiting dot even when the app-running dot is off', () => {
+    // app scanning off → sceneAppIsLive false; a `ready` hook state still
+    // proves the session is alive, so the waiting cue must not depend on it.
+    waitingSceneIds.value = new Set(['s-claude'])
+    const segments = mountSelector().findAll('.segment')
+    expect(segments[1].find('.app-live-dot').exists()).toBe(true)
+    expect(segments[0].find('.app-live-dot').exists()).toBe(false)
+  })
+
+  it('stays quiet when the setting is off and in edit mode', () => {
+    waitingSceneIds.value = new Set(['s-claude'])
+    settingsState.agentWaitingGlowEnabled.value = false
+    expect(mountSelector().findAll('.segment')[1].classes()).not.toContain('agent-waiting')
+    settingsState.agentWaitingGlowEnabled.value = true
+    expect(mountSelector(true).findAll('.segment')[1].classes()).not.toContain('agent-waiting')
+  })
+
+  it('leaves non-agent scenes alone', () => {
+    waitingSceneIds.value = new Set()
+    expect(mountSelector().find('.segment.agent-waiting').exists()).toBe(false)
+  })
+})
+
+describe('MobileDeckChrome + MobileAgentConsole waiting wiring', () => {
+  it('flags the waiting scene segment and live dot on the mobile rail', () => {
+    const chrome = readFileSync(resolve(__dirname, '../components/MobileDeckChrome.vue'), 'utf-8')
+    expect(chrome).toContain("'agent-waiting': sceneWaiting(scene)")
+    expect(chrome).toContain('sceneAgentIsWaiting')
+    expect(chrome).toContain('mc-seg.agent-waiting')
+    expect(chrome).toContain('initAgentState()')
+    expect(chrome).toContain('loadProfileMaps()')
+  })
+
+  it('rings idle session chips in the mobile console', () => {
+    const console = readFileSync(resolve(__dirname, '../components/MobileAgentConsole.vue'), 'utf-8')
+    expect(console).toContain("waiting: waitingGlowOn && s.state === 'ready'")
+    expect(console).toContain('.mac-session.waiting')
+  })
+})
+
+describe('sceneAgentIsWaiting service', () => {
+  it('reads the hook state through the scene profile', async () => {
+    // The file-level mocks above stub these three services for the component
+    // tests — undo that so this test exercises the real resolution chain.
+    vi.resetModules()
+    vi.doUnmock('@/services/agentWaiting')
+    vi.doUnmock('@/services/agentState')
+    vi.doUnmock('@/services/appDetection')
+    vi.doMock('@/api/client', () => ({
+      default: {
+        get: vi.fn(async (url: string) => {
+          if (url === '/app-profiles') {
+            return {
+              data: {
+                profiles: [{
+                  id: 'claude-code',
+                  label: 'Claude Code',
+                  exes: ['windowsterminal.exe'],
+                  status_source: 'claude',
+                  commands: [{ id: 'cc_prompt' }],
+                  action_types: ['claude_prompt'],
+                }],
+              },
+            }
+          }
+          if (url === '/agent-events/states') {
+            return { data: { states: { claude: { source: 'claude', state: 'ready', message: '', cwd: '', project: 'VDock2', ts: 1 } } } }
+          }
+          return { data: {} }
+        }),
+      },
+    }))
+    vi.doMock('@/api/socket', () => ({ default: { on: vi.fn(), off: vi.fn() } }))
+
+    const { initAgentState } = await import('@/services/agentState')
+    const { loadProfileMaps } = await import('@/services/appDetection')
+    const {
+      sceneAgentIsWaiting,
+      dismissAgentWaiting,
+      isAgentWaitingDismissed,
+    } = await import('@/services/agentWaiting')
+
+    initAgentState()
+    await loadProfileMaps()
+    await new Promise(r => setTimeout(r, 0))
+
+    const claudeScene = { id: 's1', appId: 'claude-code', pages: [] }
+    const mediaScene = { id: 's2', name: 'Media', pages: [] }
+    expect(sceneAgentIsWaiting(claudeScene as never)).toBe(true)
+    expect(sceneAgentIsWaiting(mediaScene as never)).toBe(false)
+
+    // --- snooze: silences this episode, re-arms on the next fresh event ---
+    dismissAgentWaiting('claude')
+    expect(sceneAgentIsWaiting(claudeScene as never)).toBe(false)
+    expect(isAgentWaitingDismissed('claude')).toBe(true)
+
+    // A new hook event stamps a fresh ts — the dismissal keyed on ts 1 no
+    // longer matches, so the alert re-arms by itself.
+    const socket = (await import('@/api/socket')).default as unknown as {
+      on: ReturnType<typeof vi.fn>
+    }
+    const handler = socket.on.mock.calls.find(c => c[0] === 'agent_state')![1] as (
+      payload: { states: Record<string, unknown> }
+    ) => void
+    handler({
+      states: {
+        claude: { source: 'claude', session_id: 'default', state: 'ready', message: '', cwd: '', project: 'VDock2', ts: 2 },
+      },
+    })
+    expect(sceneAgentIsWaiting(claudeScene as never)).toBe(true)
+    expect(isAgentWaitingDismissed('claude')).toBe(false)
   })
 })

@@ -26,7 +26,11 @@
       >
         <FontAwesomeIcon :icon="['fas', 'crosshairs']" class="agent-target-icon" />
         <span class="agent-target-label">{{ targetLabel }}</span>
+        <span v-if="showWaitingHint" class="row-tag tag-waiting chip-tag">waiting</span>
         <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="agent-target-caret" />
+        <!-- Another session is the idle one — a nudge dot so the user knows
+             the picker holds a session that wants input. -->
+        <span v-if="!showWaitingHint && anotherSessionWaiting" class="chip-waiting-nudge" aria-hidden="true" />
       </button>
       <!-- Teleported: the bar's backdrop-filter makes it the containing block
            for fixed/absolute descendants AND a stacking context that paints
@@ -44,18 +48,24 @@
           :style="popStyle"
           role="listbox"
         >
-          <button
-            type="button"
+          <div
             class="agent-target-row"
             :class="{ active: pinnedPid === null }"
-            @click="chooseTarget(null)"
+            role="option"
+            :aria-selected="pinnedPid === null"
           >
-            <FontAwesomeIcon :icon="['fas', 'wand-magic-sparkles']" class="row-icon" />
-            <span class="row-text">
-              <span class="row-main">Auto</span>
-              <span class="row-sub">focused project, else newest session</span>
-            </span>
-          </button>
+            <button
+              type="button"
+              class="row-pick"
+              @click="chooseTarget(null)"
+            >
+              <FontAwesomeIcon :icon="['fas', 'wand-magic-sparkles']" class="row-icon" />
+              <span class="row-text">
+                <span class="row-main">Auto</span>
+                <span class="row-sub">focused project, else newest session</span>
+              </span>
+            </button>
+          </div>
           <div
             v-for="s in sessionRows"
             :key="s.pid"
@@ -134,6 +144,7 @@ import {
   useAgentTargets,
   type AgentSessionRow,
 } from '@/composables/useAgentTargets'
+import { isAgentWaitingDismissed } from '@/services/agentWaiting'
 
 /**
  * Agent action bar (DL-064): on a Claude Code / Cursor / Devin scene, shows
@@ -177,10 +188,20 @@ const {
 } = useAgentTargets(sessionMarker)
 
 // DL-080: the "waiting" cue the edge glow announces globally; here the chip
-// and its picker row point at WHICH session is idle.
-const waitingGlowOn = computed(() => settingsStore.agentWaitingGlowEnabled !== false)
+// and its picker row point at WHICH session is idle. A snoozed episode
+// (dismissAgentWaiting) quiets the pulse/nudge until the next ready event.
+const waitingGlowOn = computed(() =>
+  settingsStore.agentWaitingGlowEnabled !== false &&
+  !isAgentWaitingDismissed(profile.value?.status_source)
+)
 const showWaitingHint = computed(() =>
   waitingGlowOn.value && effectiveSession.value?.state === 'ready'
+)
+// A session other than the current target sits idle — the chip nudges the
+// user into the picker, where that row carries the waiting flag.
+const anotherSessionWaiting = computed(() =>
+  waitingGlowOn.value &&
+  sessionRows.value.some(s => s.state === 'ready' && s.pid !== effectiveSession.value?.pid)
 )
 const targetOpen = ref(false)
 const chipRef = ref<HTMLElement | null>(null)
@@ -191,13 +212,19 @@ function toggleTargetPicker() {
   if (!targetOpen.value) return
   void refreshTargets()
   // Anchor the teleported popover under the chip; clamp to the viewport so a
-  // chip near the right edge never pushes the list offscreen. On narrow
-  // screens the CSS takes over (`left/right: 8px` full-width sheet), so the
-  // inline left is only set for wide viewports.
+  // chip near the right edge never pushes the list offscreen. On narrow,
+  // short or touch-first screens the CSS takes over (centered full-width
+  // sheet), so the inline left is only set for roomy mouse-first viewports
+  // — a 7" touch panel is short/coarse and an inline left would beat the
+  // sheet rule. Same coarse check as useMobileViewport: a touchscreen that
+  // is not the primary pointer still reports maxTouchPoints.
+  const coarse =
+    window.matchMedia?.('(pointer: coarse)').matches ||
+    navigator.maxTouchPoints > 0
   const rect = chipRef.value?.getBoundingClientRect()
   if (rect) {
     const style: Record<string, string> = { top: `${rect.bottom + 8}px` }
-    if (window.innerWidth > 720) {
+    if (window.innerWidth > 720 && window.innerHeight > 800 && !coarse) {
       style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 340))}px`
     }
     popStyle.value = style
@@ -303,6 +330,7 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .agent-target-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -327,13 +355,41 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .agent-target-chip.waiting {
-  border-color: #22c55e;
-  animation: chip-waiting-pulse 2.4s ease-in-out infinite;
+  border-color: #4ade80;
+  background: rgba(34, 197, 94, 0.2);
+  animation: chip-waiting-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes chip-waiting-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25), 0 0 10px rgba(34, 197, 94, 0.3); }
-  50% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.45), 0 0 18px rgba(34, 197, 94, 0.55); }
+  0%, 100% {
+    background: rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 0 14px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.36);
+    box-shadow: 0 0 0 4px rgba(134, 239, 172, 0.8), 0 0 30px rgba(34, 197, 94, 0.85);
+  }
+}
+
+/* The "waiting" tag spells out what the pulse means — same chip style the
+   picker rows flag idle sessions with. */
+.chip-tag {
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+/* A session other than the target sits idle — small beacon on the chip. */
+.chip-waiting-nudge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid rgba(15, 20, 28, 0.9);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.9), 0 0 0 3px rgba(34, 197, 94, 0.3);
+  animation: agent-pulse 1.2s ease-in-out infinite;
 }
 
 .agent-target-chip:hover {
@@ -362,14 +418,19 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   z-index: 1500;
 }
 
+/* Structural sizes (row heights, locate button, dot, padding) scale with
+   --touch-multiplier / --min-touch-target; TEXT follows a viewport-height
+   clamp instead — tablet mode doubles targets but the app keeps text
+   modest, and a 2× font on a 7" panel reads worse than a tall row
+   (DL-071 follow-up 8). */
 .agent-target-pop {
   position: fixed;
   z-index: 1501;
-  min-width: 320px;
-  max-width: min(480px, 92vw);
-  max-height: 60vh;
+  min-width: calc(320px * var(--touch-multiplier, 1));
+  max-width: min(calc(480px * var(--touch-multiplier, 1)), 92vw);
+  max-height: 70vh;
   overflow-y: auto;
-  padding: 8px;
+  padding: calc(8px * var(--touch-multiplier, 1));
   border-radius: 14px;
   background: rgba(18, 24, 33, 0.96);
   border: 1px solid color-mix(in srgb, var(--agent-accent) 35%, transparent);
@@ -393,7 +454,22 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .agent-target-row.waiting {
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(34, 197, 94, 0.18);
+  box-shadow:
+    inset 4px 0 0 #22c55e,
+    inset 0 0 0 1.5px rgba(34, 197, 94, 0.55);
+  animation: row-waiting-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes row-waiting-pulse {
+  0%, 100% {
+    background: rgba(34, 197, 94, 0.18);
+    box-shadow: inset 4px 0 0 #22c55e, inset 0 0 0 1.5px rgba(34, 197, 94, 0.55);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.34);
+    box-shadow: inset 4px 0 0 #86efac, inset 0 0 0 1.5px rgba(134, 239, 172, 0.85);
+  }
 }
 
 .tag-waiting {
@@ -406,15 +482,15 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 .row-pick {
   flex: 1;
   min-width: 0;
-  min-height: 56px;
+  min-height: max(56px, var(--min-touch-target, 44px));
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 4px 10px 12px;
+  gap: calc(10px * var(--touch-multiplier, 1));
+  padding: 10px 4px 10px 14px;
   border: none;
   background: transparent;
   color: inherit;
-  font-size: clamp(0.95rem, 2.4vh, 1.1rem);
+  font-size: clamp(1rem, 1.2vh + 0.65rem, 1.3rem);
   text-align: left;
   cursor: pointer;
   touch-action: manipulation;
@@ -422,8 +498,8 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 
 .row-locate {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: max(48px, var(--min-touch-target, 44px));
+  height: max(48px, var(--min-touch-target, 44px));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -432,7 +508,7 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   border-radius: 10px;
   background: transparent;
   color: rgba(229, 231, 235, 0.5);
-  font-size: 1rem;
+  font-size: 1.05rem;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -448,8 +524,8 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .row-dot {
-  width: 10px;
-  height: 10px;
+  width: calc(11px * var(--touch-multiplier, 1));
+  height: calc(11px * var(--touch-multiplier, 1));
   border-radius: 50%;
   flex-shrink: 0;
   background: #6b7280;
@@ -486,7 +562,7 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .row-sub {
-  font-size: 0.82em;
+  font-size: 0.85em;
   color: rgba(229, 231, 235, 0.55);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -499,9 +575,9 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .agent-target-empty {
-  padding: 10px 12px;
+  padding: calc(12px * var(--touch-multiplier, 1)) calc(14px * var(--touch-multiplier, 1));
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: rgba(229, 231, 235, 0.55);
 }
 
@@ -572,34 +648,46 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 /* Portrait / narrow panels: the state gets its own row and the actions wrap
-   into equal columns rather than shrinking below a touchable width. The
-   session popover becomes a full-width sheet under the bar with finger-sized
-   rows — a 280 px floating dropdown is unusable on a phone. */
+   into equal columns rather than shrinking below a touchable width. */
 @media (max-width: 720px) {
   .agent-action-bar {
     flex-direction: column;
   }
 
+  .agent-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+
+/* The session popover becomes a centered sheet under the bar with
+   finger-sized rows on narrow panels, short panels (a landscape 1024×600 or
+   1280×800 7" screen keeps the single-row bar but still needs the sheet),
+   and any touch-first pointer — a floating dropdown with 40 px rows is
+   untappable (DL-071 follow-up 8). Paired with toggleTargetPicker skipping
+   the inline `left` under the same conditions. */
+@media (max-width: 720px), (max-height: 800px), (pointer: coarse) {
   .agent-target-pop {
     left: 8px;
     right: 8px;
+    margin-inline: auto;
     min-width: 0;
-    max-width: none;
+    max-width: calc(560px * var(--touch-multiplier, 1));
     max-height: 55vh;
   }
 
   .row-pick {
-    min-height: 52px;
+    min-height: max(60px, calc(var(--min-touch-target, 44px) + 16px));
+    font-size: clamp(1.05rem, 1.4vh + 0.7rem, 1.4rem);
+  }
+
+  .row-sub {
+    font-size: 0.92em;
   }
 
   .row-locate {
-    width: 44px;
-    height: 44px;
-  }
-
-  .agent-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    width: max(52px, var(--min-touch-target, 44px));
+    height: max(52px, var(--min-touch-target, 44px));
   }
 }
 
@@ -619,5 +707,8 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 
 @media (prefers-reduced-motion: reduce) {
   .agent-state-dot { animation: none !important; }
+  .agent-target-chip.waiting,
+  .chip-waiting-nudge,
+  .agent-target-row.waiting { animation: none; }
 }
 </style>

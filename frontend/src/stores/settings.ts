@@ -64,6 +64,7 @@ export const SETTINGS_DEFAULTS = {
   appScanningEnabled: false,
   agentAlertsEnabled: true,
   agentWaitingGlowEnabled: true,
+  agentWaitingGlowStyle: 'flash' as const,
   tutorialCompleted: false,
   activeProfileId: null as string | null,
   pressSoundEnabled: true,
@@ -118,6 +119,7 @@ export interface PersistedUserSettings {
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
   agentWaitingGlowEnabled: boolean
+  agentWaitingGlowStyle: 'flash' | 'pulse' | 'orbit'
   tutorialCompleted: boolean
   /**
    * Id of the profile most recently loaded on ANY window/device connected to
@@ -233,6 +235,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const agentAlertsEnabled = ref(true)
   // Edge-glow on agent scenes while a session sits idle (DL-080).
   const agentWaitingGlowEnabled = ref(true)
+  // Frame style for the waiting alert — flash double-blinks, pulse breathes
+  // softly, orbit runs the travelling comet (DL-080 follow-up #2).
+  const agentWaitingGlowStyle = ref<'flash' | 'pulse' | 'orbit'>('flash')
   // Persisted onboarding flag — true once the tour is finished or skipped.
   // Server-backed (not localStorage) so it survives cache clears and is
   // shared by every window/device on this backend.
@@ -379,6 +384,7 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
       agentWaitingGlowEnabled: agentWaitingGlowEnabled.value,
+      agentWaitingGlowStyle: agentWaitingGlowStyle.value,
       tutorialCompleted: tutorialCompleted.value,
       activeProfileId: activeProfileId.value,
       pressSoundEnabled: pressSoundEnabled.value,
@@ -437,6 +443,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
     if (settings.agentWaitingGlowEnabled !== undefined) agentWaitingGlowEnabled.value = settings.agentWaitingGlowEnabled
+    if (settings.agentWaitingGlowStyle !== undefined) agentWaitingGlowStyle.value = settings.agentWaitingGlowStyle
     if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
     if (settings.activeProfileId !== undefined) activeProfileId.value = settings.activeProfileId
     if (settings.pressSoundEnabled !== undefined) pressSoundEnabled.value = settings.pressSoundEnabled
@@ -501,6 +508,7 @@ export const useSettingsStore = defineStore('settings', () => {
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         agentWaitingGlowEnabled: settings.agentWaitingGlowEnabled ?? true,
+        agentWaitingGlowStyle: settings.agentWaitingGlowStyle ?? 'flash',
         tutorialCompleted: settings.tutorialCompleted ?? false,
         activeProfileId: settings.activeProfileId ?? null,
         pressSoundEnabled: settings.pressSoundEnabled ?? true,
@@ -664,6 +672,7 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled,
       agentAlertsEnabled,
       agentWaitingGlowEnabled,
+      agentWaitingGlowStyle,
       tutorialCompleted,
       activeProfileId,
       pressSoundEnabled,
@@ -875,6 +884,7 @@ export const useSettingsStore = defineStore('settings', () => {
     appScanningEnabled,
     agentAlertsEnabled,
     agentWaitingGlowEnabled,
+    agentWaitingGlowStyle,
     tutorialCompleted,
     activeProfileId,
     pressSoundEnabled,

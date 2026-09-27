@@ -1292,10 +1292,23 @@
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Glow when an agent is waiting</span>
-                    <p>Pulses a green edge-glow around the screen while you're on an agent scene whose session sits idle — and flags the idle session in the status bar.</p>
+                    <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Snooze on the frame to quiet it until the agent needs you again.</p>
                   </div>
                   <div class="row-control">
                     <label class="switch"><span class="sr-only">Agent waiting glow</span><input type="checkbox" :checked="settingsStore.agentWaitingGlowEnabled" @change="toggleWaitingGlow" /><span class="track"></span></label>
+                  </div>
+                </div>
+                <div class="row" v-if="settingsStore.agentWaitingGlowEnabled">
+                  <div class="row-text">
+                    <span class="label">Waiting alert style</span>
+                    <p>Flash double-blinks the whole frame — hardest to miss. Pulse breathes softly. Comet runs a light around the edge.</p>
+                  </div>
+                  <div class="row-control">
+                    <select v-model="settingsStore.agentWaitingGlowStyle" class="select w-220" aria-label="Waiting alert style">
+                      <option value="flash">Flash</option>
+                      <option value="pulse">Pulse</option>
+                      <option value="orbit">Comet</option>
+                    </select>
                   </div>
                 </div>
                 <div v-for="hookAgent in AGENT_HOOK_TARGETS" :key="hookAgent.id" class="row">

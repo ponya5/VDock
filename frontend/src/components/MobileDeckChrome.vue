@@ -18,15 +18,16 @@
         :aria-checked="i === currentSceneIndex ? 'true' : 'false'"
         :tabindex="i === currentSceneIndex ? 0 : -1"
         class="mc-seg"
-        :class="{ 'is-active': i === currentSceneIndex }"
+        :class="{ 'is-active': i === currentSceneIndex, 'agent-waiting': sceneWaiting(scene) }"
         @click="selectScene(i)"
       >
         <FontAwesomeIcon v-if="scene.icon" :icon="parseIcon(scene.icon)" class="mc-seg-icon" />
         <span class="mc-seg-label">{{ scene.name }}</span>
         <span
-          v-if="sceneAppIsLive(scene, appIntegrations)"
+          v-if="sceneAppIsLive(scene, appIntegrations) || sceneWaiting(scene)"
           class="mc-live"
-          :title="`${scene.name}'s app is running`"
+          :class="{ 'agent-waiting': sceneWaiting(scene) }"
+          :title="sceneWaiting(scene) ? `${scene.name}'s agent is waiting for input` : `${scene.name}'s app is running`"
         ></span>
       </button>
     </div>
@@ -121,7 +122,9 @@ import { useElectron } from '@/composables/useElectron'
 import { refreshVdock } from '@/composables/useVdockRefresh'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useSettingsStore } from '@/stores/settings'
-import { startAppDetection, stopAppDetection, sceneAppIsLive } from '@/services/appDetection'
+import { startAppDetection, stopAppDetection, sceneAppIsLive, loadProfileMaps } from '@/services/appDetection'
+import { initAgentState } from '@/services/agentState'
+import { sceneAgentIsWaiting, sceneWaitingAgent } from '@/services/agentWaiting'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSupport'
@@ -150,6 +153,20 @@ const { quitApp, isElectron, toggleFullscreen: toggleElectronFullscreen, isFulls
 watch(() => settingsStore.appScanningEnabled,
   enabled => (enabled ? startAppDetection() : stopAppDetection()),
   { immediate: true })
+
+// Same waiting-agent feed the desktop rail uses (idempotent): the phone's
+// scene segments flag an idle agent on another scene too.
+onMounted(() => {
+  initAgentState()
+  void loadProfileMaps()
+})
+
+/** DL-080 follow-up: this scene's agent sits idle, waiting for input. */
+const waitingAlertsOn = computed(() => settingsStore.agentWaitingGlowEnabled !== false)
+
+function sceneWaiting(scene: Scene): boolean {
+  return waitingAlertsOn.value && sceneAgentIsWaiting(scene, appIntegrations.value)
+}
 
 function parseIcon(iconValue: unknown) {
   return normalizeFaIcon(iconValue)
@@ -190,11 +207,58 @@ let railObserver: ResizeObserver | null = null
 watch(() => [props.currentSceneIndex, props.scenes.length], measureGlider)
 onMounted(() => {
   measureGlider()
+  scrollWaitingIntoView()
   if (typeof ResizeObserver !== 'undefined' && railRef.value) {
     railObserver = new ResizeObserver(() => measureGlider())
     railObserver.observe(railRef.value)
   }
 })
+
+/* DL-080 follow-up #4: the rail is horizontally scrollable, so a waiting
+   scene's glowing segment can sit entirely off-screen — the frame flashes
+   "something waits" while the *where* stays invisible. When a waiting
+   scene's segment is clipped, smooth-scroll it into
+   view once per waiting episode (`sceneId:entry.ts`, the same episode key
+   the snooze dismissal uses). Applies to the active scene too — the
+   glider only re-scrolls it into view on scene *change*. Marked before
+   the scroll so a user who then scrolls away is never fought; a fresh
+   `ready` event is a new episode. */
+const waitingRailKey = computed(() =>
+  props.scenes
+    .map(s => {
+      const w = sceneWaitingAgent(s, appIntegrations.value)
+      return w ? `${s.id}:${w.entry.ts}` : ''
+    })
+    .join(','),
+)
+const autoScrolledWaits = new Set<string>()
+
+function scrollWaitingIntoView() {
+  const rail = railRef.value
+  if (!rail || !waitingAlertsOn.value) return
+  const liveKeys = new Set(waitingRailKey.value.split(',').filter(Boolean))
+  for (const k of autoScrolledWaits) {
+    if (!liveKeys.has(k)) autoScrolledWaits.delete(k)
+  }
+  for (const [i, scene] of props.scenes.entries()) {
+    if (!sceneWaiting(scene)) continue
+    const key = `${scene.id}:${sceneWaitingAgent(scene, appIntegrations.value)?.entry.ts ?? 0}`
+    if (autoScrolledWaits.has(key)) continue
+    const el = segmentRefs.value?.[i]
+    if (!el) continue
+    autoScrolledWaits.add(key)
+    const clipped =
+      el.offsetLeft < rail.scrollLeft - 1 ||
+      el.offsetLeft + el.offsetWidth > rail.scrollLeft + rail.clientWidth + 1
+    if (clipped) {
+      const instant = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      el.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' })
+    }
+    break
+  }
+}
+
+watch(waitingRailKey, () => void nextTick().then(scrollWaitingIntoView))
 
 // --- Overflow menu --------------------------------------------------------------
 const menuOpen = ref(false)
@@ -424,6 +488,50 @@ onUnmounted(() => {
   border-radius: 50%;
   background: #34d058;
   box-shadow: 0 0 6px rgba(52, 208, 88, 0.8);
+}
+
+/* Agent waiting — the whole segment fills green and pulses so the idle
+   agent's scene is findable from any other scene on a small screen —
+   a 2 px outline alone was invisible at 7" (DL-080 follow-up #3). */
+.mc-seg.agent-waiting {
+  background: rgba(34, 197, 94, 0.16);
+  box-shadow:
+    inset 0 0 0 3px rgba(34, 197, 94, 0.95),
+    0 0 14px rgba(34, 197, 94, 0.5);
+  animation: mc-waiting-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mc-waiting-pulse {
+  0%, 100% {
+    background: rgba(34, 197, 94, 0.16);
+    box-shadow:
+      inset 0 0 0 3px rgba(34, 197, 94, 0.95),
+      0 0 12px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.4);
+    box-shadow:
+      inset 0 0 0 3px #86efac,
+      0 0 26px rgba(34, 197, 94, 0.85),
+      0 0 6px rgba(134, 239, 172, 0.7);
+  }
+}
+
+.mc-live.agent-waiting {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.9), 0 0 0 3px rgba(34, 197, 94, 0.35);
+  animation: mc-live-waiting-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mc-live-waiting-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-seg.agent-waiting { animation: none; }
+  .mc-live.agent-waiting { animation: none; }
 }
 
 /* --- Page steppers --------------------------------------------------------- */

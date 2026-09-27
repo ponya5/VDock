@@ -90,7 +90,7 @@
             />
           </div>
         </template>
-        <AgentWaitingGlow :scene="currentScene" />
+        <AgentWaitingGlow />
 
         <div v-if="!currentPage" class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />

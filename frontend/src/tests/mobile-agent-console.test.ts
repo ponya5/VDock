@@ -73,6 +73,16 @@ vi.mock('@/stores/dashboard', () => ({
   useDashboardStore: () => ({ executeButtonAction }),
 }))
 
+const settingsState = {
+  agentWaitingGlowEnabled: ref<boolean | undefined>(true),
+}
+
+vi.mock('@/stores/settings', () => ({
+  useSettingsStore: () => ({
+    agentWaitingGlowEnabled: settingsState.agentWaitingGlowEnabled.value,
+  }),
+}))
+
 vi.mock('@/stores/notifications', () => ({
   useNotificationsStore: () => ({ error: notifyError }),
 }))
@@ -117,6 +127,7 @@ beforeEach(() => {
   sessionState.stateEntry.value = { prompt: 'Fix the tests', reply: 'All 12 tests pass now.', project: 'VDock2', message: '' }
   sessionState.currentState.value = 'ready'
   sessionState.isAgentPossiblyRunning.value = true
+  settingsState.agentWaitingGlowEnabled.value = true
   targetState.sessions.value = []
   targetState.pinnedPid.value = null
   targetState.resolvedPid.value = null
@@ -242,5 +253,24 @@ describe('MobileAgentConsole', () => {
     await wrapper.findAll('.mac-session')[0].trigger('click')
     expect(setTargetMock).toHaveBeenCalledWith(null)
     expect(identifyMock).not.toHaveBeenCalled()
+  })
+
+  // --- DL-080 follow-up: idle sessions get the waiting ring ---------------
+
+  it('rings idle sessions with the waiting class and drops it when the setting is off', () => {
+    sessionState.profile.value = {
+      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
+      status_source: 'claude', commands: [{ session_marker: 'claude' }],
+    } as AppProfileDto
+    targetState.sessions.value = TWO_SESSIONS
+
+    const wrapper = mountConsole()
+    const chips = wrapper.findAll('.mac-session')
+    expect(chips[1].classes()).not.toContain('waiting')
+    expect(chips[2].classes()).toContain('waiting')
+
+    settingsState.agentWaitingGlowEnabled.value = false
+    const off = mountConsole()
+    expect(off.findAll('.mac-session')[2].classes()).not.toContain('waiting')
   })
 })

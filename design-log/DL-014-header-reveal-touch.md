@@ -79,3 +79,47 @@ acceptable since it only renders while the header is hidden.
   serves the collapse handle inside the open header.
 - Tests: vitest 175 pass (49 files), `vue-tsc --noEmit` clean.
 - Manual verification on the 7" panel outstanding.
+
+## Follow-up (2026-09-27): reveal button relocated to bottom-left
+
+### Problem
+
+The reveal trigger is a `position: fixed` 84 px fully-transparent strip
+spanning the entire top edge, with the visible "Show Header" pill centered
+in it. On small panels it sits on top of the mobile scene rail / agent
+console action row — visually covering the "Continue"-type buttons and
+intercepting taps across the top 84 px. The DL-062 reserved-strip fix was
+lost in later refactors, and the strip itself is the overlap: any
+top-anchored hit area collides with the scene rail that now lives at the
+top edge.
+
+### Design
+
+Move the trigger off the top edge entirely: it becomes a compact floating
+button pinned to the **bottom-left** corner
+(`bottom/left: 10px + safe-area insets`), sized to the pill itself — no
+more invisible full-width strip. Consequences:
+
+- Zero overlap: nothing covers the scene rail or console rows, visually
+  or for touches; the pill only overlays empty deck corner space.
+- The bottom-left corner is free on both chromes — the waiting-alert
+  snooze chip is bottom-center, mobile has no bottom nav.
+- The swipe-down-to-reveal gesture previously caught by the top strip now
+  applies to the button itself (`useSwipe` stays bound to the trigger);
+  the "swipe down from anywhere along the top edge" affordance is
+  retired — it was the source of the overlap. Tap-to-reveal on the pill
+  is unchanged, as is swipe-up-to-dismiss on the header.
+
+### Implementation Results (follow-up, 2026-09-27)
+
+- `DeckHeader.vue`: `.header-reveal-trigger` now `bottom/left: 10px +
+  env(safe-area-inset-*)` with `width/height: auto` — the hit box is
+  exactly the pill. `.reveal-pill` lost the now-pointless `margin-top`.
+- Verified live (1280×800, desktop chrome): trigger rect x:10 y:730
+  205×60 — the AgentActionBar row (session chip, Submit/Mode/etc.) fully
+  unobstructed at top. Real click reveals the header; the 5 s autohide
+  re-hides it (earlier "still hidden" reads were post-autohide, not a
+  regression).
+- The pill stays under the screensaver (z 110 < 500) — first tap dismisses
+  the saver, then the pill is reachable; matches its previous layering.
+- Screenshot: `design-log/refs/header-reveal-bottom-left.png`.
