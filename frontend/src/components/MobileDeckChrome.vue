@@ -48,21 +48,30 @@
          entered fullscreen or dismissed the suggestion once this visit.
          The callout bubble (DL-067 follow-up) spells it out in words for
          the first few seconds — mainly for a phone that just landed here
-         fresh off a QR-code scan and has never seen this bar before. -->
-    <div class="mc-fullscreen-wrap">
-      <div v-if="!isFullscreen && showFullscreenCallout" class="mc-fullscreen-callout" role="status">
-        Tap for fullscreen
+         fresh off a QR-code scan and has never seen this bar before.
+
+         Hidden entirely once already running standalone (launched from an
+         iOS Home Screen icon or an installed PWA) — there's no browser
+         chrome left to hide in that case (DL-067 second follow-up). -->
+    <div v-if="!isStandalone" class="mc-fullscreen-wrap">
+      <div
+        v-if="!isFullscreen && showFullscreenCallout"
+        class="mc-fullscreen-callout"
+        :class="{ 'mc-fullscreen-callout-persist': fullscreenUnsupported }"
+        role="status"
+      >
+        {{ fullscreenUnsupported ? 'Add to Home Screen for fullscreen (Share → Add to Home Screen)' : 'Tap for fullscreen' }}
         <span class="mc-fullscreen-callout-arrow" aria-hidden="true"></span>
       </div>
       <button
         type="button"
         class="mc-fullscreen-btn"
         :class="{ 'mc-suggest': !isFullscreen && suggestFullscreen }"
-        :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
-        :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+        :aria-label="fullscreenButtonLabel"
+        :title="fullscreenButtonLabel"
         @click="onFullscreen"
       >
-        <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
+        <FontAwesomeIcon :icon="['fas', fullscreenButtonIcon]" />
       </button>
     </div>
 
@@ -106,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useElectron } from '@/composables/useElectron'
 import { refreshVdock } from '@/composables/useVdockRefresh'
@@ -115,6 +124,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { startAppDetection, stopAppDetection, sceneAppIsLive } from '@/services/appDetection'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
+import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSupport'
 import type { Scene } from '@/types'
 
 interface Props {
@@ -210,6 +220,25 @@ const suggestFullscreen = ref(true)
 const showFullscreenCallout = ref(true)
 let fullscreenCalloutTimer: ReturnType<typeof setTimeout> | null = null
 
+// Already running without browser chrome (launched from an iOS Home Screen
+// icon, or an installed PWA elsewhere) — nothing left for this control to
+// toggle. Computed once per mount; it can't change while the page is open.
+const isStandalone = isRunningStandalone()
+
+// iPhone Safari never implements the Fullscreen API (see fullscreenSupport.ts)
+// — Electron always has its own native call, so only a plain browser tab
+// without the DOM API is actually stuck.
+const fullscreenUnsupported = !isElectron() && !supportsFullscreenApi()
+
+const fullscreenButtonLabel = computed(() => {
+  if (fullscreenUnsupported) return 'Add to Home Screen for fullscreen'
+  return isFullscreen.value ? 'Exit fullscreen' : 'Enter fullscreen'
+})
+const fullscreenButtonIcon = computed(() => {
+  if (fullscreenUnsupported) return 'arrow-up-right-from-square'
+  return isFullscreen.value ? 'compress' : 'expand'
+})
+
 function handleFullscreenChange() {
   if (!isElectron()) isFullscreen.value = !!document.fullscreenElement
 }
@@ -221,6 +250,16 @@ watch(isFullscreen, (fullscreen) => {
 async function onFullscreen() {
   menuOpen.value = false
   suggestFullscreen.value = false
+
+  // No successful `requestFullscreen()` will ever fire on this platform, so
+  // there's no event to dismiss the callout on its own — toggle it as the
+  // button's whole job instead of attempting (and silently failing) the
+  // same dead API call every other branch below relies on.
+  if (fullscreenUnsupported) {
+    showFullscreenCallout.value = !showFullscreenCallout.value
+    return
+  }
+
   showFullscreenCallout.value = false
   try {
     isFullscreen.value = await toggleElectronFullscreen()
@@ -263,6 +302,12 @@ async function confirmExit() {
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+
+  // iPhone Safari has no Fullscreen API to attempt at all — skip straight
+  // to leaving the "Add to Home Screen" callout up (dismissed only by the
+  // user tapping the button) rather than racing it against the 6-second
+  // timer below, which exists for the "tap the button" case this isn't.
+  if (fullscreenUnsupported) return
 
   // Best-effort: browsers only honor requestFullscreen() with a recent user
   // gesture, so this silently no-ops on most phone browsers (Safari,
@@ -422,13 +467,14 @@ onUnmounted(() => {
   top: calc(100% + 10px);
   right: -6px;
   z-index: 61;
+  max-width: min(260px, 80vw);
   padding: 6px 12px;
   border-radius: 10px;
   background: #1f6fd1;
   color: #fff;
   font-size: clamp(0.68rem, 0.55rem + 0.6vw, 0.8rem);
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
   box-shadow: 0 8px 20px rgba(31, 111, 209, 0.5);
   animation: mc-fullscreen-callout-fade 6s ease forwards;
   pointer-events: none;
@@ -446,6 +492,14 @@ onUnmounted(() => {
 @keyframes mc-fullscreen-callout-fade {
   0%, 75% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* iPhone Safari has no successful requestFullscreen() to dismiss this on —
+   it stays up until the user taps the button again, so skip the timed
+   fade the pulsing-button case relies on (DL-067 second follow-up). */
+.mc-fullscreen-callout-persist {
+  animation: none;
+  opacity: 1;
 }
 
 .mc-fullscreen-btn {

@@ -94,9 +94,13 @@
         <div v-if="!currentPage" class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
           <p>No profile loaded</p>
-          <button class="btn btn-primary" @click="router.push('/profiles')">
+          <!-- Mobile never gets profile-management UI (DL-061) — this state
+               means the desktop app hasn't set one up yet either, so send
+               the user there instead of into a picker phones shouldn't have. -->
+          <button v-if="!isMobileViewport" class="btn btn-primary" @click="router.push('/profiles')">
             Select Profile
           </button>
+          <p v-else class="no-profile-hint">Set up a profile on the VDock desktop app first.</p>
         </div>
       </div>
 
@@ -949,8 +953,15 @@ onMounted(async () => {
   // follow-up.
   void loadProfileMaps()
 
-  // Load last used profile or first available profile
-  const lastProfileId = localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
+  // Load the profile every device should land on. The server-persisted
+  // `activeProfileId` (set by `setProfile` on every device, DL-061
+  // follow-up) is checked first so a phone connecting for the first time
+  // opens the SAME profile the desktop is already using, instead of this
+  // per-browser localStorage cache (kept as a fallback for the offline/
+  // settings-fetch-failed case) or, worse, falling all the way through to
+  // "first profile on the backend" or bootstrapping a brand new one.
+  await settingsStore.ensureSettingsLoaded()
+  const lastProfileId = settingsStore.activeProfileId || localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
   let profileLoaded = false
   if (lastProfileId) {
     const profile = await profilesStore.getProfile(lastProfileId)
@@ -974,14 +985,19 @@ onMounted(async () => {
   }
 
   // First-run bubble tutorial (or a "Launch Tutorial" request from Settings).
-  // Must wait for the server's `tutorialCompleted` value — this view's mounted
-  // hook fires before App.vue's (Vue mounts children before parents), so
-  // without this await, `tutorialCompleted` could still be sitting on its
-  // `ref(false)` default and the tour would incorrectly restart on every
-  // launch even though it was already completed server-side.
-  await settingsStore.ensureSettingsLoaded()
-  // Delayed so the deck renders before the tour starts measuring targets.
-  setTimeout(() => tour.consumePendingOrFirstRun(), 800)
+  // `settingsStore.ensureSettingsLoaded()` already resolved above (before the
+  // profile load), so `tutorialCompleted` is guaranteed to hold its real
+  // server value here rather than the `ref(false)` default.
+  //
+  // Skipped entirely on phones (DL-061 follow-up): the tour's first step
+  // navigates to '/profiles' to walk through profile selection — a screen
+  // mobile has no business showing (DL-061, "mobile = control surface
+  // only") — and every phone connecting to an already-set-up desktop has
+  // already had that walkthrough there.
+  if (!isMobileViewport.value) {
+    // Delayed so the deck renders before the tour starts measuring targets.
+    setTimeout(() => tour.consumePendingOrFirstRun(), 800)
+  }
 
   // Auto scene switching is bootstrapped once, globally, in App.vue —
   // registering it here too would leak a duplicate listener on every
@@ -1076,6 +1092,13 @@ onUnmounted(() => {
   justify-content: center;
   height: 100%;
   gap: var(--spacing-lg);
+  color: var(--color-text-secondary);
+}
+
+.no-profile-hint {
+  max-width: 260px;
+  text-align: center;
+  font-size: 0.9rem;
   color: var(--color-text-secondary);
 }
 

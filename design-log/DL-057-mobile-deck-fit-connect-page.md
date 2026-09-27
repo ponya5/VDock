@@ -76,3 +76,67 @@ Verified live against `localhost:5000` (Playwright device emulation):
 - **App scanning:** default flipped to disabled (`ref(false)`, `=== true`
   normalization, defaults object) — user-requested default.
 - vue-tsc clean, 239/239 vitest, production build passes.
+
+## Follow-up: the same truncation resurfaced on landscape phones (2026-09-27)
+
+### Problem
+
+The user's Media scene rendered with truncated labels ("Volu…", "Previ…")
+on a phone — the exact symptom this entry fixed, but DL-060 later made
+mobile landscape-only, and this entry's own aspect trigger (`aspect < 0.7
+|| aspect > 1.3`) is a heuristic over the CONTAINER's aspect ratio, not the
+grid's actual cell count. A scene sized for a wide desktop grid (Media's
+`3×5`) can land inside that "normal" 0.7–1.3 window on a landscape phone by
+coincidence even though each *cell* is much smaller than a desktop cell —
+compact mode never activates, so `effectiveButtonSize` never applies the
+`cellPx / 88` downscale, and icon/label sizing meant for a ~200px+ desktop
+cell overflows a ~150px phone one.
+
+### Fix
+
+`DeckGrid.vue`'s `cellMetrics` now forces `compact: true` whenever
+`useMobileViewport().isMobileViewport` is true, in addition to the
+existing aspect-ratio heuristic. Every phone — portrait or landscape —
+always gets the fit-to-screen, correctly-downscaled cell sizing this entry
+introduced; the aspect check still does its job for a resized desktop
+window with no touch/viewport signal to key off.
+
+### Verification
+
+- Frontend: 59 files / 254 tests green; `vue-tsc --noEmit` clean.
+- Not yet verified live on a physical phone from this session.
+
+## Follow-up: mobile preview thumbnail on the Connect page (2026-09-27)
+
+### Problem
+
+The user provided a real photo (two phones side by side, Media scene on one
+and Claude Code on the other) and asked for it in two places: the README's
+mobile section, and as a thumbnail next to the QR code on **Settings →
+Connect a device**, so someone about to scan it can see what they're about
+to get before they do.
+
+### Fix
+
+- README: added the photo as a centered hero image (`docs/assets/screens/
+  mobile-devices.jpg`) at the top of "Control it from your phone", same
+  treatment as the existing `panel-on-desk.jpg` hero — image + italic
+  caption, ahead of the existing side-by-side scene screenshots.
+- Settings → Connect a device: added the same photo (`frontend/public/
+  assets/help/mobile-preview.jpg`, the in-app static-asset convention
+  already used by the Help & Guide screens) as a second column beside the
+  QR canvas, with its own caption. `.qr-row` was restructured into two
+  flex columns (`qr-code-col`, `qr-preview-col`) rather than reusing the
+  generic `.row-control` class — the existing `.row.stack .row-control`
+  rule forces `display: block` at higher CSS specificity than a bare
+  `.qr-row` rule could override cleanly.
+- Caught mid-edit by the existing frontend suite: a static `<img
+  src="/assets/...">` attribute (rather than this file's own established
+  `:src="'/assets/...'"` bound-string pattern, e.g. the nav logo two lines
+  up) trips Vue's compile-time asset-URL transform and broke a test file's
+  SSR-ish import resolution. Matched the existing convention instead.
+
+### Verification
+
+- Frontend: 59 files / 254 tests green; `vue-tsc --noEmit` clean.
+- Not yet viewed live in the running Settings page from this session.

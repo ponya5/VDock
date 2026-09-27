@@ -22,14 +22,17 @@ export function createDefaultScene(): Scene {
     }
   }
 
+  // Volume controls share row 0, transport controls share row 1 — grouping
+  // by function (rather than the previous volume/play-pause/volume/transport
+  // interleave) and ordering transport as Previous → Play/Pause → Next → Stop
+  // reads the same way a physical remote's button row does.
   const buttons: Button[] = [
     makeButton({
-      id: `btn-${Date.now()}-1`,
-      label: 'Volume Up',
-      icon: ['fas', 'volume-up'],
-      style: { backgroundColor: '#27ae60', textColor: '#ffffff', iconSize: 32 },
-      layers: { effect: { type: 'glow', tint: 'brand' } },
-      action: { type: 'cross_platform', config: { action: 'volume_up', step: 10 } },
+      id: `btn-${Date.now()}-3`,
+      label: 'Mute',
+      icon: ['fas', 'volume-mute'],
+      style: { backgroundColor: '#95a5a6', textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cross_platform', config: { action: 'volume_mute' } },
       position: { row: 0, col: 0 }
     }),
     makeButton({
@@ -42,21 +45,13 @@ export function createDefaultScene(): Scene {
       position: { row: 0, col: 1 }
     }),
     makeButton({
-      id: `btn-${Date.now()}-3`,
-      label: 'Mute',
-      icon: ['fas', 'volume-mute'],
-      style: { backgroundColor: '#95a5a6', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cross_platform', config: { action: 'volume_mute' } },
+      id: `btn-${Date.now()}-1`,
+      label: 'Volume Up',
+      icon: ['fas', 'volume-up'],
+      style: { backgroundColor: '#27ae60', textColor: '#ffffff', iconSize: 32 },
+      layers: { effect: { type: 'glow', tint: 'brand' } },
+      action: { type: 'cross_platform', config: { action: 'volume_up', step: 10 } },
       position: { row: 0, col: 2 }
-    }),
-    makeButton({
-      id: `btn-${Date.now()}-4`,
-      label: 'Play/Pause',
-      icon: ['fas', 'play'],
-      style: { backgroundColor: '#9b59b6', textColor: '#ffffff', iconSize: 32 },
-      layers: { effect: { type: 'neon', tint: 'brand' } },
-      action: { type: 'cross_platform', config: { action: 'media_play_pause' } },
-      position: { row: 1, col: 0 }
     }),
     makeButton({
       id: `btn-${Date.now()}-5`,
@@ -65,6 +60,15 @@ export function createDefaultScene(): Scene {
       style: { backgroundColor: '#8e44ad', textColor: '#ffffff', iconSize: 32 },
       layers: { behaviour: 'pulse' },
       action: { type: 'cross_platform', config: { action: 'media_previous' } },
+      position: { row: 1, col: 0 }
+    }),
+    makeButton({
+      id: `btn-${Date.now()}-4`,
+      label: 'Play/Pause',
+      icon: ['fas', 'play'],
+      style: { backgroundColor: '#9b59b6', textColor: '#ffffff', iconSize: 32 },
+      layers: { effect: { type: 'neon', tint: 'brand' } },
+      action: { type: 'cross_platform', config: { action: 'media_play_pause' } },
       position: { row: 1, col: 1 }
     }),
     makeButton({

@@ -247,6 +247,17 @@
                     <h4>Agent buttons press keys in the wrong window</h4>
                     <p>Pin the target session first (session chip → pick the terminal). The eye icon flashes the real window so you can confirm before sending.</p>
                   </div>
+                  <div class="trouble-item">
+                    <h4>Touch lands on the wrong monitor</h4>
+                    <p>
+                      Running VDock on a dedicated touchscreen monitor? Windows sometimes routes every tap to your
+                      <em>primary</em> display instead. Open <strong>Tablet PC Settings</strong> (Start menu search)
+                      → <strong>Display</strong> → <strong>Setup</strong>, then tap the touchscreen when prompted.
+                      If it doesn't stick, run <code>multidigimon -touch</code> from an Administrator Command
+                      Prompt — that's Windows' own digitizer-to-monitor mapping tool (<code>System32\MultiDigiMon.exe</code>),
+                      not something VDock controls.
+                    </p>
+                  </div>
                 </div>
               </section>
             </div>

@@ -113,3 +113,60 @@ is already `true` by the time either would render.
 - Full frontend suite: 59 files / 253 tests green; `vue-tsc --noEmit`
   clean.
 - Not yet verified live on a physical phone via the Connect QR flow.
+
+## Follow-up 2: fullscreen button silently did nothing on iPhone Safari (2026-09-27)
+
+### Problem
+
+The user tried the promoted fullscreen button live on an iPhone in Safari
+and it didn't work — no error, just nothing happened.
+
+### Root cause
+
+The trade-off called out at the top of this entry ("no way around that
+from web content") undersold the actual severity on iPhone specifically:
+iPad Safari, Android Chrome, and desktop browsers all implement the
+Fullscreen API and just require a user gesture (which the button provides).
+iPhone Safari is the one browser that **never implements the API at all** —
+`document.documentElement.requestFullscreen` is simply `undefined` on that
+platform, gesture or not. `toggleElectronFullscreen()`'s web fallback
+(`useElectron.ts`) called it unconditionally, so on an iPhone the call threw
+a `TypeError`, was swallowed by the existing `catch`, and the button did
+nothing with zero visible feedback — exactly what was reported.
+
+There is still no way to force real fullscreen on that platform from a
+Safari tab. The one thing that does work: launching from an iOS Home
+Screen icon, which drops Safari's chrome entirely via the
+`apple-mobile-web-app-capable` meta tag already present in `index.html`
+— that path was never surfaced to the user.
+
+### Fix
+
+- Added `frontend/src/utils/fullscreenSupport.ts`: `supportsFullscreenApi()`
+  (feature-detects `requestFullscreen` on `document.documentElement`) and
+  `isRunningStandalone()` (`navigator.standalone` or
+  `matchMedia('(display-mode: standalone)')`).
+- `MobileDeckChrome.vue` now branches on these at mount:
+  - **Standalone** (already launched from a Home Screen icon / installed
+    PWA): the fullscreen control hides entirely — there's no browser chrome
+    left to hide.
+  - **Unsupported, non-Electron** (iPhone Safari in a regular tab): the
+    button's icon/label switch to "Add to Home Screen for fullscreen", the
+    dead best-effort auto-attempt is skipped, and tapping the button toggles
+    a persistent callout ("Add to Home Screen for fullscreen (Share → Add
+    to Home Screen)") instead of calling the API — no more silent no-op.
+  - **Supported** (Electron, Android Chrome, iPad Safari, desktop): behavior
+    is unchanged from Follow-up 1.
+- Widened `.mc-fullscreen-callout` to wrap (`max-width: min(260px, 80vw)`,
+  `white-space: normal`) for the longer instructional copy, and added
+  `.mc-fullscreen-callout-persist` to skip the 6-second auto-fade timer in
+  the unsupported case (there's no successful `fullscreenchange` event to
+  time against — dismissal is only ever "user taps the button again").
+
+### Verification
+
+- Full frontend suite: 59 files / 254 tests green; `vue-tsc --noEmit`
+  clean.
+- Not yet re-verified live on a physical iPhone from this session —
+  flagged for the user to confirm the "Add to Home Screen" callout now
+  appears instead of the button doing nothing.

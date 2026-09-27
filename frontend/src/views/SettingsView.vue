@@ -1208,9 +1208,20 @@
                   </div>
                 </div>
                 <div v-if="lanUrl" class="row stack">
-                  <div class="row-control qr-row">
-                    <canvas ref="qrCanvas" class="qr-canvas" />
-                    <p class="muted qr-note">The code encodes the address above. It changes when the backend port or your LAN address changes.</p>
+                  <div class="qr-row">
+                    <div class="qr-code-col">
+                      <canvas ref="qrCanvas" class="qr-canvas" />
+                      <p class="muted qr-note">The code encodes the address above. It changes when the backend port or your LAN address changes.</p>
+                    </div>
+                    <div class="qr-preview-col">
+                      <img
+                        :src="'/assets/help/mobile-preview.jpg'"
+                        alt="VDock open on two phones side by side: the Media scene with volume controls and a slider on one, the Claude Code scene with Submit, Continue and Interrupt on the other"
+                        class="qr-preview-img"
+                        loading="lazy"
+                      />
+                      <p class="muted qr-note">This is what it looks like once it's open on the phone.</p>
+                    </div>
                   </div>
                 </div>
                 <div v-else class="row">
@@ -4361,8 +4372,18 @@ onMounted(async () => {
 }
 .connect-steps b { color: var(--text); }
 
-.qr-row { align-items: center; }
+.qr-row { display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+.qr-code-col, .qr-preview-col { display: flex; flex-direction: column; gap: 8px; flex: none; }
 .qr-canvas { width: 128px; height: 128px; border-radius: var(--r-md); background: #fff; padding: 6px; flex: none; }
+/* Thumbnail beside the QR code showing the mobile chrome the scanned link
+   opens into — the QR itself only proves the link works, not what the
+   phone will actually look like once it's on the other end. */
+.qr-preview-img {
+  width: 180px;
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line-soft);
+}
 .qr-note { max-width: 22ch; }
 .qr-offline { margin-top: 8px; }
 

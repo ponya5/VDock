@@ -56,6 +56,10 @@ ALLOWED_USER_SETTING_KEYS = {
     'screensaverBackground',
     'screensaverLayout',
     'tutorialCompleted',
+    # Id of the profile most recently loaded on any window/device — lets a
+    # second device (e.g. a phone connecting for the first time) land on
+    # the same profile instead of guessing. See frontend DL-061 follow-up.
+    'activeProfileId',
     'appScanningEnabled',
     'agentAlertsEnabled',
     'pressSoundEnabled',

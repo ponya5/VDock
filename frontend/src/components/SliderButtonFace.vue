@@ -70,6 +70,7 @@ import type { Button } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useButtonStateStore } from '@/stores/buttonState'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotificationsStore } from '@/stores/notifications'
 import { vibrate } from '@/utils/haptics'
 
 const props = defineProps<{ button: Button; compact?: boolean; buttonSize?: number }>()
@@ -77,6 +78,7 @@ const props = defineProps<{ button: Button; compact?: boolean; buttonSize?: numb
 const dashboardStore = useDashboardStore()
 const buttonStateStore = useButtonStateStore()
 const settingsStore = useSettingsStore()
+const notificationsStore = useNotificationsStore()
 
 const cfg = computed(() => props.button.action?.config ?? {})
 const target = computed(() => cfg.value.target ?? 'volume')
@@ -169,8 +171,26 @@ function apply(v: number, force = false) {
   dashboardStore.executeAction(action, props.button.id).then((result) => {
     if (result?.success) {
       buttonStateStore.set(props.button.id, { badge: result.data?.badge ?? `${rounded}%` })
+      return
     }
-  }).catch(() => { /* throttled dispatch — failures ride the next move */ })
+    // A throttled intermediate tick failing is expected noise while dragging
+    // (the next tick or the final `force` apply below usually lands) — only
+    // surface an error for the calls that actually matter: the release, a
+    // wheel settling, or a preset tap. Otherwise a real failure (e.g. no
+    // audio session for the configured app) was previously silent, making
+    // the slider look broken with zero feedback while every other button's
+    // failure shows an "Action Failed" toast.
+    if (force) reportFailure(result?.message)
+  }).catch((error) => {
+    if (force) reportFailure(error instanceof Error ? error.message : undefined)
+  })
+}
+
+function reportFailure(message?: string) {
+  notificationsStore.error(
+    'Slider action failed',
+    message || `Could not set ${target.value.replace('_', ' ')}.`
+  )
 }
 
 function valueFromPointer(clientX: number): number {
