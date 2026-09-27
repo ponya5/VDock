@@ -45,6 +45,7 @@
         <div
           v-if="targetOpen"
           class="agent-target-pop"
+          :class="{ 'pop-sheet': popSheet }"
           :style="popStyle"
           role="listbox"
         >
@@ -206,25 +207,26 @@ const anotherSessionWaiting = computed(() =>
 const targetOpen = ref(false)
 const chipRef = ref<HTMLElement | null>(null)
 const popStyle = ref<Record<string, string>>({})
+const popSheet = ref(false)
 
 function toggleTargetPicker() {
   targetOpen.value = !targetOpen.value
   if (!targetOpen.value) return
   void refreshTargets()
-  // Anchor the teleported popover under the chip; clamp to the viewport so a
-  // chip near the right edge never pushes the list offscreen. On narrow,
-  // short or touch-first screens the CSS takes over (centered full-width
-  // sheet), so the inline left is only set for roomy mouse-first viewports
-  // — a 7" touch panel is short/coarse and an inline left would beat the
-  // sheet rule. Same coarse check as useMobileViewport: a touchscreen that
-  // is not the primary pointer still reports maxTouchPoints.
-  const coarse =
-    window.matchMedia?.('(pointer: coarse)').matches ||
+  // Sheet vs anchored dropdown is decided HERE alone (DL-071 follow-up 9)
+  // — a .pop-sheet class carries the sheet styles, so the JS and the CSS
+  // can't disagree. Previously a maxTouchPoints device at a roomy
+  // viewport got neither the inline left nor the sheet → the popover
+  // pinned itself to the left edge at left:0. Touchscreens that aren't
+  // the primary pointer still report maxTouchPoints (same check as
+  // useMobileViewport), so they get the finger-sized sheet too.
+  popSheet.value =
+    window.matchMedia?.('(max-width: 720px), (max-height: 800px), (pointer: coarse)').matches === true ||
     navigator.maxTouchPoints > 0
   const rect = chipRef.value?.getBoundingClientRect()
   if (rect) {
     const style: Record<string, string> = { top: `${rect.bottom + 8}px` }
-    if (window.innerWidth > 720 && window.innerHeight > 800 && !coarse) {
+    if (!popSheet.value) {
       style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 340))}px`
     }
     popStyle.value = style
@@ -660,35 +662,34 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   }
 }
 
-/* The session popover becomes a centered sheet under the bar with
-   finger-sized rows on narrow panels, short panels (a landscape 1024×600 or
-   1280×800 7" screen keeps the single-row bar but still needs the sheet),
-   and any touch-first pointer — a floating dropdown with 40 px rows is
-   untappable (DL-071 follow-up 8). Paired with toggleTargetPicker skipping
-   the inline `left` under the same conditions. */
-@media (max-width: 720px), (max-height: 800px), (pointer: coarse) {
-  .agent-target-pop {
-    left: 8px;
-    right: 8px;
-    margin-inline: auto;
-    min-width: 0;
-    max-width: calc(560px * var(--touch-multiplier, 1));
-    max-height: 55vh;
-  }
+/* Sheet layout for the session popover — a centered, finger-sized list
+   under the bar on narrow/short/touch screens (DL-071 follow-up 8). The
+   class is set by toggleTargetPicker (JS is the single source of truth so
+   media query and positioning can't desync, follow-up 9): it fires when
+   (max-width:720px), (max-height:800px), (pointer:coarse), or
+   navigator.maxTouchPoints > 0 — the last one has no CSS media
+   equivalent, which is why the sheet can't live in a media query alone. */
+.agent-target-pop.pop-sheet {
+  left: 8px;
+  right: 8px;
+  margin-inline: auto;
+  min-width: 0;
+  max-width: calc(560px * var(--touch-multiplier, 1));
+  max-height: 55vh;
+}
 
-  .row-pick {
-    min-height: max(60px, calc(var(--min-touch-target, 44px) + 16px));
-    font-size: clamp(1.05rem, 1.4vh + 0.7rem, 1.4rem);
-  }
+.agent-target-pop.pop-sheet .row-pick {
+  min-height: max(60px, calc(var(--min-touch-target, 44px) + 16px));
+  font-size: clamp(1.05rem, 1.4vh + 0.7rem, 1.4rem);
+}
 
-  .row-sub {
-    font-size: 0.92em;
-  }
+.agent-target-pop.pop-sheet .row-sub {
+  font-size: 0.92em;
+}
 
-  .row-locate {
-    width: max(52px, var(--min-touch-target, 44px));
-    height: max(52px, var(--min-touch-target, 44px));
-  }
+.agent-target-pop.pop-sheet .row-locate {
+  width: max(52px, var(--min-touch-target, 44px));
+  height: max(52px, var(--min-touch-target, 44px));
 }
 
 /* Up to 7"-panel widths: stack icon over label so six buttons fit a row (or

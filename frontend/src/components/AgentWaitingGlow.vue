@@ -194,15 +194,19 @@ function snooze() {
   z-index: 2100;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px 8px 14px;
+  gap: calc(10px * min(var(--touch-multiplier, 1), 1.6));
+  padding:
+    calc(10px * min(var(--touch-multiplier, 1), 1.6))
+    calc(12px * min(var(--touch-multiplier, 1), 1.6))
+    calc(10px * min(var(--touch-multiplier, 1), 1.6))
+    calc(18px * min(var(--touch-multiplier, 1), 1.6));
   border-radius: 999px;
   background: rgba(8, 26, 14, 0.92);
   border: 1.5px solid rgba(34, 197, 94, 0.7);
   box-shadow: 0 0 24px rgba(34, 197, 94, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
   color: #bbf7d0;
-  font-size: 0.85rem;
+  font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.6));
   white-space: nowrap;
 }
 
@@ -215,12 +219,15 @@ function snooze() {
 }
 
 .snooze-btn {
-  padding: 6px 14px;
+  padding:
+    calc(8px * min(var(--touch-multiplier, 1), 1.6))
+    calc(18px * min(var(--touch-multiplier, 1), 1.6));
+  min-height: max(36px, calc(var(--min-touch-target, 44px) * 0.8));
   border-radius: 999px;
   border: none;
   background: #22c55e;
   color: #052e14;
-  font-size: 0.8rem;
+  font-size: calc(0.9rem * min(var(--touch-multiplier, 1), 1.6));
   font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
@@ -242,8 +249,9 @@ function snooze() {
 @media (max-width: 520px) {
   .agent-waiting-snooze {
     gap: 8px;
-    padding: 6px 8px 6px 12px;
-    font-size: 0.78rem;
+    padding: 8px 10px 8px 12px;
+    font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.6));
+    max-width: calc(100vw - 16px);
   }
 }
 

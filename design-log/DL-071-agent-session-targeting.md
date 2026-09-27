@@ -336,3 +336,95 @@ more metadata.
   main 22.4 px / sub 20.6 px, locate 52×52 px; Auto row identical to
   session rows. Suite: 60 files / 287 tests green, `vue-tsc` clean.
   Screenshot: `design-log/refs/picker-sheet-fixed-*.png`.
+
+## Follow-up #9 (2026-09-27): picker sheet/detach desync + bigger reveal pill
+
+### Problem (follow-up #9)
+
+Two issues surfaced on the 7" panel:
+
+1. **Stale dist build** — the backend serves `frontend/dist` (last built
+   Sep 26), so the panel showed the pre-follow-up-#8 picker: a ~280px
+   dropdown with a bare `<button>` Auto row rendered by UA styles as a
+   squished white pill. Rebuilt dist; all fixes ship now.
+2. **Real desync in follow-up #8** — the JS gate skipped the inline `left`
+   when `maxTouchPoints > 0`, but the CSS sheet rules only fire on
+   `max-width:720px / max-height:800px / pointer:coarse`. A touch-capable
+   device at a roomy viewport (e.g. 1280×900) matched neither → no inline
+   left, no sheet → popover pinned at `left:0` in the corner, and the
+   "once" logic lived in two places that could disagree.
+
+### Design (follow-up #9)
+
+Single source of truth in JS: on open, compute `isSheet = matchMedia(
+'(max-width: 720px), (max-height: 800px), (pointer: coarse)').matches ||
+navigator.maxTouchPoints > 0` and bind a `pop-sheet` class on the popover.
+The sheet styles move off the media query onto `.pop-sheet`, so the class
+— not two parallel condition sets — decides the layout. Inline `left` is
+set only when `!isSheet`, anchoring the dropdown under the chip; the
+popover can no longer end up unanchored.
+
+`DeckHeader.vue` `.reveal-pill`: enlarged to a finger-first 52px base
+(scales to ~83px at touch-multiplier 2), 1rem→1.6rem font, wider padding —
+it now floats free in the corner and can afford the size it couldn't when
+it lived inside the 84px top strip.
+
+### Implementation Results (follow-up #9)
+
+- `AgentActionBar.vue`: `popSheet` ref computed once per open —
+  `matchMedia('(max-width:720px), (max-height:800px), (pointer:coarse)') ||
+  navigator.maxTouchPoints > 0` — bound as `.pop-sheet` on the popover;
+  inline `left` only when `!popSheet`. Sheet CSS moved from the media
+  query to `.agent-target-pop.pop-sheet` (row min-height, font clamp,
+  sub size, locate button included).
+- `DeckHeader.vue` `.reveal-pill`: 40→52px base height, `min(tm,1.5)` →
+  `min(tm,1.6)` caps, font 0.85→1rem base, padding 18→26px base —
+  measured live at tm=2: 273×83px (was 205×60), 25.6px text.
+- Verified live (Playwright, maxTouchPoints=10, 1280×900 — the desync
+  case): popover now `pop-sheet`, 1120px wide centered at left:8 —
+  previously it sat orphaned at left:0. Screenshot:
+  `design-log/refs/picker-sheet-desync-fixed-*.png` and
+  `header-reveal-bigger-pill-*.png`.
+- Rebuilt `frontend/dist` so the backend-served panel picks up this
+  plus today's earlier work (the stale Sep 26 bundle is why the panel
+  still showed the old narrow picker and top-strip Show Header).
+- Tests: focused 37/37 green; `npm run build` (vue-tsc + vite) clean.
+
+## Follow-up #10 (2026-09-27): guarantee the idle session's picker highlight
+
+### Problem (follow-up #10)
+
+The picker's `waiting` row/chip highlight depends on the backend's
+cwd→hook join (`_hook_state_by_cwd`): a hook entry whose `cwd` doesn't
+match the window's (stale path, symlinked dir, agent `cd`'d after the
+event) leaves `state: null`, so the picker shows the idle session with
+**no** highlight on both desktop rows and mobile chips — exactly the cue
+that must not silently fail.
+
+### Design (follow-up #10)
+
+In `list_agent_sessions`: when the cwd join misses AND there is exactly
+one live host AND exactly one hook entry for the marker, pair them — one
+window and one recorded session can't be ambiguous. Two+ hosts or two+
+entries keep the strict cwd join (a wrong guess there would flag the
+wrong terminal).
+
+### Implementation Results (follow-up #10)
+
+- `backend/routes/agent_sessions.py`: `list_agent_sessions` collects the
+  marker's hook entries once; when `len(hosts) == 1 and
+  len(hook_entries) == 1` the lone entry pairs with the lone host
+  regardless of cwd (`hook = by_cwd.get(...) or lone_entry`).
+- Tests: `test_list_sessions_single_host_pairs_on_cwd_mismatch` (mismatched
+  cwd still yields `state: ready`) and
+  `test_list_sessions_no_fallback_with_multiple_hosts` (two hosts stay
+  strict-join) — `pytest tests/test_session_targeting.py` 15/15 green.
+- Verified live end-to-end: restarted the Flask backend (DEBUG=False, no
+  reloader), POSTed `ready` with `cwd: C:/totally/different/path` —
+  `/api/agent-sessions` row reported `state: ready`, and the desktop
+  picker row rendered `agent-target-row waiting`. Mobile chips read the
+  same `state` field via `useAgentTargets`, so `.mac-session.waiting`
+  highlights identically (verified earlier at 480×800).
+- Note: the backend needed a manual restart for the route change; the
+  panel's socket reconnected cleanly. In-memory agent state cleared —
+  the real Claude session re-posts on its next hook event.
