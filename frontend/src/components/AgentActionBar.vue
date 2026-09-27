@@ -18,7 +18,7 @@
         ref="chipRef"
         type="button"
         class="agent-target-chip"
-        :class="{ pinned: pinnedPid !== null }"
+        :class="{ pinned: pinnedPid !== null, waiting: showWaitingHint }"
         :title="`Buttons target: ${targetLabel}`"
         aria-haspopup="listbox"
         :aria-expanded="targetOpen"
@@ -60,7 +60,7 @@
             v-for="s in sessionRows"
             :key="s.pid"
             class="agent-target-row"
-            :class="{ active: s.pid === pinnedPid }"
+            :class="{ active: s.pid === pinnedPid, waiting: waitingGlowOn && s.state === 'ready' }"
             role="option"
             :aria-selected="s.pid === pinnedPid"
           >
@@ -74,6 +74,7 @@
                 <span class="row-main">
                   {{ s.label }}
                   <span v-if="s.pid === resolvedPid && pinnedPid === null" class="row-tag">auto</span>
+                  <span v-if="waitingGlowOn && s.state === 'ready'" class="row-tag tag-waiting">waiting</span>
                 </span>
                 <span class="row-sub">{{ rowSub(s) }}</span>
               </span>
@@ -126,6 +127,7 @@ import { computed, ref, toRef } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useSettingsStore } from '@/stores/settings'
 import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
 import {
   profileSessionMarker,
@@ -143,6 +145,7 @@ import {
 const props = defineProps<{ scene: Scene | null }>()
 
 const dashboardStore = useDashboardStore()
+const settingsStore = useSettingsStore()
 const {
   profile,
   stateEntry,
@@ -166,11 +169,19 @@ const {
   sessionRows,
   pinnedPid,
   resolvedPid,
+  effectiveSession,
   targetLabel,
   refresh: refreshTargets,
   setTarget,
   identify,
 } = useAgentTargets(sessionMarker)
+
+// DL-080: the "waiting" cue the edge glow announces globally; here the chip
+// and its picker row point at WHICH session is idle.
+const waitingGlowOn = computed(() => settingsStore.agentWaitingGlowEnabled !== false)
+const showWaitingHint = computed(() =>
+  waitingGlowOn.value && effectiveSession.value?.state === 'ready'
+)
 const targetOpen = ref(false)
 const chipRef = ref<HTMLElement | null>(null)
 const popStyle = ref<Record<string, string>>({})
@@ -315,6 +326,16 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   color: color-mix(in srgb, var(--agent-accent) 80%, #e5e7eb);
 }
 
+.agent-target-chip.waiting {
+  border-color: #22c55e;
+  animation: chip-waiting-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes chip-waiting-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25), 0 0 10px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.45), 0 0 18px rgba(34, 197, 94, 0.55); }
+}
+
 .agent-target-chip:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -369,6 +390,16 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 
 .agent-target-row.active {
   background: color-mix(in srgb, var(--agent-accent) 18%, transparent);
+}
+
+.agent-target-row.waiting {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.tag-waiting {
+  background: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+  animation: agent-pulse 2.4s ease-in-out infinite;
 }
 
 /* The row is a container: row-pick selects, row-locate flashes the window. */
