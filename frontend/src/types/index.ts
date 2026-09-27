@@ -223,6 +223,9 @@ export interface Profile {
   avatar?: string // URL or path to avatar image/gif
   scenes: Scene[]
   dockedButtons?: Button[] // Buttons that persist across all scenes
+  /** Factory seed keys already added or already present (DL-079) — makes the
+      missing-scene backfill one-shot so a deleted seed stays deleted. */
+  factorySeedsApplied?: string[]
   theme: string
   settings?: ProfileSettings
   created_at?: string

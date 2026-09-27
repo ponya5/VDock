@@ -1289,6 +1289,15 @@
                     <label class="switch"><span class="sr-only">Agent attention alerts</span><input type="checkbox" :checked="settingsStore.agentAlertsEnabled" @change="toggleAgentAlerts" /><span class="track"></span></label>
                   </div>
                 </div>
+                <div class="row">
+                  <div class="row-text">
+                    <span class="label">Glow when an agent is waiting</span>
+                    <p>Pulses a green edge-glow around the screen while you're on an agent scene whose session sits idle — and flags the idle session in the status bar.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="switch"><span class="sr-only">Agent waiting glow</span><input type="checkbox" :checked="settingsStore.agentWaitingGlowEnabled" @change="toggleWaitingGlow" /><span class="track"></span></label>
+                  </div>
+                </div>
                 <div v-for="hookAgent in AGENT_HOOK_TARGETS" :key="hookAgent.id" class="row">
                   <div class="row-text">
                     <span class="label">{{ hookAgent.label }} hook</span>
@@ -2759,6 +2768,10 @@ const agentHooks = reactive<Record<HookAgentId, AgentHookState>>({
 
 function toggleAgentAlerts() {
   settingsStore.agentAlertsEnabled = !settingsStore.agentAlertsEnabled
+}
+
+function toggleWaitingGlow() {
+  settingsStore.agentWaitingGlowEnabled = !settingsStore.agentWaitingGlowEnabled
 }
 
 function agentHookButtonLabel(agent: HookAgentId): string {

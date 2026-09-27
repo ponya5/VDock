@@ -86,12 +86,14 @@ describe('sceneAppIsLive behavior', () => {
                 profiles: [
                   {
                     id: 'claude-code',
+                    label: 'Claude Code',
                     exes: ['windowsterminal.exe'],
                     commands: [{ id: 'cc_prompt' }, { id: 'cc_interrupt' }],
                     action_types: ['claude_prompt', 'claude_slash'],
                   },
                   {
                     id: 'cursor',
+                    label: 'Cursor',
                     exes: ['cursor.exe'],
                     commands: [{ id: 'cursor_chat' }],
                   },
@@ -162,5 +164,34 @@ describe('sceneAppIsLive behavior', () => {
     expect(svc.sceneAppProfile(claudeScene as any)?.id).toBe('claude-code')
     expect(svc.sceneAppProfile(sceneWith({ triggeredByApp: 'Cursor.exe' }) as any)?.id).toBe('cursor')
     expect(svc.sceneAppProfile(sceneWith({}) as any)).toBeNull()
+  })
+
+  // DL-079: the 'Claude' assistant template stamps appId 'claude' — the
+  // claude_pack plugin id, not a profile id. Without the alias that stamp
+  // dead-ended resolution (and shadowed the vote/exe fallbacks), so scenes
+  // added that way never showed the agent bar.
+  it('resolves a stamped plugin/template id via the alias map', async () => {
+    const svc = await loadService()
+    expect(svc.sceneAppProfile(sceneWith({ appId: 'claude' }) as any)?.id).toBe('claude-code')
+    expect(svc.sceneAppIsLive(sceneWith({ appId: 'claude' }) as any)).toBe(true)
+  })
+
+  it('falls through a stamped id that names no profile', async () => {
+    const svc = await loadService()
+    const scene = sceneWith({
+      appId: 'spotify',
+      pages: [{ buttons: [{ action: { type: 'cc_prompt' } }] }],
+    })
+    expect(svc.sceneAppProfile(scene as any)?.id).toBe('claude-code')
+  })
+
+  it('resolves a scene named after an IDE or agent', async () => {
+    const svc = await loadService()
+    expect(svc.sceneAppProfile(sceneWith({ name: 'Cursor' }) as any)?.id).toBe('cursor')
+    expect(svc.sceneAppProfile(sceneWith({ name: 'Claude Code' }) as any)?.id).toBe('claude-code')
+    // 'Claude' is an alias key for claude-code — same resolution a stamped
+    // 'claude' appId gets.
+    expect(svc.sceneAppProfile(sceneWith({ name: 'Claude' }) as any)?.id).toBe('claude-code')
+    expect(svc.sceneAppProfile(sceneWith({ name: 'My Cursor tricks' }) as any)).toBeNull()
   })
 })

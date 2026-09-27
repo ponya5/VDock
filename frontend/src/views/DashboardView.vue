@@ -90,6 +90,7 @@
             />
           </div>
         </template>
+        <AgentWaitingGlow :scene="currentScene" />
 
         <div v-if="!currentPage" class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
@@ -214,6 +215,7 @@ import QuickAddPicker from '@/components/QuickAddPicker.vue'
 import OnScreenKeypad from '@/components/OnScreenKeypad.vue'
 import RotateToLandscape from '@/components/RotateToLandscape.vue'
 import AgentActionBar from '@/components/AgentActionBar.vue'
+import AgentWaitingGlow from '@/components/AgentWaitingGlow.vue'
 import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'

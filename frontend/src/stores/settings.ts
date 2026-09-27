@@ -63,6 +63,7 @@ export const SETTINGS_DEFAULTS = {
   dashboardFont: 'default' as const,
   appScanningEnabled: false,
   agentAlertsEnabled: true,
+  agentWaitingGlowEnabled: true,
   tutorialCompleted: false,
   activeProfileId: null as string | null,
   pressSoundEnabled: true,
@@ -116,6 +117,7 @@ export interface PersistedUserSettings {
   dashboardFont: 'default' | 'editorial' | 'mono'
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
+  agentWaitingGlowEnabled: boolean
   tutorialCompleted: boolean
   /**
    * Id of the profile most recently loaded on ANY window/device connected to
@@ -229,6 +231,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   const appScanningEnabled = ref(false)
   const agentAlertsEnabled = ref(true)
+  // Edge-glow on agent scenes while a session sits idle (DL-080).
+  const agentWaitingGlowEnabled = ref(true)
   // Persisted onboarding flag — true once the tour is finished or skipped.
   // Server-backed (not localStorage) so it survives cache clears and is
   // shared by every window/device on this backend.
@@ -374,6 +378,7 @@ export const useSettingsStore = defineStore('settings', () => {
       dashboardFont: dashboardFont.value,
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
+      agentWaitingGlowEnabled: agentWaitingGlowEnabled.value,
       tutorialCompleted: tutorialCompleted.value,
       activeProfileId: activeProfileId.value,
       pressSoundEnabled: pressSoundEnabled.value,
@@ -431,6 +436,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
+    if (settings.agentWaitingGlowEnabled !== undefined) agentWaitingGlowEnabled.value = settings.agentWaitingGlowEnabled
     if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
     if (settings.activeProfileId !== undefined) activeProfileId.value = settings.activeProfileId
     if (settings.pressSoundEnabled !== undefined) pressSoundEnabled.value = settings.pressSoundEnabled
@@ -494,6 +500,7 @@ export const useSettingsStore = defineStore('settings', () => {
         dashboardFont: settings.dashboardFont ?? 'default',
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
+        agentWaitingGlowEnabled: settings.agentWaitingGlowEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
         activeProfileId: settings.activeProfileId ?? null,
         pressSoundEnabled: settings.pressSoundEnabled ?? true,
@@ -656,6 +663,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverLayout,
       appScanningEnabled,
       agentAlertsEnabled,
+      agentWaitingGlowEnabled,
       tutorialCompleted,
       activeProfileId,
       pressSoundEnabled,
@@ -866,6 +874,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dashboardFont,
     appScanningEnabled,
     agentAlertsEnabled,
+    agentWaitingGlowEnabled,
     tutorialCompleted,
     activeProfileId,
     pressSoundEnabled,
