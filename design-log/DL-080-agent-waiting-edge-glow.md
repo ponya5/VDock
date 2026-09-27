@@ -45,7 +45,10 @@ Landed as designed:
 
 - `components/AgentWaitingGlow.vue` (new) — teleported fixed edge-glow,
   breathing green pulse while `ready`, static under `prefers-reduced-motion`
-  and `animationsEnabled: false`, hidden in edit mode.
+  and `animationsEnabled: false`, hidden in edit mode; `role="status"` +
+  aria-label announce the waiting agent.
+  - Deviation: mounts via `v-if` (breathing starts on insert) rather than a
+    Vue `<Transition>` fade — visually equivalent, one less lifecycle.
 - `views/DashboardView.vue` — glow mounted beside the bar/console so desktop
   and mobile layouts share it.
 - `components/AgentActionBar.vue` — `waiting` pulse on the target chip when
