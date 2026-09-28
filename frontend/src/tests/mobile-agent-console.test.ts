@@ -184,93 +184,104 @@ describe('MobileAgentConsole', () => {
     expect(executeButtonAction).toHaveBeenCalledWith(expect.objectContaining({ id: 'review' }))
   })
 
-  // --- DL-071: session target strip ---------------------------------------
+  // --- DL-071: session target picker ---------------------------------------
 
   const TWO_SESSIONS = [
     { pid: 100, hwnd: 9001, title: 'wt A', cwd: 'C:\\repos\\projA', project: 'projA', state: 'working' },
     { pid: 200, hwnd: 9002, title: 'wt B', cwd: 'C:\\repos\\projB', project: 'projB', state: 'ready', prompted: true },
   ]
 
-  it('hides the session strip only when no sessions exist', () => {
+  function profileWithMarker() {
     sessionState.profile.value = {
       id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
       status_source: 'claude', commands: [{ session_marker: 'claude' }],
     } as AppProfileDto
-    // Zero sessions → hidden; one session → strip shows the current target.
-    expect(mountConsole().find('.mac-sessions').exists()).toBe(false)
+  }
+
+  /** The picker's listbox is teleported to <body> — query the DOM, and when
+      an earlier test left a popover open take the newest one. */
+  async function openPicker(wrapper: ReturnType<typeof mountConsole>) {
+    await wrapper.find('.agent-target-chip').trigger('click')
+    const pops = document.body.querySelectorAll('.agent-target-pop')
+    const pop = pops[pops.length - 1] as HTMLElement
+    return {
+      rows: [...pop.querySelectorAll('.agent-target-row')] as HTMLElement[],
+      picks: [...pop.querySelectorAll('.row-pick')] as HTMLElement[],
+    }
+  }
+
+  it('hides the session chip only when no sessions exist', () => {
+    profileWithMarker()
+    // Zero sessions → hidden; one session → chip shows the current target.
+    expect(mountConsole().find('.agent-target-chip').exists()).toBe(false)
     targetState.sessions.value = [TWO_SESSIONS[0]]
-    expect(mountConsole().find('.mac-sessions').exists()).toBe(true)
+    expect(mountConsole().find('.agent-target-chip').exists()).toBe(true)
   })
 
-  it('lists sessions and pins the tapped one', async () => {
-    sessionState.profile.value = {
-      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
-      status_source: 'claude', commands: [{ session_marker: 'claude' }],
-    } as AppProfileDto
+  it('lists sessions in the sheet and pins the tapped one', async () => {
+    profileWithMarker()
     targetState.sessions.value = TWO_SESSIONS
     targetState.resolvedPid.value = 200
 
     const wrapper = mountConsole()
-    const chips = wrapper.findAll('.mac-session')
-    expect(chips).toHaveLength(3) // Auto + 2 sessions
-    expect(chips[0].text()).toContain('Auto')
-    expect(chips[1].text()).toContain('projA')
-    expect(chips[2].text()).toContain('projB')
+    const { rows, picks } = await openPicker(wrapper)
+    expect(rows).toHaveLength(3) // Auto + 2 sessions
+    expect(rows[0].textContent).toContain('Auto')
+    expect(rows[1].textContent).toContain('projA')
+    expect(rows[2].textContent).toContain('projB')
+    // The auto-resolved session carries the marker while nothing is pinned.
+    expect(rows[2].querySelector('.row-tag')?.textContent).toBe('auto')
 
-    await chips[2].trigger('click')
+    picks[2].click()
+    await flushPromises()
     expect(setTargetMock).toHaveBeenCalledWith(200)
     // Pinning flashes the real window — "this one" made visible.
     expect(identifyMock).toHaveBeenCalledWith(200)
   })
 
   it('tapping the pinned session releases back to Auto', async () => {
-    sessionState.profile.value = {
-      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
-      status_source: 'claude', commands: [{ session_marker: 'claude' }],
-    } as AppProfileDto
+    profileWithMarker()
     targetState.sessions.value = TWO_SESSIONS
     targetState.pinnedPid.value = 100
 
     const wrapper = mountConsole()
-    const pinned = wrapper.findAll('.mac-session')[1]
-    expect(pinned.classes()).toContain('active')
+    const { rows, picks } = await openPicker(wrapper)
+    expect(rows[1].classList.contains('active')).toBe(true)
 
-    await pinned.trigger('click')
+    picks[1].click()
+    await flushPromises()
     expect(setTargetMock).toHaveBeenCalledWith(null)
     // Releasing to Auto doesn't flash anything — nothing was armed.
     expect(identifyMock).not.toHaveBeenCalled()
   })
 
   it('tapping Auto unpins without flashing', async () => {
-    sessionState.profile.value = {
-      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
-      status_source: 'claude', commands: [{ session_marker: 'claude' }],
-    } as AppProfileDto
+    profileWithMarker()
     targetState.sessions.value = TWO_SESSIONS
     targetState.pinnedPid.value = 100
 
     const wrapper = mountConsole()
-    await wrapper.findAll('.mac-session')[0].trigger('click')
+    const { picks } = await openPicker(wrapper)
+    picks[0].click()
+    await flushPromises()
     expect(setTargetMock).toHaveBeenCalledWith(null)
     expect(identifyMock).not.toHaveBeenCalled()
   })
 
   // --- DL-080 follow-up: idle sessions get the waiting ring ---------------
 
-  it('rings idle sessions with the waiting class and drops it when the setting is off', () => {
-    sessionState.profile.value = {
-      id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt',
-      status_source: 'claude', commands: [{ session_marker: 'claude' }],
-    } as AppProfileDto
+  it('rings idle sessions with the waiting class and drops it when the setting is off', async () => {
+    profileWithMarker()
     targetState.sessions.value = TWO_SESSIONS
 
     const wrapper = mountConsole()
-    const chips = wrapper.findAll('.mac-session')
-    expect(chips[1].classes()).not.toContain('waiting')
-    expect(chips[2].classes()).toContain('waiting')
+    const { rows } = await openPicker(wrapper)
+    expect(rows[1].classList.contains('waiting')).toBe(false)
+    expect(rows[2].classList.contains('waiting')).toBe(true)
 
     settingsState.agentWaitingGlowEnabled.value = false
     const off = mountConsole()
-    expect(off.findAll('.mac-session')[2].classes()).not.toContain('waiting')
+    const { rows: offRows } = await openPicker(off)
+    expect(offRows[2].classList.contains('waiting')).toBe(false)
   })
 })

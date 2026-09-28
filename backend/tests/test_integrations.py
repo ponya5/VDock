@@ -340,6 +340,26 @@ def test_command_is_refused_when_no_target_window_exists(mocker):
     macro.assert_not_called()
 
 
+def test_missing_window_message_points_at_the_template_card(mocker):
+    """DL-084 follow-up: the failure must say WHERE to set the launch
+    path — the app's template card gear — not just that no window was
+    found."""
+    mocker.patch(
+        'integrations.editor_base.window_focus.focus_app_window',
+        return_value=False)
+    mocker.patch('integrations.editor_base.MacroAction')
+
+    result = CursorPlugin().execute_action('cursor_composer', {})
+
+    assert result['success'] is False
+    assert 'cursor.exe' in result['message']
+    # The editor_label turns the pointer into "the Cursor template card".
+    assert 'Cursor' in result['message']
+    assert 'template card' in result['message']
+    assert 'gear' in result['message']
+    assert result['details']
+
+
 def test_focus_first_can_be_disabled(mocker):
     focus = mocker.patch(
         'integrations.editor_base.window_focus.focus_app_window')

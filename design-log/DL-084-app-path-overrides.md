@@ -193,3 +193,44 @@ Antigravity installed):
   `--version` works, GUI never stays up, no crash event. App-side
   issue, not the retry path. The retry correctly refused after the
   refocus check failed.
+
+## Follow-up (2026-09-28): "No <exe> window found" names the fix path
+
+**Ask:** the launch-retry toast read "New agent failed — No cursor.exe
+window found" with no pointer at the fix. The guidance already existed
+but sat in `details`, which never reached the user: the desktop caller
+read `result.data?.details` (the backend returns `details` at top
+level, alongside `data`) and `MobileAgentConsole.runShortcut` dropped
+it entirely. The toast's Details toggle was always empty.
+
+**Design:** put the actionable pointer in `message` itself (the toast
+always renders it): `No cursor.exe window found — Cursor is not
+running. Start it, or set the launch path on the Cursor template card
+(Settings → Templates → gear icon) so this button can launch it for
+you.` `editor_base.send()` gains an `editor_label` param so the pointer
+names the actual template ("Cursor", "VS Code"); phrase-like labels
+('a terminal window') fall back to the exe name. Front-end fixes:
+`ActionResult.details` added to the type; `showActionResult` reads
+`result.details` (string) before the legacy `data.details` nesting;
+`runShortcut` forwards details to the toast.
+
+### Implementation Results (2026-09-28 follow-up)
+
+- `editor_base.send()` gained `editor_label`; `KeystrokeEditorPlugin.
+  execute_action` passes `self.editor_label` — "Cursor" for cursor pack,
+  "VS Code" for vscode/copilot, etc. Phrase labels ('a terminal window')
+  fall back to the exe name so the template pointer stays readable.
+- The not-running failure now reads, e.g.: "No cursor.exe window found —
+  Cursor is not running. Start it, or set the launch path on the Cursor
+  template card (Settings → Templates → gear icon) so this button can
+  launch it for you." Details explain the auto-launch-retry.
+- `ActionResult.details` added to the frontend type;
+  `showActionResult` reads top-level `result.details` (falling back to a
+  string `data.details`); `MobileAgentConsole.runShortcut` forwards it —
+  the toast's Details toggle finally has content. The agent bar's
+  runAction already surfaced `details`; the long-job path forwards the
+  stored result dict unchanged, so `details` rides through.
+- New backend test pins the pointer ('cursor.exe' + 'Cursor' +
+  'template card' + 'gear' in message).
+- Verified: 58/58 integrations + 35/35 session-targeting/keymap backend
+  tests, 11/11 mobile-console tests, `vue-tsc` clean, `dist` rebuilt.

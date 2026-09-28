@@ -81,6 +81,24 @@ def _read_port(env_file: Path, key: str, default: int) -> int:
 DEFAULT_BACKEND_PORT = _read_port(BACKEND_PATH / ".env", "PORT", 5000)
 DEFAULT_FRONTEND_PORT = _read_port(FRONTEND_PATH / ".env", "VITE_PORT", 3000)
 
+FRONTEND_DIST_INDEX = FRONTEND_PATH / "dist" / "index.html"
+
+
+def production_frontend_available() -> bool:
+    """True when the built bundle can be served by the backend instead of
+    starting the Vite dev server.
+
+    Daily/production launches load `dist` from Flask — the same artifact the
+    touch panel and LAN devices already get — so no npm/vite console ever
+    appears and nothing says "dev server". Setting VDOCK_DEV_SERVER=1 opts
+    back into hot-reload development mode (launch.bat documents it).
+    """
+    if os.environ.get("VDOCK_DEV_SERVER", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    ):
+        return False
+    return FRONTEND_DIST_INDEX.exists()
+
 
 def load_user_settings_file() -> dict:
     """Load persisted UI settings written by the VDock backend."""
@@ -545,6 +563,12 @@ def launch_electron():
         # bind the port and loop retrying forever in the background.
         electron_env["VDOCK_SKIP_BACKEND_SPAWN"] = "1"
 
+        # Production launches (dist built, launcher skipped Vite) tell
+        # Electron to load the backend-served bundle instead of looking for
+        # the dev server — repo checkouts otherwise always read as isDev.
+        if production_frontend_available():
+            electron_env["VDOCK_PRODUCTION"] = "1"
+
         subprocess.Popen(
             [npx, "electron", "."],
             cwd=str(electron_dir),
@@ -564,7 +588,11 @@ def launch_electron():
 def open_browser():
     """Open VDock in default browser (fallback when Electron is unavailable)."""
     time.sleep(2)
-    frontend_url = f"http://localhost:{DEFAULT_FRONTEND_PORT}"
+    frontend_url = (
+        f"http://localhost:{DEFAULT_BACKEND_PORT}"
+        if production_frontend_available()
+        else f"http://localhost:{DEFAULT_FRONTEND_PORT}"
+    )
     try:
         webbrowser.open(frontend_url)
         print(f"[OK] Opening VDock in browser at {frontend_url}")
@@ -613,14 +641,21 @@ def main():
     if not ensure_fresh_backend(venv):
         return False
 
-    if not ensure_fresh_frontend():
-        return False
-
-    frontend_url = f"http://localhost:{DEFAULT_FRONTEND_PORT}"
-    print(f"  Waiting for frontend at {frontend_url} ...")
-    if not wait_for_url(frontend_url, timeout_seconds=60):
-        print("[WARN] Frontend did not respond in time. Check log:")
-        print(f"       {FRONTEND_LOG}")
+    # Production: the backend serves frontend/dist — no Vite dev server
+    # process, no second console, no "dev server" wording. Frontend
+    # development opts back in via VDOCK_DEV_SERVER=1.
+    production_mode = production_frontend_available()
+    if production_mode:
+        app_url = f"http://localhost:{DEFAULT_BACKEND_PORT}"
+        print("[OK] Frontend: serving the built bundle via the backend")
+    else:
+        if not ensure_fresh_frontend():
+            return False
+        app_url = f"http://localhost:{DEFAULT_FRONTEND_PORT}"
+        print(f"  Waiting for frontend at {app_url} ...")
+        if not wait_for_url(app_url, timeout_seconds=60):
+            print("[WARN] Frontend did not respond in time. Check log:")
+            print(f"       {FRONTEND_LOG}")
 
     electron_ok = launch_electron()
     if not electron_ok:
@@ -632,7 +667,10 @@ def main():
     print("  VDock Started Successfully!")
     print("=" * 50)
     print(f"\nBackend:  http://localhost:{DEFAULT_BACKEND_PORT}")
-    print(f"Frontend: {frontend_url}")
+    if production_mode:
+        print(f"App:      {app_url} (built bundle)")
+    else:
+        print(f"Frontend: {app_url} (Vite dev server)")
     if electron_ok:
         print("\nElectron is running full-screen on your smallest display.")
         print("Use the 'Full Screen' button in the header to toggle window chrome.")

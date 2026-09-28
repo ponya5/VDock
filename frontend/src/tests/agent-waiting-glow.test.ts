@@ -394,10 +394,12 @@ describe('MobileDeckChrome + MobileAgentConsole waiting wiring', () => {
     expect(chrome).toContain('loadProfileMaps()')
   })
 
-  it('rings idle session chips in the mobile console', () => {
-    const console = readFileSync(resolve(__dirname, '../components/MobileAgentConsole.vue'), 'utf-8')
-    expect(console).toContain("waiting: waitingGlowOn && s.state === 'ready' && s.prompted === true")
-    expect(console).toContain('.mac-session.waiting')
+  it('rings idle session rows in the shared session picker', () => {
+    // The waiting ring moved with the picker into AgentSessionPicker.vue
+    // (DL-071 follow-up) — AgentActionBar and MobileAgentConsole share it.
+    const picker = readFileSync(resolve(__dirname, '../components/AgentSessionPicker.vue'), 'utf-8')
+    expect(picker).toContain("waiting: waitingGlowOn && s.state === 'ready' && s.prompted === true")
+    expect(picker).toContain('.agent-target-row.waiting')
   })
 })
 

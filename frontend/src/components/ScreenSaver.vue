@@ -11,11 +11,14 @@
          (WebGL/CSS effects) mount directly; a scrim keeps text readable. -->
     <div v-if="hasCustomBg" class="ss-bg" :class="ssBgClass" :style="ssBgStyle"></div>
     <BackgroundHost
-      v-if="ssBgComponent"
+      v-if="ssBgComponent && ssBgFailedId !== ssBgId"
       :component="ssBgComponent"
       class="ss-bg-component"
       @error="onSsBgError"
     />
+    <!-- A component bg that can't initialize (no WebGL) still leaves an
+         animated scene under the scrim, not the plain dark base. -->
+    <div v-if="ssBgComponent && ssBgFailedId === ssBgId" class="ss-bg bg-fallback-animated" aria-hidden="true"></div>
     <div v-if="hasCustomBg" class="ss-dim"></div>
 
     <div class="ss-glow"></div>
@@ -434,10 +437,13 @@ const ssBgComponent = computed(() => {
   return option.kind === 'component' ? option.component : null
 })
 // A failing component background (e.g. WebGL refused) is caught by
-// BackgroundHost and quietly unmounted — the dark base + dim scrim stay,
-// which is exactly the designed 'default' look.
+// BackgroundHost and swapped for the animated fallback layer — a device
+// without a GPU path still gets motion under the dim scrim. Keyed by id so
+// changing the background setting lets the new component try again.
+const ssBgFailedId = ref<string | null>(null)
 const onSsBgError = (err: unknown) => {
   console.warn('[screensaver] background component failed:', ssBgId.value, err)
+  ssBgFailedId.value = ssBgId.value
 }
 
 // Drift state is declared up here because the layout-edit watcher below

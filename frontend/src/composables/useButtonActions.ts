@@ -48,7 +48,10 @@ export function useButtonActions() {
       notificationsStore.error(
         'Action Failed',
         result.message,
-        result.data?.details || undefined
+        // Backend sends `details` at top level; a few actions also nest a
+        // `details` key inside `data` — prefer the top-level string.
+        result.details ||
+        (typeof result.data?.details === 'string' ? result.data.details : undefined)
       )
     }
     

@@ -260,6 +260,10 @@ export interface PluginInfo {
 export interface ActionResult {
   success: boolean
   message: string
+  /** Top-level extra explanation the backend sends on failure — shown in
+      the toast's Details toggle. (Some actions also nest a `details` key
+      inside `data`; readers prefer this field.) */
+  details?: string
   data?: Record<string, any>
 }
 

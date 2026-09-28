@@ -137,3 +137,51 @@ base), and the Settings preview (→ "Preview unavailable").
 - Frontend suite: **365 passed / 70 files** (1 known vitest-worker teardown
   flake in `property6_settings.test.ts`); `vue-tsc --noEmit` clean;
   `npm run build` clean, `dist/` rebuilt (75 precached entries).
+
+## Follow-up 2 (2026-09-28): animated fallback — the phone's "plain background" was the fallback working
+
+**Root cause found:** the user's phone (real device, LAN → dev server)
+showed a flat purple-pink gradient in landscape. That gradient IS
+`--color-background` (`#667eea→#764ba2`) — the `BackgroundHost` boundary
+was already catching a genuine WebGL init throw on the device and the
+designed `background-renderer__fallback` paints `--color-background`
+as its base layer. Confirmed live by nulling `getContext('webgl*')` on
+the prod build: console shows `unable to create webgl context` →
+`[background] fell back to gradient` → identical purple-pink surface.
+The phone's browser refuses WebGL entirely (OGL's own webgl2→webgl1
+fallback already ran — nothing shader-side can rescue it).
+
+**Design:** a failed component background shouldn't mean "no animation"
+— the user asked for the animated dashboard. `.bg-fallback-animated`
+(main.css) is the shared fallback: `--color-background` base + two
+layers of drifting radial accent blobs (~26s/34s alternate loops),
+`prefers-reduced-motion`-respecting. `BackgroundRenderer` uses it; the
+screensaver renders the same layer under its existing dim scrim when a
+component bg fails (`ssBgFailedId`, reset when the setting changes) —
+cheap CSS motion on devices that can't run a shader.
+
+### Implementation Results (follow-up 2)
+
+- `.bg-fallback-animated` added to `main.css` next to the other
+  dashboard-bg rules: `::before`/`::after` carry the two blob layers
+  (blue/violet + mint/pink radials at 0.16–0.24 alpha), transform-only
+  `bg-fallback-drift` loops, `prefers-reduced-motion` kills both.
+- `BackgroundRenderer.vue` — failure branch renders
+  `background-renderer__fallback bg-fallback-animated`; the scoped
+  `.background-renderer__fallback` rule keeps only `position:absolute;
+  inset:0` (scoped styles beat the shared class on `position`, so the
+  layer stays full-viewport).
+- `ScreenSaver.vue` — new `ssBgFailedId` ref; `BackgroundHost` unmounts
+  a failed component and `ss-bg bg-fallback-animated` mounts in its
+  place, still under `.ss-dim` — the saver keeps its dark readable look
+  but the blobs drift instead of sitting flat.
+- Settings preview intentionally unchanged: it already owns an explicit
+  "Preview unavailable on this device" state, which communicates the
+  failure better than silently showing a different animation.
+- Verified live on the prod build (Pixel 7 landscape): with
+  `HTMLCanvasElement.getContext` returning null for `webgl*`, switching
+  the background over the `vdock-settings-sync` channel mounts
+  `.bg-fallback-animated`, logs `fell back to gradient`, and the deck
+  stays fully usable.
+- `vue-tsc` clean; 365/365 frontend tests; `npm run build` → `dist/`
+  rebuilt (75 precached entries) so the panel and phones pick it up.

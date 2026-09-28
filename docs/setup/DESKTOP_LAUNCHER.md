@@ -31,8 +31,10 @@ When you double-click the launcher:
 1. ✓ Checks for Python and Node.js
 2. ✓ Verifies virtual environment is set up
 3. ✓ Starts backend server (port 5000)
-4. ✓ Starts frontend server (port 3000)
-5. ✓ Opens VDock in your browser automatically
+4. ✓ Serves the built frontend bundle through the backend — no separate
+   dev server or extra console (`frontend/dist` must exist; set
+   `VDOCK_DEV_SERVER=1` in `launch.bat` for hot-reload development)
+5. ✓ Opens VDock in Electron, or your browser if Electron isn't installed
 
 **First launch:** May take 10-30 seconds  
 **Subsequent launches:** ~10 seconds
