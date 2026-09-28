@@ -29,11 +29,13 @@ ALLOWED_USER_SETTING_KEYS = {
     'background',
     'uiBrightness',
     'toastLevel',
+    # DL-076 follow-up marker: separates inherited 'all' from a deliberate
+    # post-migration "All" pick so the one-shot migration fires only once.
+    'toastLevelMigrated',
     'touchMode',
     'minimumTouchTargetSize',
     'defaultGridRows',
     'defaultGridCols',
-    'startOnBoot',
     'openSettingsInNewTab',
     'recentActions',
     'weatherLocationMode',

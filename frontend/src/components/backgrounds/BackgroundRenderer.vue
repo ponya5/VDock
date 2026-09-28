@@ -1,11 +1,11 @@
 <template>
   <div class="background-renderer">
     <div v-if="failedId === current.id" class="background-renderer__fallback" />
-    <component
-      :is="current.component"
+    <BackgroundHost
       v-else-if="current.kind === 'component'"
       :key="current.id"
-      :on-error="onBackgroundError"
+      :component="current.component"
+      @error="onBackgroundError"
     />
   </div>
 </template>
@@ -14,6 +14,7 @@
 import { computed, ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { resolveBackground } from '@/data/backgrounds'
+import BackgroundHost from './BackgroundHost.vue'
 
 // Every component-kind background renders here, including the three that used
 // to live in DashboardView. One value, one owner: that is what stops the two

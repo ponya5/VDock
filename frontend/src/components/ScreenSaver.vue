@@ -10,7 +10,12 @@
          fight the base color for specificity. Component-kind entries
          (WebGL/CSS effects) mount directly; a scrim keeps text readable. -->
     <div v-if="hasCustomBg" class="ss-bg" :class="ssBgClass" :style="ssBgStyle"></div>
-    <component :is="ssBgComponent" v-if="ssBgComponent" class="ss-bg-component" />
+    <BackgroundHost
+      v-if="ssBgComponent"
+      :component="ssBgComponent"
+      class="ss-bg-component"
+      @error="onSsBgError"
+    />
     <div v-if="hasCustomBg" class="ss-dim"></div>
 
     <div class="ss-glow"></div>
@@ -285,6 +290,7 @@ import { useMarket } from '@/composables/useMarket'
 import { useSettingsStore } from '@/stores/settings'
 import { resolveBackground, DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
+import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
 import {
   defaultScreensaverLayout,
   type ScreensaverLayout,
@@ -427,6 +433,12 @@ const ssBgComponent = computed(() => {
   const option = resolveBackground(ssBgId.value)
   return option.kind === 'component' ? option.component : null
 })
+// A failing component background (e.g. WebGL refused) is caught by
+// BackgroundHost and quietly unmounted — the dark base + dim scrim stay,
+// which is exactly the designed 'default' look.
+const onSsBgError = (err: unknown) => {
+  console.warn('[screensaver] background component failed:', ssBgId.value, err)
+}
 
 // Drift state is declared up here because the layout-edit watcher below
 // (immediate: true) can zero it before the later section would run.

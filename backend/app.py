@@ -171,7 +171,7 @@ limiter.exempt(logs_bp)
 # Uploaded files are served through upload_bp — every <img> on the dashboard
 # (avatars, backgrounds, button icons) plus picker thumbnail grids count as
 # requests. Keep the upload POST write path limited, exempt the GET view and
-# the remaining local-read blueprints (asset catalogs, autostart/ports,
+# the remaining local-read blueprints (asset catalogs, ports/system,
 # templates, app-profiles) so browsing settings can't drain the quota.
 limiter.exempt(serve_uploaded_file)
 limiter.exempt(assets_bp)
