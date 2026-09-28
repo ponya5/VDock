@@ -186,6 +186,26 @@ def send(command: Command, text_override: Optional[str] = None,
                             command.target_exes,
                             prefer_title=command.window_title_hint,
                         )
+                elif focused is None:
+                    # Non-Windows (macOS/Linux): no window inspection — but
+                    # the same "app not running" case exists. When an
+                    # override is configured and no matching process is
+                    # alive, launch it, then wait for the app monitor
+                    # (~5s poll) to see the new foreground app so the
+                    # keystroke guard below can pass.
+                    from services import app_paths
+                    override = app_paths.override_for(*command.target_exes)
+                    if override:
+                        stems = [Path(e).stem.lower()
+                                 for e in command.target_exes]
+                        if not any(sessions.session_alive(s)
+                                   for s in stems):
+                            if app_paths.launch_app(override):
+                                deadline = time.time() + 7
+                                while time.time() < deadline:
+                                    if foreground_exe() in command.target_exes:
+                                        break
+                                    time.sleep(1.0)
                 if focused is False:
                     expected = ' or '.join(command.target_exes)
                     hint = (' Set the app\'s path under Templates → '

@@ -34,7 +34,14 @@
         :style="segmentSwipeStyle(i)"
         @click="selectScene(i)"
       >
-        <FontAwesomeIcon v-if="scene.icon" :icon="parseIcon(scene.icon)" class="mc-seg-icon" />
+        <img
+          v-if="segLogo(scene)"
+          :src="segLogo(scene)!"
+          class="mc-seg-logo"
+          alt=""
+          aria-hidden="true"
+        />
+        <FontAwesomeIcon v-else-if="scene.icon" :icon="parseIcon(scene.icon)" class="mc-seg-icon" />
         <span class="mc-seg-label">{{ scene.name }}</span>
         <span
           v-if="sceneAppIsLive(scene, appIntegrations) || sceneWaiting(scene)"
@@ -135,7 +142,7 @@ import { useElectron } from '@/composables/useElectron'
 import { refreshVdock } from '@/composables/useVdockRefresh'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useSettingsStore } from '@/stores/settings'
-import { startAppDetection, stopAppDetection, sceneAppIsLive, loadProfileMaps } from '@/services/appDetection'
+import { startAppDetection, stopAppDetection, sceneAppIsLive, sceneLogo, loadProfileMaps } from '@/services/appDetection'
 import { initAgentState } from '@/services/agentState'
 import { sceneAgentIsWaiting, sceneWaitingAgent } from '@/services/agentWaiting'
 import { sceneSwipe } from '@/services/sceneSwipe'
@@ -180,6 +187,11 @@ const waitingAlertsOn = computed(() => settingsStore.agentWaitingGlowEnabled !==
 
 function sceneWaiting(scene: Scene): boolean {
   return waitingAlertsOn.value && sceneAgentIsWaiting(scene, appIntegrations.value)
+}
+
+/** Gallery logo for the scene's app, or null → the FA icon renders. */
+function segLogo(scene: Scene): string | null {
+  return sceneLogo(scene, appIntegrations.value)
 }
 
 function parseIcon(iconValue: unknown) {
@@ -572,8 +584,8 @@ onUnmounted(() => {
   justify-content: center;
   gap: 7px;
   min-width: 72px;
-  min-height: 44px;
-  padding: 6px 12px;
+  min-height: 48px;
+  padding: 8px 12px;
   border: none;
   border-radius: 12px;
   background: transparent;
@@ -591,6 +603,16 @@ onUnmounted(() => {
 .mc-seg.is-active { color: #fff; }
 
 .mc-seg-icon { flex-shrink: 0; }
+
+/* App logo (DL-086) — smaller than desktop's 26px but still legible on a
+   phone rail. */
+.mc-seg-logo {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 5px;
+}
 
 .mc-seg-label {
   max-width: 96px;

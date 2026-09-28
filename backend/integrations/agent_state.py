@@ -22,13 +22,36 @@ STATE_WORKING = 'working'
 STATE_PERMISSION = 'permission'
 
 ALLOWED_STATES = frozenset({STATE_READY, STATE_WORKING, STATE_PERMISSION})
-ALLOWED_SOURCES = frozenset({'claude', 'cursor', 'devin', 'generic'})
+ALLOWED_SOURCES = frozenset(
+    {'claude', 'cursor', 'devin', 'antigravity', 'generic'}
+)
 
 #: Hooks that don't report a session id share this one.
 DEFAULT_SESSION_ID = 'default'
 
 #: A killed session never reports its end, so a state goes stale eventually.
 STATE_TTL_SECONDS = 30 * 60
+
+#: Sources backed by a detectable session process. 'generic' covers hooks
+#: with no identifiable agent — those keep TTL-only expiry.
+_LIVENESS_SOURCES = frozenset(
+    {'claude', 'cursor', 'devin', 'antigravity'}
+)
+
+#: Fresh entries beat a possibly-lagging process scan; only sessions whose
+#: every entry is older than this are prunable on a dead scan.
+_LIVENESS_GRACE_SECONDS = 90
+
+#: A process scan can miss an unusually-hosted agent (WSL, container) —
+#: require the scan to report dead continuously for this long first.
+_LIVENESS_DEAD_SECONDS = 60
+
+#: psutil scans take a few ms; cache per source so a burst of snapshot()
+#: calls doesn't rescan the process table.
+_ALIVE_CACHE_SECONDS = 10
+
+_alive_cache: Dict[str, tuple] = {}
+_dead_since: Dict[str, float] = {}
 
 MAX_PROMPT_CHARS = 2000
 MAX_REPLY_CHARS = 6000
@@ -105,6 +128,40 @@ def _drop_expired(now: float) -> None:
             del _sessions_by_source[source]
 
 
+def _source_alive(source: str, now: float) -> bool:
+    """Process-scan liveness for a marker-backed source, cached briefly."""
+    hit = _alive_cache.get(source)
+    if hit and now - hit[0] < _ALIVE_CACHE_SECONDS:
+        return hit[1]
+    from . import sessions as session_scan  # late: integrations init order
+    alive = session_scan.session_alive(source)
+    _alive_cache[source] = (now, alive)
+    return alive
+
+
+def _drop_dead(now: float) -> None:
+    """Drop marker-backed sources whose session process is provably gone.
+
+    A killed session never posts 'ended' — without this its `ready` entry
+    outlives the session by the whole TTL, telling the user an agent is
+    waiting for input that no longer exists (DL-080 follow-up #5).
+    """
+    for source in list(_sessions_by_source):
+        if source not in _LIVENESS_SOURCES:
+            continue
+        entries = _sessions_by_source[source]
+        if any(now - e.get('ts', 0) < _LIVENESS_GRACE_SECONDS for e in entries.values()):
+            _dead_since.pop(source, None)
+            continue
+        if _source_alive(source, now):
+            _dead_since.pop(source, None)
+            continue
+        first_dead = _dead_since.setdefault(source, now)
+        if now - first_dead >= _LIVENESS_DEAD_SECONDS:
+            del _sessions_by_source[source]
+            _dead_since.pop(source, None)
+
+
 def _combined(sessions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     newest_first = sorted(sessions.values(), key=lambda entry: entry['ts'], reverse=True)
     waiting_on_permission = [entry for entry in newest_first if entry['state'] == STATE_PERMISSION]
@@ -117,6 +174,7 @@ def snapshot() -> Dict[str, Dict[str, Any]]:
     now = time.time()
     with _lock:
         _drop_expired(now)
+        _drop_dead(now)
         return {
             source: _combined(sessions)
             for source, sessions in _sessions_by_source.items()
@@ -136,6 +194,7 @@ def session_entries(source: str) -> List[Dict[str, Any]]:
     now = time.time()
     with _lock:
         _drop_expired(now)
+        _drop_dead(now)
         return [dict(e) for e in _sessions_by_source.get(source, {}).values()]
 
 
@@ -143,3 +202,5 @@ def reset() -> None:
     """Drop all states (tests)."""
     with _lock:
         _sessions_by_source.clear()
+        _alive_cache.clear()
+        _dead_since.clear()

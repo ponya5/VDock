@@ -84,6 +84,33 @@ const aiAssistants: AppTemplate[] = [
   ]},
 ]
 const aiCoding: AppTemplate[] = [
+  { id: "antigravity", name: "Antigravity", description: "Google Antigravity IDE agent controls", icon: ["fas","rocket"], logo: "/logos/antigravity-color.png", color: "#8b5cf6", buttons: [
+    // Live controls: keystrokes into the focused Antigravity window.
+    { label: "Agent Panel", icon: ["fas","comments"], action: { type: "antigravity_agent", config: {} }, tooltip: "Show/hide the agent panel (Ctrl+L)" },
+    { label: "New Chat", icon: ["fas","plus"], action: { type: "antigravity_new_thread", config: {} }, tooltip: "New conversation thread (Ctrl+Shift+L)" },
+    { label: "Submit", icon: ["fas","paper-plane"], action: { type: "antigravity_submit", config: {} }, tooltip: "Send the typed prompt" },
+    { label: "Continue", icon: ["fas","forward"], action: { type: "antigravity_followup", config: { text: "continue" } }, tooltip: "Type \"continue\" and send it" },
+    { label: "Stop", icon: ["fas","hand"], action: { type: "antigravity_stop", config: {} }, tooltip: "Halt the running agent (Esc)" },
+    { label: "Manager", icon: ["fas","table-columns"], action: { type: "antigravity_manager", config: {} }, tooltip: "Toggle Editor ↔ Agent Manager (Ctrl+E)" },
+    { label: "Inline Cmd", icon: ["fas","wand-magic-sparkles"], action: { type: "antigravity_inline", config: {} }, tooltip: "Inline AI command (Ctrl+I)" },
+    { label: "Terminal", icon: ["fas","terminal"], action: { type: "antigravity_toggle_terminal", config: {} }, tooltip: "Toggle terminal (Ctrl+`)" },
+    { label: "Quick Open", icon: ["fas","magnifying-glass"], action: { type: "antigravity_quick_open", config: {} }, tooltip: "Jump to a file (Ctrl+P)" },
+    { label: "Open Antigravity", icon: ["fas","window-maximize"], action: prog("antigravity"), tooltip: "Launch the Antigravity app" },
+  ]},
+  { id: "cursor", name: "Cursor", description: "Cursor AI editor agent controls", icon: ["fas","i-cursor"], color: "#000000", buttons: [
+    // Live controls: keystrokes into the focused Cursor window.
+    { label: "New Agent", icon: ["fas","paper-plane"], action: { type: "cursor_prompt", config: {} }, tooltip: "New agent chat + prompt (Ctrl+Shift+L)" },
+    { label: "Continue", icon: ["fas","forward"], action: { type: "cursor_followup", config: { text: "continue" } }, tooltip: "Type \"continue\" and send it" },
+    { label: "Submit", icon: ["fas","check"], action: { type: "cursor_submit", config: {} }, tooltip: "Send the typed prompt" },
+    { label: "Stop", icon: ["fas","hand"], action: { type: "cursor_cancel", config: {} }, tooltip: "Cancel generation (Ctrl+Shift+Backspace)" },
+    { label: "Chat", icon: ["fas","comments"], action: { type: "cursor_chat", config: {} }, tooltip: "Toggle chat pane (Ctrl+L)" },
+    { label: "Composer", icon: ["fas","wand-magic-sparkles"], action: { type: "cursor_composer", config: {} }, tooltip: "Open Composer (Ctrl+I)" },
+    { label: "Inline Edit", icon: ["fas","pen"], action: { type: "cursor_inline_edit", config: {} }, tooltip: "Edit selection with AI (Ctrl+K)" },
+    { label: "Accept", icon: ["fas","check-double"], action: { type: "cursor_accept", config: {} }, tooltip: "Accept diff (Ctrl+Enter)" },
+    { label: "Reject", icon: ["fas","xmark"], action: { type: "cursor_reject", config: {} }, tooltip: "Reject diff (Ctrl+Backspace)" },
+    { label: "Terminal", icon: ["fas","terminal"], action: { type: "cursor_toggle_terminal", config: {} }, tooltip: "Toggle terminal (Ctrl+`)" },
+    { label: "Open Cursor", icon: ["fas","window-maximize"], action: prog("cursor"), tooltip: "Launch the Cursor app" },
+  ]},
   { id: "claude-code", name: "Claude Code", description: "Anthropic Claude Code CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/claudecode-color.png", color: "#d97757", buttons: [
     // Live-session controls: keystrokes into the terminal running Claude Code.
     { label: "Submit", icon: ["fas","paper-plane"], action: { type: "cc_submit", config: {} }, tooltip: "Send the prompt you typed (Enter)" },
@@ -244,9 +271,6 @@ const aiPlatforms: AppTemplate[] = [
     { label: "Pull Model", icon: ["fas","download"], action: cmd("ollama pull llama3.2"), tooltip: "Pull a model" },
     { label: "Open WebUI", icon: ["fas","globe"], action: url("http://localhost:3000"), tooltip: "Open Ollama WebUI" },
   ]},
-  { id: "antigravity", name: "Antigravity", description: "Antigravity AI shortcuts", icon: ["fas","rocket"], logo: "/logos/antigravity-color.png", color: "#8b5cf6", buttons: [
-    { label: "Open Antigravity", icon: ["fas","arrow-up-right-from-square"], action: url("https://antigravity.ai"), tooltip: "Open Antigravity" },
-  ]},
   { id: "microsoft-ai", name: "Microsoft AI", description: "Microsoft AI tools shortcuts", icon: ["fab","microsoft"], logo: "/logos/microsoft-color.png", color: "#0078d4", buttons: [
     { label: "Copilot", icon: ["fas","robot"], action: url("https://copilot.microsoft.com"), tooltip: "Open Microsoft Copilot" },
     { label: "Azure AI", icon: ["fas","cloud"], action: url("https://ai.azure.com"), tooltip: "Open Azure AI Studio" },
@@ -265,8 +289,8 @@ const aiPlatforms: AppTemplate[] = [
   ]},
 ]
 export const templateCategories: TemplateCategory[] = [
-  { id: "ai-assistants", name: "AI Assistants", icon: ["fas","robot"], templates: aiAssistants },
   { id: "ai-coding", name: "AI Coding", icon: ["fas","terminal"], templates: aiCoding },
+  { id: "ai-assistants", name: "AI Assistants", icon: ["fas","robot"], templates: aiAssistants },
   { id: "ai-image-video", name: "AI Image & Video", icon: ["fas","image"], templates: aiImageVideo },
   { id: "design-creative", name: "Design & Creative", icon: ["fas","pen-nib"], templates: designCreative },
   { id: "automation-dev", name: "Automation & Dev", icon: ["fas","diagram-project"], templates: automationDev },

@@ -33,6 +33,7 @@ logger = logging.getLogger('vdock')
 # Editors that name the open project in their window title.
 EDITOR_EXECUTABLES = {
     'cursor.exe': 'Cursor',
+    'antigravity.exe': 'Antigravity',
     'code.exe': 'VS Code',
     'codium.exe': 'VSCodium',
     'idea64.exe': 'IntelliJ IDEA',

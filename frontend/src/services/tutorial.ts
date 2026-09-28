@@ -64,7 +64,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     // Desktop scene pills; the mobile/touch chrome swaps in a rail.
     target: '.enhanced-scene-nav, .mc-scene-rail',
     title: 'Scenes & Pages',
-    text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch; swipe up/down on the deck works too.',
+    text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch — or just swipe left/right anywhere on the deck.',
     placement: 'bottom',
     optional: true,
   },
@@ -72,7 +72,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     route: '/',
     target: '.deck-grid',
     title: 'Your Deck',
-    text: 'Tap a button to run its action — media controls, hotkeys, websites, agent commands. Swipe left/right for more pages.',
+    text: 'Tap a button to run its action — media controls, hotkeys, websites, agent commands. Scenes with more buttons get extra pages — flip them with the dots or ‹ › below.',
     placement: 'top',
     optional: true,
   },

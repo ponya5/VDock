@@ -53,6 +53,7 @@ export async function probeAppPath(key: string): Promise<string | null> {
  * `override_for` matches on).
  */
 export const launchApps: { key: string; label: string }[] = [
+  { key: 'antigravity', label: 'Antigravity' },
   { key: 'cursor', label: 'Cursor' },
   { key: 'code', label: 'VS Code' },
   { key: 'codium', label: 'VSCodium' },

@@ -133,6 +133,7 @@ vi.mock('@/services/appDetection', () => ({
   sceneAppIsLive: () => false,
   loadProfileMaps: vi.fn(async () => {}),
   sceneAppProfile: () => null,
+  sceneLogo: () => null,
 }))
 
 vi.mock('@/composables/useAppIntegrations', () => ({

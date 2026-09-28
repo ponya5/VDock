@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * Compact editor for one app's executable override (DL-084). Rendered as an
- * inline panel — from a template card's gear, or standalone in the "App
- * launch paths" settings row. The path persists via /api/config app_paths.
+ * Compact editor for one app's executable override (DL-084). Rendered inside
+ * the modal popup a template card's gear opens. The path persists via
+ * /api/config app_paths.
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { appPaths, saveAppPaths, probeAppPath } from '@/api/appPaths'
 import { useElectron } from '@/composables/useElectron'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -20,6 +20,12 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { isElectron, pickExecutable } = useElectron()
 const notifications = useNotificationsStore()
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') emit('close')
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const input = ref(appPaths[props.appKey] ?? '')
 const saving = ref(false)
@@ -79,7 +85,6 @@ async function detect() {
 
 <template>
   <div class="app-path-editor" @click.stop>
-    <label class="ape-label" :for="`ape-${appKey}`">{{ label }} executable</label>
     <div class="ape-row">
       <input
         :id="`ape-${appKey}`"
@@ -120,6 +125,9 @@ async function detect() {
         Reset to auto
       </button>
       <span class="ape-spacer" />
+      <button type="button" class="btn btn-secondary ape-btn" @click="emit('close')">
+        Close
+      </button>
       <button
         type="button"
         class="btn btn-primary ape-btn"
@@ -139,14 +147,9 @@ async function detect() {
   gap: 0.5rem;
 }
 
-.ape-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--vdock-text-secondary, rgba(255, 255, 255, 0.6));
-}
-
 .ape-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
 }
@@ -156,6 +159,14 @@ async function detect() {
   min-width: 0;
   font-size: 0.8rem;
   font-family: ui-monospace, monospace;
+}
+
+/* iOS Safari force-zooms focused inputs under 16px — match the global
+   coarse-pointer floor (scoped styles out-specify it otherwise). */
+@media (pointer: coarse) {
+  .ape-input {
+    font-size: clamp(16px, 1rem, 18px);
+  }
 }
 
 .ape-btn {
@@ -172,6 +183,7 @@ async function detect() {
 
 .ape-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
 }

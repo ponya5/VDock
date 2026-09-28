@@ -43,6 +43,17 @@ CURSOR_STATE_BY_EVENT = {
     'afterAgentResponse': 'working',
 }
 
+# Antigravity's stdin payload doesn't name the event — the installed
+# command pins it via --event. PostInvocation is still mid-loop (tool
+# calls follow), so only Stop means the agent went quiet.
+AGY_STATE_BY_EVENT = {
+    'PreInvocation': 'working',
+    'PreToolUse': 'working',
+    'PostToolUse': 'working',
+    'PostInvocation': 'working',
+    'Stop': 'ready',
+}
+
 #: Cursor events whose hooks must answer on stdout.
 CURSOR_REPLY_BY_EVENT = {
     'beforeSubmitPrompt': {'continue': True},
@@ -77,9 +88,11 @@ def _claude_notification_state(payload: Dict[str, Any]) -> str:
 
 def map_event(source: str, payload: Dict[str, Any]) -> Optional[str]:
     """The agent state an event implies, or None for unrelated events."""
-    event_name = str(payload.get('hook_event_name') or '')
+    event_name = str(payload.get('hook_event_name') or payload.get('event') or '')
     if source == 'cursor':
         return CURSOR_STATE_BY_EVENT.get(event_name)
+    if source == 'antigravity':
+        return AGY_STATE_BY_EVENT.get(event_name)
     if event_name == 'Notification':
         return _claude_notification_state(payload)
     return CLAUDE_STATE_BY_EVENT.get(event_name)
@@ -206,17 +219,23 @@ def _post(port: int, body: Dict[str, Any]) -> None:
         pass  # VDock not running or busy — the agent must not notice.
 
 
-def _parse_args() -> Tuple[int, str]:
+def _parse_args() -> Tuple[int, str, str]:
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=5000)
     parser.add_argument('--source', default='claude')
+    # Agents whose stdin payload doesn't name the event (Antigravity) pin
+    # it in the installed command instead.
+    parser.add_argument('--event', default='')
     args, _unknown = parser.parse_known_args()
-    return args.port, args.source
+    return args.port, args.source, args.event
 
 
 def main() -> int:
-    port, source = _parse_args()
+    port, source, pinned_event = _parse_args()
     payload = _read_payload()
+    if pinned_event:
+        payload.setdefault('hook_event_name', pinned_event)
+        payload['event'] = pinned_event
     event_name = str(payload.get('hook_event_name') or '')
 
     if source == 'cursor' and event_name in CURSOR_REPLY_BY_EVENT:

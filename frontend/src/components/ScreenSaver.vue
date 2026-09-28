@@ -1132,9 +1132,9 @@ onUnmounted(() => {
 
 .ss-market-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
 .ss-market-symbol {

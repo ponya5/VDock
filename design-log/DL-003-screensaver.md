@@ -385,3 +385,22 @@ screenshot `design-log/refs/ss-default-prismatic-*.png`.
 the Activation box — order is Activation → Background → Widgets, so the
 backdrop choice lands next to "what turns it on" instead of below the
 widget list.
+
+## Follow-up — flicker-free enter/exit fade
+
+The 2026-09-27 radial-mask dissolve (saver-bloom/saver-evaporate keyframes
+animating `mask-size`) read as flicker: the mask forced the full-viewport
+layer — including the WebGL Prismatic Burst canvas — to re-rasterize its
+masked output every frame, and mask compositing could lag a frame behind
+the animation producing a momentary unmasked flash.
+
+Replaced with composited properties only: `saver-in` 0.45s `--ease-out`
+(opacity 0→1, scale 1.025→1) and `saver-out` 0.3s `--ease-out`
+(opacity→0, scale→1.025 — the time-reverse exit). No mask at any point.
+Reduced-motion keeps the plain 0.25s opacity fade.
+
+**Verified:** triggered `show_screensaver` via the `vdock-ui-command`
+event and sampled computed style at ~30ms intervals — enter ramps
+opacity 0→0.87→0.95→0.98→1 monotonically with `mask: none`; exit ramps
+1→0 over ~300ms and unmounts cleanly. `vue-tsc` clean; screensaver
+tests pass; `dist` rebuilt.

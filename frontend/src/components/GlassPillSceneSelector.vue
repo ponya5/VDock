@@ -31,7 +31,14 @@
         @click="selectScene(i)"
         @keydown="onKeyDown($event, i)"
       >
-        <FontAwesomeIcon v-if="scene.icon" :icon="parseIcon(scene.icon)" class="segment-icon" />
+        <img
+          v-if="segLogo(scene)"
+          :src="segLogo(scene)!"
+          class="segment-logo"
+          alt=""
+          aria-hidden="true"
+        />
+        <FontAwesomeIcon v-else-if="scene.icon" :icon="parseIcon(scene.icon)" class="segment-icon" />
         <span class="segment-label">{{ scene.name }}</span>
         <!-- Green dot when the scene's app is actually running — so a Claude
              scene pill means "buttons will reach a live session", not just
@@ -72,12 +79,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
-import { startAppDetection, stopAppDetection, sceneAppIsLive, loadProfileMaps } from '@/services/appDetection'
+import { startAppDetection, stopAppDetection, sceneAppIsLive, sceneLogo, loadProfileMaps } from '@/services/appDetection'
 import { initAgentState } from '@/services/agentState'
 import { sceneAgentIsWaiting } from '@/services/agentWaiting'
 import { sceneSwipe } from '@/services/sceneSwipe'
@@ -128,22 +135,55 @@ function sceneWaiting(scene: Scene): boolean {
   return waitingAlertsOn.value && sceneAgentIsWaiting(scene, appIntegrations.value)
 }
 
+/** Gallery logo for the scene's app, or null → the FA icon renders. */
+function segLogo(scene: Scene): string | null {
+  return sceneLogo(scene, appIntegrations.value)
+}
+
 const pillRef = ref<HTMLElement | null>(null)
 const segmentRefs = ref<HTMLElement[]>([])
 const disableAnimation = ref(false)
 const focusedIndex = ref(0)
 
-const segmentPercent = computed(() => 100 / Math.max(props.scenes.length, 1))
-const segmentWidth = computed(() => `${segmentPercent.value}%`)
+/* Measured glider (ported from MobileDeckChrome): segments aren't equal
+   width — min-width, padding, the edit-mode badge lane — so a 100/N %
+   glider undershot wider pills and the active highlight covered only part
+   of the label (DL-086). Size it from the real segment box instead. */
+const gliderStyle = ref<Record<string, string>>({ opacity: '0' })
 
-const gliderStyle = computed(() => {
-  const safeIndex = Math.max(0, Math.min(props.currentSceneIndex, props.scenes.length - 1))
-  return {
-    width: segmentWidth.value,
-    transform: `translateX(${safeIndex * 100}%)`,
-    transition: disableAnimation.value ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+async function measureGlider() {
+  await nextTick()
+  const el = segmentRefs.value?.[props.currentSceneIndex] as HTMLElement | undefined
+  if (!el || !pillRef.value) {
+    gliderStyle.value = { opacity: '0' }
+    return
   }
+  // Glider's CSS `left` is 4px (the container padding) — translate accounts
+  // for it so it lands on the segment's real left edge.
+  gliderStyle.value = {
+    transform: `translateX(${el.offsetLeft - 4}px)`,
+    width: `${el.offsetWidth}px`,
+    opacity: '1',
+    transition: disableAnimation.value
+      ? 'none'
+      : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+  }
+  el.scrollIntoView?.({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+}
+
+let pillObserver: ResizeObserver | null = null
+onMounted(() => {
+  measureGlider()
+  if (typeof ResizeObserver !== 'undefined' && pillRef.value) {
+    pillObserver = new ResizeObserver(() => measureGlider())
+    pillObserver.observe(pillRef.value)
+  }
+  // Webfont arrival changes label widths — re-measure once fonts settle.
+  document.fonts?.ready.then(() => measureGlider()).catch(() => {})
 })
+onUnmounted(() => pillObserver?.disconnect())
+
+watch(() => [props.currentSceneIndex, props.scenes.length, props.isEditMode], measureGlider)
 
 function selectScene(index: number) {
   if (index === props.currentSceneIndex) return
@@ -369,9 +409,9 @@ watch(() => sceneSwipe.dragging, (dragging) => {
   justify-content: center;
   gap: 8px;
   /* Generous touch target — these are tapped often on touch panels. */
-  min-height: 48px;
+  min-height: 56px;
   min-width: 96px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary, rgba(255,255,255,0.7));
@@ -394,7 +434,17 @@ watch(() => sceneSwipe.dragging, (dragging) => {
 
 .segment-icon {
   flex-shrink: 0;
-  font-size: 1.1em;
+  font-size: 1.2em;
+}
+
+/* App logo (DL-086): real product mark instead of a generic FA icon —
+   26px reads inside the taller 56px pill. */
+.segment-logo {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .segment-label {
@@ -475,7 +525,8 @@ watch(() => sceneSwipe.dragging, (dragging) => {
 
 @media (max-width: 480px) {
   .segment-icon { display: none; }
-  .segment { min-width: 64px; padding: 10px 10px; }
+  .segment-logo { width: 22px; height: 22px; }
+  .segment { min-width: 64px; min-height: 48px; padding: 10px 10px; }
 }
 
 /* DL-033 — green "app is running" dot on the scene pill's top-right corner.

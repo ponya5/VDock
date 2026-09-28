@@ -149,3 +149,13 @@ crossfade, and the segment sweep animation is disabled.
   (was `swipe-left/right` → `nextPage/previousPage` on the grid).
   Pages keep the ‹ › steppers in both chromes; vertical swipe still
   switches scenes as before.
+
+## Follow-up — tutorial teaches the gesture
+
+- `tutorial.ts` "Scenes & Pages" step now says "…or just swipe
+  left/right anywhere on the deck" (previously only mentioned
+  up/down). "Your Deck" step's stale "swipe left/right for more
+  pages" corrected — horizontal swipes switch scenes; pages use the
+  dots/‹ › steppers.
+- `UserGuideModal` Scenes bullet gained the same swipe tip.
+- Verified live in the tour; `vue-tsc` clean, `dist` rebuilt.

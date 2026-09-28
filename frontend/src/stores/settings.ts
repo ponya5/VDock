@@ -253,8 +253,6 @@ export const useSettingsStore = defineStore('settings', () => {
   // the live layout editor reached from Settings -> Screensaver.
   const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
 
-  const showHelpGuide = ref(false)
-
   let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
   let serverSyncInFlight: Promise<void> | null = null
   let serverSyncQueued = false
@@ -890,7 +888,6 @@ export const useSettingsStore = defineStore('settings', () => {
     pressSoundEnabled,
     pressSoundStyle,
     screensaverLayout,
-    showHelpGuide,
     applyTouchModeStyles,
     applyUIBrightnessFilter,
     applyButtonTransparency,

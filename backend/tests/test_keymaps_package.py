@@ -24,7 +24,8 @@ def test_command_ids_are_unique():
 
 def test_all_commands_is_the_union_of_the_per_app_tuples():
     assert set(keymaps.ALL_COMMANDS) == (
-        set(keymaps.COPILOT_COMMANDS) | set(keymaps.CURSOR_COMMANDS)
+        set(keymaps.ANTIGRAVITY_COMMANDS)
+        | set(keymaps.COPILOT_COMMANDS) | set(keymaps.CURSOR_COMMANDS)
         | set(keymaps.CLAUDE_CODE_COMMANDS) | set(keymaps.DEVIN_COMMANDS)
         | set(keymaps.JETBRAINS_COMMANDS)
         | set(keymaps.VISUAL_STUDIO_COMMANDS) | set(keymaps.VSCODE_COMMANDS)
@@ -39,6 +40,11 @@ def test_known_commands_keep_their_keys():
         'cursor_accept': ('ctrl', 'enter'),
         'copilot_chat': ('ctrl', 'alt', 'i'),
         'copilot_accept': ('tab',),
+        'antigravity_agent': ('ctrl', 'l'),
+        'antigravity_new_thread': ('ctrl', 'shift', 'l'),
+        'antigravity_manager': ('ctrl', 'e'),
+        'antigravity_inline': ('ctrl', 'i'),
+        'antigravity_stop': ('escape',),
     }
     for command_id, keys in expected.items():
         assert keymaps.COMMANDS_BY_ID[command_id].keys == keys
@@ -105,6 +111,28 @@ def test_cursor_submit_focuses_the_chat_before_pressing_enter():
         {'type': 'delay', 'delay': 150},
         {'type': 'hotkey', 'keys': ['enter']},
     ]
+
+
+def test_antigravity_submit_focuses_the_agent_panel_before_enter():
+    """Same contract as cursor_submit: a bare Enter could land in a file,
+    so the panel focus chord (Ctrl+Shift+I, idempotent) must lead."""
+    submit = keymaps.COMMANDS_BY_ID['antigravity_submit']
+    steps = submit.to_macro_steps()
+    assert steps == [
+        {'type': 'hotkey', 'keys': ['ctrl', 'shift', 'i']},
+        {'type': 'delay', 'delay': 150},
+        {'type': 'hotkey', 'keys': ['enter']},
+    ]
+
+
+def test_antigravity_typing_commands_never_lead_with_the_toggle():
+    """Ctrl+L toggles the agent panel — typing commands must focus with
+    Ctrl+Shift+I (idempotent open) instead."""
+    for cid in ('antigravity_prompt', 'antigravity_followup', 'antigravity_submit'):
+        cmd = keymaps.COMMANDS_BY_ID[cid]
+        assert cmd.keys != ('ctrl', 'l'), cid
+        assert cmd.risk == 'input', cid
+        assert cmd.target_exes == keymaps.ANTIGRAVITY_EXES
 
 
 def test_the_old_module_is_gone():

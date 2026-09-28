@@ -60,6 +60,24 @@ def test_find_binary_prefers_override(real_exe):
     assert find_binary('claude') == real_exe
 
 
+def test_find_binary_resolves_app_bundle_inner_binary(tmp_path):
+    """macOS: pointing at Foo.app must yield the executable inside it —
+    argv spawns can't run a directory."""
+    inner = tmp_path / 'Cursor.app' / 'Contents' / 'MacOS' / 'Cursor'
+    inner.parent.mkdir(parents=True)
+    inner.write_text('stub')
+    inner.chmod(0o755)
+    Config.APP_PATHS = {'cursor': str(tmp_path / 'Cursor.app')}
+    assert find_binary('cursor') == str(inner)
+
+
+def test_validate_accepts_app_bundle_directory(tmp_path):
+    bundle = tmp_path / 'Cursor.app'
+    bundle.mkdir()
+    ok, _ = app_paths.validate_path(str(bundle))
+    assert ok
+
+
 def test_find_binary_falls_back_to_path(real_exe):
     Config.APP_PATHS = {}
     # A real binary on PATH keeps working untouched.

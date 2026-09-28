@@ -66,6 +66,19 @@ def _keys_for(name: str) -> Tuple[str, ...]:
     return tuple(dict.fromkeys(k for k in keys if k))
 
 
+def resolve_executable(path: str) -> str:
+    """A .app bundle override resolves to its inner executable — callers
+    spawning argv get a real binary instead of a directory."""
+    p = Path(path)
+    if p.is_dir() and p.suffix.lower() == '.app':
+        macos = p / 'Contents' / 'MacOS'
+        if macos.is_dir():
+            for child in sorted(macos.iterdir()):
+                if child.is_file() and os.access(child, os.X_OK):
+                    return str(child)
+    return str(p)
+
+
 def override_for(*names: str) -> Optional[str]:
     """First configured path for any of ``names`` (normalized), else None.
 

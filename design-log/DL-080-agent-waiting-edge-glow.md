@@ -431,3 +431,48 @@ the waiting computeds. Snooze chip reads "Snooze 3m". Verified: unit
 coverage for expire/re-arm/clear/extend paths (`agent-waiting.test.ts`,
 4 new tests, fake timers); live in WebKit — snooze hid the frame, a fresh
 `ready` event re-armed instantly; 291/291 green, `dist` rebuilt.
+
+## Follow-up #5 — stale "waiting" after the session is gone
+
+**Problem.** User report: Claude still shows the waiting/snooze state
+with no open session. A killed session never posts `ended`, so its
+`ready` hook entry persisted — the 30-min TTL only runs inside
+`snapshot()`, which itself only runs when a hook posts or a client
+connects. Nothing pruned it, and connected clients never re-synced.
+
+**Fix.** Two halves:
+
+1. `agent_state.snapshot()` now also drops sources whose session
+   process is provably gone (`sessions.session_alive`) — but only when
+   every entry is older than a 90s grace and the scan has reported dead
+   continuously for ≥60s. Both guards exist because a process scan can
+   miss a just-spawned or unusually-hosted (WSL/container) agent; a
+   single bad scan must never kill a live alert. `generic`/unknown
+   sources keep TTL-only expiry — no marker to scan for.
+2. `agentState.ts` re-syncs `GET /agent-events/states` every 15s — the
+   socket only pushes on new events, so a pruned entry could never
+   reach an idle client otherwise.
+
+Dead session → next scan marks dead → ~1min continuous-dead check →
+entry dropped → next 15s client sync removes the waiting state → the
+glow, snooze chip, scene pills, bar/consolе status all quiet at once.
+
+### Implementation Results (follow-up #5)
+
+- `agent_state.py`: `_drop_dead` runs in `snapshot()` and
+  `session_entries()`; `_LIVENESS_SOURCES` = {claude, cursor, devin};
+  grace 90s per entry, dead-scan must persist 60s, aliveness cached 10s
+  per source; `reset()` also clears the new caches.
+- `agentState.ts`: `SYNC_MS = 15_000` interval inside `initAgentState`
+  re-fetches states — a backend-pruned entry now reaches idle clients.
+- Verified: 7 new tests (`test_agent_state_liveness.py` — dead-prune,
+  fresh-grace, live-keep, dead-clock persistence/reset, generic TTL-only,
+  TTL unchanged); 57/57 with `test_agent_state_events`. Live: a posted
+  `devin` ready survived the fresh-entry grace and was correctly KEPT —
+  `devin.exe` is genuinely running on this box (all marker sources here
+  are alive); prune path is unit-covered. Frontend suite 298/298
+  (teardown RPC noise only), `vue-tsc` clean, `dist` rebuilt.
+- Caveat recorded: liveness is per-source process matching — an agent in
+  WSL/a container may not match the marker on Windows; the 90s+60s
+  guards keep it alive at worst ~2.5min short of ideal, and 'generic'
+  sources stay TTL-only.

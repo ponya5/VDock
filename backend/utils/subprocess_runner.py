@@ -114,7 +114,9 @@ def find_binary(name: str) -> Optional[str]:
     from services import app_paths
     override = app_paths.override_for(name)
     if override:
-        return _unwrap_cmd_shim(override)
+        # A .app bundle override resolves to its inner executable so argv
+        # spawns get a real binary, not a directory.
+        return _unwrap_cmd_shim(app_paths.resolve_executable(override))
     binary = shutil.which(name)
     if binary is None:
         return None
