@@ -147,29 +147,6 @@
           </button>
         </div>
       </nav>
-      <div class="nav-foot">
-        <button type="button" class="btn ghost sm nav-foot-btn" title="Reload profile and settings from the server" @click="refreshVdock()">
-          <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" /> Reload VDock
-        </button>
-        <button type="button" class="btn ghost sm nav-foot-btn" @click="handleSettingsBack">
-          <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
-          {{ isStandaloneSettings ? 'Close' : 'Back' }}
-        </button>
-        <footer class="nav-credit">
-          <span class="nav-credit-text">Created by Daniel S. · v{{ appVersion }}</span>
-          <div class="nav-credit-links">
-            <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="nav-credit-link" title="Daniel Shalom on LinkedIn" aria-label="LinkedIn">
-              <FontAwesomeIcon :icon="['fab', 'linkedin']" />
-            </a>
-            <a href="https://github.com/ponya5/ponya5" target="_blank" rel="noopener" class="nav-credit-link" title="Daniel Shalom on GitHub" aria-label="GitHub">
-              <FontAwesomeIcon :icon="['fab', 'github']" />
-            </a>
-            <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="nav-credit-link nav-credit-site" title="daniel-shalom.com" aria-label="Daniel Shalom's website">
-              <img :src="'/assets/branding/daniel-shalom-logo.jpg'" alt="" class="nav-credit-logo" />
-            </a>
-          </div>
-        </footer>
-      </div>
     </aside>
 
     <main ref="mainEl" class="main">
@@ -198,15 +175,8 @@
             <FontAwesomeIcon :icon="['fas', 'rotate-left']" /> Reset section
           </button>
           <template v-if="isButtonsPage">
-            <span v-if="buttonPageDirty" class="draft-hint">Draft not applied</span>
-            <button
-              type="button"
-              class="btn ghost sm"
-              :disabled="!buttonPageDirty"
-              @click="revertButtonDefaults"
-            >
-              Revert
-            </button>
+            <span class="topbar-divider" aria-hidden="true"></span>
+            <span v-if="buttonPageDirty" class="draft-chip"><span class="draft-dot" aria-hidden="true"></span>Draft not applied</span>
             <button
               type="button"
               class="btn primary sm"
@@ -470,14 +440,6 @@
                 </div>
               </div>
             </section>
-
-            <div class="note warn">
-              <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
-              <div>
-                Animation, icon motion and key design are drafts until <b>Save &amp; Apply</b>,
-                which rewrites every existing key — including per-key customisation.
-              </div>
-            </div>
           </div>
 
           <div class="rail">
@@ -1581,10 +1543,11 @@
             <section class="panel" id="features">
               <div class="panel-head"><h2>What's in it</h2></div>
               <div class="panel-body">
-                <div class="row stack picker-row">
-                  <div class="grid-3">
-                    <div v-for="feature in aboutFeatures" :key="feature.label" class="feature">
-                      <div class="feature-title"><FontAwesomeIcon :icon="feature.icon" class="feature-icon" /> {{ feature.label }}</div>
+                <div class="feature-list">
+                  <div v-for="feature in aboutFeatures" :key="feature.label" class="feature">
+                    <FontAwesomeIcon :icon="feature.icon" class="feature-icon" />
+                    <div class="feature-text">
+                      <div class="feature-title">{{ feature.label }}</div>
                       <div class="muted feature-desc">{{ feature.desc }}</div>
                     </div>
                   </div>
@@ -1613,6 +1576,32 @@
         </div>
 
     </main>
+
+    <footer class="settings-dock">
+      <div class="dock-credit">
+        <span class="dock-credit-text">Created by Daniel S. · v{{ appVersion }}</span>
+        <div class="dock-credit-links">
+          <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="dock-credit-link" title="Daniel Shalom on LinkedIn" aria-label="LinkedIn">
+            <FontAwesomeIcon :icon="['fab', 'linkedin']" />
+          </a>
+          <a href="https://github.com/ponya5/ponya5" target="_blank" rel="noopener" class="dock-credit-link" title="Daniel Shalom on GitHub" aria-label="GitHub">
+            <FontAwesomeIcon :icon="['fab', 'github']" />
+          </a>
+          <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="dock-credit-link dock-credit-site" title="daniel-shalom.com" aria-label="Daniel Shalom's website">
+            <img :src="'/assets/branding/daniel-shalom-logo.jpg'" alt="" class="dock-credit-logo" />
+          </a>
+        </div>
+      </div>
+      <div class="dock-actions">
+        <button type="button" class="btn ghost sm" title="Reload profile and settings from the server" @click="refreshVdock()">
+          <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" /> Reload VDock
+        </button>
+        <button type="button" class="btn ghost sm" @click="handleSettingsBack">
+          <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
+          {{ isStandaloneSettings ? 'Close' : 'Back' }}
+        </button>
+      </div>
+    </footer>
 
     <FeatureRequestModal v-if="showFeatureRequest" @close="showFeatureRequest = false" />
 
@@ -2090,6 +2079,23 @@ const buttonPageDirty = computed(() =>
   previewIconLoop.value !== settingsStore.buttonDefaultIconLoop ||
   previewEffect.value !== settingsStore.buttonDefaultEffect
 )
+
+// Warn once per draft episode — the rewrite cost is the one fact the
+// draft chip can't carry; a toast surfaces it at the moment it matters
+// instead of as permanent page chrome (DL-095 follow-up).
+let draftToastShown = false
+watch(buttonPageDirty, (dirty) => {
+  if (dirty && !draftToastShown) {
+    draftToastShown = true
+    notificationsStore.warning(
+      'Draft changes',
+      'Motion and key design stay drafts until Save & Apply — which rewrites every existing key, including per-key customisation.',
+      { duration: 7000, important: true }
+    )
+  } else if (!dirty) {
+    draftToastShown = false
+  }
+})
 function revertButtonDefaults() {
   previewAnimation.value = settingsStore.buttonDefaultAnimation
   previewIconLoop.value = settingsStore.buttonDefaultIconLoop
@@ -2378,7 +2384,7 @@ const applyingButtonBehaviour = ref(false)
 // "Save & Apply to all keys" — commits the draft (preview refs) as the
 // persisted defaults AND rewrites every existing key (DL-031 follow-up:
 // the draft-only path looked identical to a real apply, so picks
-// never reached the deck). The warn note above states the per-key
+// never reached the deck). The dirty-watch toast states the per-key
 // customisation cost.
 async function applyButtonBehaviourToAll() {
   applyingButtonBehaviour.value = true
@@ -4045,6 +4051,7 @@ onMounted(async () => {
 
   display: grid;
   grid-template-columns: var(--nav-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   width: 100%;
   height: 100vh;
   overflow: hidden;
@@ -4239,21 +4246,29 @@ onMounted(async () => {
 .nav-sub button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .nav-sub button[aria-current="true"] { background: var(--accent-ghost); color: #b9d3ff; font-weight: 600; }
 
-.nav-foot { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
-.nav-foot-btn { flex: 1; justify-content: center; }
+/* --- dock footer bar ------------------------------------------------------- */
 
-/* Credit footer — author, version and social links at the rail bottom. */
-.nav-credit {
-  width: 100%;
+/* Full-width chrome bar under nav + main. bg-sunken keeps it visually
+   continuous with the nav rail; sticky bottom:0 pins it in the ≤880px
+   body-scroll layout (no-op in the fixed-height desktop shell). */
+.settings-dock {
+  grid-column: 1 / -1;
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 7px var(--gutter);
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-sunken);
 }
-.nav-credit-text { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
-.nav-credit-links { display: flex; align-items: center; gap: 4px; }
-.nav-credit-link {
+.dock-credit { display: flex; align-items: center; gap: 10px; }
+.dock-credit-text { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
+.dock-credit-links { display: flex; align-items: center; gap: 4px; }
+.dock-credit-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4263,8 +4278,9 @@ onMounted(async () => {
   color: var(--text-3);
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
-.nav-credit-link:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.07); }
-.nav-credit-logo { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: block; }
+.dock-credit-link:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.07); }
+.dock-credit-logo { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: block; }
+.dock-actions { display: flex; align-items: center; gap: 8px; }
 
 /* --- main column ---------------------------------------------------------- */
 
@@ -4287,7 +4303,21 @@ onMounted(async () => {
 .topbar .crumb { margin: 0 0 2px; color: var(--text-3); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
 .topbar p { margin: 4px 0 0; color: var(--text-2); max-width: 62ch; font-size: var(--fs-md); }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
-.draft-hint { font-size: var(--fs-sm); color: var(--warn); white-space: nowrap; }
+.topbar-divider { width: 1px; height: 20px; background: var(--line); margin: 0 3px; flex: none; }
+.draft-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(245, 181, 71, 0.10);
+  border: 1px solid rgba(245, 181, 71, 0.35);
+  color: var(--warn);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.draft-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); flex: none; }
 
 .content {
   flex: 1 1 auto;
@@ -4342,11 +4372,11 @@ onMounted(async () => {
 .panel-head h2 {
   margin: 0;
   white-space: nowrap;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: var(--text);
 }
 .panel-head .hint { color: var(--text-3); font-size: var(--fs-sm); }
 .panel-head .spacer { margin-left: auto; }
@@ -4695,13 +4725,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 14px;
+  padding: 13px 18px 11px;
   border-bottom: 1px solid var(--line-soft);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: var(--text);
 }
 .preview-stage {
   display: grid;
@@ -4844,16 +4874,19 @@ onMounted(async () => {
 .kofi-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 .kofi-icon { width: 18px; height: 18px; object-fit: contain; }
 
-.feature-grid-new { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.feature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
 .feature {
   display: flex;
   gap: 10px;
-  padding: 11px 12px;
-  border-radius: var(--r-md);
-  background: var(--panel-2);
-  border: 1px solid var(--line-soft);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.feature:last-child { border-bottom: 0; }
+@media (min-width: 881px) {
+  .feature:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
 }
 .feature-icon { color: var(--accent); margin-top: 2px; flex: none; }
+.feature-text { min-width: 0; }
 .feature-title { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
 .feature-desc { font-size: var(--fs-xs); margin-top: 2px; }
 
@@ -4895,6 +4928,7 @@ onMounted(async () => {
 
 /* keep usable height on the 600px-tall panel */
 @media (max-height: 700px) {
+  .settings-dock { padding-top: 5px; padding-bottom: 5px; }
   .nav { padding-top: 10px; gap: 10px; }
   .nav-brand { padding-top: 0; }
   .topbar { padding-top: 12px; padding-bottom: 10px; }
@@ -4904,7 +4938,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 880px) {
-  .settings-app { grid-template-columns: 1fr; height: auto; min-height: 100vh; overflow: visible; }
+  .settings-app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; height: auto; min-height: 100vh; overflow: visible; }
   .main, .content { overflow: visible; }
   .topbar { position: static; }
   .nav {
@@ -4925,7 +4959,7 @@ onMounted(async () => {
   .logs-layout { flex-direction: column; height: auto; }
   .logs-files-card { width: 100%; }
   .log-viewer { height: 46vh; }
-  .grid-3 { grid-template-columns: 1fr; }
+  .grid-3, .feature-list { grid-template-columns: 1fr; }
   .picker-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .about-hero { flex-direction: column; align-items: flex-start; }
   .about-meta { margin-left: 0; text-align: left; }
