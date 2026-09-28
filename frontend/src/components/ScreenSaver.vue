@@ -66,6 +66,7 @@
     </div>
 
     <div
+      v-if="showClockWidget"
       :ref="el => setWidgetEl('clock', el)"
       class="ss-pos ss-body"
       :class="{ 'ss-editing': layoutEdit }"
@@ -371,6 +372,11 @@ const location = computed(() => weather.value?.location || '—')
 // clock + weather + world clock always; headlines too when they fit
 // without scrolling (newsFits guard). Markets and sports stay off —
 // they're the densest feeds.
+// DL-098: the clock is toggleable too, via its own persisted flag (it
+// can't join the widgets array — saved lists predate 'clock', so
+// includes() would hide it for every existing user). On phones the
+// curated layout still forces it, like weather + world clock.
+const showClockWidget = computed(() => isMobileViewport.value || settingsStore.screensaverClockEnabled)
 const showWeatherWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('weather'))
 // Touch mode feeds the same scale as the user sliders: a small panel running
 // tablet mode gets readable widgets without finding the sliders, and the
@@ -519,8 +525,11 @@ function transformScale(id: ScreensaverWidgetId, layoutScale: number) {
 }
 
 // Widgets mounted right now — separation only runs between these.
+// A hidden clock reserves nothing (DL-098): it's conditional like the
+// rest so neighbors can claim the freed space.
 const mountedWidgets = computed<ScreensaverWidgetId[]>(() => {
-  const ids: ScreensaverWidgetId[] = ['clock']
+  const ids: ScreensaverWidgetId[] = []
+  if (showClockWidget.value) ids.push('clock')
   if (showWeatherWidget.value) ids.push('weather')
   if (showMarketWidget.value) ids.push('market')
   if (showNewsWidget.value) ids.push('news')

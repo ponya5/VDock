@@ -118,18 +118,21 @@
         :expanded-categories="expandedCategories"
         :filtered-categories="filteredCategories"
         @toggle-category="toggleCategory"
-        @move-category-up="moveCategoryUp"
-        @move-category-down="moveCategoryDown"
         @select-action="selectAction"
         @close="closeSidebar"
       />
     </main>
 
     <!-- Decomposed Footer component — replaced by the page steppers in
-         MobileDeckChrome on phones. -->
-    <DeckFooter
-      v-if="!isMobileViewport"
-      :is-edit-mode="isEditMode"
+         MobileDeckChrome on phones. DL-097: only mounts when it has
+         content — edit controls (edit mode), the docked reveal pill
+         (header hidden) or page dots (multi-page) — and slides up from
+         below the viewport edge / down off it. Outside those states the
+         grid reclaims the strip. -->
+    <Transition name="footer-slide">
+      <DeckFooter
+        v-if="!isMobileViewport && (isEditMode || !settingsStore.showHeader || (currentScene?.pages.length || 1) > 1)"
+        :is-edit-mode="isEditMode"
       :total-pages="currentScene?.pages.length || 1"
       :current-page-index="currentPageIndex"
       :grid-rows="currentPage?.grid_config.rows || 3"
@@ -140,7 +143,8 @@
       @save-profile="saveProfile"
       @update-rows="updateGridRows"
       @update-cols="updateGridCols"
-    />
+      />
+    </Transition>
 
     <!-- Screen Saver overlay — wrapped in a dissolve Transition (DL-003
          follow-up): it blooms in from center on idle, and evaporates
@@ -428,6 +432,7 @@ const actionCategories = ref([
   {
     id: 'quick-launch',
     name: 'Quick Launch',
+    icon: ['fas', 'rocket'],
     actions: [
       { id: 'launch-browser', name: 'Web Browser', icon: ['fas', 'globe'] },
       { id: 'launch-file-explorer', name: 'File Explorer', icon: ['fas', 'folder'] },
@@ -442,6 +447,7 @@ const actionCategories = ref([
   {
     id: 'system',
     name: 'System',
+    icon: ['fas', 'desktop'],
     actions: [
       { id: 'shutdown', name: 'Shutdown', icon: ['fas', 'power-off'] },
       { id: 'restart', name: 'Restart', icon: ['fas', 'redo'] },
@@ -458,6 +464,7 @@ const actionCategories = ref([
   {
     id: 'audio',
     name: 'Audio & Volume',
+    icon: ['fas', 'volume-high'],
     actions: [
       { id: 'volume-up', name: 'Volume Up', icon: ['fas', 'volume-up'] },
       { id: 'volume-down', name: 'Volume Down', icon: ['fas', 'volume-down'] },
@@ -469,6 +476,7 @@ const actionCategories = ref([
   {
     id: 'media',
     name: 'Media Control',
+    icon: ['fas', 'music'],
     actions: [
       { id: 'play-pause', name: 'Play/Pause', icon: ['fas', 'play'] },
       { id: 'next-track', name: 'Next Track', icon: ['fas', 'forward'] },
@@ -478,7 +486,8 @@ const actionCategories = ref([
   },
   {
     id: 'window-management',
-    name: 'Window Management',
+    name: 'Windows',
+    icon: ['fas', 'window-restore'],
     actions: [
       { id: 'minimize-window', name: 'Minimize Window', icon: ['fas', 'window-minimize'] },
       { id: 'maximize-window', name: 'Maximize Window', icon: ['fas', 'window-maximize'] },
@@ -490,6 +499,7 @@ const actionCategories = ref([
   {
     id: 'web',
     name: 'Web & Apps',
+    icon: ['fas', 'globe'],
     actions: [
       { id: 'open-url', name: 'Open URL', icon: ['fas', 'globe'] },
       { id: 'open-app', name: 'Open Application', icon: ['fas', 'rocket'] },
@@ -503,6 +513,7 @@ const actionCategories = ref([
   {
     id: 'text',
     name: 'Text & Input',
+    icon: ['fas', 'keyboard'],
     actions: [
       { id: 'type-text', name: 'Type Text', icon: ['fas', 'keyboard'] },
       { id: 'hotkey', name: 'Hotkey', icon: ['fas', 'keyboard'] },
@@ -513,6 +524,7 @@ const actionCategories = ref([
   {
     id: 'metrics',
     name: 'Monitor Metrics',
+    icon: ['fas', 'chart-line'],
     actions: [
       { id: 'metric_cpu_usage', name: 'CPU Usage', icon: ['fas', 'microchip'] },
       { id: 'metric_memory', name: 'Memory', icon: ['fas', 'memory'] },
@@ -529,6 +541,7 @@ const actionCategories = ref([
   {
     id: 'time',
     name: 'Time & Date',
+    icon: ['fas', 'clock'],
     actions: [
       { id: 'time_world_clock', name: 'World Time', icon: ['fas', 'globe'] },
       { id: 'time_timer', name: 'Timer', icon: ['fas', 'stopwatch'] },
@@ -538,6 +551,7 @@ const actionCategories = ref([
   {
     id: 'weather',
     name: 'Weather',
+    icon: ['fas', 'cloud-sun'],
     actions: [
       { id: 'weather', name: 'Weather', icon: ['fas', 'cloud-sun'] }
     ]
@@ -545,6 +559,7 @@ const actionCategories = ref([
   {
     id: 'navigation',
     name: 'Navigation',
+    icon: ['fas', 'compass'],
     actions: [
       { id: 'next-page', name: 'Next Page', icon: ['fas', 'arrow-right'] },
       { id: 'previous-page', name: 'Previous Page', icon: ['fas', 'arrow-left'] },
@@ -554,6 +569,7 @@ const actionCategories = ref([
   {
     id: 'streaming',
     name: 'Streaming (OBS)',
+    icon: ['fas', 'video'],
     actions: [
       { id: 'obs-scene', name: 'OBS Scene', icon: ['fas', 'video'] },
       { id: 'obs-source', name: 'OBS Source', icon: ['fas', 'layer-group'] },
@@ -567,6 +583,7 @@ const actionCategories = ref([
   {
     id: 'custom',
     name: 'Custom Media',
+    icon: ['fas', 'puzzle-piece'],
     actions: [
       { id: 'custom-icon', name: 'Custom Icon', icon: ['fas', 'image'] },
       { id: 'custom-gif', name: 'Custom GIF', icon: ['fas', 'film'] },
@@ -608,6 +625,7 @@ const catalogCategories = computed(() => {
     .map(category => ({
       id: `catalog-${category.id}`,
       name: category.label,
+      icon: category.icon,
       actions: actionCatalogStore
         .actionsInCategory(category.id)
         .filter(spec => !alreadyListed.has(spec.label.toLowerCase()))
@@ -685,24 +703,6 @@ function toggleCategory(categoryId: string) {
     expandedCategories.value.splice(index, 1)
   } else {
     expandedCategories.value.push(categoryId)
-  }
-}
-
-function moveCategoryUp(index: number) {
-  if (index > 0) {
-    const categories = actionCategories.value
-    const temp = categories[index]
-    categories[index] = categories[index - 1]
-    categories[index - 1] = temp
-  }
-}
-
-function moveCategoryDown(index: number) {
-  if (index < actionCategories.value.length - 1) {
-    const categories = actionCategories.value
-    const temp = categories[index]
-    categories[index] = categories[index + 1]
-    categories[index + 1] = temp
   }
 }
 

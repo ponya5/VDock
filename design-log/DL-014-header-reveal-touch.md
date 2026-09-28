@@ -175,3 +175,105 @@ Reduced-motion disables the transition.
   restoring the previous instant swap.
 - `vue-tsc --noEmit` clean; 37/37 focused vitest green; `npm run build`
   clean — dist rebuilt for the panel.
+
+### Follow-up (2026-09-28): reveal pill docked into the footer strip
+
+#### Problem
+
+Live screenshot on the 7" panel (1024×552): the bottom-left floating pill
+straddles the chrome seam — it covers the left end of `DeckFooter` and its
+top edge + shadow graze the bottom border of the grid's bottom-left tile
+(the "+" placeholder). Pixel-measured: footer band y512–552, tile bottom
+y511, pill y≈508–546. Two consequences:
+
+- **Visual overlap:** the pill clips the tile's bottom edge instead of
+  sitting on clean chrome.
+- **Touch conflict (latent):** `footer-left` is where `.page-dots` render
+  when `totalPages > 1` — the fixed pill would sit on top of them and
+  intercept their taps.
+
+Root cause: a `position: fixed` pill can never be overlap-free here. The
+pill's min-height (`max(--min-touch-target, 52px × min(tm,1.6))` ≈ 52–104px
+outer under border-box) exceeds the footer's `max(44px, 56px × tm)` at low
+multipliers, so at `bottom: 10px` it always pokes above the footer band
+into the grid — up to ~18px at tm=1. And every corner of the footer strip
+except the right end is spoken for (dots left, snooze chip center). This
+is the same class of bug the top-edge strip had: floating chrome colliding
+with live content, relocated rather than eliminated.
+
+#### Design
+
+Stop floating — dock the pill **inside** `.deck-footer` as an in-flow flex
+item (first child of `.footer-left`, ahead of the page dots). In-flow
+placement makes overlap with grid tiles and page dots structurally
+impossible at every touch multiplier, and it reuses reserved chrome space
+instead of hovering over content.
+
+- `DeckFooter.vue` gains the trigger markup (same `.header-reveal-trigger`
+  → `.reveal-pill` → ripple/label structure and class names, so the
+  editorial/mono font theming in `main.css` keeps applying), `v-if`ed on
+  `!settingsStore.showHeader`, tap → `settingsStore.showHeader = true`,
+  `useSwipe` DOWN → same reveal. Trigger becomes a plain flex item:
+  `position: static`, vertically centered by the footer's `align-items`.
+  If the pill is taller than the footer's minimum the footer simply grows
+  (≤ ~8px at tm=1, nothing at higher multipliers) — a fair trade while
+  the grid is already gaining the whole header's height.
+- Shared-direction choreography preserved via the pill's own
+  `<Transition name="hdr-pill">` in the footer: on hide the pill rises up
+  into its slot while the header slides up away; on reveal it slides down
+  off the bottom edge while the header slides down in. `leave-active`
+  takes the pill out of flow (`position: absolute` on the now-`relative`
+  footer, same left offset / vertical centre) so the footer reclaims its
+  height at the *start* of the leave — inside the header's 0.55s motion,
+  invisible — instead of snapping after it.
+- `DeckHeader.vue` drops the trigger div, `triggerRef`, `revealHeader()`,
+  its `useSwipe`, and the trigger/pill/ripple styles (moved verbatim to
+  the footer). The `hdr-reveal` Transition stays, now wrapping only the
+  header (single `v-if` child — slide animation unchanged).
+- `userRevealedOnShort` is now set inside the `showHeader` watcher,
+  guarded by `innerHeight < SHORT_VIEWPORT_PX` — any reveal path (footer
+  pill, future callers) marks the flag, and a reveal on a tall viewport
+  no longer leaves the flag stuck true forever (matching the flag's
+  name/intent: it only suppresses auto-hide *on short viewports*).
+- Mobile unchanged: `DeckFooter` and `DeckHeader` are both
+  `v-if="!isMobileViewport"`, so the pill still never renders on phones —
+  same as today.
+
+#### Trade-offs
+
+The reveal affordance is now coupled to the footer existing (always true
+on the dashboard desktop chrome). Footer grows ≤ ~8px at tm=1 while the
+header is hidden; dots shift left at leave-start as the pill exits flow —
+both masked by the simultaneous header slide.
+
+#### Implementation Results (follow-up, 2026-09-28)
+
+- `DeckFooter.vue`: `.header-reveal-trigger` + `.reveal-pill` (markup,
+  styles, ripple keyframes, hover/active, reduced-motion) moved here
+  verbatim, rendered in-flow as the first child of `.footer-left` ahead
+  of `.page-dots` inside `<Transition name="hdr-pill">`. Tap →
+  `settingsStore.showHeader = true`; `useSwipe` DOWN → same.
+  `.deck-footer` gains `position: relative`; `.hdr-pill-leave-active`
+  goes `position: absolute` at the same left offset / vertical centre so
+  the footer reclaims height at leave-start (inside the header slide).
+- `DeckHeader.vue`: trigger markup, `triggerRef`, `revealHeader()`, its
+  `useSwipe`, and the fixed-position/pill/ripple styles removed.
+  `hdr-reveal` Transition now wraps only the header; slide unchanged.
+- `userRevealedOnShort` moved into the `showHeader` watcher guarded by
+  `innerHeight < SHORT_VIEWPORT_PX` — every reveal path marks it; a
+  tall-viewport reveal no longer pins the flag.
+- New regression guard `src/tests/header-reveal-dock.test.ts`: trigger
+  absent from DeckHeader, present + non-`fixed` in DeckFooter, pill
+  keeps its `min-height: 44px` baseline (plain line added ahead of the
+  `max()` form, matching the codebase's baseline-then-enhanced
+  convention).
+- Verified live (Chrome DevTools MCP, backend serving fresh `dist`,
+  viewport ~1343×677): pill settles in-flow inside `.footer-left`
+  (`position: static`, rect 32,406 320×83 — inside footer band
+  391–503; grid bottom = footer top = 391 → zero overlap). Click →
+  header enters ~550ms while pill slides down out; autohide re-hide →
+  pill re-enters. Screenshot: `design-log/refs/header-reveal-footer-docked.png`.
+- `vue-tsc --noEmit` clean; vitest 308/309 (sole failure =
+  `news-carousel` `beforeEach` hook timeout flake under full-suite load —
+  passes in isolation, unrelated); `npm run build` clean, `dist/` rebuilt
+  for the panel.

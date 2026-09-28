@@ -1,31 +1,15 @@
 <template>
   <div class="deck-header-wrapper" :class="{ 'header-hidden': !settingsStore.showHeader }">
-    <!-- Reveal trigger (visible when header is hidden). A compact pill
-         pinned to the bottom-left corner — tap or swipe-down on it to
-         reveal. Kept off the top edge so it can't overlap the scene
-         rail or console rows. The Transition swap choreographs the
-         handoff: header slides down in while the button slides down out;
-         on collapse both move up (DL-014 addendum #3). -->
+    <!-- While the header is hidden the reveal pill lives docked inside
+         DeckFooter (in-flow chrome — a floating pill always overlapped
+         the grid or the footer's page dots; DL-014 follow-up). This
+         Transition now animates the header alone: it slides down in on
+         reveal while the footer pill slides down out of its slot, and on
+         collapse the header slides up away while the pill rises into
+         place (DL-014 addendum #3). -->
     <Transition name="hdr-reveal">
-      <div
-        v-if="!settingsStore.showHeader"
-        ref="triggerRef"
-        class="header-reveal-trigger"
-        @click="revealHeader"
-        title="Swipe down or tap to show header"
-      >
-        <div class="reveal-pill">
-          <span class="reveal-ripple" aria-hidden="true"></span>
-          <span class="reveal-pill-label">
-            <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
-            <span>Show Header</span>
-          </span>
-          <span class="reveal-ripple" aria-hidden="true"></span>
-        </div>
-      </div>
-
       <!-- Main Header -->
-      <header v-else ref="headerRef" class="deck-header dashboard-header">
+      <header v-if="settingsStore.showHeader" ref="headerRef" class="deck-header dashboard-header">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
@@ -187,7 +171,6 @@ const settingsStore = useSettingsStore()
 // deck is a pure control surface on small screens.
 const { isMobileViewport } = useMobileViewport()
 const { quitApp, isElectron, toggleFullscreen: toggleElectronFullscreen, isFullscreen: getElectronFullscreen } = useElectron()
-const triggerRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 const progressWidth = ref(100)
 const isFullscreen = ref(typeof document !== 'undefined' && !!document.fullscreenElement)
@@ -260,11 +243,6 @@ let autohideRemainingMs = 5000
 const AUTOHIDE_MS = 5000
 const TICK_MS = 50
 
-function revealHeader() {
-  userRevealedOnShort = true
-  settingsStore.showHeader = true
-}
-
 function collapseHeader() {
   stopAutohide()
   settingsStore.showHeader = false
@@ -318,18 +296,17 @@ function resetAutohide() {
 
 watch(() => settingsStore.showHeader, (visible) => {
   if (visible) {
+    // A reveal while the viewport is short counts as an explicit user
+    // reveal — auto-hide won't re-engage for it. Set here (not in a
+    // click handler) so every reveal path marks it, including the
+    // footer-docked pill. The height guard keeps a reveal on a tall
+    // viewport from pinning the flag forever.
+    if (window.innerHeight < SHORT_VIEWPORT_PX) {
+      userRevealedOnShort = true
+    }
     startAutohide()
   } else {
     stopAutohide()
-  }
-})
-
-// Support swipe down gesture on the trigger area to reveal header
-useSwipe(triggerRef, {
-  onSwipeEnd: (direction) => {
-    if (direction === 'DOWN') {
-      revealHeader()
-    }
   }
 })
 
@@ -371,27 +348,6 @@ onUnmounted(() => {
   overflow: visible;
 }
 
-.header-reveal-trigger {
-  -webkit-user-select: none;
-  user-select: none;
-  position: fixed;
-  /* Bottom-left corner, sized to the pill itself — a top-anchored hit
-     strip overlapped the scene rail/console rows both visually and for
-     touches. The corner is free on both chromes (the waiting-alert snooze
-     chip sits bottom-center). Swipe-down on the pill still reveals. */
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  left: calc(10px + env(safe-area-inset-left, 0px));
-  width: auto;
-  height: auto;
-  background: transparent;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  cursor: pointer;
-  touch-action: none;
-  z-index: 110;
-}
-
 .reveal-handle {
   width: 96px;
   height: 10px;
@@ -401,89 +357,12 @@ onUnmounted(() => {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-/* Visible tap affordance inside the transparent trigger — a labelled pill
-   reads as a button on touchscreens, where the bare handle bar did not.
-   Styled on the Uiverse "ripple button" (DL-014 follow-up, 2026-09-27):
-   solid teal, square-ish corners, uppercase tracked label flanked by two
-   ripple dots. It floats free in the bottom-left corner, so it carries a
-   finger-first size scaled by the touch multiplier. */
-.reveal-pill {
-  -webkit-user-select: none;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(14px * min(var(--touch-multiplier, 1), 1.6));
-  min-width: calc(200px * min(var(--touch-multiplier, 1), 1.6));
-  min-height: max(var(--min-touch-target, 48px), calc(52px * min(var(--touch-multiplier, 1), 1.6)));
-  padding:
-    calc(16px * min(var(--touch-multiplier, 1), 1.6))
-    calc(20px * min(var(--touch-multiplier, 1), 1.6));
-  background: #40B3A2;
-  border: 0;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
-  color: #fff;
-  font-size: calc(0.75rem * min(var(--touch-multiplier, 1), 1.6));
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.reveal-pill-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-/* Ripple dots — expanding box-shadow rings, clipped inside the button. */
-.reveal-ripple {
-  width: 10px;
-  height: 10px;
-  border-radius: 100%;
-  background: rgba(255, 255, 255, 0.85);
-  flex-shrink: 0;
-  animation: reveal-ripple 0.6s linear infinite;
-}
-
-@keyframes reveal-ripple {
-  0% {
-    box-shadow:
-      0 0 0 0 rgba(255, 255, 255, 0.1),
-      0 0 0 20px rgba(255, 255, 255, 0.1),
-      0 0 0 40px rgba(255, 255, 255, 0.1),
-      0 0 0 60px rgba(255, 255, 255, 0.1);
-  }
-  100% {
-    box-shadow:
-      0 0 0 20px rgba(255, 255, 255, 0.1),
-      0 0 0 40px rgba(255, 255, 255, 0.1),
-      0 0 0 60px rgba(255, 255, 255, 0.1),
-      0 0 0 80px rgba(255, 255, 255, 0);
-  }
-}
-
-.header-reveal-trigger:hover .reveal-pill,
-.header-reveal-trigger:active .reveal-pill {
-  opacity: 0.92;
-  transform: scale(1.04);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal-ripple { animation: none; }
-}
-
-/* Show/hide choreography (DL-014 addendum #3): one Transition swaps the
-   reveal trigger and the header, so both move in the same direction —
-   header slides down in while the button slides down out; on hide the
-   header slides up away while the button rises back up into place.
-   The leaving header rides on .header-hidden's height:0 +
-   overflow:visible — the grid reclaims the space instantly, no
-   end-of-leave jump. */
+/* Show/hide choreography (DL-014 addendum #3): the header slides down in
+   on reveal and up away on hide; the footer-docked reveal pill animates
+   in the same direction from its own Transition in DeckFooter, so the
+   handoff still reads as one motion. The leaving header rides on
+   .header-hidden's height:0 + overflow:visible — the grid reclaims the
+   space instantly, no end-of-leave jump. */
 .hdr-reveal-enter-active,
 .hdr-reveal-leave-active {
   transition: transform 0.55s var(--ease-io, cubic-bezier(0.4, 0, 0.2, 1));
@@ -499,11 +378,6 @@ onUnmounted(() => {
 .deck-header.hdr-reveal-enter-from,
 .deck-header.hdr-reveal-leave-to {
   transform: translateY(-102%);
-}
-
-.header-reveal-trigger.hdr-reveal-enter-from,
-.header-reveal-trigger.hdr-reveal-leave-to {
-  transform: translateY(140%);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -43,6 +43,10 @@ ALLOWED_USER_SETTING_KEYS = {
     # Screensaver widgets. 'screensaverWidgets' was read by ScreenSaver.vue but
     # never allowlisted here, so the user's choice was dropped on every save.
     'screensaverWidgets',
+    # The clock is toggleable via its own flag rather than a widgets-array
+    # entry — saved lists predate 'clock', so gating on the array would hide
+    # the clock for every existing user (DL-098).
+    'screensaverClockEnabled',
     'screensaverWeatherSize',
     'newsFeeds',
     'sportsFeeds',

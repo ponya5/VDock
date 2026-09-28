@@ -795,13 +795,17 @@
                 <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
               </div>
               <div class="panel-body">
+                <!-- DL-098: the clock is a real toggle — its own persisted
+                     flag, not a widgets-array entry (saved lists predate
+                     'clock', so array membership could never distinguish
+                     "turned off" from "old payload"). -->
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Clock</span>
-                    <p>Large time and date. Always drawn.</p>
+                    <p>Large time and date.</p>
                   </div>
                   <div class="row-control">
-                    <label class="switch"><span class="sr-only">Clock</span><input type="checkbox" checked disabled /><span class="track"></span></label>
+                    <label class="switch"><span class="sr-only">Clock</span><input type="checkbox" :checked="settingsStore.screensaverClockEnabled" @change="settingsStore.screensaverClockEnabled = !settingsStore.screensaverClockEnabled" /><span class="track"></span></label>
                   </div>
                 </div>
                 <template v-for="w in screensaverWidgetOptions" :key="w.id">
@@ -952,8 +956,8 @@
               <div class="preview-head"><FontAwesomeIcon :icon="['fas', 'moon']" /> Screensaver preview</div>
               <div class="preview-stage preview-stage-bg preview-stage-ss" :class="screensaverPreviewClass" :style="screensaverPreviewStyle">
                 <div class="ss-mock">
-                  <div class="ss-mock-clock" :style="{ fontSize: `${Math.round(46 * settingsStore.screensaverWidgetSize / 100)}px` }">12:34</div>
-                  <div class="ss-mock-date">Monday, 21 September</div>
+                  <div v-if="settingsStore.screensaverClockEnabled" class="ss-mock-clock" :style="{ fontSize: `${Math.round(46 * settingsStore.screensaverWidgetSize / 100)}px` }">12:34</div>
+                  <div v-if="settingsStore.screensaverClockEnabled" class="ss-mock-date">Monday, 21 September</div>
                   <div class="ss-mock-chips">
                     <span v-if="settingsStore.screensaverWidgets.includes('weather')" :style="{ fontSize: `${12 * settingsStore.screensaverWeatherSize / 100}px` }">☀ 27° Tel Aviv</span>
                     <span v-if="settingsStore.screensaverWidgets.includes('market')">BTC ▲ 1.4%</span>
@@ -2489,13 +2493,17 @@ function toggleScreensaverWidget(id: string) {
   }
 }
 
-// DL-028: section-level reset restores the default five-widget set.
+// DL-028: section-level reset restores the default widget set — the
+// DL-098 glanceable trio plus the clock flag, which sits in the same
+// panel even though it persists as its own setting.
 const screensaverWidgetsAtDefault = computed(() =>
+  settingsStore.screensaverClockEnabled === SETTINGS_DEFAULTS.screensaverClockEnabled &&
   settingsStore.screensaverWidgets.length === SETTINGS_DEFAULTS.screensaverWidgets.length &&
   SETTINGS_DEFAULTS.screensaverWidgets.every(w => settingsStore.screensaverWidgets.includes(w))
 )
 function resetScreensaverWidgets() {
   settingsStore.screensaverWidgets = [...SETTINGS_DEFAULTS.screensaverWidgets]
+  settingsStore.screensaverClockEnabled = SETTINGS_DEFAULTS.screensaverClockEnabled
 }
 
 // ── Session Logs tab (DL-029) ──

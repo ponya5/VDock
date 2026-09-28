@@ -56,7 +56,11 @@ export const SETTINGS_DEFAULTS = {
   buttonDefaultIconLoop: 'swing',
   buttonDefaultEffect: 'none',
   screensaverTimeout: 120,
-  screensaverWidgets: ['weather', 'news', 'sports', 'market', 'worldclock'],
+  // DL-098: fresh installs get the glanceable set — clock (its own flag),
+  // weather, news, markets. Sports and world clock stay available, off by
+  // default; persisted lists always win for existing users.
+  screensaverWidgets: ['weather', 'news', 'market'],
+  screensaverClockEnabled: true,
   screensaverWeatherSize: 100,
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_SCREENSAVER_BACKGROUND_ID,
@@ -105,6 +109,14 @@ export interface PersistedUserSettings {
   buttonDefaultIconLoop: string
   buttonDefaultEffect: string
   screensaverWidgets: string[]
+  /**
+   * DL-098: the clock is toggleable via its own flag rather than a
+   * `screensaverWidgets` entry — saved lists written before it existed
+   * never contained 'clock', so gating on the array would hide the clock
+   * for every existing user, and "turned off" vs "old payload" would be
+   * indistinguishable there.
+   */
+  screensaverClockEnabled: boolean
   screensaverWeatherSize: number
   newsApiKey: string
   newsFeeds: string
@@ -205,9 +217,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const buttonDefaultIconLoop = ref('swing')
   const buttonDefaultEffect = ref('none')
 
-  // Fresh installs get the full editorial layout from the mockup; persisted
+  // Fresh installs get the glanceable set; persisted
   // choices always win over this default.
-  const screensaverWidgets = ref<string[]>(['weather', 'news', 'sports', 'market', 'worldclock'])
+  const screensaverWidgets = ref<string[]>([...SETTINGS_DEFAULTS.screensaverWidgets])
+  // The clock sits outside the widgets array (DL-098) — see the interface
+  // comment above for why it can't share the list.
+  const screensaverClockEnabled = ref(true)
   // Percentage scale for the screensaver's corner weather pill. 100 keeps the
   // desktop-size rendering; small touch panels push it up for glanceability.
   const screensaverWeatherSize = ref(100)
@@ -368,6 +383,7 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultEffect: buttonDefaultEffect.value,
       // Spread for the same structured-clone reason as recentActions above.
       screensaverWidgets: [...screensaverWidgets.value],
+      screensaverClockEnabled: screensaverClockEnabled.value,
       screensaverWeatherSize: screensaverWeatherSize.value,
       newsApiKey: newsApiKey.value,
       newsFeeds: newsFeeds.value,
@@ -427,6 +443,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.buttonDefaultIconLoop !== undefined) buttonDefaultIconLoop.value = settings.buttonDefaultIconLoop
     if (settings.buttonDefaultEffect !== undefined) buttonDefaultEffect.value = settings.buttonDefaultEffect
     if (settings.screensaverWidgets !== undefined) screensaverWidgets.value = settings.screensaverWidgets
+    if (settings.screensaverClockEnabled !== undefined) screensaverClockEnabled.value = settings.screensaverClockEnabled
     if (settings.screensaverWeatherSize !== undefined) screensaverWeatherSize.value = settings.screensaverWeatherSize
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
     if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
@@ -491,7 +508,9 @@ export const useSettingsStore = defineStore('settings', () => {
         buttonDefaultAnimation: settings.buttonDefaultAnimation ?? 'none',
         buttonDefaultIconLoop: settings.buttonDefaultIconLoop ?? 'swing',
         buttonDefaultEffect: settings.buttonDefaultEffect ?? 'none',
-        screensaverWidgets: settings.screensaverWidgets ?? ['weather', 'news', 'sports', 'market', 'worldclock'],
+        screensaverWidgets: settings.screensaverWidgets ?? [...SETTINGS_DEFAULTS.screensaverWidgets],
+        // Missing key = written before the flag existed → keep the clock on.
+        screensaverClockEnabled: settings.screensaverClockEnabled ?? true,
         screensaverWeatherSize: settings.screensaverWeatherSize ?? 100,
         newsApiKey: settings.newsApiKey ?? '',
         newsFeeds: settings.newsFeeds ?? '',
@@ -655,6 +674,7 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultIconLoop,
       buttonDefaultEffect,
       screensaverWidgets,
+      screensaverClockEnabled,
       screensaverWeatherSize,
       newsApiKey,
       newsFeeds,
@@ -868,6 +888,7 @@ export const useSettingsStore = defineStore('settings', () => {
     buttonDefaultIconLoop,
     buttonDefaultEffect,
     screensaverWidgets,
+    screensaverClockEnabled,
     screensaverWeatherSize,
     newsApiKey,
     newsFeeds,
