@@ -259,7 +259,7 @@ const emit = defineEmits<{
   delete: [buttonId: string]
   move: [buttonId: string, newPosition: { row: number; col: number }]
   doubleTap: [button: Button]
-  longPress: [button: Button]
+  longPress: [button: Button, pointerType?: string]
 }>()
 
 const buttonRef = ref<HTMLElement | null>(null)
@@ -279,6 +279,7 @@ useDoubleTap(buttonRef, {
 // and cancelling the gesture on early movement reads as "touch doesn't work").
 let downTarget: EventTarget | null = null
 let downPos: { x: number; y: number } | null = null
+let downPointerType: string | null = null
 let grabEmitted = false
 
 const overlayControlSelector = '.edit-overlay-actions button, .delete-btn'
@@ -288,7 +289,10 @@ function emitGrab() {
   // Long-pressing an overlay control (delete/edit/copy) is not a drag grab.
   if ((downTarget as HTMLElement | null)?.closest?.(overlayControlSelector)) return
   grabEmitted = true
-  emit('longPress', props.button)
+  // pointerType rides along so DeckGrid can skip the touch-ghost path for
+  // mice — they already reorder via native HTML5 drag, and the ghost's
+  // touchmove/touchend cleanup can never fire for a mouse.
+  emit('longPress', props.button, downPointerType ?? undefined)
 }
 
 useLongPress(buttonRef, {
@@ -297,6 +301,7 @@ useLongPress(buttonRef, {
 
 function handleEditModeMove(event: PointerEvent) {
   if (!downPos || !event.isPrimary || grabEmitted) return
+  if (event.pointerType === 'mouse') return // mice reorder via HTML5 drag
   const dx = Math.abs(event.clientX - downPos.x)
   const dy = Math.abs(event.clientY - downPos.y)
   if (dx > 12 || dy > 12) emitGrab()
@@ -304,6 +309,7 @@ function handleEditModeMove(event: PointerEvent) {
 
 function endEditModeGrab() {
   downPos = null
+  downPointerType = null
   window.removeEventListener('pointermove', handleEditModeMove)
   window.removeEventListener('pointerup', endEditModeGrab)
   window.removeEventListener('pointercancel', endEditModeGrab)
@@ -718,6 +724,7 @@ let releasePending = false
 function handlePointerDown(event: PointerEvent) {
   triggerRipple(event)
   downTarget = event.target
+  downPointerType = event.pointerType
   if (props.isEditMode) {
     // Watch the whole window: the finger travels off the button during a drag,
     // and setPointerCapture would retarget click events and break the

@@ -699,6 +699,7 @@
                     <component :is="previewBgComponent" :key="settingsStore.background" :on-error="onPreviewBgError" />
                   </div>
                 </div>
+                <div v-else-if="previewBgUnavailable" class="preview-bg-note">Preview unavailable on this device</div>
                 <div class="mock-grid mock-grid-ghost">
                   <span v-for="i in 6" :key="i" class="mock-key ghost"></span>
                 </div>
@@ -2065,6 +2066,10 @@ function onPreviewBgError(err: unknown) {
   console.warn('[settings-preview] background fell back:', settingsStore.background, err)
   bgPreviewFailed.value = settingsStore.background
 }
+
+// A failed component leaves a bare checkerboard that reads as a corrupted
+// render — label it so the stage explains itself.
+const previewBgUnavailable = computed(() => bgPreviewFailed.value === settingsStore.background)
 
 // The inner stage is 100vw×100vh; scale = stage width / real viewport width.
 const bgPreviewStage = ref<HTMLElement | null>(null)
@@ -4794,6 +4799,7 @@ onMounted(async () => {
 /* scaled-viewport host for real component backgrounds (DL-059) */
 .preview-bg-clip { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; z-index: 0; }
 .preview-bg-viewport { width: 100vw; height: 100vh; transform-origin: top left; }
+.preview-bg-note { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: var(--color-text-secondary, #94a3b8); text-align: center; padding: 0.5rem; pointer-events: none; }
 .preview-stage-bg .mock-grid { position: relative; z-index: 1; }
 .preview-stage-grid { min-height: 150px; }
 .preview-stage-bg-tall { min-height: 240px; }

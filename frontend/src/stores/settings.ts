@@ -199,11 +199,13 @@ export const useSettingsStore = defineStore('settings', () => {
   const background = ref<string>(FACTORY_BACKGROUND_ID)
   const uiBrightness = ref(100)
   // Ephemeral UI state (not persisted/synced): whether the auto-hiding header
-  // is currently shown. Each window/tab manages its own header visibility
-  // independently — this must never be part of the cross-window settings sync
-  // or server persistence, otherwise one window's auto-hide timer would force
-  // the header closed (and unable to reopen) in every other connected window.
-  const showHeader = ref(true)
+  // is currently shown. Starts closed — the deck launches full-grid and the
+  // corner FAB reveals it on demand (and arms the 5s auto-hide). Each
+  // window/tab manages its own header visibility independently — this must
+  // never be part of the cross-window settings sync or server persistence,
+  // otherwise one window's auto-hide timer would force the header closed
+  // (and unable to reopen) in every other connected window.
+  const showHeader = ref(false)
   const toastLevel = ref<'all' | 'errors-only' | 'off'>('errors-only')
   
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')

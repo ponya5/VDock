@@ -78,4 +78,53 @@ describe('edit-mode touch drag', () => {
     expect(dt).toContain('pointerdown')
     expect(dt).toContain('threshold')
   })
+
+  // DL-110: a ghost must never outlive its drag — mice can't fire touchend,
+  // and cancelled/backgrounded touches never emit it either.
+  it('cleans up the ghost on cancel, pointer release, blur and unmount', () => {
+    expect(grid).toContain("document.addEventListener('touchcancel'")
+    expect(grid).toContain("document.addEventListener('pointercancel'")
+    expect(grid).toContain("document.addEventListener('pointerup'")
+    expect(grid).toContain("window.addEventListener('blur'")
+    // cancel path must not execute a drop
+    expect(grid).toMatch(/onTouchCancelDrag[\s\S]*?finishDrag\(false\)/)
+    // unmount shares the same cleanup
+    const unmount = grid.slice(grid.indexOf('onUnmounted'))
+    expect(unmount).toContain('finishDrag(false)')
+  })
+
+  it('never starts the touch-ghost for a mouse pointer', () => {
+    const handler = grid.slice(
+      grid.indexOf('function handleButtonLongPress'),
+      grid.indexOf('function handleButtonLongPress') + 700
+    )
+    expect(handler).toContain("pointerType === 'mouse'")
+    expect(handler).toContain('isEditMode')
+    // DeckButton must actually report the pointer type
+    expect(button).toContain('downPointerType = event.pointerType')
+    expect(button).toMatch(/emit\('longPress', props\.button, downPointerType/)
+    expect(button).toMatch(/pointerType === 'mouse'/)
+  })
+
+  it('the sidebar action drag cancels on touchcancel too', () => {
+    const drag = readFileSync(
+      resolve(__dirname, '../composables/useTouchActionDrag.ts'),
+      'utf-8'
+    )
+    expect(drag).toContain("document.addEventListener('touchcancel'")
+    expect(drag).toContain("document.addEventListener('pointercancel'")
+    expect(drag).toContain("window.addEventListener('blur'")
+  })
+
+  it('hides the header reveal FAB while editing (it overlapped Delete Page)', () => {
+    const view = readFileSync(
+      resolve(__dirname, '../views/DashboardView.vue'),
+      'utf-8'
+    )
+    const fab = view.slice(
+      view.indexOf('header-reveal-fab') - 300,
+      view.indexOf('header-reveal-fab')
+    )
+    expect(fab).toContain('!isEditMode')
+  })
 })

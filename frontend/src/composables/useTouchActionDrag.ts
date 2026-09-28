@@ -10,6 +10,7 @@ let dragGhostElement: HTMLElement | null = null
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let touchMoveHandler: ((event: TouchEvent) => void) | null = null
 let touchEndHandler: ((event: TouchEvent) => void) | null = null
+let touchCancelHandler: (() => void) | null = null
 
 function clearLongPressTimer() {
   if (longPressTimer) {
@@ -26,6 +27,12 @@ function removeTouchDragListeners() {
   if (touchEndHandler) {
     document.removeEventListener('touchend', touchEndHandler)
     touchEndHandler = null
+  }
+  if (touchCancelHandler) {
+    document.removeEventListener('touchcancel', touchCancelHandler)
+    document.removeEventListener('pointercancel', touchCancelHandler)
+    window.removeEventListener('blur', touchCancelHandler)
+    touchCancelHandler = null
   }
 }
 
@@ -121,8 +128,14 @@ export function useTouchActionDrag() {
       cancelTouchDrag()
     }
 
+    // A cancelled touch never reaches touchend — without these the ghost
+    // and armed listeners survive forever (frozen clone over the deck).
+    touchCancelHandler = () => cancelTouchDrag()
     document.addEventListener('touchmove', touchMoveHandler, { passive: false })
     document.addEventListener('touchend', touchEndHandler, { passive: true })
+    document.addEventListener('touchcancel', touchCancelHandler, { passive: true })
+    document.addEventListener('pointercancel', touchCancelHandler, { passive: true })
+    window.addEventListener('blur', touchCancelHandler)
   }
 
   function bindTouchDragSource(

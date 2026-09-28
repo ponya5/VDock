@@ -558,6 +558,7 @@ function mountShapeWaves(rootEl, canvasEl, hooks, {
         });
         const createMaskTexture = (maskWidth, maskHeight) =>
           gpu.device.createTexture({
+            kind: '2d',
             size: [maskWidth, maskHeight],
             format: 'rgba8unorm',
             usage: ['texture_binding', 'copy_dst', 'render_attachment'],
