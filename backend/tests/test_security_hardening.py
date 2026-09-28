@@ -205,3 +205,60 @@ def test_config_deck_host_clear_restores_auto(client):
     assert Config.DECK_HOST == ''
     resp = client.get('/api/config')
     assert resp.get_json()['config']['deck_host'] is None
+
+
+# ---------------------------------------------------------------------------
+# lan_ip() — must advertise a phone-reachable address (DL-056 follow-up).
+# A VPN/overlay adapter that captures the default route makes the UDP
+# probe answer with a tunnel IP; the fix prefers the physical NIC.
+# ---------------------------------------------------------------------------
+import config as config_mod  # noqa: E402
+
+
+def test_lan_ip_probe_on_physical_iface_wins(mocker):
+    mocker.patch.object(config_mod, '_probe_ip', return_value='192.168.1.110')
+    mocker.patch.object(config_mod, '_iface_candidates', return_value=[
+        ('Wi-Fi', '192.168.1.110'),
+        ('vEthernet (WSL (Hyper-V firewall))', '192.168.112.1'),
+    ])
+    assert config_mod.lan_ip() == '192.168.1.110'
+
+
+def test_lan_ip_probe_on_vpn_falls_back_to_physical(mocker):
+    """Full-tunnel WireGuard captures the default route — the probe IP is
+    the tunnel address a phone on Wi-Fi cannot reach."""
+    mocker.patch.object(config_mod, '_probe_ip', return_value='10.255.4.170')
+    mocker.patch.object(config_mod, '_iface_candidates', return_value=[
+        ('Wi-Fi', '192.168.1.110'),
+        ('P81_Securitiz_WG_8RiPKjInQi', '10.255.4.170'),
+        ('vEthernet (Default Switch)', '172.19.96.1'),
+    ])
+    assert config_mod.lan_ip() == '192.168.1.110'
+
+
+def test_lan_ip_overlay_only_host_keeps_probe(mocker):
+    """A box whose only address is an overlay (Tailscale) still answers —
+    a device on the same overlay can reach it."""
+    mocker.patch.object(config_mod, '_probe_ip', return_value='100.64.1.5')
+    mocker.patch.object(config_mod, '_iface_candidates', return_value=[
+        ('Tailscale', '100.64.1.5'),
+    ])
+    assert config_mod.lan_ip() == '100.64.1.5'
+
+
+def test_lan_ip_prefers_192_168_over_10(mocker):
+    """Two physical NICs — the typical home-LAN class wins the guess."""
+    mocker.patch.object(config_mod, '_probe_ip', return_value=None)
+    mocker.patch.object(config_mod, '_iface_candidates', return_value=[
+        ('Ethernet', '10.20.30.40'),
+        ('Wi-Fi', '192.168.1.110'),
+    ])
+    assert config_mod.lan_ip() == '192.168.1.110'
+
+
+def test_lan_ip_no_candidates_falls_to_hostname(mocker):
+    mocker.patch.object(config_mod, '_probe_ip', return_value=None)
+    mocker.patch.object(config_mod, '_iface_candidates', return_value=[])
+    mocker.patch.object(config_mod.socket, 'gethostbyname',
+                        return_value='192.168.1.50')
+    assert config_mod.lan_ip() == '192.168.1.50'

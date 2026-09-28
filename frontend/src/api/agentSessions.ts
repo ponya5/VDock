@@ -18,6 +18,9 @@ export interface AgentSessionInfo {
   prompted?: boolean
   /** Hook detail — the current task or last prompt, when reported. */
   detail: string
+  /** Friendly name of the app owning the session's window — 'Windows
+      Terminal', 'Cursor', 'VS Code' — or null when unresolvable. */
+  host?: string | null
   /** Unix start time of the session process, or null. */
   started: number | null
 }

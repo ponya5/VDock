@@ -114,3 +114,33 @@ socket clients reconnected automatically.
 Note: the bind itself is unchanged — the override only changes what the
 QR/address advertises. That is the correct scope: the server already
 answers on every interface when ALLOW_LAN is on.
+
+## Follow-up — lan_ip() must ignore VPN/overlay adapters
+
+The UDP-connect probe (`connect('192.168.255.255')` → `getsockname()`)
+answers "which interface would the *default route* use". When a
+full-tunnel VPN (WireGuard/Tailscale) is up it owns the default route,
+so the probe returned the tunnel IP — QR encoded
+`http://10.255.4.170:5000` on this machine, unreachable from a phone on
+the Wi-Fi LAN (`192.168.1.110`). Reported as "scan the QR and nothing
+loads".
+
+`lan_ip()` now enumerates up interfaces via `psutil.net_if_addrs()`
+(excluding loopback/link-local), partitions out names matching
+`_VIRTUAL_IFACE_HINTS` (vEthernet/Hyper-V/WSL/VMware/VirtualBox/
+Bluetooth/Tailscale/ZeroTier/WireGuard/`_wg_`/`wg-`/OpenVPN/wintun/
+TAP/VPN/tunnel/docker/br-), then:
+
+- probe IP on a physical iface → probe wins (unchanged normal case)
+- probe on a virtual iface → best physical candidate, ranked
+  192.168/16 → 10/8 → 172.16/12 → other
+- no physical candidates → probe anyway (Tailscale-only host is
+  legitimately reachable over the overlay)
+- no probe, no candidates → hostname fallback (unchanged)
+
+Verified live on the user's machine: `lan_ip()` returns
+`192.168.1.110` (was `10.255.4.170`), `GET http://192.168.1.110:5000/`
+→ 200, Socket.IO handshake with `Origin: http://192.168.1.110:5000`
+→ 200 with sid. Firewall confirmed non-blocking (python.exe allow
+rules on Public profile; Wi-Fi profile is Public).
+5 new pins in `test_security_hardening.py` (24/24 green).

@@ -36,31 +36,37 @@
       >
         <button class="category-header" @click="toggleCategory(category.id)">
           <FontAwesomeIcon
-            :icon="isExpanded(category.id) ? ['fas', 'chevron-down'] : ['fas', 'chevron-right']"
+            :icon="['fas', 'chevron-down']"
+            class="category-chevron"
+            :class="{ open: isExpanded(category.id) }"
           />
           <span>{{ category.label }}</span>
           <span class="count">({{ category.actions.length }})</span>
         </button>
 
-        <div v-show="isExpanded(category.id)" class="category-items">
-          <button
-            v-for="action in category.actions"
-            :key="action.id"
-            class="action-item"
-            :class="{ 'is-unavailable': action.unavailable_reason }"
-            :title="action.unavailable_reason || action.description"
-            :disabled="!!action.unavailable_reason"
-            @click="selectAction(action)"
-          >
-            <FontAwesomeIcon :icon="action.icon" />
-            <span>{{ action.label }}</span>
-            <FontAwesomeIcon
-              v-if="action.unavailable_reason"
-              :icon="['fas', 'circle-exclamation']"
-              class="unavailable-icon"
-            />
-          </button>
-        </div>
+        <!-- Collapse keeps items mounted (visibility, not v-if) and
+             animates height + fade instead of snapping like v-show. -->
+        <Collapse :open="isExpanded(category.id)">
+          <div class="category-items">
+            <button
+              v-for="action in category.actions"
+              :key="action.id"
+              class="action-item"
+              :class="{ 'is-unavailable': action.unavailable_reason }"
+              :title="action.unavailable_reason || action.description"
+              :disabled="!!action.unavailable_reason"
+              @click="selectAction(action)"
+            >
+              <FontAwesomeIcon :icon="action.icon" />
+              <span>{{ action.label }}</span>
+              <FontAwesomeIcon
+                v-if="action.unavailable_reason"
+                :icon="['fas', 'circle-exclamation']"
+                class="unavailable-icon"
+              />
+            </button>
+          </div>
+        </Collapse>
       </div>
     </div>
   </div>
@@ -79,6 +85,7 @@
 // action_type and the default_config it needs.
 import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import Collapse from '@/components/Collapse.vue'
 import { useActionCatalogStore, type ActionSpec } from '@/stores/actionCatalog'
 
 interface Props {
@@ -262,6 +269,17 @@ function selectAction(action: ActionSpec) {
   margin-left: auto;
   font-size: calc(clamp(0.68rem, 2vw + 0.42rem, 1.02rem) * var(--touch-multiplier, 1));
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* Single chevron rotated -90° when collapsed — same pattern as the
+   edit-mode sidebar (transform transition instead of an icon swap). */
+.category-chevron {
+  transform: rotate(-90deg);
+  transition: transform 0.25s var(--ease-out);
+}
+
+.category-chevron.open {
+  transform: rotate(0deg);
 }
 
 .category-items {

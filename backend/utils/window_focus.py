@@ -355,6 +355,86 @@ def _cwd_tier(session_cwd: Optional[str], prefer_cwd: Optional[str]) -> int:
 #: children would admit every unrelated top-level window as a candidate.
 _NON_HOST_ANCESTORS = {'explorer.exe'}
 
+#: Terminal apps that can host a *delegated* console (Windows "default
+#: terminal" mode). The console window is then owned by the terminal's
+#: own process tree — disconnected from the session's ancestors, so the
+#: ancestor walk cannot reach it. These hosts title their windows after
+#: the hosted app ("✳ Claude Code" for a claude session), which is the
+#: only remaining link (DL-111).
+_TERMINAL_HOST_EXES = {
+    'windowsterminal.exe', 'openconsole.exe', 'wezterm-gui.exe',
+    'tabby.exe', 'alacritty.exe', 'hyper.exe', 'fluent-terminal.exe',
+    'wave.exe', 'warp.exe',
+}
+
+#: Display names for the process that owns a session's host window —
+#: shown in the picker so "backend · Cursor" reads different from
+#: "backend · Windows Terminal" (DL-071 follow-up 11).
+_FRIENDLY_HOST_NAMES = {
+    'windowsterminal.exe': 'Windows Terminal',
+    'conhost.exe': 'Console',
+    'openconsole.exe': 'Console',
+    'cursor.exe': 'Cursor',
+    'code.exe': 'VS Code',
+    'code - insiders.exe': 'VS Code Insiders',
+    'windsurf.exe': 'Windsurf',
+    'zed.exe': 'Zed',
+    'devenv.exe': 'Visual Studio',
+    'wezterm-gui.exe': 'WezTerm',
+    'alacritty.exe': 'Alacritty',
+    'tabby.exe': 'Tabby',
+    'warp.exe': 'Warp',
+    'hyper.exe': 'Hyper',
+    'powershell.exe': 'PowerShell',
+    'pwsh.exe': 'PowerShell',
+    'cmd.exe': 'Command Prompt',
+    'claude.exe': 'Claude',
+    'devin.exe': 'Devin',
+}
+
+
+def _host_display_name(owner_pid: Optional[int]) -> Optional[str]:
+    """Friendly name of the app owning a session's host window."""
+    if not owner_pid:
+        return None
+    import psutil
+    try:
+        exe = (psutil.Process(owner_pid).name() or '').lower()
+    except Exception:
+        return None
+    if exe in _FRIENDLY_HOST_NAMES:
+        return _FRIENDLY_HOST_NAMES[exe]
+    stem = exe[:-4] if exe.endswith('.exe') else exe
+    return stem.title() if stem else None
+
+
+def _delegated_terminal_windows(
+    needle: str,
+    win_by_pid: dict,
+    claimed_hwnds: set,
+) -> List[Tuple[int, str]]:
+    """(hwnd, title) of marker-titled windows owned by terminal hosts.
+
+    Last-resort pairings for sessions whose console was delegated to an
+    external terminal — the host window is unreachable from the session's
+    process tree. Only windows not already claimed by the ancestor walk
+    are offered, so a normal in-tree host always wins.
+    """
+    import psutil
+
+    windows: List[Tuple[int, str]] = []
+    for pid, wins in win_by_pid.items():
+        try:
+            exe = psutil.Process(pid).name().lower()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        if exe not in _TERMINAL_HOST_EXES:
+            continue
+        for hwnd, title in wins:
+            if needle in title.lower() and hwnd not in claimed_hwnds:
+                windows.append((hwnd, title))
+    return windows
+
 
 def _session_host_candidates(
     marker: str,
@@ -394,6 +474,7 @@ def _session_host_candidates(
             continue
 
     candidates: List[Tuple[int, int, str, bool, int, float]] = []
+    unresolved: List[Tuple[int, int, float]] = []  # (pid, tier, create_time)
     for pid in session_pids:
         sess_cwd: Optional[str] = None
         create_time = 0.0
@@ -433,6 +514,23 @@ def _session_host_candidates(
                     found = True
             if found:
                 break
+        if not found:
+            unresolved.append((pid, tier, create_time))
+
+    # Delegated consoles (default-terminal mode): the host window lives on
+    # a disconnected terminal-app tree, so only a marker-titled terminal
+    # window can stand in. Newest session claims the topmost free window;
+    # extra sessions share the last one (several sessions per hwnd is a
+    # supported shape).
+    if unresolved:
+        claimed = {hwnd for _p, hwnd, _t, _s, _ti, _c in candidates}
+        free_windows = _delegated_terminal_windows(
+            marker.lower(), win_by_pid, claimed)
+        if free_windows:
+            for i, (pid, tier, create_time) in enumerate(
+                    sorted(unresolved, key=lambda u: -u[2])):
+                hwnd, title = free_windows[min(i, len(free_windows) - 1)]
+                candidates.append((pid, hwnd, title, False, tier, create_time))
 
     return candidates
 
@@ -517,6 +615,16 @@ def list_session_hosts(marker: str) -> List[dict]:
         if row['self_owned'] and not self_owned:
             row.update({'hwnd': hwnd, 'title': title, 'self_owned': False})
 
+    # hwnd -> owning process, to name the surface hosting each session.
+    owner_by_hwnd: dict = {}
+    if by_pid:
+        try:
+            for owner, wins in _visible_windows_by_pid().items():
+                for hwnd, _t in wins:
+                    owner_by_hwnd[hwnd] = owner
+        except Exception:
+            pass
+
     # Per-session cwd rides along for display and hook matching; it was
     # already read during candidate enumeration, so re-read just it here.
     import psutil
@@ -525,5 +633,6 @@ def list_session_hosts(marker: str) -> List[dict]:
             row['cwd'] = psutil.Process(pid).cwd()
         except Exception:
             row['cwd'] = None
+        row['host'] = _host_display_name(owner_by_hwnd.get(row['hwnd']))
 
     return sorted(by_pid.values(), key=lambda r: -r['create_time'])

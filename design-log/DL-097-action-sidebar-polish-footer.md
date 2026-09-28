@@ -161,3 +161,25 @@ collapsed so the list reads as a compact category index.
   seeds, inverted tracking in the modal, `effectiveExpandedCategories`
   binding, and the search-expansion contract.
 - vitest + vue-tsc + build verified; `dist/` rebuilt.
+
+## Follow-up (2026-10-02, b): smooth collapse/expand animation
+
+The categories collapsed/expanded instantly — a snap, not a glide.
+
+- `ButtonActionsSidebar.vue` — the modal picker used `v-show` (hard
+  show/hide); now uses the shared `Collapse` component like the
+  edit-mode sidebar and Settings sections. Chevron switched from an
+  instant icon swap (right/down) to the rotating-chevron pattern
+  (`transform` transition, same as EditSidebar's).
+- `Collapse.vue` — retuned: `grid-template-rows` transition moved off
+  `--ease-out` (its fast-start curve pushed ~67% of the height in the
+  first 40ms, which still read as a snap) to symmetric `--ease-io` at
+  320ms; inner fade/slide retimed to match. Affects every Collapse
+  consumer (edit sidebar, Settings sections, widget cards) — all get
+  the smoother glide.
+- Verified live: sampled `offsetHeight` during a toggle — before
+  `0 → 293 → 436` (front-loaded), after `3 → 65 → 234 → 436` over
+  ~320ms (proper accel/decel).
+- `edit-sidebar-categories.test.ts` + `vdock-ui-redesign-property11`
+  (easing-token guard — new transitions use `var(--ease-*)` tokens)
+  green; `npm run build` clean.
