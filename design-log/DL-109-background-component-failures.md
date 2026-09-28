@@ -80,3 +80,60 @@ backgrounds render identically in preview and dashboard — no divergence.
   mounted clean.
 - Frontend suite: **340 passed / 68 files**; `vue-tsc --noEmit` clean;
   `npm run build` clean, `dist/` rebuilt (75 precached entries).
+
+## Follow-up (2026-09-28): mount-time error boundary for component backgrounds
+
+**Context:** user report — dashboard + screensaver backgrounds show plain on
+their phone. Live verification (Chromium + WebKit mobile emulation, dev +
+prod builds) shows both backgrounds already apply on mobile — the likely
+device-side cause is a stale precached bundle: `balatro`/`prismatic-burst`
+both entered the catalog in `2d99146` (2026-09-20), and a bundle older than
+that resolves both ids to `'default'` = plain on both surfaces. The hourly
+SW self-update heals any phone whose bundle has it; older bundles need one
+manual reload (DL-060 documented this gap).
+
+**Real defect found in the audit:** every ported component background
+declares an `onError` prop but never calls it — `mount*()` runs the
+renderer effects loop bare, so an init throw (`new Renderer()` when WebGL
+is refused or the context is lost) escapes as an uncaught Vue error and the
+`BackgroundRenderer` fallback never engages. The screensaver's
+`ssBgComponent` mount and the Settings preview have the same hole — a
+mount-time throw propagates past their failure states entirely.
+
+**Design:** one shared boundary — `backgrounds/BackgroundHost.vue` —
+renders `<component :is>`, wires the inner `onError` prop AND captures
+uncaught lifecycle errors via `onErrorCaptured`; on any failure it unmounts
+the child and emits `error`. Used by `BackgroundRenderer` (→ designed
+quiet-gradient fallback), `ScreenSaver` (component bg drops to the dark
+base), and the Settings preview (→ "Preview unavailable").
+
+### Implementation Results (2026-09-28 follow-up)
+
+- New `frontend/src/components/backgrounds/BackgroundHost.vue`: forwards
+  `onError` into the child AND `onErrorCaptured`-captures init throws;
+  `failed` unmounts the child and emits `error` once. `inheritAttrs:false`
+  + `v-bind="$attrs"` keeps `class`/style fallthrough landing on the real
+  component (and silent once it's unmounted).
+- `BackgroundRenderer`, `ScreenSaver` (`ssBgComponent`), and the Settings
+  preview all mount component backgrounds through the host — every
+  component-kind catalog entry now fails soft on every surface.
+- New test in `background-renderer.test.ts`: a stubbed Balatro throwing in
+  `setup()` produces `.background-renderer__fallback` + the
+  `[background] fell back to gradient` warn, no uncaught error.
+- **Live failure simulation (prod build :5000, Pixel-7-landscape
+  emulation):** nulled `canvas.getContext('webgl*')`, broadcast a
+  background flip over `vdock-settings-sync` to force a remount under the
+  broken context — console shows `unable to create webgl context` then
+  `[background] fell back to gradient: galaxy TypeError: Cannot set
+  properties of null`; `.background-renderer__fallback` rendered and the
+  deck stayed usable. Same for `balatro`. Store/localStorage restored to
+  `balatro`; settings PUTs were stubbed during the flip.
+- **Stale-bundle note:** the user's phone symptom (plain on both surfaces,
+  landscape included) matches a precached bundle older than `2d99146`
+  (2026-09-20), which lacks the `balatro`/`prismatic-burst` catalog ids —
+  both resolve to `'default'`. `dist/` rebuilt; one manual reload on the
+  phone pulls the new bundle and the hourly/visibility SW update takes over
+  from there (the DL-060 poll).
+- Frontend suite: **365 passed / 70 files** (1 known vitest-worker teardown
+  flake in `property6_settings.test.ts`); `vue-tsc --noEmit` clean;
+  `npm run build` clean, `dist/` rebuilt (75 precached entries).

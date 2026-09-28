@@ -53,3 +53,48 @@ under both the nav rail and the content column:
   1400×800 and 1024×600 with credit left / actions right; sidebar footer
   gone — nav rail is pure navigation.
 - `vue-tsc --noEmit` clean; `npm run build` green — `dist/` rebuilt.
+
+## Follow-up — footer declutter (2026-09-28)
+
+### Ask
+
+The dock's right-side action buttons duplicated controls that belong with
+the page actions: drop `Reload VDock` (dead weight — every settings write
+already syncs live, and Back re-syncs the dashboard anyway), move
+`Back`/`Close` into `.topbar-actions` beside Reset section / Apply, and
+centre the credit line (name + social icons) in the now-unopposed footer.
+Social icons bump up a size while staying well inside the bar's height.
+
+### Design
+
+- `.topbar-actions` gains the `Back`/`Close` ghost-sm button as the
+  rightmost item — outside the per-tab conditionals so it renders on
+  every tab like the dock version did. Handlers unchanged.
+- `.settings-dock` loses `.dock-actions` and becomes credit-only:
+  `justify-content: space-between` → `center`.
+- `.dock-credit-link` hitbox 26px → 32px, icon `font-size` 19px, logo
+  image 18px → 22px — visibly larger but still clear of the bar's
+  `7px`-padded ~46px height.
+- `refreshVdock` stays imported — `handleSettingsBack` and the port-save
+  path still call it; only the button goes.
+
+### Implementation Results (follow-up)
+
+- `Back`/`Close` ghost-sm button moved into `.topbar-actions` as the
+  rightmost item — outside the per-tab conditionals, so it renders on
+  every tab exactly as the dock version did (same handler, same
+  standalone label/icon logic).
+- `.settings-dock` is now credit-only: `.dock-actions` (Reload VDock +
+  Back/Close) removed, `justify-content: space-between` → `center` so
+  the "Created by Daniel S. · v" line + social links sit in the bar's
+  horizontal centre.
+- Social link hitboxes 26px → 32px with explicit `font-size: 19px`
+  (FontAwesome icons scale off it); site logo img 18px → 22px. Bigger
+  but comfortably inside the ~46px bar.
+- `refreshVdock` import kept — `handleSettingsBack` and the port-save
+  path still call it; only the button went away.
+
+Verified live (Playwright, standalone settings, 1400×800 + 1024×600):
+topbar reads `Reset section · Save & Apply · Close`; footer credit
+centred with the larger icons; no Reload button. `vue-tsc --noEmit`
+clean; `npm run build` green — `dist/` rebuilt so the panel serves it.

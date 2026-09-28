@@ -10,9 +10,6 @@ const electronBridge = {
   isFullscreen: () => ipcRenderer.invoke('window-is-fullscreen'),
   setKioskMode: (enabled) => ipcRenderer.invoke('window-set-kiosk', enabled),
 
-  // Auto-launch controls
-  toggleAutoLaunch: (enabled) => ipcRenderer.invoke('toggle-auto-launch', enabled),
-  isAutoLaunchEnabled: () => ipcRenderer.invoke('is-auto-launch-enabled'),
   quitApp: () => ipcRenderer.invoke('quit-app'),
 
   // Open URLs in the system browser (not another Electron window)

@@ -89,7 +89,7 @@ Everything is adjustable, and nothing is guesswork — a **live preview** render
 
 - **Appearance** — touch mode presets, key size/transparency/design, animations, press sound, dashboard font, docked sidebar, background, and the [screensaver](#the-screensaver)
 - **Templates** — 36 one-tap scenes for ChatGPT, Claude, Gemini, Claude Code, Copilot, Cursor, Figma, n8n and more
-- **Server** — launch on startup, connection details, how Settings opens
+- **Server** — connection details, ports, how Settings opens
 - **Integrations** — detected apps, auto scene switching, the Claude Code attention-alert hook
 - **Connect a device** — LAN access and the QR code for your phone, [see below](#control-it-from-your-phone)
 - **Logs** — tail backend and frontend logs, export them as a zip

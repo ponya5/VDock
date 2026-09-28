@@ -34,3 +34,45 @@ remove them, and to live-test every control on the Server screen.
 - Sub-nav removal verified live (nav list shows bare "Server"),
   `vue-tsc` clean, `dist` rebuilt.
 - Ref: `design-log/refs/server-tab-no-subnav-*.png`
+
+## Follow-up (2026-09-28): remove the launch-on-startup option entirely
+
+**Ask:** "remove the option to start vdock when windows, macos linux starts".
+The audited toggle is gone — and so is the mechanism, not just the UI row:
+
+- `SettingsView.vue` — "Launch VDock on startup" row + status line,
+  `handleStartOnBootToggle`, `syncStartOnBootFromSystem`,
+  `startOnBootStatus`, and the two search-index entries removed. The
+  "Startup & navigation" panel keeps launcher-terminal + new-tab rows.
+- `stores/settings.ts` — `startOnBoot` dropped from
+  `PersistedUserSettings`, the ref, `buildSettingsPayload`,
+  `applySettingsObject`, the defaults merge, and both return objects.
+  Legacy blobs carrying the key are silently ignored and the key is
+  dropped on next save.
+- `backend/routes/user_settings.py` — `startOnBoot` removed from the
+  allowlist so stale clients can't resurrect it.
+- `backend/routes/system.py` — `GET/POST /api/system/autostart`,
+  `_is_autostart_enabled`, `_windows_autostart`, `_macos_autostart`,
+  `_linux_autostart`, `_resolve_launch_command`, and
+  `AUTOSTART_REGISTRY_NAME` deleted; `os`/`platform`/`sys` imports that
+  only served the helpers removed.
+- `frontend/electron/main.js` — `auto-launch` package init, both IPC
+  handlers (`toggle-auto-launch`, `is-auto-launch-enabled`), the boot-time
+  `isEnabled` log, and the dead `setLoginItemSettings(openAtLogin:false)`
+  block deleted. `preload.js` + `useElectron.ts` drop the matching bridge
+  methods; `auto-launch` uninstalled from `frontend/electron/package.json`.
+- `UserGuide.vue` "Auto-start" tip and the README Server blurb updated.
+- This machine's existing `HKCU\...\Run\VDock` entry (enabled earlier per
+  the audit above) deleted — removing the option must not leave VDock
+  autostarting with no way to disable it. `uninstall.bat`/`uninstall.sh`
+  still remove the legacy entry for any other install.
+
+### Implementation Results (2026-09-28 follow-up)
+
+- Frontend suite: **365 passed / 70 files** (same known vitest-worker
+  teardown flake in `property6_settings.test.ts`); `vue-tsc --noEmit`
+  clean; backend tests clean; `npm run build` green — `dist/` rebuilt.
+- `reg query` confirms the `VDock` Run value is gone.
+- Server tab still shows the remaining two rows; settings round-trip
+  verified (45→44 keys, `startOnBoot` stripped from `user_settings.json`
+  on next save).

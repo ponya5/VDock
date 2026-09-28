@@ -118,11 +118,17 @@ export interface PersistedUserSettings {
   background: string
   uiBrightness: number
   toastLevel: 'all' | 'errors-only' | 'off'
+  /**
+   * DL-076 follow-up: 'all' was the factory default until Sep 2026, so every
+   * persisted blob written since carries it — deliberately chosen or not.
+   * An unmarked 'all' is migrated to 'errors-only' once; the marker is what
+   * lets a deliberate post-migration "All" pick stick.
+   */
+  toastLevelMigrated: boolean
   touchMode: 'normal' | 'touch-friendly' | 'tablet'
   minimumTouchTargetSize: number
   defaultGridRows: number
   defaultGridCols: number
-  startOnBoot: boolean
   openSettingsInNewTab: boolean
   recentActions: string[]
   weatherLocationMode: 'auto' | 'manual'
@@ -207,6 +213,9 @@ export const useSettingsStore = defineStore('settings', () => {
   // (and unable to reopen) in every other connected window.
   const showHeader = ref(false)
   const toastLevel = ref<'all' | 'errors-only' | 'off'>('errors-only')
+  // DL-076 follow-up: write-once marker — set when an unmarked persisted 'all'
+  // is migrated to 'errors-only'. Monotonic: applying a false is meaningless.
+  const toastLevelMigrated = ref(false)
   
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
   const minimumTouchTargetSize = ref(44)
@@ -226,7 +235,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const defaultGridRows = ref(3)
   const defaultGridCols = ref(3)
 
-  const startOnBoot = ref(false)
   const openSettingsInNewTab = ref(true)
   const autoCloseLauncher = ref(true)
 
@@ -406,11 +414,11 @@ export const useSettingsStore = defineStore('settings', () => {
       background: background.value,
       uiBrightness: uiBrightness.value,
       toastLevel: toastLevel.value,
+      toastLevelMigrated: toastLevelMigrated.value,
       touchMode: touchMode.value,
       minimumTouchTargetSize: minimumTouchTargetSize.value,
       defaultGridRows: defaultGridRows.value,
       defaultGridCols: defaultGridCols.value,
-      startOnBoot: startOnBoot.value,
       openSettingsInNewTab: openSettingsInNewTab.value,
       autoCloseLauncher: autoCloseLauncher.value,
       // Spread into a plain array: `recentActions.value` is a Vue-reactive
@@ -470,12 +478,21 @@ export const useSettingsStore = defineStore('settings', () => {
       background.value = migrateBackground(settings)
     }
     if (settings.uiBrightness !== undefined) uiBrightness.value = settings.uiBrightness
-    if (settings.toastLevel !== undefined) toastLevel.value = settings.toastLevel
+    if (settings.toastLevelMigrated === true) toastLevelMigrated.value = true
+    if (settings.toastLevel !== undefined) {
+      // An unmarked 'all' is the pre-DL-076 inherited default, not a choice —
+      // migrate once and mark so a deliberate later "All" pick sticks.
+      if (settings.toastLevel === 'all' && settings.toastLevelMigrated !== true) {
+        toastLevel.value = 'errors-only'
+        toastLevelMigrated.value = true
+      } else {
+        toastLevel.value = settings.toastLevel
+      }
+    }
     if (settings.touchMode !== undefined) touchMode.value = settings.touchMode
     if (settings.minimumTouchTargetSize !== undefined) minimumTouchTargetSize.value = settings.minimumTouchTargetSize
     if (settings.defaultGridRows !== undefined) defaultGridRows.value = settings.defaultGridRows
     if (settings.defaultGridCols !== undefined) defaultGridCols.value = settings.defaultGridCols
-    if (settings.startOnBoot !== undefined) startOnBoot.value = settings.startOnBoot
     if (settings.openSettingsInNewTab !== undefined) openSettingsInNewTab.value = settings.openSettingsInNewTab
     if (settings.autoCloseLauncher !== undefined) autoCloseLauncher.value = settings.autoCloseLauncher
     if (settings.recentActions !== undefined) recentActions.value = settings.recentActions
@@ -535,13 +552,15 @@ export const useSettingsStore = defineStore('settings', () => {
         dockedSidebarWidth: settings.dockedSidebarWidth ?? 190,
         dockedButtonHeight: settings.dockedButtonHeight ?? 84,
         uiBrightness: settings.uiBrightness ?? 100,
-        toastLevel: settings.toastLevel
-          ?? (settings.showRegularToasts === false ? 'errors-only' : 'all'),
+        // Missing key = blob predates the radio — apply the current factory
+        // default. An unmarked 'all' (key or legacy showRegularToasts) is
+        // caught by the applySettingsObject migration either way.
+        toastLevel: settings.toastLevel ?? SETTINGS_DEFAULTS.toastLevel,
+        toastLevelMigrated: settings.toastLevelMigrated === true,
         touchMode: settings.touchMode ?? 'normal',
         minimumTouchTargetSize: settings.minimumTouchTargetSize ?? 44,
         defaultGridRows: settings.defaultGridRows ?? 3,
         defaultGridCols: settings.defaultGridCols ?? 3,
-        startOnBoot: settings.startOnBoot ?? false,
         openSettingsInNewTab: settings.openSettingsInNewTab !== false,
         autoCloseLauncher: settings.autoCloseLauncher !== false,
         recentActions: settings.recentActions ?? [],
@@ -702,11 +721,13 @@ export const useSettingsStore = defineStore('settings', () => {
       background,
       uiBrightness,
       toastLevel,
+      // Persisting the migration marker is what makes it one-shot — and the
+      // save it triggers rebroadcasts the healed payload to peer devices.
+      toastLevelMigrated,
       touchMode,
       minimumTouchTargetSize,
       defaultGridRows,
       defaultGridCols,
-      startOnBoot,
       openSettingsInNewTab,
       autoCloseLauncher,
       recentActions,
@@ -915,12 +936,12 @@ export const useSettingsStore = defineStore('settings', () => {
     uiBrightness,
     showHeader,
     toastLevel,
+    toastLevelMigrated,
     touchMode,
     minimumTouchTargetSize,
     touchModeMultiplier,
     defaultGridRows,
     defaultGridCols,
-    startOnBoot,
     openSettingsInNewTab,
     autoCloseLauncher,
     recentActions,

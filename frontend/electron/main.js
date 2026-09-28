@@ -1,7 +1,6 @@
 const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen, shell, dialog } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
-const AutoLaunch = require('auto-launch')
 // Detect development mode by checking if backend exists relative to electron directory
 const isDev = require('fs').existsSync(path.join(__dirname, '../../backend'))
 
@@ -12,7 +11,6 @@ let windowPinned = false
 let alwaysOnTop = false
 let kioskMode = false
 let backendProcess = null
-let autoLaunch = null
 
 // .ico only renders on Windows; Tray/BrowserWindow need PNG elsewhere.
 const iconFile = process.platform === 'win32' ? 'vdock-icon.ico' : 'vdock-icon.png'
@@ -39,15 +37,6 @@ function resolveTargetDisplay() {
   }
 
   return screen.getPrimaryDisplay()
-}
-
-// Initialize auto-launch
-function initializeAutoLaunch() {
-  autoLaunch = new AutoLaunch({
-    name: 'VDock',
-    path: app.getPath('exe'),
-    isHidden: true
-  })
 }
 
 // Start backend server
@@ -471,30 +460,6 @@ ipcMain.handle('window-set-kiosk', (event, enabled) => {
   return kioskMode
 })
 
-// Auto-launch IPC handlers
-ipcMain.handle('toggle-auto-launch', async (event, enabled) => {
-  try {
-    if (enabled) {
-      await autoLaunch.enable()
-    } else {
-      await autoLaunch.disable()
-    }
-    return true
-  } catch (err) {
-    console.error('Failed to toggle auto-launch:', err)
-    return false
-  }
-})
-
-ipcMain.handle('is-auto-launch-enabled', async () => {
-  try {
-    return await autoLaunch.isEnabled()
-  } catch (err) {
-    console.error('Failed to check auto-launch status:', err)
-    return false
-  }
-})
-
 ipcMain.handle('open-external-url', async (_event, url) => {
   if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
     throw new Error('Invalid external URL')
@@ -532,9 +497,6 @@ app.whenReady().then(async () => {
   console.log('Electron app ready - initializing VDock')
   console.log('========================================')
 
-  initializeAutoLaunch()
-  console.log('[OK] Auto-launch initialized')
-
   if (process.env.VDOCK_SKIP_BACKEND_SPAWN === '1') {
     console.log('[OK] Backend already started by launcher — skipping spawn')
   } else {
@@ -550,14 +512,6 @@ app.whenReady().then(async () => {
 
   registerGlobalShortcuts()
   console.log('[OK] Global shortcuts registered')
-
-  // Check if auto-launch is enabled
-  try {
-    const isEnabled = await autoLaunch.isEnabled()
-    console.log('Auto-launch enabled:', isEnabled)
-  } catch (err) {
-    console.error('Failed to check auto-launch status:', err)
-  }
 
   console.log('========================================')
   console.log('VDock initialization complete!')
@@ -582,11 +536,5 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
   // Stop backend server
   stopBackend()
-})
-
-// Auto-launch on system startup (optional)
-app.setLoginItemSettings({
-  openAtLogin: false, // Can be toggled via settings
-  openAsHidden: true
 })
 

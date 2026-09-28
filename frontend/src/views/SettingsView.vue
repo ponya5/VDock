@@ -195,6 +195,10 @@
           >
             <FontAwesomeIcon :icon="['fas', 'check']" /> Apply
           </button>
+          <button type="button" class="btn ghost sm" @click="handleSettingsBack">
+            <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
+            {{ isStandaloneSettings ? 'Close' : 'Back' }}
+          </button>
         </div>
       </header>
 
@@ -696,7 +700,11 @@
                      effect inside the rail instead of a checkerboard. -->
                 <div v-if="previewBgComponent" class="preview-bg-clip">
                   <div class="preview-bg-viewport" :style="{ transform: `scale(${bgPreviewScale})` }">
-                    <component :is="previewBgComponent" :key="settingsStore.background" :on-error="onPreviewBgError" />
+                    <BackgroundHost
+                      :component="previewBgComponent"
+                      :key="settingsStore.background"
+                      @error="onPreviewBgError"
+                    />
                   </div>
                 </div>
                 <div v-else-if="previewBgUnavailable" class="preview-bg-note">Preview unavailable on this device</div>
@@ -1150,16 +1158,6 @@
               <div class="panel-body">
                 <div class="row">
                   <div class="row-text">
-                    <span class="label">Launch VDock on startup</span>
-                    <p>Starts VDock when you log in to Windows, macOS or Linux.</p>
-                  </div>
-                  <div class="row-control">
-                    <label class="switch"><span class="sr-only">Launch VDock on startup</span><input v-model="settings.startOnBoot" type="checkbox" @change="handleStartOnBootToggle" /><span class="track"></span></label>
-                  </div>
-                </div>
-                <p v-if="startOnBootStatus" class="status-msg row-status" :class="startOnBootStatus.success ? 'status-success' : 'status-error'">{{ startOnBootStatus.message }}</p>
-                <div class="row">
-                  <div class="row-text">
                     <span class="label">Close launcher terminal after startup</span>
                     <p>Closes the launcher window once VDock starts. Turn off to keep it open for debugging.</p>
                   </div>
@@ -1606,15 +1604,6 @@
           </a>
         </div>
       </div>
-      <div class="dock-actions">
-        <button type="button" class="btn ghost sm" title="Reload profile and settings from the server" @click="refreshVdock()">
-          <FontAwesomeIcon :icon="['fas', 'arrows-rotate']" /> Reload VDock
-        </button>
-        <button type="button" class="btn ghost sm" @click="handleSettingsBack">
-          <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
-          {{ isStandaloneSettings ? 'Close' : 'Back' }}
-        </button>
-      </div>
     </footer>
 
     <FeatureRequestModal v-if="showFeatureRequest" @close="showFeatureRequest = false" />
@@ -1675,6 +1664,7 @@ import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgr
 import { appForScene, appIdForExe } from '@/data/appBackgrounds'
 import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
+import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
 import AppPathEditor from '@/components/AppPathEditor.vue'
 import UserGuide from '@/components/UserGuide.vue'
 import FeatureRequestModal from '@/components/FeatureRequestModal.vue'
@@ -2858,7 +2848,7 @@ const filteredApps = computed(() => {
     (a, b) => appTier(a) - appTier(b) || a.name.localeCompare(b.name)
   )
 })
-const startOnBootStatus = ref<{success: boolean, message: string} | null>(null)
+
 
 const availableScenes = computed(() => {
   const profile = dashboardStore.currentProfile
@@ -2901,8 +2891,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'User Guide', keywords: 'help guide tutorial how to documentation swipe gestures troubleshooting', tabId: 'guide', icon: ['fas', 'circle-question'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
-  { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
-  { label: 'Startup', keywords: 'startup boot autostart launcher terminal close debug', tabId: 'server', icon: ['fas', 'power-off'] },
+  { label: 'Startup', keywords: 'launcher terminal close debug new tab', tabId: 'server', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
@@ -2954,50 +2943,6 @@ async function clearRecentActions() {
     icon: 'clock-rotate-left',
   })
   if (ok) settingsStore.clearRecentActions()
-}
-
-async function syncStartOnBootFromSystem() {
-  try {
-    const response = await apiClient.get('/system/autostart')
-    if (response.data?.success && typeof response.data.enabled === 'boolean') {
-      settingsStore.startOnBoot = response.data.enabled
-    }
-
-    if (window.electronAPI?.isAutoLaunchEnabled) {
-      const electronAutoLaunchEnabled = await window.electronAPI.isAutoLaunchEnabled()
-      settingsStore.startOnBoot = electronAutoLaunchEnabled || settingsStore.startOnBoot
-    }
-  } catch (error) {
-    console.warn('Failed to read launch-on-startup status:', error)
-  }
-}
-
-// Single cross-platform "launch automatically" toggle. Always registers the
-// backend's own OS-level autostart (works whether you're running via browser
-// or Electron), and additionally syncs Electron's own auto-launch mechanism
-// when running inside the desktop app, so both stay consistent instead of
-// needing two separate toggles for what is, to the user, one setting.
-async function handleStartOnBootToggle() {
-  const desired = settings.value.startOnBoot
-  try {
-    const response = await apiClient.post('/system/autostart', { enabled: desired })
-    if (!response.data.success) {
-      startOnBootStatus.value = { success: false, message: response.data.message || 'Failed to update auto-start setting' }
-      settings.value.startOnBoot = !desired
-      setTimeout(() => { startOnBootStatus.value = null }, 5000)
-      return
-    }
-
-    if (window.electronAPI) {
-      await window.electronAPI.toggleAutoLaunch(desired)
-    }
-
-    startOnBootStatus.value = { success: true, message: desired ? 'VDock will now start automatically when your computer starts' : 'Auto-start disabled' }
-  } catch {
-    startOnBootStatus.value = { success: false, message: 'Failed to update auto-start setting. This feature may require administrator privileges.' }
-    settings.value.startOnBoot = !desired
-  }
-  setTimeout(() => { startOnBootStatus.value = null }, 5000)
 }
 
 function formatScreensaverTimeout(seconds: number): string {
@@ -3312,7 +3257,6 @@ watch(activeTab, (tab) => {
 onMounted(async () => {
   applySettingsRouteQuery()
   await ensureProfileLoaded()
-  await syncStartOnBootFromSystem()
   settingsStore.loadServerConfig().then(() => renderQr())
   void loadAppPaths()
   loadPorts()
@@ -4305,7 +4249,8 @@ onMounted(async () => {
 
 /* Full-width chrome bar under nav + main. bg-sunken keeps it visually
    continuous with the nav rail; sticky bottom:0 pins it in the ≤880px
-   body-scroll layout (no-op in the fixed-height desktop shell). */
+   body-scroll layout (no-op in the fixed-height desktop shell). The
+   centred credit is the only content — actions live in the topbar. */
 .settings-dock {
   grid-column: 1 / -1;
   position: sticky;
@@ -4313,7 +4258,7 @@ onMounted(async () => {
   z-index: 30;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
   padding: 7px var(--gutter);
@@ -4327,15 +4272,15 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
+  font-size: 19px;
   border-radius: var(--radius-sm);
   color: var(--text-3);
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 .dock-credit-link:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.07); }
-.dock-credit-logo { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: block; }
-.dock-actions { display: flex; align-items: center; gap: 8px; }
+.dock-credit-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; display: block; }
 
 /* --- main column ---------------------------------------------------------- */
 

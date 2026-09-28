@@ -10,8 +10,6 @@ interface ElectronAPI {
   toggleFullscreen: () => Promise<boolean>
   isFullscreen: () => Promise<boolean>
   setKioskMode: (enabled: boolean) => Promise<boolean>
-  toggleAutoLaunch: (enabled: boolean) => Promise<boolean>
-  isAutoLaunchEnabled: () => Promise<boolean>
   quitApp: () => Promise<void>
   pickExecutable?: () => Promise<string | null>
   platform: string

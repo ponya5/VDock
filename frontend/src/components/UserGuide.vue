@@ -123,7 +123,6 @@
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'server']" /> Server & System</h2>
                 <ul>
-                  <li><strong>Auto-start:</strong> Enable "Launch on Startup" to have VDock ready the moment you log in.</li>
                   <li><strong>Server Port:</strong> Default is 5000. If you have port conflicts, change it under Settings → Server.</li>
                   <li><strong>Remote Access:</strong> Turn on <strong>Allow LAN</strong> (Settings → Server), then point any device on your network to your PC's address — the Settings → Connect page shows it with a QR code.</li>
                 </ul>
