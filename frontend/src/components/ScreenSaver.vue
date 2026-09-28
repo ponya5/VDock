@@ -36,7 +36,7 @@
       ></span>
     </div>
 
-    <!-- Market — top-right serif quote rows. -->
+    <!-- Market — left-aligned serif quote rows. -->
     <div
       v-if="showMarketWidget"
       :ref="el => setWidgetEl('market', el)"
@@ -1052,6 +1052,7 @@ onUnmounted(() => {
 .ss-time {
   display: flex;
   align-items: center;
+  justify-content: center;
   font-size: clamp(5rem, 17vw, 21rem);
   line-height: 0.86;
   letter-spacing: -0.02em;
@@ -1122,18 +1123,18 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.94);
 }
 
-/* --- Market: top-right serif quote rows ------------------------------------- */
+/* --- Market: left-aligned serif quote rows ----------------------------------- */
 .ss-market {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 0.9rem;
 }
 
 .ss-market-row {
   display: flex;
   align-items: baseline;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.6rem;
 }
 
@@ -1392,7 +1393,7 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.94);
 }
 
-/* The market chip is right-aligned; stretch its section head full width. */
+/* Stretch the market section head full width so the hairline spans the box. */
 .ss-market .ss-section-head {
   align-self: stretch;
 }
