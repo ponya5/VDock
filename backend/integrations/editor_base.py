@@ -103,7 +103,8 @@ def _focus_failure(message: str, details: str) -> Dict[str, Any]:
 def send(command: Command, text_override: Optional[str] = None,
          enforce_focus: bool = True, focus_first: bool = True,
          allow_destructive: bool = False,
-         cwd: Optional[str] = None) -> Dict[str, Any]:
+         cwd: Optional[str] = None,
+         editor_label: Optional[str] = None) -> Dict[str, Any]:
     """Send ``command`` to the target application.
 
     Args:
@@ -119,6 +120,8 @@ def send(command: Command, text_override: Optional[str] = None,
         cwd: Working directory identifying which session to target when
             several run at once. None resolves to the focused editor's
             project.
+        editor_label: Product name for failure messages ('Cursor') -- the
+            not-running error points the user at that template card.
     """
     # Gate on cheap checks first so a refused press never yanks focus around.
     if command.risk == RISK_DESTRUCTIVE and not allow_destructive:
@@ -208,14 +211,28 @@ def send(command: Command, text_override: Optional[str] = None,
                                     time.sleep(1.0)
                 if focused is False:
                     expected = ' or '.join(command.target_exes)
-                    hint = (' Set the app\'s path under Templates → '
-                            'app settings (the gear on its card) or '
-                            'App launch paths.')
+                    # A phrase label ('a terminal window') reads wrong as a
+                    # product name -- fall back to the exe for the pointer.
+                    name = (
+                        editor_label
+                        if editor_label and not editor_label.startswith(
+                            ('a ', 'an ', 'the '))
+                        else expected
+                    )
                     return {
                         'success': False,
-                        'message': f'No {expected} window found',
-                        'details': 'The app is not running, so there is '
-                                   'nowhere to send these keystrokes.' + hint,
+                        'message': (
+                            f'No {expected} window found — {name} is not '
+                            f'running. Start it, or set the launch path on '
+                            f'the {name} template card (Settings → '
+                            f'Templates → gear icon) so this button can '
+                            f'launch it for you.'
+                        ),
+                        'details': 'VDock found no running window owned by '
+                                   f'{expected}, so there is nowhere to '
+                                   'send these keystrokes. A configured '
+                                   'launch path makes the button start the '
+                                   'app and retry automatically.',
                     }
                 if focused:
                     time.sleep(FOCUS_SETTLE_SECONDS)
@@ -392,4 +409,5 @@ class KeystrokeEditorPlugin(BasePlugin):
             focus_first=bool(config.get('focus_first', True)),
             allow_destructive=bool(config.get('allow_destructive', False)),
             cwd=config.get('cwd'),
+            editor_label=self.editor_label,
         )

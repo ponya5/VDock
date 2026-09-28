@@ -1,6 +1,6 @@
 <template>
   <div class="background-renderer">
-    <div v-if="failedId === current.id" class="background-renderer__fallback" />
+    <div v-if="failedId === current.id" class="background-renderer__fallback bg-fallback-animated" />
     <BackgroundHost
       v-else-if="current.kind === 'component'"
       :key="current.id"
@@ -51,24 +51,10 @@ const onBackgroundError = (err: unknown) => {
   pointer-events: none;
 }
 
+/* Visuals live in the shared .bg-fallback-animated (main.css) — a failed
+   component still leaves an animated scene, not a flat paint (DL-109). */
 .background-renderer__fallback {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 20% 20%, rgba(52, 152, 219, 0.15), transparent 55%),
-    radial-gradient(ellipse at 80% 80%, rgba(155, 89, 182, 0.12), transparent 55%),
-    var(--color-background, #0f1419);
-}
-</style>
-
-<style scoped>
-.background-renderer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: -10;
-  pointer-events: none;
 }
 </style>

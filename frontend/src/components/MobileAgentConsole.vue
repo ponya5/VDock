@@ -10,55 +10,22 @@
         <strong class="mac-agent-name">{{ agentName }}</strong>
         <span class="mac-state-label">{{ statusLine }}</span>
       </div>
-      <!-- Session targeting (DL-071) merged into this row — saves a whole
-           stacked row on the phone. flex-wrap still lets the chips fall
-           to a second line inside the card on narrow widths. -->
-      <div
+      <!-- Session targeting (DL-071): a single chip that opens the shared
+           listbox sheet — the old wrap-visible chip strip ate a whole row
+           of the status card once several sessions were live. -->
+      <AgentSessionPicker
         v-if="showSessionPicker"
-        class="mac-sessions"
-        role="radiogroup"
-        aria-label="Target session"
-      >
-        <button
-          type="button"
-          class="mac-session"
-          :class="{ active: pinnedPid === null }"
-          role="radio"
-          :aria-checked="pinnedPid === null"
-          @click="chooseTarget(null)"
-        >
-          <FontAwesomeIcon :icon="['fas', 'wand-magic-sparkles']" class="mac-session-auto" />
-          <span class="mac-session-label">Auto</span>
-        </button>
-        <button
-          v-for="s in targetRows"
-          :key="s.pid"
-          type="button"
-          class="mac-session"
-          :class="{
-            active: s.pid === pinnedPid,
-            'is-resolved': s.pid === resolvedPid && pinnedPid === null,
-            waiting: waitingGlowOn && s.state === 'ready' && s.prompted === true,
-          }"
-          role="radio"
-          :aria-checked="s.pid === pinnedPid"
-          :title="s.cwd || s.title"
-          @click="chooseTarget(s.pid)"
-        >
-          <span
-            class="mac-session-badge"
-            :style="{ background: s.accent }"
-            aria-hidden="true"
-          >{{ s.badge || '·' }}</span>
-          <span class="mac-session-dot" :class="`dot-${s.state || 'idle'}`" aria-hidden="true" />
-          <span class="mac-session-label">{{ s.label }}</span>
-          <FontAwesomeIcon
-            v-if="s.pid === pinnedPid"
-            :icon="['fas', 'thumbtack']"
-            class="mac-session-pin"
-          />
-        </button>
-      </div>
+        class="mac-target"
+        :rows="targetRows"
+        :pinned-pid="pinnedPid"
+        :resolved-pid="resolvedPid"
+        :waiting-glow-on="waitingGlowOn"
+        :target-label="targetLabel"
+        :effective-session="effectiveSession"
+        @pick="chooseTarget"
+        @identify="identify"
+        @opened="refreshTargets"
+      />
       <!-- Only when the picker is absent — otherwise it duplicates the
            session chip's label (both read the project dir name). -->
       <span v-else-if="projectName" class="mac-project" :title="stateEntry?.cwd">
@@ -147,6 +114,7 @@ import { profileSessionMarker, useAgentTargets } from '@/composables/useAgentTar
 import { isAgentWaitingDismissed } from '@/services/agentWaiting'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
+import AgentSessionPicker from '@/components/AgentSessionPicker.vue'
 
 /**
  * Mobile agent console (DL-065): a portrait phone surface for driving a
@@ -206,6 +174,9 @@ const {
   sessionRows: targetRows,
   pinnedPid,
   resolvedPid,
+  effectiveSession,
+  targetLabel,
+  refresh: refreshTargets,
   setTarget,
   identify,
 } = useAgentTargets(sessionMarker)
@@ -295,7 +266,11 @@ async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
   try {
     const result = await dashboardStore.executeButtonAction(shortcut.button)
     if (result && !result.success) {
-      notificationsStore.error(`${shortcut.label} failed`, result.message || 'The action did not run')
+      notificationsStore.error(
+        `${shortcut.label} failed`,
+        result.message || 'The action did not run',
+        result.details || undefined,
+      )
     }
   } finally {
     runningShortcutId.value = null
@@ -392,113 +367,11 @@ trackAgentSurfaceVisibility(
 }
 
 /* --- Session targeting (DL-071) --------------------------------------------- */
-/* A wrap-visible chip strip — DL-069's rule applies here too: no horizontal
-   scroll row hiding sessions. Chips render whenever ≥1 live session exists
-   (or a pin is set), so the current target is always on screen. The strip
-   sits inside .mac-status: margin-left:auto hugs the right edge when it
-   shares the status line; on a wrapped second line it right-aligns there,
-   which reads fine as a trailing control group. */
-.mac-sessions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* The shared picker's chip hugs the right edge of the status card, exactly
+   where the old wrap-strip lived. On wrap it right-aligns on the second
+   line, which reads fine as a trailing control. */
+.mac-target {
   margin-left: auto;
-}
-
-.mac-session {
-  -webkit-user-select: none;
-  user-select: none;
-  min-height: 44px;
-  max-width: 48%;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(15, 20, 28, 0.78);
-  color: inherit;
-  font-size: clamp(0.78rem, 0.74rem + 0.3vw, 0.92rem);
-  font-weight: 600;
-  touch-action: manipulation;
-  cursor: pointer;
-}
-
-/* The session auto-resolution would pick right now (no pin set). */
-.mac-session.is-resolved {
-  border-color: color-mix(in srgb, var(--agent-accent) 40%, transparent);
-}
-
-.mac-session.active {
-  border-color: var(--agent-accent);
-  background: color-mix(in srgb, var(--agent-accent) 24%, transparent);
-}
-
-/* Idle session waiting for a prompt — filled + thick ring like the desktop
-   picker rows; a thin border was invisible on the 7" panel (DL-080 #3). */
-.mac-session.waiting {
-  border-color: #4ade80;
-  border-width: 2px;
-  background: rgba(34, 197, 94, 0.25);
-  animation: mac-session-waiting-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes mac-session-waiting-pulse {
-  0%, 100% {
-    background: rgba(34, 197, 94, 0.2);
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.45), 0 0 10px rgba(34, 197, 94, 0.5);
-  }
-  50% {
-    background: rgba(34, 197, 94, 0.38);
-    box-shadow: 0 0 0 4px rgba(134, 239, 172, 0.8), 0 0 24px rgba(34, 197, 94, 0.85);
-  }
-}
-
-.mac-session:active:not(:disabled) { transform: scale(0.96); }
-
-/* Per-session identity chip — accent color + host initials (DL-071 #11). */
-.mac-session-badge {
-  flex-shrink: 0;
-  min-width: 24px;
-  height: 22px;
-  padding: 0 5px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #10131a;
-  font-size: 0.68em;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.mac-session-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: #6b7280;
-}
-
-.mac-session-dot.dot-ready { background: #22c55e; }
-.mac-session-dot.dot-working { background: #38bdf8; }
-.mac-session-dot.dot-permission { background: #f59e0b; }
-
-.mac-session-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mac-session-auto {
-  color: var(--agent-accent);
-  font-size: 0.9em;
-}
-
-.mac-session-pin {
-  color: var(--agent-accent);
-  font-size: 0.8em;
-  flex-shrink: 0;
 }
 
 /* --- State actions ------------------------------------------------------------ */

@@ -1454,6 +1454,49 @@ select option {
 
 /* Static Gradient Backgrounds — these had no CSS at all (Settings let you
    pick them, but nothing changed on the dashboard). */
+/* Fallback for component-kind backgrounds that can't initialize on a
+   device (no WebGL/WebGPU context): still an animated scene, not a flat
+   paint — the user's "animated background" expectation survives a dead
+   GPU path (DL-109 follow-up). Two layers of radial accent blobs drift
+   slowly over the base gradient; transform-only, GPU-cheap. */
+.bg-fallback-animated {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-background);
+}
+
+.bg-fallback-animated::before,
+.bg-fallback-animated::after {
+  content: '';
+  position: absolute;
+  inset: -15%;
+  pointer-events: none;
+}
+
+.bg-fallback-animated::before {
+  background:
+    radial-gradient(ellipse 36% 30% at 25% 30%, rgba(122, 162, 255, 0.24), transparent 70%),
+    radial-gradient(ellipse 30% 34% at 75% 72%, rgba(155, 89, 182, 0.22), transparent 70%);
+  animation: bg-fallback-drift 26s ease-in-out infinite alternate;
+}
+
+.bg-fallback-animated::after {
+  background:
+    radial-gradient(ellipse 28% 26% at 66% 24%, rgba(99, 208, 163, 0.16), transparent 70%),
+    radial-gradient(ellipse 32% 30% at 30% 76%, rgba(229, 135, 214, 0.18), transparent 70%);
+  animation: bg-fallback-drift 34s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes bg-fallback-drift {
+  from { transform: translate3d(-3%, -2%, 0) scale(1); }
+  to   { transform: translate3d(3%, 2%, 0) scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-fallback-animated::before,
+  .bg-fallback-animated::after { animation: none; }
+}
+
 .dashboard-bg-ocean-breeze {
   background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
 }

@@ -167,3 +167,36 @@ instruction box) is a separate element entirely and was untouched.
 - Confirmed live via a browser screenshot against the running dev
   server — QR code and instruction box unchanged, preview image now
   large and right-aligned at the same vertical position as the QR.
+
+## Follow-up 4: fill the phone pane instead of centered square cells (2026-09-28)
+
+### Problem
+
+On a landscape phone the Media scene (3×6) rendered as small centered
+squares — 108px cells in an 839×356 host, ~135px of dead horizontal space —
+while the agent console fills its pane edge-to-edge. The mobile-compact
+force added above capped every cell at `min(fitW, fitH)` and centered the
+tracks, so even scenes whose natural 1fr cell aspect was already sane got
+shrunk to the limiting dimension.
+
+### Fix
+
+`cellMetrics` splits mobile from the compact heuristic: on a mobile
+viewport the grid now always uses the desktop-style `repeat(n,
+minmax(0, 1fr))` fill (with the mobile pad/gap), so cells stretch to cover
+the whole pane. What DL-057 actually needed on phones was the icon/label
+downscale — `effectiveButtonSize` still caps at `min(buttonSize,
+cellPx / 88)` in fill mode, and the `compact-cells` overrides (min-size
+release, tighter content padding) apply there too. The centered-square
+compact mode remains for desktop windows whose aspect no longer matches
+the grid (the `>1.3 / <0.7` trigger), where there is no touch signal.
+
+### Verification
+
+- Live on the dev server at Pixel 7 landscape (839×412): Media 3×6 grid
+  went from centered 108px squares (~135px dead width) to full-pane fill —
+  130.5×108 cells, "Volume Down"/"Play/Pause" no longer ellipsis-
+  truncated, and the slider's wider track + preset row breathe. Websites
+  2×4 fills edge-to-edge at ~199×155 cells.
+- Frontend: 70 files / 365 tests green; `vue-tsc --noEmit` clean;
+  `npm run build` → fresh `dist` (75 precached entries).

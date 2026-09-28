@@ -1,8 +1,12 @@
 const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen, shell, dialog } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
-// Detect development mode by checking if backend exists relative to electron directory
-const isDev = require('fs').existsSync(path.join(__dirname, '../../backend'))
+// Detect development mode by checking if backend exists relative to electron
+// directory. In a repo checkout that dir always exists, so the launcher passes
+// VDOCK_PRODUCTION=1 when it skipped the Vite dev server and Electron should
+// load the backend-served `dist` bundle instead (DL-112).
+const isDev = process.env.VDOCK_PRODUCTION !== '1'
+  && require('fs').existsSync(path.join(__dirname, '../../backend'))
 
 let mainWindow = null
 let tray = null

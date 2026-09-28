@@ -190,22 +190,22 @@ const { tiltX, tiltY } = useParallax(gridRef, {
    the mobile agent console — and left/right now means "switch scene",
    not "flip page". */
 
-// DL-057/DL-059: on tall narrow viewports (portrait phones) the 1fr rows
-// stretch cells into slivers; on short wide ones (landscape phones) they
-// squash them below the button's minimum. In compact mode cells are
-// square and sized by the LIMITING dimension — min of the width- and
-// height-driven cell size — so the whole deck always fits the screen,
-// centred, no scrolling (only spills to scroll below a hard 36px floor).
+// DL-057/DL-059: when a resized desktop window's aspect no longer matches
+// the grid's, 1fr rows/cols squash cells into slivers below the button's
+// minimum. In compact mode cells are square and sized by the LIMITING
+// dimension — min of the width- and height-driven cell size — so the whole
+// deck always fits, centred, no scrolling (only spills to scroll below a
+// hard 36px floor). Phones skip this entirely and stretch-fill the pane.
 const hostSize = ref({ w: 0, h: 0 })
 let hostObserver: ResizeObserver | undefined
 
-// A phone's landscape aspect (post-DL-060, mobile is landscape-only) often
-// lands inside the [0.7, 1.3] window below even though its cells are
-// smaller than a desktop window's — a scene sized for a wide desktop grid
-// (e.g. Media's 3x5) then renders each cell near its raw 1fr size, with
-// icon/label sized for a much bigger button and overflowing into an
-// ellipsis. Forcing the fit-to-screen sizing on every mobile viewport
-// (regardless of aspect) keeps every scene's buttons legible there.
+// On a phone the grid always stretch-fills the pane (same 1fr semantics as
+// the desktop layout), so a scene sized for a desktop grid renders cells
+// that cover the screen instead of small centred squares with dead
+// margins. The cellPx/88 icon/label downscale still applies via
+// effectiveButtonSize, which is what keeps glyphs legible in small cells —
+// squareness never was. Centred square cells remain only for desktop
+// windows whose aspect no longer matches the grid.
 const { isMobileViewport } = useMobileViewport()
 
 const GRID_PAD = 8
@@ -221,17 +221,20 @@ const cellMetrics = computed(() => {
   const fitH = (h - GRID_PAD * 2 - GRID_GAP * (rows - 1)) / rows
   const cellPx = Math.max(36, Math.floor(Math.min(fitW, fitH)))
   const aspect = cellH / cellW
-  const compact = isMobileViewport.value || aspect > 1.3 || aspect < 0.7
-  return { cellW, cellH, cellPx, compact }
+  const compact = !isMobileViewport.value && (aspect > 1.3 || aspect < 0.7)
+  const fit = isMobileViewport.value || compact
+  return { cellW, cellH, cellPx, compact, fit }
 })
 
-const compactCells = computed(() => cellMetrics.value?.compact === true)
+// Small-cell overrides (min-size release, tighter padding) apply whenever
+// the fit pipeline is in play — square compact cells or mobile fill.
+const compactCells = computed(() => cellMetrics.value?.fit === true)
 
 // Scale icon/label through the existing buttonSize pipeline so small cells
 // stay proportional (<=88px cells shrink; larger cells unaffected).
 const effectiveButtonSize = computed(() => {
   const m = cellMetrics.value
-  if (!m?.compact) return props.buttonSize
+  if (!m?.fit) return props.buttonSize
   return Math.min(props.buttonSize, m.cellPx / 88)
 })
 
@@ -247,6 +250,23 @@ const gridStyle = computed(() => {
       gap: `${GRID_GAP}px`,
       alignContent: 'center',
       justifyContent: 'center',
+      overflow: 'auto',
+      width: '100%',
+      height: '100%',
+      padding: `${GRID_PAD}px`,
+      transform: `rotateX(${tiltX.value}deg) rotateY(${tiltY.value}deg)`,
+      transformOrigin: 'center'
+    }
+  }
+
+  // Mobile fill: desktop-style stretch tracks so the deck covers the whole
+  // pane, at the tighter mobile pad/gap.
+  if (m?.fit) {
+    return {
+      display: 'grid',
+      gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+      gap: `${GRID_GAP}px`,
       overflow: 'auto',
       width: '100%',
       height: '100%',

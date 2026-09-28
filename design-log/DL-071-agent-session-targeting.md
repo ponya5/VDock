@@ -491,3 +491,58 @@ Each row now carries `accent` (a per-session color) and `badge`
 - Tests: accent distinctness + stability + badge initials pinned in
   `agent-session-labels.test.ts` (12/12); sibling suites 43/43;
   `vue-tsc` clean, `dist/` rebuilt.
+
+## Follow-up (2026-09-28): shared picker — mobile console drops the chip strip
+
+**Ask:** "in mobile view i need a session drop down or another intuitive
+way to manage multiple ide sessions." The console's wrap-visible chip
+strip (`mac-sessions`) ate a whole second row of the status card once a
+machine ran several sessions — four sessions + Auto wrapped to two chip
+lines on a phone.
+
+**Design:** the desktop bar's chip + teleported listbox/sheet popover is
+extracted into `AgentSessionPicker.vue`, shared by `AgentActionBar` and
+`MobileAgentConsole`. The mobile status card shows a single target chip
+(current target label + waiting cues); tapping opens the same
+finger-sized sheet the desktop uses on touch (`popSheet` heuristic
+unchanged: narrow/short/coarse-pointer viewports). Picking flashes the
+real window (`identify`) — on a phone the window itself names the chip,
+since there's no room to describe terminals.
+
+The picker's popover markup rows/badge/dot/sub/pin/locate are identical
+to the bar's — the console's release-on-retap + haptic stays
+parent-side via `pick`/`identify`/`opened` emits. The `mac-session*`
+chip styles are deleted; `--agent-accent` now gets a fallback inside the
+teleported popover (it never resolved under `<body>` before — the pop
+border silently fell back to currentColor).
+
+### Implementation Results (2026-09-28 follow-up)
+
+- `AgentSessionPicker.vue` created (~520 lines): chip (pinned/waiting/
+  nudge states), teleported backdrop + listbox, Auto row, session rows
+  (badge, dot, label, `auto`/`waiting` tags, sub-line, pin, locate),
+  `pop-sheet` layout for narrow/short/coarse-pointer viewports,
+  reduced-motion rules.
+- `AgentActionBar.vue` — picker template, picker state (`targetOpen`,
+  `popStyle`, `popSheet`, `chipRef`, `toggleTargetPicker`, `rowSub`),
+  and all `.agent-target*`/`.row-*` CSS removed; renders
+  `AgentSessionPicker` under the original `v-if="sessionMarker"`.
+- `MobileAgentConsole.vue` — the `.mac-sessions` radiogroup and its
+  `.mac-session*` styles replaced by `AgentSessionPicker.mac-target`
+  (right-aligned in the status card). Mobile keeps its own pick
+  semantics: re-tapping the pinned session releases to Auto + vibrate.
+- **Deviation from design above:** the picker's chip needs the
+  composable-resolved `effectiveSession` (focus/hwnd-aware), not a
+  `pinnedPid ?? resolvedPid` rows lookup — the first cut derived it
+  internally and the idle-chip tests failed. `effectiveSession` is now a
+  prop passed by both parents.
+- `mobile-agent-console.test.ts` — session tests rewritten for the
+  sheet (chip → teleported rows queried on `document.body`); the
+  waiting-wiring source assertion in `agent-waiting-glow.test.ts` now
+  reads `AgentSessionPicker.vue` instead of the console.
+- Verified live (Pixel 7 landscape emulation, dev server, two injected
+  sessions): chip reads "Auto · VDock2/frontend · Windows Terminal" with
+  the waiting tag; tap opens the centered sheet — Auto + both sessions
+  with WT badges, state dots, sub-lines, AUTO/WAITING tags, locate eyes.
+- `vue-tsc` clean; 365/365 frontend tests; `npm run build` → `dist/`
+  rebuilt for the panel.
