@@ -338,11 +338,25 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* DL-104: the header is an overlay shade, not a flow strip — anchored to
+   .dashboard-view (position:relative) so it slides down over the grid and
+   the deck's height never reflows when it opens/closes. The mobile header
+   already overlays the same way. */
 .deck-header-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   width: 100%;
-  z-index: 100;
+  /* Above the docked sidebar (z-100) — an open header shades the whole
+     deck, sidebar included. Below the narrow-mode sidebar drawer (999),
+     toasts (1000) and modals (2000). DL-104 follow-up. */
+  z-index: 200;
 }
 
+/* Redundant with the overlay (the wrapper no longer has flow height at
+   all) but kept: the leave transition's choreography comments reference
+   the collapsed wrapper, and it documents the zero-height invariant. */
 .header-hidden {
   height: 0;
   overflow: visible;

@@ -85,12 +85,13 @@ def _conversation(previous_entry: Dict[str, Any], prompt: str, reply: str) -> Di
 
 def record(source: str, state: str, message: str = '', cwd: str = '',
            project: str = '', session_id: str = DEFAULT_SESSION_ID,
-           prompt: str = '', reply: str = '') -> Dict[str, Any]:
+           prompt: str = '', reply: str = '', prompted: bool = False) -> Dict[str, Any]:
     """Store ``state`` for one session of ``source``; returns the entry."""
     if state not in ALLOWED_STATES:
         raise ValueError(f'Unknown agent state: {state}')
     with _lock:
         sessions = _sessions_by_source.setdefault(source, {})
+        previous = sessions.get(session_id, {})
         entry = {
             'source': source,
             'session_id': session_id,
@@ -98,7 +99,13 @@ def record(source: str, state: str, message: str = '', cwd: str = '',
             'message': message[:300],
             'cwd': cwd[:300],
             'project': project[:120],
-            **_conversation(sessions.get(session_id, {}), prompt, reply),
+            # Sticky per session: waiting alerts fire only once the user
+            # has actually prompted the session (DL-105). Prompt text or
+            # the hook's explicit flag both count; a fresh session_id
+            # resets it.
+            'prompted': bool(prompted) or bool(prompt)
+                        or bool(previous.get('prompted')),
+            **_conversation(previous, prompt, reply),
             'ts': time.time(),
         }
         sessions[session_id] = entry

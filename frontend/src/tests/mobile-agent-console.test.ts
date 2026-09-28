@@ -188,7 +188,7 @@ describe('MobileAgentConsole', () => {
 
   const TWO_SESSIONS = [
     { pid: 100, hwnd: 9001, title: 'wt A', cwd: 'C:\\repos\\projA', project: 'projA', state: 'working' },
-    { pid: 200, hwnd: 9002, title: 'wt B', cwd: 'C:\\repos\\projB', project: 'projB', state: 'ready' },
+    { pid: 200, hwnd: 9002, title: 'wt B', cwd: 'C:\\repos\\projB', project: 'projB', state: 'ready', prompted: true },
   ]
 
   it('hides the session strip only when no sessions exist', () => {

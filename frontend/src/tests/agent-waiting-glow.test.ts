@@ -278,22 +278,30 @@ describe('AgentActionBar waiting highlight', () => {
   }
 
   it('pulses the target chip while the effective session is idle', () => {
-    effectiveSession.value = { state: 'ready' }
+    effectiveSession.value = { state: 'ready', prompted: true }
     expect(mountBar().find('.agent-target-chip').classes()).toContain('waiting')
   })
 
   it('leaves the chip alone for working sessions and when the setting is off', () => {
     effectiveSession.value = { state: 'working' }
     expect(mountBar().find('.agent-target-chip').classes()).not.toContain('waiting')
-    effectiveSession.value = { state: 'ready' }
+    effectiveSession.value = { state: 'ready', prompted: true }
     settingsState.agentWaitingGlowEnabled.value = false
     expect(mountBar().find('.agent-target-chip').classes()).not.toContain('waiting')
+  })
+
+  it('leaves a just-launched (never prompted) session unflagged (DL-105)', () => {
+    effectiveSession.value = { state: 'ready', prompted: false }
+    const chip = mountBar().find('.agent-target-chip')
+    expect(chip.classes()).not.toContain('waiting')
+    expect(chip.find('.chip-tag').exists()).toBe(false)
   })
 
   it('flags idle rows in the session picker', async () => {
     sessionRowsState.value = [
       { pid: 100, label: 'projA', state: 'working' },
-      { pid: 200, label: 'projB', state: 'ready' },
+      { pid: 200, label: 'projB', state: 'ready', prompted: true },
+      { pid: 300, label: 'projC', state: 'ready', prompted: false },
     ]
     const wrapper = mountBar()
     await wrapper.find('.agent-target-chip').trigger('click')
@@ -303,12 +311,14 @@ describe('AgentActionBar waiting highlight', () => {
     expect(rows[1].classes()).not.toContain('waiting')
     expect(rows[2].classes()).toContain('waiting')
     expect(rows[2].text()).toContain('waiting')
+    // DL-105: a ready-but-never-prompted session does not flag.
+    expect(rows[3].classes()).not.toContain('waiting')
   })
 
   // --- DL-080 follow-up: chip tag + other-session nudge --------------------
 
   it('spells out "waiting" on the chip when the target session is idle', () => {
-    effectiveSession.value = { state: 'ready' }
+    effectiveSession.value = { state: 'ready', prompted: true }
     const chip = mountBar().find('.agent-target-chip')
     expect(chip.find('.chip-tag').exists()).toBe(true)
     expect(chip.find('.chip-tag').text()).toBe('waiting')
@@ -319,7 +329,7 @@ describe('AgentActionBar waiting highlight', () => {
     effectiveSession.value = { state: 'working', pid: 100 }
     sessionRowsState.value = [
       { pid: 100, label: 'projA', state: 'working' },
-      { pid: 200, label: 'projB', state: 'ready' },
+      { pid: 200, label: 'projB', state: 'ready', prompted: true },
     ]
     const chip = mountBar().find('.agent-target-chip')
     expect(chip.classes()).not.toContain('waiting')
@@ -386,7 +396,7 @@ describe('MobileDeckChrome + MobileAgentConsole waiting wiring', () => {
 
   it('rings idle session chips in the mobile console', () => {
     const console = readFileSync(resolve(__dirname, '../components/MobileAgentConsole.vue'), 'utf-8')
-    expect(console).toContain("waiting: waitingGlowOn && s.state === 'ready'")
+    expect(console).toContain("waiting: waitingGlowOn && s.state === 'ready' && s.prompted === true")
     expect(console).toContain('.mac-session.waiting')
   })
 })
@@ -417,7 +427,7 @@ describe('sceneAgentIsWaiting service', () => {
             }
           }
           if (url === '/agent-events/states') {
-            return { data: { states: { claude: { source: 'claude', state: 'ready', message: '', cwd: '', project: 'VDock2', ts: 1 } } } }
+            return { data: { states: { claude: { source: 'claude', state: 'ready', message: '', cwd: '', project: 'VDock2', prompted: true, ts: 1 } } } }
           }
           return { data: {} }
         }),
@@ -457,7 +467,7 @@ describe('sceneAgentIsWaiting service', () => {
     ) => void
     handler({
       states: {
-        claude: { source: 'claude', session_id: 'default', state: 'ready', message: '', cwd: '', project: 'VDock2', ts: 2 },
+        claude: { source: 'claude', session_id: 'default', state: 'ready', message: '', cwd: '', project: 'VDock2', prompted: true, ts: 2 },
       },
     })
     expect(sceneAgentIsWaiting(claudeScene as never)).toBe(true)

@@ -70,10 +70,10 @@ test('setProfile backfills missing factory scenes exactly once', () => {
   store.setProfile(makeProfile())
 
   const names = store.currentProfile!.scenes.map((s) => s.name)
-  expect(names).toEqual(['Custom Scene', 'Media', 'Claude Code', 'Cursor', 'Websites'])
-  expect(store.currentProfile!.factorySeedsApplied).toEqual(
-    expect.arrayContaining(['claude-code', 'cursor', 'websites'])
-  )
+  // DL-100: the out-of-box set is Media + Claude Code — Cursor and Websites
+  // are no longer seeded or backfilled.
+  expect(names).toEqual(['Custom Scene', 'Media', 'Claude Code'])
+  expect(store.currentProfile!.factorySeedsApplied).toEqual(['claude-code'])
 
   store.setProfile(JSON.parse(JSON.stringify(store.currentProfile)))
   expect(store.currentProfile!.scenes.map((s) => s.name)).toEqual(names)
@@ -84,11 +84,11 @@ test('a factory scene deleted by the user stays deleted', () => {
   const store = useDashboardStore()
   store.setProfile(makeProfile())
 
-  const websites = store.currentProfile!.scenes.find((s) => s.name === 'Websites')!
-  store.removeScene(websites.id)
+  const claudeCode = store.currentProfile!.scenes.find((s) => s.name === 'Claude Code')!
+  store.removeScene(claudeCode.id)
 
   store.setProfile(JSON.parse(JSON.stringify(store.currentProfile)))
-  expect(store.currentProfile!.scenes.some((s) => s.name === 'Websites')).toBe(false)
+  expect(store.currentProfile!.scenes.some((s) => s.name === 'Claude Code')).toBe(false)
 })
 
 test('a same-named custom scene counts as the factory seed already present', () => {
@@ -211,4 +211,97 @@ test('setProfile leaves a customised Cursor scene alone', () => {
   const actionTypes = cursorScene.pages[0].buttons.map((b) => b.action?.type)
   expect(actionTypes).toContain('url')
   expect(actionTypes).not.toContain('cursor_new_chat')
+})
+
+// DL-100: profiles that predate the marker carry a legacy 'Home' scene (the
+// pre-rename factory default) and/or a template-gallery 'Claude' scene —
+// both pruned once, only when byte-identical to their legacy origin.
+function legacyHomeScene() {
+  const actions = [
+    'volume_up', 'volume_down', 'volume_mute',
+    'media_play_pause', 'media_previous', 'media_next', 'media_stop'
+  ]
+  return {
+    id: 'scene-legacy-home',
+    name: 'Home',
+    pages: [{
+      id: 'page-legacy-home',
+      name: 'Page 1',
+      grid_config: { rows: 3, cols: 5 },
+      buttons: actions.map((action, index) => ({
+        id: `btn-h${index}`,
+        label: action,
+        icon_type: 'fontawesome' as const,
+        enabled: true,
+        position: { row: 0, col: index },
+        action: { type: 'cross_platform', config: { action } }
+      }))
+    }]
+  }
+}
+
+function legacyClaudeScene() {
+  const labels = ['New Chat', 'Open Claude', 'Projects', 'Upload File', 'Copy Last', 'Console', 'Docs']
+  return {
+    id: 'scene-legacy-claude',
+    name: 'Claude',
+    appId: 'claude',
+    pages: [{
+      id: 'page-legacy-claude',
+      name: 'Page 1',
+      grid_config: { rows: 4, cols: 5 },
+      buttons: labels.map((label, index) => ({
+        id: `btn-c${index}`,
+        label,
+        icon_type: 'fontawesome' as const,
+        enabled: true,
+        position: { row: 0, col: index },
+        action: { type: 'url', config: { url: 'https://claude.ai' } }
+      }))
+    }]
+  }
+}
+
+test('first load prunes untouched legacy Home and Claude scenes', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  const profile = makeProfile()
+  profile.scenes = [legacyHomeScene() as any, ...profile.scenes, legacyClaudeScene() as any]
+
+  store.setProfile(profile)
+
+  const names = store.currentProfile!.scenes.map((s) => s.name)
+  expect(names).not.toContain('Home')
+  expect(names).not.toContain('Claude')
+  expect(names).toEqual(['Custom Scene', 'Media', 'Claude Code'])
+})
+
+test('a customised Home scene survives the legacy prune', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  const profile = makeProfile()
+  const customised = legacyHomeScene()
+  customised.pages[0].buttons[0] = {
+    ...customised.pages[0].buttons[0],
+    action: { type: 'url', config: { url: 'https://example.com' } }
+  }
+  profile.scenes = [customised as any, ...profile.scenes]
+
+  store.setProfile(profile)
+
+  expect(store.currentProfile!.scenes.some((s) => s.id === 'scene-legacy-home')).toBe(true)
+})
+
+test('the prune never runs on a profile that already carries the marker', () => {
+  setActivePinia(createPinia())
+  const store = useDashboardStore()
+  const profile = makeProfile()
+  // Marker present = profile already ran the seed pass — a Claude scene
+  // added afterwards (e.g. from the template gallery) must be kept.
+  profile.factorySeedsApplied = ['claude-code']
+  profile.scenes = [...profile.scenes, legacyClaudeScene() as any]
+
+  store.setProfile(profile)
+
+  expect(store.currentProfile!.scenes.some((s) => s.id === 'scene-legacy-claude')).toBe(true)
 })

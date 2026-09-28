@@ -311,6 +311,48 @@ def test_plain_stop_does_not_raise_alert(client, emitted):
     assert client.get('/api/agent-events/current').get_json()['alert'] is None
 
 
+def test_idle_notification_on_never_prompted_session_stays_quiet(client, emitted):
+    """DL-105: a just-launched agent is always idle — its idle
+    notification is not 'waiting for you' until a prompt was sent."""
+    client.post('/api/agent-events', json={
+        'source': 'claude', 'state': 'ready', 'attention': True,
+        'message': 'Claude Code is waiting for your input',
+    })
+    assert client.get('/api/agent-events/current').get_json()['alert'] is None
+    assert agent_state.get('claude')['prompted'] is False
+
+
+def test_idle_notification_alerts_once_the_session_was_prompted(client, emitted):
+    client.post('/api/agent-events', json={
+        'source': 'claude', 'state': 'working', 'prompt': 'fix the bug',
+        'session_id': 's1',
+    })
+    client.post('/api/agent-events', json={
+        'source': 'claude', 'state': 'ready', 'attention': True,
+        'session_id': 's1',
+    })
+    assert client.get('/api/agent-events/current').get_json()['alert'] is not None
+    assert agent_state.get('claude')['prompted'] is True
+
+
+def test_prompted_flag_counts_without_prompt_text(client, emitted):
+    """The hook flags prompted on events that imply a prompt even when
+    no prompt text rides along (tool calls, a finished turn)."""
+    client.post('/api/agent-events', json={
+        'source': 'claude', 'state': 'ready', 'attention': True, 'prompted': True,
+    })
+    assert client.get('/api/agent-events/current').get_json()['alert'] is not None
+
+
+def test_permission_alert_bypasses_the_prompted_gate(client, emitted):
+    """Permission dialogs are real blockers (and legacy 'waiting' events
+    map here) — they alert regardless of prompt history."""
+    client.post('/api/agent-events', json={
+        'source': 'claude', 'state': 'permission', 'attention': True,
+    })
+    assert client.get('/api/agent-events/current').get_json()['alert'] is not None
+
+
 def test_legacy_waiting_and_clear_events_still_work(client, emitted):
     client.post('/api/agent-events', json={'source': 'claude', 'event': 'waiting'})
     assert client.get('/api/agent-events/current').get_json()['alert'] is not None
@@ -347,6 +389,22 @@ def test_a_pending_permission_prompt_outranks_newer_activity(client, emitted):
 
     assert agent_state.get('claude')['state'] == 'permission'
     assert client.get('/api/agent-events/current').get_json()['alert'] is not None
+
+
+def test_hook_body_flags_prompt_implying_events():
+    """DL-105: every event except SessionStart/Notification means the
+    session was prompted — Cursor/Antigravity events only exist mid-run."""
+    promptless = hook.build_body('claude', 'ready', {'hook_event_name': 'SessionStart'})
+    notify = hook.build_body('claude', 'ready', {'hook_event_name': 'Notification'})
+    assert promptless['prompted'] is False
+    assert notify['prompted'] is False
+    for source, event in [
+        ('claude', 'UserPromptSubmit'), ('claude', 'PreToolUse'),
+        ('claude', 'Stop'), ('cursor', 'stop'),
+        ('cursor', 'beforeSubmitPrompt'), ('antigravity', 'PreInvocation'),
+    ]:
+        body = hook.build_body(source, 'ready', {'hook_event_name': event})
+        assert body['prompted'] is True, (source, event)
 
 
 def test_hook_body_carries_the_session_id():

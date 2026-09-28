@@ -71,7 +71,7 @@
             v-for="s in sessionRows"
             :key="s.pid"
             class="agent-target-row"
-            :class="{ active: s.pid === pinnedPid, waiting: waitingGlowOn && s.state === 'ready' }"
+            :class="{ active: s.pid === pinnedPid, waiting: waitingGlowOn && s.state === 'ready' && s.prompted === true }"
             role="option"
             :aria-selected="s.pid === pinnedPid"
           >
@@ -85,7 +85,7 @@
                 <span class="row-main">
                   {{ s.label }}
                   <span v-if="s.pid === resolvedPid && pinnedPid === null" class="row-tag">auto</span>
-                  <span v-if="waitingGlowOn && s.state === 'ready'" class="row-tag tag-waiting">waiting</span>
+                  <span v-if="waitingGlowOn && s.state === 'ready' && s.prompted === true" class="row-tag tag-waiting">waiting</span>
                 </span>
                 <span class="row-sub">{{ rowSub(s) }}</span>
               </span>
@@ -196,13 +196,14 @@ const waitingGlowOn = computed(() =>
   !isAgentWaitingDismissed(profile.value?.status_source)
 )
 const showWaitingHint = computed(() =>
-  waitingGlowOn.value && effectiveSession.value?.state === 'ready'
+  waitingGlowOn.value && effectiveSession.value?.state === 'ready' &&
+  effectiveSession.value?.prompted === true
 )
 // A session other than the current target sits idle — the chip nudges the
 // user into the picker, where that row carries the waiting flag.
 const anotherSessionWaiting = computed(() =>
   waitingGlowOn.value &&
-  sessionRows.value.some(s => s.state === 'ready' && s.pid !== effectiveSession.value?.pid)
+  sessionRows.value.some(s => s.state === 'ready' && s.prompted === true && s.pid !== effectiveSession.value?.pid)
 )
 const targetOpen = ref(false)
 const chipRef = ref<HTMLElement | null>(null)

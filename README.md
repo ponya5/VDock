@@ -219,7 +219,13 @@ Setup installs dependencies, creates a desktop shortcut, writes `backend/.env`, 
 
 Double-click the **VDock** desktop shortcut, or run `launch.bat` / `./launch.sh`. Give it **5–10 seconds**, then it opens at **http://localhost:3000** (or the port you chose).
 
-First launch walks you through a **13-step tour** and drops you into a starter profile with four working scenes — **Media**, **Claude Code**, **Cursor** and **Websites** — every button working with no keys and no config.
+First launch walks you through a **13-step tour** and drops you into a starter profile with two working scenes — **Media** and **Claude Code** — every button working with no keys and no config.
+
+### Uninstall
+
+**Installed app:** Windows → uninstall via Settings → Apps (removes the program, shortcuts, and startup entry; your profiles are kept). macOS → drag VDock to Trash, then remove `~/Library/LaunchAgents/com.vdock.launcher.plist` if you enabled launch-at-login. Linux `.deb` → `sudo apt remove vdock`; AppImage → delete the file and `~/.config/autostart/vdock.desktop`. Per-user data lives in the OS app-data folder (`VDock/vdock-data`) — delete it manually if you want a full wipe.
+
+**Source checkout:** run `uninstall.bat` (Windows) or `chmod +x uninstall.sh && ./uninstall.sh` (macOS/Linux). It stops running VDock processes, removes the startup entry and desktop launcher, then tells you to delete the folder itself — user data in `backend/data/` goes with it.
 
 ---
 

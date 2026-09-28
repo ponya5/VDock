@@ -58,8 +58,10 @@ test('category header keeps its >=44px touch floor', () => {
 test('footer only mounts when it has content, with a slide transition', () => {
   const view = readSrc('views/DashboardView.vue')
   const footerBlock = view.match(/<DeckFooter[^>]*>/)?.[0] ?? ''
-  expect(footerBlock.includes('isEditMode'), 'DeckFooter v-if must include isEditMode').toBe(true)
-  expect(footerBlock.includes('showHeader'), 'DeckFooter v-if must include showHeader (hosts the reveal pill)').toBe(true)
+  // DL-102: the reveal control is a floating button now — the footer only
+  // mounts for real content (edit controls / page dots) via footerVisible.
+  expect(footerBlock.includes('footerVisible'), 'DeckFooter v-if must be the footerVisible computed').toBe(true)
+  expect(footerBlock.includes('showHeader'), 'DeckFooter v-if must not depend on showHeader — hiding the header must not mount the footer').toBe(false)
   expect(view.includes('footer-slide'), 'DeckFooter should be wrapped in a footer-slide Transition').toBe(true)
 
   const footerStyles = styleBlock(readSrc('components/DeckFooter.vue'), 'DeckFooter.vue')

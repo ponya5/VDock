@@ -13,6 +13,9 @@ export interface AgentSessionInfo {
   project: string
   /** Hook-reported state ('ready' | 'working' | 'permission') or null. */
   state: string | null
+  /** True once the session saw a user prompt (DL-105) — waiting cues
+      only fire for prompted sessions. */
+  prompted?: boolean
   /** Hook detail — the current task or last prompt, when reported. */
   detail: string
   /** Unix start time of the session process, or null. */

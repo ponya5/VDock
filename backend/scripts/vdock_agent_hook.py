@@ -182,10 +182,16 @@ def conversation_fields(source: str, payload: Dict[str, Any]) -> Dict[str, str]:
 
 def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     cwd = _session_cwd(payload)
+    event_name = str(payload.get('hook_event_name') or payload.get('event') or '')
     return {
         **conversation_fields(source, payload),
         'source': source,
         'state': state,
+        # Every event except SessionStart/Notification implies the user
+        # already prompted this session (tool calls, submits, a finished
+        # turn) — Cursor and Antigravity events only exist mid-run at
+        # all. Waiting alerts fire only for prompted sessions (DL-105).
+        'prompted': event_name not in ('SessionStart', 'Notification'),
         # Only a notification means "come back to the agent" — a normal
         # Stop is ready too, but shouldn't pop the alert every turn.
         'attention': payload.get('hook_event_name') == 'Notification',

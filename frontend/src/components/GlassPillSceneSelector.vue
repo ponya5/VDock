@@ -408,6 +408,10 @@ watch(() => sceneSwipe.dragging, (dragging) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  /* Never compress a pill (DL-107): a squeezed segment shrinks the label
+     to a couple of characters. Full content width always; the container
+     scrolls horizontally when the row overflows. */
+  flex-shrink: 0;
   /* Generous touch target — these are tapped often on touch panels. */
   min-height: 56px;
   min-width: 96px;
@@ -448,7 +452,9 @@ watch(() => sceneSwipe.dragging, (dragging) => {
 }
 
 .segment-label {
-  max-width: 112px;
+  /* Generous cap — real scene names read in full (DL-107); only very
+     long custom names still ellipsize. */
+  max-width: 200px;
   /* min-width:0 lets the flex item shrink below its content width so the
      edit-mode badge lane can reclaim space without the label overflowing
      into it — ellipsis kicks in instead. */
@@ -515,6 +521,17 @@ watch(() => sceneSwipe.dragging, (dragging) => {
   border-color: #4aa3ff;
   color: #7dbcff;
   background: rgba(74, 163, 255, 0.16);
+}
+
+/* DL-107: slim pills on narrow headers (the 7" panel's 1024px) so a
+   typical 4–5 scene set fits without scrolling; overflow still scrolls. */
+@media (max-width: 1100px) {
+  .segment {
+    padding: 12px 10px;
+    gap: 6px;
+    font-size: clamp(13px, 1vw + 7px, 16px);
+  }
+  .segment-logo { width: 22px; height: 22px; }
 }
 
 @media (max-width: 768px) {

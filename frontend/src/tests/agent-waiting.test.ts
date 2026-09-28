@@ -19,7 +19,7 @@ vi.mock('@/services/appDetection', () => ({
 import { dismissAgentWaiting, isAgentWaitingDismissed, sceneWaitingAgent, AGENT_SNOOZE_MS } from '@/services/agentWaiting'
 
 function readyEntry(ts: number): AgentStateEntry {
-  return { source: 'claude', state: 'ready', message: '', cwd: '', project: 'backend', ts }
+  return { source: 'claude', state: 'ready', message: '', cwd: '', project: 'backend', prompted: true, ts }
 }
 
 const scene = { id: 's1', name: 'Claude Code', appId: 'claude', triggeredByApp: false, pages: [] } as never
@@ -46,6 +46,13 @@ describe('agentWaiting snooze window', () => {
     await nextTick()
     expect(isAgentWaitingDismissed('claude')).toBe(false)
     expect(sceneWaitingAgent(scene)).not.toBeNull()
+  })
+
+  it('ignores a ready state from a session that was never prompted (DL-105)', () => {
+    // A freshly launched agent sits idle by definition — the waiting
+    // surfaces only fire once the user has actually prompted it.
+    entryRef.value = { ...readyEntry(1000), prompted: false }
+    expect(sceneWaitingAgent(scene)).toBeNull()
   })
 
   it('re-arms immediately when a new waiting episode starts', () => {

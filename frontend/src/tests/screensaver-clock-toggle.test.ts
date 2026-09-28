@@ -40,9 +40,14 @@ test('new-user widget default is weather + news + market only', () => {
     'pre-load ref default should share SETTINGS_DEFAULTS').toBe(true)
   expect(store.includes("settings.screensaverWidgets ?? [...SETTINGS_DEFAULTS.screensaverWidgets]"),
     'load fallback should share SETTINGS_DEFAULTS').toBe(true)
-  // sports/worldclock must not survive in the defaults
-  expect(store.includes("'sports', 'market', 'worldclock'"),
-    'sports/worldclock should be off the default list').toBe(false)
+  // sports/worldclock must not survive in the defaults — scope the check to
+  // the SETTINGS_DEFAULTS block: LEGACY_SCREENSAVER_WIDGETS (DL-101) carries
+  // the old five-widget list verbatim as a migration signature, not a default.
+  const defaultsBlock = store.match(/SETTINGS_DEFAULTS\s*=\s*\{([\s\S]*?)\} as const/)?.[1] ?? ''
+  expect(defaultsBlock.includes("'sports'"),
+    'sports should be off the default list').toBe(false)
+  expect(defaultsBlock.includes("'worldclock'"),
+    'worldclock should be off the default list').toBe(false)
 })
 
 test('screensaver gates the clock on showClockWidget and excludes it from mountedWidgets when off', () => {

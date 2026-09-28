@@ -399,32 +399,42 @@ export function isUntouchedLegacyCursorScene(scene: Scene): boolean {
 }
 
 /**
- * "Websites" scene: generic, globally-known sites only — nothing
- * region- or user-specific ships in the default profile.
+ * Untouched-legacy scene signatures (DL-100). `setProfile` prunes these once
+ * per profile — only while `factorySeedsApplied` is absent, and only when the
+ * scene is byte-identical to its legacy origin, so a customized scene (or a
+ * freshly re-added "Claude" template on a marked profile) is never deleted.
  */
-function createWebsitesScene(ts: number): Scene {
-  const makeButton = seedButton(ts)
-  const site = (id: string, label: string, icon: string[], color: string, url: string, row: number, col: number) =>
-    makeButton({
-      id: `btn-${ts}-${id}`,
-      label,
-      icon: icon as [string, string],
-      style: { backgroundColor: color, textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'url', config: { url } },
-      position: { row, col }
-    })
 
-  const buttons: Button[] = [
-    site('w1', 'YouTube', ['fab', 'youtube'], '#ff0000', 'https://www.youtube.com', 0, 0),
-    site('w2', 'Google', ['fab', 'google'], '#4285f4', 'https://www.google.com', 0, 1),
-    site('w3', 'GitHub', ['fab', 'github'], '#24292f', 'https://github.com', 0, 2),
-    site('w4', 'Gmail', ['fas', 'envelope'], '#ea4335', 'https://mail.google.com', 0, 3),
-    site('w5', 'Reddit', ['fab', 'reddit-alien'], '#ff4500', 'https://www.reddit.com', 1, 0),
-    site('w6', 'Stack Overflow', ['fab', 'stack-overflow'], '#f48024', 'https://stackoverflow.com', 1, 1),
-    site('w7', 'Wikipedia', ['fab', 'wikipedia-w'], '#636466', 'https://www.wikipedia.org', 1, 2),
-    site('w8', 'Discord', ['fab', 'discord'], '#5865f2', 'https://discord.com/app', 1, 3)
-  ]
-  return seedScene(ts, 'websites', 'Websites', 'globe', '#0ea5e9', buttons)
+/** Pre-DL-047 default scene, when the factory deck was still named 'Home' —
+ *  same media actions as today's Media scene on an older interleaved layout. */
+const LEGACY_HOME_ACTIONS = [
+  'volume_up', 'volume_down', 'volume_mute',
+  'media_play_pause', 'media_previous', 'media_next', 'media_stop'
+]
+
+export function isLegacyHomeScene(scene: Scene): boolean {
+  if (scene.name !== 'Home') return false
+  const actions = scene.pages.flatMap((page) =>
+    page.buttons.map((button) =>
+      button.action?.type === 'cross_platform' ? button.action.config?.action : undefined
+    )
+  )
+  return actions.length === LEGACY_HOME_ACTIONS.length
+    && actions.every((action, index) => action === LEGACY_HOME_ACTIONS[index])
+}
+
+/** The AI Assistants "Claude" template applied as a scene — supplanted by the
+ *  real Claude Code factory scene, which drives the live CLI instead of the
+ *  web app's hotkeys. */
+const LEGACY_CLAUDE_TEMPLATE_LABELS = [
+  'New Chat', 'Open Claude', 'Projects', 'Upload File', 'Copy Last', 'Console', 'Docs'
+]
+
+export function isLegacyClaudeScene(scene: Scene): boolean {
+  if (scene.name !== 'Claude' || scene.appId !== 'claude') return false
+  const labels = scene.pages.flatMap((page) => page.buttons.map((button) => button.label))
+  return labels.length === LEGACY_CLAUDE_TEMPLATE_LABELS.length
+    && labels.every((label, index) => label === LEGACY_CLAUDE_TEMPLATE_LABELS[index])
 }
 
 /**
@@ -433,6 +443,8 @@ function createWebsitesScene(ts: number): Scene {
  * list from this and `setProfile`'s backfill walks it to append whatever an
  * older profile never received, so the seed set has a single source of truth.
  * Media isn't listed: it's governed by the `isDefault` invariant instead.
+ * DL-100: the out-of-box set is Media + Claude Code — Cursor stays reachable
+ * via the template gallery and "Reset to Default" but is no longer seeded.
  */
 export const FACTORY_SEED_SCENES: ReadonlyArray<{
   /** Stable key recorded in `profile.factorySeedsApplied`. */
@@ -442,13 +454,11 @@ export const FACTORY_SEED_SCENES: ReadonlyArray<{
   build: (ts?: number) => Scene
 }> = [
   { key: 'claude-code', name: 'Claude Code', build: createClaudeCodeScene },
-  { key: 'cursor', name: 'Cursor', build: createCursorScene },
-  { key: 'websites', name: 'Websites', build: createWebsitesScene },
 ]
 
 /**
  * Creates a minimal default profile for first-time users, seeded with the
- * out-of-box scenes: Media, Claude Code, Cursor, Websites.
+ * out-of-box scenes: Media and Claude Code (DL-100).
  */
 export function createDefaultProfile(): Profile {
   const ts = Date.now()
@@ -457,8 +467,11 @@ export function createDefaultProfile(): Profile {
   const profile: Profile = {
     id: profileId,
     name: 'My VDock',
-    description: 'Media controls, Claude Code and Cursor actions, and quick website links to get you started.',
+    description: 'Media controls and Claude Code actions to get you started.',
     scenes: [createDefaultScene(), ...FACTORY_SEED_SCENES.map((seed) => seed.build(ts))],
+    // Stamped so a brand-new profile never enters setProfile's one-time
+    // legacy-scene prune — every seed it will ever need is already present.
+    factorySeedsApplied: FACTORY_SEED_SCENES.map((seed) => seed.key),
     dockedButtons: [],
     theme: 'default',
     settings: {
