@@ -1,10 +1,15 @@
-"""Install VDock's agent hook into Claude Code and Cursor.
+"""Install VDock's agent hook into Claude Code, Cursor and Antigravity.
 
-Both agents read a user-level JSON file listing shell commands to run on
+All three read a user-level JSON file listing shell commands to run on
 lifecycle events. VDock adds one command — ``scripts/vdock_agent_hook.py`` —
 to the events that reveal the agent's state (see ``agent_state``).
 
-Rules shared by both installers:
+Antigravity's format differs: ``hooks.json`` maps a hook *name* to its
+event configs, so VDock owns one named entry (``AGY_HOOK_NAME``) covering
+all events, and the command carries ``--event`` because Antigravity's
+stdin payload doesn't expose ``hook_event_name``.
+
+Rules shared by all installers:
   * merge, never replace: entries VDock doesn't own are left untouched;
   * ownership is recognised by ``HOOK_MARKER`` in the command string;
   * idempotent, and an older partial install (DL-045 only hooked
@@ -37,6 +42,17 @@ CURSOR_HOOK_EVENTS: Tuple[str, ...] = (
     'beforeSubmitPrompt', 'afterAgentResponse', 'stop',
 )
 
+#: Antigravity's named entry in hooks.json and its observational events.
+#: Stop fires when the execution loop terminates — the closest thing to
+#: "idle" Antigravity exposes. There is no permission event, so 'waiting
+#: for approval' can't be distinguished — the glow shows ready instead.
+AGY_HOOK_NAME = 'vdock-agent-state'
+AGY_HOOK_EVENTS: Tuple[str, ...] = (
+    'PreInvocation', 'PostInvocation', 'PreToolUse', 'PostToolUse', 'Stop',
+)
+#: Tool events take a matcher+hooks entry; loop events take bare commands.
+AGY_MATCHER_EVENTS = frozenset({'PreToolUse', 'PostToolUse'})
+
 
 class HookSettingsError(ValueError):
     """The agent's settings file exists but can't be parsed."""
@@ -54,10 +70,13 @@ def hook_script_path() -> Path:
     return Path(__file__).resolve().parent.parent / 'scripts' / 'vdock_agent_hook.py'
 
 
-def hook_command(source: str) -> str:
+def hook_command(source: str, event: str = '') -> str:
     # Forward slashes work on Windows Python too and avoid JSON escaping pain.
     script = hook_script_path().as_posix()
-    return f'python "{script}" --port {Config.PORT} --source {source}'
+    command = f'python "{script}" --port {Config.PORT} --source {source}'
+    # Antigravity's stdin payload doesn't carry the event name, so the
+    # command pins it instead of relying on hook_event_name.
+    return f'{command} --event {event}' if event else command
 
 
 def claude_settings_path() -> Path:
@@ -66,6 +85,10 @@ def claude_settings_path() -> Path:
 
 def cursor_hooks_path() -> Path:
     return Path.home() / '.cursor' / 'hooks.json'
+
+
+def antigravity_hooks_path() -> Path:
+    return Path.home() / '.gemini' / 'config' / 'hooks.json'
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -156,6 +179,61 @@ def _add_cursor_events(settings: Dict[str, Any]) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
+# Antigravity: {"vdock-agent-state": {"enabled": true, "<Event>": [...]}}
+# Loop events (PreInvocation/PostInvocation/Stop) take bare command
+# entries; tool events (Pre/PostToolUse) take {matcher, hooks[]} entries.
+# ---------------------------------------------------------------------------
+
+def _agy_entry(settings: Dict[str, Any]) -> Dict[str, Any]:
+    entry = settings.get(AGY_HOOK_NAME)
+    return entry if isinstance(entry, dict) else {}
+
+
+def _agy_event_covered(entries: Any) -> bool:
+    """Any entry in the event's list carrying our command."""
+    if not isinstance(entries, list):
+        return False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if HOOK_MARKER in str(entry.get('command', '')):
+            return True
+        for hook in entry.get('hooks') or []:
+            if isinstance(hook, dict) and HOOK_MARKER in str(hook.get('command', '')):
+                return True
+    return False
+
+
+def antigravity_installed_events(settings: Dict[str, Any]) -> List[str]:
+    entry = _agy_entry(settings)
+    return [event for event in AGY_HOOK_EVENTS
+            if _agy_event_covered(entry.get(event))]
+
+
+def _agy_command_entry(event: str) -> Dict[str, Any]:
+    command = hook_command('antigravity', event)
+    if event in AGY_MATCHER_EVENTS:
+        return {'matcher': '',
+                'hooks': [{'type': 'command', 'command': command, 'timeout': 10}]}
+    return {'type': 'command', 'command': command, 'timeout': 10}
+
+
+def _add_antigravity_events(settings: Dict[str, Any]) -> List[str]:
+    entry = settings.setdefault(AGY_HOOK_NAME, {})
+    if not isinstance(entry, dict):  # someone else owns the name — never clobber
+        return []
+    entry.setdefault('enabled', True)
+    added: List[str] = []
+    for event in AGY_HOOK_EVENTS:
+        handlers = entry.setdefault(event, [])
+        if not isinstance(handlers, list) or _agy_event_covered(handlers):
+            continue
+        handlers.append(_agy_command_entry(event))
+        added.append(event)
+    return added
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -175,6 +253,10 @@ _TARGETS: Dict[str, _AgentHookTarget] = {
     'cursor': _AgentHookTarget(
         cursor_hooks_path, cursor_installed_events, _add_cursor_events,
         CURSOR_HOOK_EVENTS,
+    ),
+    'antigravity': _AgentHookTarget(
+        antigravity_hooks_path, antigravity_installed_events,
+        _add_antigravity_events, AGY_HOOK_EVENTS,
     ),
 }
 

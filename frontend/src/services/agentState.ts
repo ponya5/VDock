@@ -46,6 +46,12 @@ async function syncFromBackend(): Promise<void> {
   }
 }
 
+// DL-080 follow-up #5: the socket only pushes on new hook events, so a
+// session that died without an 'ended' (and got pruned backend-side)
+// would look alive forever on a connected client. A slow re-sync lets the
+// backend's TTL + dead-process pruning actually reach the deck.
+const SYNC_MS = 15_000
+
 export function initAgentState(): void {
   if (initialized) return
   initialized = true
@@ -53,6 +59,7 @@ export function initAgentState(): void {
     replaceStates(payload?.states)
   })
   socketClient.on('connect', () => { void syncFromBackend() })
+  window.setInterval(() => { void syncFromBackend() }, SYNC_MS)
   void syncFromBackend()
 }
 

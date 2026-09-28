@@ -84,14 +84,7 @@
           >
             <FontAwesomeIcon :icon="['fas', 'server']" />
             <span>Server</span>
-            <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="nav-item-chevron" :class="{ 'chevron-open': activeTab === 'server' }" />
           </button>
-          <Collapse :open="activeTab === 'server'">
-            <div class="nav-sub">
-              <button type="button" @click="scrollToPanel('startup')">Startup &amp; navigation</button>
-              <button type="button" @click="scrollToPanel('connection')">Connection</button>
-            </div>
-          </Collapse>
         </div>
         <div class="nav-group">
           <button
@@ -133,6 +126,18 @@
           <button
             type="button"
             class="nav-item nav-rail-item"
+            :aria-current="activeTab === 'guide' ? 'page' : undefined"
+            data-tour="nav-guide"
+            @click="activeTab = 'guide'"
+          >
+            <FontAwesomeIcon :icon="['fas', 'circle-question']" />
+            <span>Guide</span>
+          </button>
+        </div>
+        <div class="nav-group">
+          <button
+            type="button"
+            class="nav-item nav-rail-item"
             :aria-current="activeTab === 'about' ? 'page' : undefined"
             data-tour="nav-about"
             @click="activeTab = 'about'"
@@ -150,6 +155,20 @@
           <FontAwesomeIcon :icon="['fas', isStandaloneSettings ? 'xmark' : 'arrow-left']" />
           {{ isStandaloneSettings ? 'Close' : 'Back' }}
         </button>
+        <footer class="nav-credit">
+          <span class="nav-credit-text">Created by Daniel S. · v{{ appVersion }}</span>
+          <div class="nav-credit-links">
+            <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="nav-credit-link" title="Daniel Shalom on LinkedIn" aria-label="LinkedIn">
+              <FontAwesomeIcon :icon="['fab', 'linkedin']" />
+            </a>
+            <a href="https://github.com/ponya5/ponya5" target="_blank" rel="noopener" class="nav-credit-link" title="Daniel Shalom on GitHub" aria-label="GitHub">
+              <FontAwesomeIcon :icon="['fab', 'github']" />
+            </a>
+            <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="nav-credit-link nav-credit-site" title="daniel-shalom.com" aria-label="Daniel Shalom's website">
+              <img :src="'/assets/branding/daniel-shalom-logo.jpg'" alt="" class="nav-credit-logo" />
+            </a>
+          </div>
+        </footer>
       </div>
     </aside>
 
@@ -177,6 +196,35 @@
             @click="resetAppearanceSection"
           >
             <FontAwesomeIcon :icon="['fas', 'rotate-left']" /> Reset section
+          </button>
+          <template v-if="isButtonsPage">
+            <span v-if="buttonPageDirty" class="draft-hint">Draft not applied</span>
+            <button
+              type="button"
+              class="btn ghost sm"
+              :disabled="!buttonPageDirty"
+              @click="revertButtonDefaults"
+            >
+              Revert
+            </button>
+            <button
+              type="button"
+              class="btn primary sm"
+              :disabled="applyingButtonBehaviour"
+              @click="applyButtonBehaviourToAll"
+            >
+              <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
+              {{ applyingButtonBehaviour ? 'Applying…' : 'Save & Apply to all keys' }}
+            </button>
+          </template>
+          <button
+            v-else-if="activeTab !== 'about' && activeTab !== 'logs' && activeTab !== 'guide'"
+            type="button"
+            class="btn primary sm"
+            title="Save settings and refresh the dashboard"
+            @click="applyToDashboard"
+          >
+            <FontAwesomeIcon :icon="['fas', 'check']" /> Apply
           </button>
         </div>
       </header>
@@ -904,7 +952,7 @@
                         <div class="stack-12">
                           <label class="stack-8">
                             <span class="muted field-label">Cities — one per line: a city name, an IANA zone, or Label=Zone</span>
-                            <textarea v-model="settingsStore.worldClockTimezones" class="input textarea" rows="3" :placeholder="'Tel Aviv\nLondon\nHome Office=America/New_York\nAsia/Tokyo'"></textarea>
+                            <textarea v-model="settingsStore.worldClockTimezones" class="input textarea" rows="3" :placeholder="'New York\nLondon\nTokyo'"></textarea>
                           </label>
                           <div class="widget-detail-foot">
                             <span class="muted field-note">Blank shows New York, London and Tokyo.</span>
@@ -1020,14 +1068,29 @@
                         </button>
                       </div>
                     </div>
+                    <div v-if="selectedLog" class="log-search-row">
+                      <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="log-search-icon" />
+                      <input
+                        v-model="logSearch"
+                        type="text"
+                        class="input log-search-input"
+                        placeholder="Search the tail… try level:error"
+                        aria-label="Search log lines"
+                        @keydown.esc="logSearch = ''"
+                      />
+                      <span v-if="logQuery" class="log-search-count">{{ displayedLogLines.length }} of {{ logLines.length }}</span>
+                      <button v-if="logQuery" type="button" class="log-search-clear" title="Clear search" aria-label="Clear log search" @click="logSearch = ''">
+                        <FontAwesomeIcon :icon="['fas', 'xmark']" />
+                      </button>
+                    </div>
                     <div ref="logViewerEl" class="log-viewer">
-                      <template v-if="logLines.length">
-                        <div v-for="(line, i) in logLines" :key="i" class="log-line" :class="logLineClass(line)">{{ line }}</div>
+                      <template v-if="displayedLogLines.length">
+                        <div v-for="(line, i) in displayedLogLines" :key="i" class="log-line" :class="logLineClass(line)"><span v-for="(part, j) in logLineParts(line)" :key="j" :class="{ 'log-hit': part.hit }">{{ part.text }}</span></div>
                       </template>
-                      <p v-else class="form-help">{{ selectedLog ? 'This log is empty.' : 'Pick a log file on the left to view its tail.' }}</p>
+                      <p v-else class="form-help">{{ selectedLog ? (logQuery ? 'No lines match — widen the tail or clear the search.' : 'This log is empty.') : 'Pick a log file on the left to view its tail.' }}</p>
                     </div>
                     <div class="log-statusbar">
-                      <span>{{ selectedLog ? `${logLines.length} lines shown` : 'No file selected' }}</span>
+                      <span>{{ selectedLog ? (logQuery ? `${displayedLogLines.length} of ${logLines.length} lines match` : `${logLines.length} lines shown`) : 'No file selected' }}</span>
                       <span v-if="logsUpdatedAt">Updated {{ logsUpdatedAt }}</span>
                     </div>
                   </section>
@@ -1041,42 +1104,6 @@
         <!-- ── Templates ── -->
         <div v-if="activeTab === 'templates'" class="content">
           <div class="col">
-            <section class="panel" id="app-paths">
-              <div class="panel-head">
-                <h2><FontAwesomeIcon :icon="['fas', 'folder-open']" class="category-icon" /> App launch paths</h2>
-                <span class="hint">Point the deck at apps installed outside PATH — used by “New agent” and app-launch buttons.</span>
-              </div>
-              <div class="panel-body">
-                <div v-for="app in appPathRows" :key="app.key" class="app-path-item">
-                  <div class="row">
-                    <div class="row-text">
-                      <span class="label">{{ app.label }}</span>
-                      <p class="app-path-current" :class="{ 'is-set': appPaths[app.key] }">
-                        {{ appPaths[app.key] || 'Auto-detect (PATH + usual install folders)' }}
-                      </p>
-                    </div>
-                    <div class="row-control">
-                      <button
-                        type="button"
-                        class="btn btn-secondary btn-sm"
-                        :aria-expanded="openAppPathRow === app.key"
-                        @click="openAppPathRow = openAppPathRow === app.key ? '' : app.key"
-                      >
-                        <FontAwesomeIcon :icon="['fas', 'cog']" />
-                        {{ appPaths[app.key] ? 'Change' : 'Set path' }}
-                      </button>
-                    </div>
-                  </div>
-                  <AppPathEditor
-                    v-if="openAppPathRow === app.key"
-                    :app-key="app.key"
-                    :label="app.label"
-                    class="app-path-editor-wrap"
-                    @close="openAppPathRow = ''"
-                  />
-                </div>
-              </div>
-            </section>
             <section
               v-for="category in templateCategories"
               :key="category.id"
@@ -1106,8 +1133,8 @@
                           class="btn btn-secondary btn-sm template-path-btn"
                           :class="{ 'path-set': appPaths[templateAppKey(template)] }"
                           :title="appPaths[templateAppKey(template)] ? `Executable: ${appPaths[templateAppKey(template)]}` : 'Set the app executable path'"
-                          :aria-expanded="openPathEditor === template.id"
-                          @click="openPathEditor = openPathEditor === template.id ? '' : template.id"
+                          aria-haspopup="dialog"
+                          @click="openPathEditor = template.id"
                         >
                           <FontAwesomeIcon :icon="['fas', 'cog']" />
                         </button>
@@ -1116,13 +1143,6 @@
                           {{ addingTemplate === template.id ? 'Adding…' : 'Add Scene' }}
                         </button>
                       </div>
-                      <AppPathEditor
-                        v-if="openPathEditor === template.id"
-                        :app-key="templateAppKey(template)"
-                        :label="template.name"
-                        class="template-path-editor"
-                        @close="openPathEditor = ''"
-                      />
                       <div class="template-buttons-preview">
                         <span v-for="btn in template.buttons.slice(0, 8)" :key="btn.label" class="template-btn-chip"
                           :style="{ background: btn.style?.backgroundColor ? btn.style.backgroundColor + '33' : template.color + '22', borderColor: btn.style?.backgroundColor ?? template.color }">
@@ -1136,6 +1156,22 @@
                 </div>
               </Collapse>
             </section>
+          </div>
+
+          <div v-if="pathEditorTemplate" class="modal-overlay" @click.self="openPathEditor = ''">
+            <div class="modal app-path-modal" role="dialog" aria-modal="true" :aria-label="`${pathEditorTemplate.name} executable path`">
+              <div class="modal-header">
+                <h2>{{ pathEditorTemplate.name }} executable</h2>
+                <button type="button" class="close-btn" aria-label="Close" @click="openPathEditor = ''">
+                  <FontAwesomeIcon :icon="['fas', 'times']" />
+                </button>
+              </div>
+              <AppPathEditor
+                :app-key="templateAppKey(pathEditorTemplate)"
+                :label="pathEditorTemplate.name"
+                @close="openPathEditor = ''"
+              />
+            </div>
           </div>
         </div>
 
@@ -1346,16 +1382,16 @@
               <div class="panel-head">
                 <h2>Agent attention alerts</h2>
                 <span class="spacer"></span>
-                <span v-if="agentHooks.claude.known" class="chip" :class="{ 'chip-ok': agentHooks.claude.installed }">
-                  <FontAwesomeIcon :icon="['fas', agentHooks.claude.installed ? 'circle-check' : 'circle-xmark']" />
-                  {{ agentHooks.claude.installed ? 'Claude hook installed' : 'Hook not installed' }}
+                <span v-if="hookStatusKnown" class="chip" :class="{ 'chip-ok': installedHookCount > 0 }">
+                  <FontAwesomeIcon :icon="['fas', installedHookCount === AGENT_HOOK_TARGETS.length ? 'circle-check' : 'circle-half-stroke']" />
+                  {{ installedHookCount }} of {{ AGENT_HOOK_TARGETS.length }} agents hooked
                 </span>
               </div>
               <div class="panel-body">
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Alert me when an agent waits</span>
-                    <p>Pops a banner — over the dashboard and the screensaver — when Claude Code needs input or finishes.</p>
+                    <p>Pops a banner — over the dashboard and the screensaver — when a hooked agent needs input or finishes.</p>
                   </div>
                   <div class="row-control">
                     <label class="switch"><span class="sr-only">Agent attention alerts</span><input type="checkbox" :checked="settingsStore.agentAlertsEnabled" @change="toggleAgentAlerts" /><span class="track"></span></label>
@@ -1383,15 +1419,20 @@
                     </select>
                   </div>
                 </div>
-                <div v-for="hookAgent in AGENT_HOOK_TARGETS" :key="hookAgent.id" class="row">
+                <div class="row">
                   <div class="row-text">
-                    <span class="label">{{ hookAgent.label }} hook</span>
-                    <p>Adds a state hook to <code class="kv-code">{{ hookAgent.settingsFile }}</code> so the deck knows when {{ hookAgent.label }} is ready for a prompt, working, or waiting for permission — and shows the matching buttons.</p>
+                    <span class="label">Agent hooks</span>
+                    <p>Adds a state hook to the agent's settings file — <code class="kv-code">{{ selectedHookTarget.settingsFile }}</code> — so the deck knows when it's ready for a prompt, working, or idle. Restart a running session to pick the hook up.</p>
                   </div>
-                  <div class="row-control">
-                    <button type="button" class="btn sm" @click="installAgentHook(hookAgent.id)" :disabled="agentHooks[hookAgent.id].installing">
-                      <FontAwesomeIcon :icon="['fas', agentHooks[hookAgent.id].installing ? 'spinner' : 'plug']" :spin="agentHooks[hookAgent.id].installing" />
-                      {{ agentHookButtonLabel(hookAgent.id) }}
+                  <div class="row-control hook-picker">
+                    <select v-model="selectedHookAgent" class="select" aria-label="Agent to hook">
+                      <option v-for="target in AGENT_HOOK_TARGETS" :key="target.id" :value="target.id">
+                        {{ target.label }}{{ hookOptionSuffix(target.id) }}
+                      </option>
+                    </select>
+                    <button type="button" class="btn sm" @click="installAgentHook(selectedHookAgent)" :disabled="agentHooks[selectedHookAgent].installing">
+                      <FontAwesomeIcon :icon="['fas', agentHooks[selectedHookAgent].installing ? 'spinner' : 'plug']" :spin="agentHooks[selectedHookAgent].installing" />
+                      {{ agentHookButtonLabel(selectedHookAgent) }}
                     </button>
                   </div>
                 </div>
@@ -1502,6 +1543,11 @@
           </div>
         </div>
 
+        <!-- ── Guide ── -->
+        <div v-if="activeTab === 'guide'" class="content guide-page">
+          <UserGuide />
+        </div>
+
         <!-- ── About ── -->
         <div v-if="activeTab === 'about'" class="content">
           <div class="col col-about">
@@ -1515,8 +1561,11 @@
                   </div>
                   <p class="muted about-desc">A virtual stream interface for controlling your computer with customisable buttons, macros, system metrics and intelligent app integration.</p>
                   <div class="about-actions">
-                    <button type="button" class="btn primary" data-tour="about-help" @click="settingsStore.showHelpGuide = true">
+                    <button type="button" class="btn primary" data-tour="about-help" @click="activeTab = 'guide'">
                       <FontAwesomeIcon :icon="['fas', 'circle-question']" /> Help &amp; guide
+                    </button>
+                    <button type="button" class="btn" @click="showFeatureRequest = true">
+                      <FontAwesomeIcon :icon="['fas', 'lightbulb']" /> Request a feature
                     </button>
                     <button type="button" class="btn" @click="launchTutorial">
                       <FontAwesomeIcon :icon="['fas', 'route']" /> Launch tutorial
@@ -1563,27 +1612,9 @@
           </div>
         </div>
 
-      <!-- Save bar — settings autosave via the store's deep watch, so the
-           honest state is "clean". The Buttons page additionally drafts its
-           three motion/design defaults locally (buttonDraftDirty) until
-           Save & Apply commits them to the store. -->
-      <div v-if="savebarVisible" class="savebar" :data-state="buttonPageDirty ? 'dirty' : 'clean'">
-        <span class="dot"></span>
-        <span class="msg">{{ savebarMessage }}</span>
-        <span class="grow">
-          <template v-if="isButtonsPage">
-            <button type="button" class="btn ghost" :disabled="!buttonPageDirty" @click="revertButtonDefaults">Revert</button>
-            <button type="button" class="btn primary" :disabled="applyingButtonBehaviour" @click="applyButtonBehaviourToAll">
-              <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
-              {{ applyingButtonBehaviour ? 'Applying…' : 'Save & Apply to all keys' }}
-            </button>
-          </template>
-          <button v-else type="button" class="btn primary" @click="applyToDashboard">
-            <FontAwesomeIcon :icon="['fas', 'check']" /> Apply to dashboard
-          </button>
-        </span>
-      </div>
     </main>
+
+    <FeatureRequestModal v-if="showFeatureRequest" @close="showFeatureRequest = false" />
 
     <!-- Shortcut Manager Modal -->
     <AppShortcutManager
@@ -1642,7 +1673,9 @@ import { appForScene, appIdForExe } from '@/data/appBackgrounds'
 import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import AppPathEditor from '@/components/AppPathEditor.vue'
-import { appPaths, loadAppPaths, launchApps, templateAppKey } from '@/api/appPaths'
+import UserGuide from '@/components/UserGuide.vue'
+import FeatureRequestModal from '@/components/FeatureRequestModal.vue'
+import { appPaths, loadAppPaths, templateAppKey } from '@/api/appPaths'
 
 const router = useRouter()
 const route = useRoute()
@@ -1894,6 +1927,7 @@ const PAGE_META: Record<string, { crumb: string; title: string; blurb: string }>
   integration: { crumb: 'Integrations', title: 'Integrations', blurb: 'Scenes that follow the app in focus.' },
   connect: { crumb: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.' },
   logs: { crumb: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.' },
+  guide: { crumb: 'Guide', title: 'User guide', blurb: 'How VDock works — gestures, features and troubleshooting.' },
   about: { crumb: 'About', title: 'About VDock', blurb: 'Version, help and project links.' },
 }
 const topbarMeta = computed(() =>
@@ -2056,10 +2090,6 @@ const buttonPageDirty = computed(() =>
   previewIconLoop.value !== settingsStore.buttonDefaultIconLoop ||
   previewEffect.value !== settingsStore.buttonDefaultEffect
 )
-const savebarVisible = computed(() => activeTab.value !== 'about' && activeTab.value !== 'logs')
-const savebarMessage = computed(() =>
-  buttonPageDirty.value ? 'Design draft not applied — preview only' : 'All changes save automatically'
-)
 function revertButtonDefaults() {
   previewAnimation.value = settingsStore.buttonDefaultAnimation
   previewIconLoop.value = settingsStore.buttonDefaultIconLoop
@@ -2132,16 +2162,13 @@ const addingTemplate = ref<string | null>(null)
 
 // DL-084 app-path editors — which card / launch-paths row is open.
 const openPathEditor = ref('')
-const openAppPathRow = ref('')
-// Curated launch apps + any override keys the user saved that aren't listed
-// (e.g. a key set from a template card), so nothing saved is orphaned.
-const appPathRows = computed(() => {
-  const known = new Set(launchApps.map((a) => a.key))
-  const extras = Object.keys(appPaths)
-    .filter((k) => !known.has(k))
-    .sort()
-    .map((k) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1) }))
-  return [...launchApps, ...extras]
+const pathEditorTemplate = computed(() => {
+  if (!openPathEditor.value) return null
+  for (const cat of templateCategories) {
+    const found = cat.templates.find((t) => t.id === openPathEditor.value)
+    if (found) return found
+  }
+  return null
 })
 
 const aboutFeatures = [
@@ -2350,7 +2377,7 @@ const applyingButtonBehaviour = ref(false)
 
 // "Save & Apply to all keys" — commits the draft (preview refs) as the
 // persisted defaults AND rewrites every existing key (DL-031 follow-up:
-// the draft-only savebar path looked identical to a real apply, so picks
+// the draft-only path looked identical to a real apply, so picks
 // never reached the deck). The warn note above states the per-key
 // customisation cost.
 async function applyButtonBehaviourToAll() {
@@ -2492,6 +2519,55 @@ function logLineClass(line: string) {
   if (/ - (ERROR|CRITICAL) /.test(line)) return 'log-error'
   if (/ - (WARNING|WARN) /.test(line)) return 'log-warn'
   return ''
+}
+
+const logSearch = ref('')
+const logQuery = computed(() => logSearch.value.trim())
+
+// "level:err|warn|info|critical" prefixes filter by logLineClass; any text
+// after the prefix still substring-matches, so `level:error upload` works.
+const LOG_LEVEL_RE = /^level:(error|err|warn|warning|info|critical)\b\s*(.*)$/i
+
+function logLineLevel(line: string): 'error' | 'warn' | 'info' {
+  const cls = logLineClass(line)
+  if (cls === 'log-error') return 'error'
+  if (cls === 'log-warn') return 'warn'
+  return 'info'
+}
+
+const displayedLogLines = computed(() => {
+  const q = logQuery.value
+  if (!q) return logLines.value
+  const levelMatch = q.match(LOG_LEVEL_RE)
+  const needle = (levelMatch ? levelMatch[2] : q).toLowerCase()
+  return logLines.value.filter(line => {
+    if (levelMatch) {
+      const lvl = levelMatch[1].toLowerCase()
+      const want = lvl === 'err' ? 'error' : lvl === 'warning' ? 'warn' : lvl
+      if (logLineLevel(line) !== want) return false
+    }
+    return !needle || line.toLowerCase().includes(needle)
+  })
+})
+
+// Split a line into matched/unmatched segments — rendered as spans, so
+// arbitrary log text never goes through v-html.
+function logLineParts(line: string): { text: string; hit: boolean }[] {
+  const levelMatch = logQuery.value.match(LOG_LEVEL_RE)
+  const needle = (levelMatch ? levelMatch[2] : logQuery.value).toLowerCase()
+  if (!needle) return [{ text: line, hit: false }]
+  const parts: { text: string; hit: boolean }[] = []
+  const lower = line.toLowerCase()
+  let i = 0
+  let idx = lower.indexOf(needle)
+  while (idx !== -1) {
+    if (idx > i) parts.push({ text: line.slice(i, idx), hit: false })
+    parts.push({ text: line.slice(idx, idx + needle.length), hit: true })
+    i = idx + needle.length
+    idx = lower.indexOf(needle, i)
+  }
+  if (i < line.length) parts.push({ text: line.slice(i), hit: false })
+  return parts.length ? parts : [{ text: line, hit: false }]
 }
 
 async function loadLogs() {
@@ -2642,6 +2718,7 @@ const loadingApps = ref(false)
 const appIntegrations = useAppIntegrations()
 const autoSwitchingEnabled = ref(false)
 const showShortcutManager = ref(false)
+const showFeatureRequest = ref(false)
 const selectedAppForShortcuts = ref<RunningApp | null>(null)
 const appSearch = ref('')
 const appProfiles = ref<AppProfileDto[]>([])
@@ -2735,6 +2812,7 @@ const tabs = [
   { id: 'integration', name: 'Integrations', icon: ['fas', 'plug'] },
   { id: 'connect', name: 'Connect a device', icon: ['fas', 'mobile-screen-button'] },
   { id: 'logs', name: 'Logs', icon: ['fas', 'file-lines'] },
+  { id: 'guide', name: 'Guide', icon: ['fas', 'circle-question'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
 
@@ -2759,6 +2837,7 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Background', keywords: 'background animation particles waves aurora image wallpaper gradient', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', tabId: 'logs', icon: ['fas', 'file-lines'] },
+  { label: 'User Guide', keywords: 'help guide tutorial how to documentation swipe gestures troubleshooting', tabId: 'guide', icon: ['fas', 'circle-question'] },
   { label: 'App Templates', keywords: 'templates presets apps buttons', tabId: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Server Configuration', keywords: 'server host port connection', tabId: 'server', icon: ['fas', 'server'] },
   { label: 'Launch on startup', keywords: 'startup boot autostart launch windows mac login', tabId: 'server', icon: ['fas', 'power-off'] },
@@ -2883,7 +2962,7 @@ function toggleAppScanning() {
 }
 
 // --- Agent attention alerts -------------------------------------------------
-type HookAgentId = 'claude' | 'cursor'
+type HookAgentId = 'claude' | 'cursor' | 'antigravity'
 
 interface AgentHookState {
   /** Whether the backend has answered a status request yet. */
@@ -2897,16 +2976,38 @@ interface AgentHookState {
 const AGENT_HOOK_TARGETS: ReadonlyArray<{ id: HookAgentId; label: string; settingsFile: string }> = [
   { id: 'claude', label: 'Claude Code', settingsFile: '~/.claude/settings.json' },
   { id: 'cursor', label: 'Cursor', settingsFile: '~/.cursor/hooks.json' },
+  { id: 'antigravity', label: 'Antigravity', settingsFile: '~/.gemini/config/hooks.json' },
 ]
 
 function createAgentHookState(): AgentHookState {
   return { known: false, installed: false, partial: false, installing: false }
 }
 
-const agentHooks = reactive<Record<HookAgentId, AgentHookState>>({
-  claude: createAgentHookState(),
-  cursor: createAgentHookState(),
-})
+const agentHooks = reactive<Record<HookAgentId, AgentHookState>>(
+  Object.fromEntries(AGENT_HOOK_TARGETS.map(t => [t.id, createAgentHookState()])) as Record<HookAgentId, AgentHookState>
+)
+
+const selectedHookAgent = ref<HookAgentId>('claude')
+
+const selectedHookTarget = computed(
+  () => AGENT_HOOK_TARGETS.find(t => t.id === selectedHookAgent.value) ?? AGENT_HOOK_TARGETS[0]
+)
+
+const installedHookCount = computed(
+  () => AGENT_HOOK_TARGETS.filter(t => agentHooks[t.id].installed).length
+)
+
+const hookStatusKnown = computed(
+  () => AGENT_HOOK_TARGETS.some(t => agentHooks[t.id].known)
+)
+
+function hookOptionSuffix(id: HookAgentId): string {
+  const state = agentHooks[id]
+  if (!state.known) return ''
+  if (state.installed) return ' — hooked'
+  if (state.partial) return ' — partial'
+  return ' — not hooked'
+}
 
 function toggleAgentAlerts() {
   settingsStore.agentAlertsEnabled = !settingsStore.agentAlertsEnabled
@@ -2923,20 +3024,21 @@ function agentHookButtonLabel(agent: HookAgentId): string {
 }
 
 async function fetchAgentHookStatus() {
-  await Promise.all(AGENT_HOOK_TARGETS.map(async ({ id }) => {
-    try {
-      // apiClient.get's second arg is the params object already — wrapping
-      // it in `{ params: … }` nested `agent` so the backend never saw it and
-      // silently defaulted to 'claude' for every tile.
-      const res = await apiClient.get('/agent-events/hook-status', { agent: id })
-      agentHooks[id].installed = !!res.data?.installed
-      agentHooks[id].partial = !!res.data?.partial
+  try {
+    // One call answers for every agent — the dropdown renders its
+    // per-agent install state from this.
+    const res = await apiClient.get('/agent-events/hook-status', { agent: 'all' })
+    const statuses = res.data?.agents ?? {}
+    for (const { id } of AGENT_HOOK_TARGETS) {
+      const status = statuses[id]
+      if (!status) continue
+      agentHooks[id].installed = !!status.installed
+      agentHooks[id].partial = !!status.partial
       agentHooks[id].known = true
-    } catch (error) {
-      console.error(`Failed to read ${id} hook status:`, error)
-      agentHooks[id].known = false
     }
-  }))
+  } catch (error) {
+    console.error('Failed to read hook statuses:', error)
+  }
 }
 
 async function installAgentHook(agent: HookAgentId) {
@@ -3185,6 +3287,22 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.logs-files-card > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 2px 4px 10px;
+  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
 }
 
 .logs-viewer-card {
@@ -3335,6 +3453,67 @@ onMounted(async () => {
   width: auto;
   min-width: 76px;
   padding: 4px 8px;
+}
+
+.hook-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.hook-picker .select { width: auto; min-width: 190px; }
+
+.log-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.log-search-icon { color: var(--color-text-secondary); flex-shrink: 0; font-size: 0.9em; }
+
+.log-search-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+}
+
+.log-search-count {
+  font-size: clamp(10px, 0.5vw + 8px, 12px);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .log-search-clear:hover { background: rgba(255, 255, 255, 0.08); color: var(--color-text); }
+}
+
+.log-hit {
+  background: color-mix(in srgb, var(--color-accent, #4aa3ff) 38%, transparent);
+  color: var(--color-text);
+  border-radius: 3px;
+  padding: 0 1px;
 }
 
 .log-viewer {
@@ -3745,29 +3924,42 @@ onMounted(async () => {
   border-color: rgba(52, 211, 153, 0.5);
 }
 
-.template-path-editor {
-  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);
-  border-top: 1px solid var(--glass-border, var(--color-border));
-  background: rgba(0, 0, 0, 0.12);
+/* DL-084 — executable-path popup from the card gear */
+.app-path-modal {
+  width: 520px;
+  padding: var(--spacing-lg) var(--spacing-xl);
 }
 
-/* App launch paths panel (DL-084) */
-.app-path-item + .app-path-item {
-  border-top: 1px solid var(--glass-border, var(--color-border));
+.app-path-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
-.app-path-current {
-  font-family: ui-monospace, monospace;
-  font-size: clamp(10px, 0.5vw + 8px, 12px);
-  word-break: break-all;
+.app-path-modal .modal-header h2 {
+  margin: 0;
+  font-size: clamp(16px, 1.2vw + 12px, 20px);
 }
 
-.app-path-current.is-set {
-  color: #34d399;
+.app-path-modal .close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
 }
 
-.app-path-editor-wrap {
-  padding: 0 var(--spacing-md) var(--spacing-md);
+.app-path-modal .close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
 }
 
 .template-buttons-preview {
@@ -4047,15 +4239,36 @@ onMounted(async () => {
 .nav-sub button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .nav-sub button[aria-current="true"] { background: var(--accent-ghost); color: #b9d3ff; font-weight: 600; }
 
-.nav-foot { display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.nav-foot { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 .nav-foot-btn { flex: 1; justify-content: center; }
+
+/* Credit footer — author, version and social links at the rail bottom. */
+.nav-credit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+}
+.nav-credit-text { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
+.nav-credit-links { display: flex; align-items: center; gap: 4px; }
+.nav-credit-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  color: var(--text-3);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+.nav-credit-link:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.07); }
+.nav-credit-logo { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: block; }
 
 /* --- main column ---------------------------------------------------------- */
 
-/* .main is the fixed-height column; .content is the scroller. The savebar
-   used to be a sticky bottom:0 child INSIDE .main — but a sticky element is
-   clamped to its containing block, and a scroll container's box is only the
-   scrollport, so the bar scrolled off upward the moment you moved. */
+/* .main is the fixed-height column; .content is the scroller. */
 .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
 .topbar {
@@ -4073,7 +4286,8 @@ onMounted(async () => {
 .topbar h1 { margin: 0; font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.01em; }
 .topbar .crumb { margin: 0 0 2px; color: var(--text-3); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
 .topbar p { margin: 4px 0 0; color: var(--text-2); max-width: 62ch; font-size: var(--fs-md); }
-.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+.draft-hint { font-size: var(--fs-sm); color: var(--warn); white-space: nowrap; }
 
 .content {
   flex: 1 1 auto;
@@ -4087,6 +4301,9 @@ onMounted(async () => {
 }
 .content.has-rail { grid-template-columns: minmax(0, 1fr) var(--rail-w); align-items: start; }
 .content:not(.has-rail) .col { max-width: 1000px; }
+/* Guide tab — the panel fills the viewport and scrolls internally. */
+.content.guide-page { display: flex; flex-direction: column; }
+.content.guide-page > .user-guide { flex: 1 1 auto; min-height: 0; }
 .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .rail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 16px; }
 
@@ -4600,6 +4817,8 @@ onMounted(async () => {
 .about-hero { display: flex; align-items: center; gap: 16px; }
 .about-mark { width: 52px; height: 52px; border-radius: 14px; }
 .about-title { margin: 0; font-size: var(--fs-xl); font-weight: 650; }
+.about-title-row { display: flex; align-items: baseline; gap: 10px; }
+.about-title-row .nav-ver { margin-left: 0; }
 .about-lead { margin: 4px 0 0; color: var(--text-2); font-size: var(--fs-md); max-width: 56ch; }
 .about-meta { margin-left: auto; text-align: right; color: var(--text-3); font-size: var(--fs-sm); }
 .about-links { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -4659,31 +4878,6 @@ onMounted(async () => {
 :deep(.collapse-inner) { min-width: 0; }
 
 /* ==========================================================================
-   Save bar — real footer of the main column, always in view
-   ========================================================================== */
-
-.savebar {
-  position: static;
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px var(--gutter);
-  border-top: 1px solid var(--line);
-  background: #0c1526;
-  box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.35);
-}
-.savebar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; transition: background-color 0.25s ease; }
-.savebar .msg { color: var(--text-2); font-size: var(--fs-sm); }
-.savebar .grow { margin-left: auto; display: flex; gap: 8px; }
-.savebar[data-state="clean"] .dot { background: var(--ok); }
-.savebar[data-state="clean"] .msg { color: var(--text-3); }
-.savebar[data-state="dirty"] { animation: savebar-in 0.22s var(--ease-out, ease); }
-@keyframes savebar-in {
-  from { transform: translateY(100%); }
-}
-
-/* ==========================================================================
    Responsive — 1024×600 touch panel and up
    ========================================================================== */
 
@@ -4707,7 +4901,6 @@ onMounted(async () => {
   .content { padding-top: 14px; padding-bottom: 20px; }
   .panel-head { padding-top: 10px; padding-bottom: 9px; }
   .row { padding-top: 10px; padding-bottom: 10px; }
-  .savebar { padding-top: 9px; padding-bottom: 9px; }
 }
 
 @media (max-width: 880px) {
@@ -4750,7 +4943,7 @@ onMounted(async () => {
   .slider-bare::-moz-range-thumb {
     transition: none;
   }
-  .nav-results, .col > *, .rail > *, .savebar[data-state="dirty"],
+  .nav-results, .col > *, .rail > *,
   .pick:has(input:checked) .tick {
     animation: none;
   }

@@ -75,6 +75,25 @@ def test_cursor_events_map_to_states(event_name, expected_state):
     assert hook.map_event('cursor', {'hook_event_name': event_name}) == expected_state
 
 
+@pytest.mark.parametrize('event_name, expected_state', [
+    ('PreInvocation', 'working'),
+    ('PreToolUse', 'working'),
+    ('PostToolUse', 'working'),
+    ('PostInvocation', 'working'),
+    ('Stop', 'ready'),
+    ('Whatever', None),
+])
+def test_antigravity_events_map_to_states(event_name, expected_state):
+    # Antigravity pins the event in the installed command — the script
+    # surfaces it as payload['event'] (hook_event_name stays empty).
+    assert hook.map_event('antigravity', {'event': event_name}) == expected_state
+
+
+def test_antigravity_event_can_also_come_from_hook_event_name():
+    assert hook.map_event(
+        'antigravity', {'hook_event_name': 'Stop'}) == 'ready'
+
+
 def test_only_notifications_ask_for_attention():
     stop_body = hook.build_body('claude', 'ready', {'hook_event_name': 'Stop'})
     notification_body = hook.build_body(
@@ -135,6 +154,11 @@ def agent_home(tmp_path, monkeypatch):
         agent_hooks.cursor_installed_events, agent_hooks._add_cursor_events,
         agent_hooks.CURSOR_HOOK_EVENTS,
     ))
+    monkeypatch.setitem(agent_hooks._TARGETS, 'antigravity', agent_hooks._AgentHookTarget(
+        lambda: tmp_path / '.gemini' / 'config' / 'hooks.json',
+        agent_hooks.antigravity_installed_events, agent_hooks._add_antigravity_events,
+        agent_hooks.AGY_HOOK_EVENTS,
+    ))
     return tmp_path
 
 
@@ -180,6 +204,68 @@ def test_cursor_install_creates_versioned_hooks_file(agent_home):
     assert set(written['hooks']) == set(agent_hooks.CURSOR_HOOK_EVENTS)
     assert '--source cursor' in written['hooks']['stop'][0]['command']
     assert 'beforeShellExecution' not in written['hooks']
+
+
+def test_antigravity_install_writes_named_entry(agent_home):
+    hooks_path = agent_home / '.gemini' / 'config' / 'hooks.json'
+    result = agent_hooks.install_hook('antigravity')
+    assert result.installed and not result.already
+    assert set(result.added_events) == set(agent_hooks.AGY_HOOK_EVENTS)
+
+    written = json.loads(hooks_path.read_text(encoding='utf-8'))
+    entry = written['vdock-agent-state']
+    assert entry['enabled'] is True
+    # Loop events carry a bare command entry pinning --event; tool events
+    # carry the matcher+hooks shape.
+    assert '--event Stop' in entry['Stop'][0]['command']
+    assert '--source antigravity' in entry['Stop'][0]['command']
+    pre_tool = entry['PreToolUse'][0]
+    assert 'matcher' in pre_tool
+    assert '--event PreToolUse' in pre_tool['hooks'][0]['command']
+    assert agent_hooks.hook_status('antigravity')['installed'] is True
+
+
+def test_antigravity_install_merges_and_is_idempotent(agent_home):
+    hooks_path = agent_home / '.gemini' / 'config' / 'hooks.json'
+    hooks_path.parent.mkdir(parents=True)
+    hooks_path.write_text(json.dumps({
+        'my-linter': {'PostToolUse': [{'matcher': 'run_command', 'hooks': [
+            {'type': 'command', 'command': 'lint.sh'}]}]},
+    }), encoding='utf-8')
+
+    agent_hooks.install_hook('antigravity')
+    written = json.loads(hooks_path.read_text(encoding='utf-8'))
+    assert written['my-linter']['PostToolUse'][0]['hooks'][0]['command'] == 'lint.sh'
+    assert set(written['vdock-agent-state']) >= set(agent_hooks.AGY_HOOK_EVENTS)
+    assert hooks_path.with_suffix('.vdock-backup.json').exists()
+
+    second = agent_hooks.install_hook('antigravity')
+    assert second.already is True and second.added_events == ()
+
+
+def test_antigravity_partial_install_is_detected(agent_home):
+    hooks_path = agent_home / '.gemini' / 'config' / 'hooks.json'
+    hooks_path.parent.mkdir(parents=True)
+    hooks_path.write_text(json.dumps({
+        'vdock-agent-state': {'enabled': True, 'Stop': [
+            {'type': 'command',
+             'command': 'python "x/vdock_agent_hook.py" --event Stop'}]},
+    }), encoding='utf-8')
+    status = agent_hooks.hook_status('antigravity')
+    assert status['partial'] is True and status['installed'] is False
+    agent_hooks.install_hook('antigravity')
+    assert agent_hooks.hook_status('antigravity')['installed'] is True
+
+
+def test_hook_status_all_reports_every_agent(client, agent_home):
+    response = client.get('/api/agent-events/hook-status?agent=all')
+    assert response.status_code == 200
+    agents = response.get_json()['agents']
+    assert set(agents) == {'claude', 'cursor', 'antigravity'}
+    agent_hooks.install_hook('antigravity')
+    agents = client.get('/api/agent-events/hook-status?agent=all').get_json()['agents']
+    assert agents['antigravity']['installed'] is True
+    assert agents['claude']['installed'] is False
 
 
 def test_install_refuses_unparseable_settings(agent_home):

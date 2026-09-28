@@ -1,7 +1,6 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal user-guide-modal">
-      <div class="guide-container">
+  <div class="user-guide">
+    <div class="guide-container">
         <!-- Sidebar Navigation -->
         <aside class="guide-sidebar">
           <div class="sidebar-header">
@@ -11,10 +10,10 @@
             </div>
             <p class="subtitle">User Guide</p>
           </div>
-          
+
           <nav class="sidebar-nav">
-            <button 
-              v-for="tab in tabs" 
+            <button
+              v-for="tab in tabs"
               :key="tab.id"
               :class="['nav-item', { active: activeTab === tab.id }]"
               @click="activeTab = tab.id"
@@ -23,20 +22,10 @@
               <span>{{ tab.label }}</span>
             </button>
           </nav>
-
-          <div class="sidebar-footer">
-            <button class="btn btn-secondary btn-sm close-btn" @click="$emit('close')">
-              <FontAwesomeIcon :icon="['fas', 'times']" /> Close Guide
-            </button>
-          </div>
         </aside>
 
         <!-- Main Content Area -->
         <main class="guide-main">
-          <button class="mobile-close-btn" @click="$emit('close')">
-            <FontAwesomeIcon :icon="['fas', 'times']" />
-          </button>
-
           <header class="main-header">
             <h1>{{ activeTabLabel }}</h1>
           </header>
@@ -80,6 +69,8 @@
                   <li><strong>Drag & Drop:</strong> In Edit Mode, you can drag buttons to different cells or click and drag corners to resize them.</li>
                   <li><strong>Right Click:</strong> Right-click any button in Edit Mode for quick actions like Copy, Paste, or Delete.</li>
                   <li><strong>Quick Search:</strong> Press <code>Ctrl+F</code> anywhere to search for existing buttons or potential actions across all scenes.</li>
+                  <li><strong>Scene Swipe:</strong> Swipe left or right anywhere on the deck to move between scenes — the scene pill dissolves under your finger. Swiping up/down works too.</li>
+                  <li><strong>Extra Pages:</strong> Scenes with more buttons than fit get extra pages — flip them with the dots or ‹ › steppers below the grid.</li>
                 </ul>
               </section>
 
@@ -89,18 +80,19 @@
                 <ul>
                   <li><strong>Multiple sessions:</strong> With several agent terminals open, the session chip next to the state pill lists them all. Pick one to pin it — every agent button then targets that terminal.</li>
                   <li><strong>Which window is which?</strong> Click the eye icon on a session row (or tap its chip on mobile) — the real terminal's taskbar button flashes so you can see it.</li>
+                  <li><strong>Waiting for input:</strong> When an agent finishes and waits, its scene pill glows in the rail — even from another scene — and a waiting chip appears on the deck. Tap <em>Snooze 3m</em> to quiet it; it re-alerts if the agent is still waiting.</li>
                   <li><strong>Auto mode:</strong> Leave it unpinned and VDock targets the focused project, else the newest session.</li>
                 </ul>
               </section>
 
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'moon']" /> Idle & Screensaver</h2>
-                <p>Leave the deck untouched and the screensaver takes over with live widgets — weather, news, sports, markets, world clocks. Pick and configure them in <strong>Settings → Appearance → Screen Saver</strong>.</p>
+                <p>Leave the deck untouched and the screensaver takes over with live widgets — clock, weather, news, sports, markets and world clocks — over your choice of animated backdrop. Pick widgets and configure them in <strong>Settings → Appearance → Screen Saver</strong>, and drag them into place with <em>Customize Layout</em>. World Clock defaults to New York, London and Tokyo — type cities one per line to change them.</p>
               </section>
 
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'mobile-screen']" /> Phone & Tablet</h2>
-                <p>Open VDock on any device on your network: enable <strong>Allow LAN</strong> in Settings → Server, then browse to your PC's address shown in <strong>Settings → Connect</strong> (QR code included). On mobile you get the same deck plus a compact agent console — session chips at top, action buttons below, no chat clutter.</p>
+                <p>Open VDock on any device on your network: enable <strong>Allow LAN</strong> in Settings → Server, then browse to your PC's address shown in <strong>Settings → Connect</strong> (QR code included). On mobile you get the same deck with a scene rail on top — swipe the grid left/right to switch scenes — plus a compact agent console: session chips at top, action buttons below, no chat clutter.</p>
               </section>
 
               <section class="guide-section card accent-card">
@@ -203,14 +195,17 @@
                 <p>Organize your controls into different contexts:</p>
                 <ul>
                   <li><strong>Profiles:</strong> Complete sets of scenes. You might have a "Home" profile and a "Work" profile.</li>
-                  <li><strong>Scenes:</strong> Collections of pages. Switching scenes changes the entire available grid (e.g. "Gaming Scene" vs "Coding Scene").</li>
+                  <li><strong>Scenes:</strong> Collections of pages. Switching scenes changes the entire available grid (e.g. "Gaming Scene" vs "Coding Scene"). Tap a scene pill — or swipe left/right anywhere on the deck.</li>
                   <li><strong>Docked Sidebar:</strong> Persistent buttons that stay visible no matter which scene or page you are on. Perfect for Volume or Mute controls.</li>
                 </ul>
               </section>
 
               <section class="guide-section">
                 <h2><FontAwesomeIcon :icon="['fas', 'cubes']" /> Templates</h2>
-                <p>Don't want to start from scratch? Use the <strong>Template Gallery</strong> (Settings → Templates) to import pre-configured decks for Claude Code, Cursor, GitHub workflows, meetings, and more.</p>
+                <p>Don't want to start from scratch? The <strong>Template Gallery</strong> (Settings → Templates) ships ready-made decks — <strong>AI Coding</strong> leads with real keyboard-driven controls for Claude Code, Cursor, Windsurf, Antigravity, Codex and GitHub Copilot, alongside assistants, media, meetings and more.</p>
+                <ul>
+                  <li><strong>Executable path:</strong> If a "New agent" or app-launch button can't find the app, click the card's <FontAwesomeIcon :icon="['fas', 'cog']" /> gear — a popup lets you paste the path, or hit <em>Detect</em> to search PATH and the usual install folders.</li>
+                </ul>
               </section>
             </div>
 
@@ -248,6 +243,14 @@
                     <p>Pin the target session first (session chip → pick the terminal). The eye icon flashes the real window so you can confirm before sending.</p>
                   </div>
                   <div class="trouble-item">
+                    <h4>"New agent" says the app isn't installed</h4>
+                    <p>VDock can't find the executable. Open Settings → Templates, click the card's ⚙ gear, then Detect (PATH + usual install folders) or paste the full path — on macOS point at the <code>.app</code> bundle.</p>
+                  </div>
+                  <div class="trouble-item">
+                    <h4>Scene glows "waiting" but the session is closed</h4>
+                    <p>It clears on its own — VDock re-checks that the agent process is alive and drops stale states within a couple of minutes. If it persists, reload VDock (Settings nav → Reload VDock).</p>
+                  </div>
+                  <div class="trouble-item">
                     <h4>Touch lands on the wrong monitor</h4>
                     <p>
                       Running VDock on a dedicated touchscreen monitor? Windows sometimes routes every tap to your
@@ -267,7 +270,6 @@
             <p>Still have questions? Check the full <code>docs/</code> folder in the source code or <a href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener">open an issue on GitHub</a>.</p>
           </footer>
         </main>
-      </div>
     </div>
   </div>
 </template>
@@ -277,8 +279,6 @@ import { ref, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import AnnotatedFigure from '@/components/AnnotatedFigure.vue'
 import { HELP_SCREENS } from '@/data/helpScreens'
-
-const emit = defineEmits(['close'])
 
 const activeTab = ref('usage')
 const helpScreens = HELP_SCREENS
@@ -298,14 +298,14 @@ const activeTabLabel = computed(() => {
 </script>
 
 <style scoped>
-.user-guide-modal {
-  width: 950px;
-  height: 85vh;
-  max-width: 95vw;
-  max-height: 92vh;
+/* Full-size panel inside the Settings → Guide tab (was a 950px modal). */
+.user-guide {
+  height: 100%;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   background: var(--color-background);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   display: flex;
 }
@@ -629,23 +629,32 @@ kbd {
   text-decoration: underline;
 }
 
-.mobile-close-btn {
-  display: none;
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: var(--color-text);
-  font-size: 1.5rem;
-}
-
 @media (max-width: 768px) {
+  /* Sidebar becomes a horizontal section bar so every guide section
+     stays reachable on phones. */
+  .guide-container {
+    flex-direction: column;
+  }
   .guide-sidebar {
+    width: 100%;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+  }
+  .sidebar-header {
     display: none;
   }
-  .mobile-close-btn {
-    display: block;
+  .sidebar-nav {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .nav-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    white-space: nowrap;
   }
 }
 </style>

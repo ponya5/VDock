@@ -126,9 +126,70 @@ files on Linux). Exposed via preload `pickExecutable()` and typed in
 
 **Notes / trade-offs**
 
-- Launch-on-missing-window is Windows-only in practice — it triggers on
-  `focus_app_window → False`, and window inspection only returns False
-  on Windows. On macOS/Linux the override still drives `open_app` and
-  `find_binary`.
+- Launch-on-missing-window: Windows retries focus after launch; on
+  macOS/Linux (no window inspection — `focus_app_window` returns `None`)
+  the same override path launches the app when *no matching process is
+  alive*, then waits up to ~7s for the app monitor's 5s poll to see it
+  foregrounded so the keystroke guard can pass on the same press.
 - `launch_app` uses `os.startfile`/`open`/detached `Popen` — fire-and-
   forget, no shell strings, no quoting surface.
+- `.app` bundle overrides resolve to `Contents/MacOS/<exe>` inside
+  `find_binary` so CLI spawns never try to exec a directory.
+- Frontend compat: `AppPathEditor` input pins 16px under
+  `pointer: coarse` (iOS zoom guard — scoped styles out-specify the
+  global rule), input/button rows wrap on narrow screens; verified in
+  WebKit at iPhone 13 size (no horizontal overflow, 40px buttons).
+
+## Follow-up — path editing moved into a per-card popup
+
+User feedback: the standalone "App launch paths" panel cluttered
+Settings → Templates, and the gear's inline editor squeezed the card.
+Detect was also suspected broken (screenshot showed a failure) — live
+verification showed it working once the backend was restarted; the
+failure was stale state, not the endpoint.
+
+**Changes**
+
+- `SettingsView.vue` — removed the `#app-paths` panel, `appPathRows`,
+  `openAppPathRow`, and the `launchApps` import. The card gear is now
+  `aria-haspopup="dialog"` and opens a `.modal-overlay` + `.modal`
+  popup (`pathEditorTemplate` resolves the template by id). Header X,
+  backdrop click, and `Esc` all dismiss.
+- `AppPathEditor.vue` — removed the in-card label (modal header covers
+  it), added an explicit **Close** button next to Save and a window
+  `keydown` Escape listener while mounted. Detect, Browse, Reset to
+  auto, Save unchanged.
+- `launchApps` stays exported — still used by tests and future callers;
+  the curated list no longer renders a panel.
+- `app-paths.test.ts` — added source-level assertions: no `#app-paths`
+  panel, gear is `aria-haspopup="dialog"`, popup has input/Save/Close/
+  Escape.
+
+**Verified**
+
+- Live on dev server: gear → modal titled "<App> executable" with
+  input, Detect, Close, Save. Detect filled `Antigravity.exe` and
+  `claude.CMD` correctly. Save → modal closes, gear turns green
+  (`path-set`), `GET /api/config` echoes the path. Escape and backdrop
+  click dismiss cleanly.
+- 390px viewport: modal 351px, no horizontal overflow, rows wrap.
+- `vitest` 306/306, `vue-tsc` clean, `dist` rebuilt.
+
+## Live integration audit (follow-up)
+
+Tested against real running apps (Cursor, Claude Code session, Devin,
+Antigravity installed):
+
+- `detected-profiles` → `['cursor','devin','claude-code']` — editors via
+  exe scan, terminal agents via session-marker (Claude Desktop's many
+  `claude.exe` helpers correctly did NOT count as sessions; the real
+  `✱ VDOCK-OK` Claude Code window resolved to pid 40828).
+- `cursor_toggle_sidebar` — resolved/focused Cursor.exe, Ctrl+B landed,
+  toggled back. Focus-guard chain verified.
+- `cc_scroll_up/down` — session-host hwnd resolved + focused before
+  sending.
+- Antigravity with a saved override: `launch_app` fired
+  (`os.startfile` True) but the app exits instantly on this machine —
+  `--version` works, GUI never stays up, no crash event. App-side
+  issue, not the retry path. The retry correctly refused after the
+  refocus check failed.

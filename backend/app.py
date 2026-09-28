@@ -49,6 +49,7 @@ from routes.app_profiles import app_profiles_bp
 from routes.logs import logs_bp
 from routes.agent_events import agent_events_bp, set_emitter as set_agent_events_emitter
 from routes.agent_sessions import agent_sessions_bp
+from routes.feedback import feedback_bp
 from routes.actions import set_emitter as set_actions_emitter
 
 # Initialize Flask app
@@ -147,6 +148,7 @@ app.register_blueprint(app_profiles_bp)
 app.register_blueprint(logs_bp)
 app.register_blueprint(agent_events_bp)
 app.register_blueprint(agent_sessions_bp)
+app.register_blueprint(feedback_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical

@@ -14,7 +14,6 @@
          layout editor live there and must surface results. -->
     <NotificationCenter v-if="showNotifications" />
     <ConfirmDialog />
-    <UserGuideModal v-if="settingsStore.showHelpGuide" @close="settingsStore.showHelpGuide = false" />
     <!-- Tour lives above the router so it survives dashboard ↔ settings navigation -->
     <TutorialTour />
     <QuickDeckOverlay v-if="!isStandaloneSettings" />
@@ -34,7 +33,6 @@ import apiClient from '@/api/client'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
-import UserGuideModal from '@/components/UserGuideModal.vue'
 import TutorialTour from '@/components/TutorialTour.vue'
 import QuickDeckOverlay from '@/components/QuickDeckOverlay.vue'
 import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'

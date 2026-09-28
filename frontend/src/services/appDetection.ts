@@ -30,6 +30,7 @@ import { ref, shallowRef, type Ref } from 'vue'
 import apiClient from '@/api/client'
 import type { AppProfileDto } from '@/api/appProfiles'
 import { canonicalAppId, normalizeAppKey } from '@/data/appBackgrounds'
+import { templateCategories } from '@/data/appTemplates'
 import type { Scene, AppIntegration } from '@/types'
 
 const detectedProfiles: Ref<Set<string>> = ref(new Set())
@@ -230,6 +231,44 @@ export function sceneAppProfile(
   const profiles = profilesById.value
   const profileId = resolveSceneProfileId(scene, integrations)
   return profileId ? profiles.get(profileId) ?? null : null
+}
+
+/* --- Scene → gallery logo (DL-086) --------------------------------------
+   Scenes carry the same id space as gallery templates: appId is stamped
+   with the template id on apply, and appIdForExe stamps the same ids on
+   auto-created scenes. Profile ids that don't share a template id are
+   aliased below. No logo asset → null → callers keep the FA icon. */
+const LOGO_BY_ID = new Map<string, string>()
+for (const cat of templateCategories) {
+  for (const t of cat.templates) {
+    if (t.logo) LOGO_BY_ID.set(t.id, t.logo)
+  }
+}
+const PROFILE_TO_TEMPLATE_ID: Record<string, string> = {
+  'copilot': 'github-copilot',
+}
+
+/** The gallery logo for a scene's app, or null when none is bundled. */
+export function sceneLogo(
+  scene: SceneLink,
+  integrations?: readonly AppIntegration[],
+): string | null {
+  const stamped = scene.appId ?? null
+  if (stamped) {
+    // Raw template id first — 'claude' (assistant) and 'claude-code' are
+    // distinct gallery entries with distinct logos; canonicalizing
+    // 'claude'→'claude-code' would grab the wrong one.
+    const direct = LOGO_BY_ID.get(stamped)
+    if (direct) return direct
+    const canonical = canonicalAppId(stamped) ?? stamped
+    const viaProfile = LOGO_BY_ID.get(canonical)
+      ?? LOGO_BY_ID.get(PROFILE_TO_TEMPLATE_ID[canonical] ?? '')
+    if (viaProfile) return viaProfile
+  }
+  const profileId = resolveSceneProfileId(scene, integrations)
+  if (!profileId) return null
+  const tid = PROFILE_TO_TEMPLATE_ID[profileId] ?? profileId
+  return LOGO_BY_ID.get(tid) ?? null
 }
 
 export { detectedProfiles, runningExes }

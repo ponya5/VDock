@@ -84,10 +84,12 @@ backend/data/profiles/*.json
 backend/data/uploads/*
 backend/data/plugins/*
 backend/data/themes/*
+backend/data/feedback/*
 !backend/data/profiles/.gitkeep
 !backend/data/uploads/.gitkeep
 !backend/data/plugins/.gitkeep
 !backend/data/themes/.gitkeep
+!backend/data/feedback/.gitkeep
 
 # SSL certificates
 *.pem

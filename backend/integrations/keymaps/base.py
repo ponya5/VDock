@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 #: Process names for the editors these keymaps target.
 VSCODE_EXES = ('code.exe', 'codium.exe')
 CURSOR_EXES = ('cursor.exe',)
+ANTIGRAVITY_EXES = ('antigravity.exe',)
 JETBRAINS_EXES = (
     'idea64.exe', 'pycharm64.exe', 'webstorm64.exe', 'phpstorm64.exe',
     'rider64.exe', 'clion64.exe', 'goland64.exe', 'datagrip64.exe',

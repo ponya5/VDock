@@ -193,8 +193,20 @@ def _requested_agent() -> str:
 @agent_events_bp.route('/api/agent-events/hook-status', methods=['GET'])
 @require_auth
 def hook_status():
-    """Whether VDock's hook is present in the agent's settings file."""
+    """Whether VDock's hook is present in the agent's settings file.
+
+    ``?agent=all`` answers for every supported agent in one call — the
+    settings dropdown renders its per-agent install states from it.
+    """
     agent = _requested_agent()
+    if agent == 'all':
+        return jsonify({
+            'success': True,
+            'agents': {
+                name: agent_hooks.hook_status(name)
+                for name in agent_hooks.SUPPORTED_AGENTS
+            },
+        })
     if agent not in agent_hooks.SUPPORTED_AGENTS:
         return jsonify({'success': False, 'error': f'Unsupported agent: {agent}'}), 400
     return jsonify({'success': True, 'agent': agent, **agent_hooks.hook_status(agent)})

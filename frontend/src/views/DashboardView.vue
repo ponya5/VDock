@@ -1297,60 +1297,40 @@ onUnmounted(() => {
   }
 }
 
-/* DL-003 follow-up — screensaver dissolve. No gesture direction to follow,
-   so it materializes radially: a fixed ellipse mask (black center →
-   transparent at 70%) whose mask-size animates. Enter blooms the saver
-   center-out; leave is the time-reverse — edges evaporate inward while it
-   lifts with a faint 1.03 zoom. Keyframes instead of class transitions:
-   Chromium won't interpolate mask-size from a fresh element's never-painted
-   from-state, which truncated the enter — @keyframes always play. */
-.saver-dissolve-enter-active,
-.saver-dissolve-leave-active {
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, #000 45%, transparent 70%);
-  mask-image: radial-gradient(ellipse at center, #000 0%, #000 45%, transparent 70%);
-}
+/* DL-003 follow-up — screensaver fade. Was a mask-size dissolve; animating
+   a mask on a full-viewport layer over a WebGL bg (Prismatic Burst)
+   re-rasterized the mask every frame — read as flicker. Composited
+   opacity+transform only: the GPU handles it and no paint runs. Enter
+   fades in drifting down from a faint zoom; leave is the time-reverse. */
 .saver-dissolve-enter-active {
-  animation: saver-bloom 0.55s var(--ease-out) both;
+  animation: saver-in 0.45s var(--ease-out) both;
 }
 .saver-dissolve-leave-active {
   pointer-events: none; /* a dissolving saver must not eat the tap's follow-ups */
-  animation: saver-evaporate 0.5s var(--ease-io) both;
+  animation: saver-out 0.3s var(--ease-out) both;
 }
-@keyframes saver-bloom {
+@keyframes saver-in {
   from {
-    -webkit-mask-size: 20% 20%;
-    mask-size: 20% 20%;
-    opacity: 0.25;
-    transform: scale(1.03);
-  }
-  to {
-    -webkit-mask-size: 300% 300%;
-    mask-size: 300% 300%;
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-@keyframes saver-evaporate {
-  from {
-    -webkit-mask-size: 300% 300%;
-    mask-size: 300% 300%;
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    -webkit-mask-size: 20% 20%;
-    mask-size: 20% 20%;
     opacity: 0;
-    transform: scale(1.03);
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes saver-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.025);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .saver-dissolve-enter-active,
-  .saver-dissolve-leave-active {
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
   .saver-dissolve-enter-active {
     animation: saver-fade-in 0.25s ease both;
   }

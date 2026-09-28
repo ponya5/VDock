@@ -1,5 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, test, expect } from 'vitest'
 import { templateAppKey, launchApps } from '../api/appPaths'
+import { templateCategories } from '../data/appTemplates'
+
+const settingsSource = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const editorSource = readFileSync(resolve(__dirname, '../components/AppPathEditor.vue'), 'utf-8')
 
 describe('templateAppKey', () => {
   test('derives the key from an open_app program stem', () => {
@@ -48,10 +54,76 @@ describe('launchApps', () => {
     expect(keys).toContain('cursor')
     expect(keys).toContain('code')
     expect(keys).toContain('claude')
+    expect(keys).toContain('antigravity')
   })
 
   test('keys are unique', () => {
     const keys = launchApps.map((a) => a.key)
     expect(new Set(keys).size).toBe(keys.length)
+  })
+})
+
+describe('antigravity template', () => {
+  const aiCoding = templateCategories.find((c) => c.id === 'ai-coding')!
+  const card = aiCoding.templates.find((t) => t.id === 'antigravity')
+
+  test('lives in the AI Coding category, exactly once gallery-wide', () => {
+    expect(card).toBeDefined()
+    const all = templateCategories.flatMap((c) => c.templates)
+    expect(all.filter((t) => t.id === 'antigravity')).toHaveLength(1)
+  })
+
+  test('wires real antigravity_* pack actions, not URL stubs', () => {
+    const types = card!.buttons.map((b) => b.action!.type)
+    expect(types).toContain('antigravity_agent')
+    expect(types).toContain('antigravity_new_thread')
+    expect(types).toContain('antigravity_submit')
+    expect(types).toContain('antigravity_followup')
+    expect(types).toContain('antigravity_stop')
+    expect(types).not.toContain('url')
+  })
+
+  test('the open_app launcher resolves the antigravity path key', () => {
+    expect(templateAppKey(card!)).toBe('antigravity')
+  })
+})
+
+describe('cursor template', () => {
+  const aiCoding = templateCategories.find((c) => c.id === 'ai-coding')!
+  const card = aiCoding.templates.find((t) => t.id === 'cursor')
+
+  test('lives in the AI Coding category wired to the cursor_* pack', () => {
+    expect(card).toBeDefined()
+    const types = card!.buttons.map((b) => b.action!.type)
+    expect(types).toContain('cursor_prompt')
+    expect(types).toContain('cursor_submit')
+    expect(types).toContain('cursor_accept')
+    expect(templateAppKey(card!)).toBe('cursor')
+  })
+})
+
+describe('templateCategories order', () => {
+  test('AI Coding leads the gallery', () => {
+    expect(templateCategories[0].id).toBe('ai-coding')
+  })
+})
+
+describe('app path editor popup', () => {
+  test('the standalone App launch paths panel is gone', () => {
+    expect(settingsSource).not.toContain('id="app-paths"')
+    expect(settingsSource).not.toContain('appPathRows')
+  })
+
+  test('the card gear opens a dialog, not an inline editor', () => {
+    expect(settingsSource).toContain('aria-haspopup="dialog"')
+    expect(settingsSource).toContain('role="dialog"')
+    expect(settingsSource).toContain('modal-overlay')
+  })
+
+  test('the popup carries path input, Save, and Close', () => {
+    expect(editorSource).toContain('class="input ape-input"')
+    expect(editorSource).toMatch(/>\s*Close\s*<\/button>/)
+    expect(editorSource).toContain("emit('close')")
+    expect(editorSource).toContain("e.key === 'Escape'")
   })
 })
