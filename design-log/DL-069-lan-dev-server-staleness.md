@@ -106,3 +106,46 @@ existed at all.
   `sw.js` regenerated).
 - Full frontend suite: 59 files / 253 tests green; `vue-tsc --noEmit`
   clean.
+
+## Follow-up 2026-09-28 — QR silently encodes a dead URL when LAN was enabled after dev-server start
+
+### Problem
+
+User enabled **Allow LAN access** and scanned the QR — the phone showed
+nothing. Live investigation proved the boundary:
+
+- `backend/data/config.json` had `allow_lan: true` and the backend was
+  bound `0.0.0.0:5000` (`http://<lan_ip>:5000` → 200 from the LAN side).
+- The QR encodes `http://<lan_ip>:3000` in dev (`import.meta.env.DEV` →
+  `VITE_PORT`), and **Vite was bound to `::1` only** — `host:
+  isLanAccessAllowed()` is evaluated once at Vite startup (9:50 AM),
+  hours before the toggle (3:34 PM).
+- `http://<lan_ip>:3000` → connection refused from the host itself;
+  `http://localhost:3000` → 200. Vite alive but loopback-only.
+
+So in the dev stack, enabling LAN requires restarting **two** servers —
+backend AND Vite — but the Connect card only says "relaunch VDock" and
+restarting the backend/Electron does not rebind Vite (a separate
+`npm run dev` process). The QR kept encoding a dead URL with no warning.
+
+### Fix
+
+- `SettingsView.vue`: added `probeLanReachability()` — the page fetches
+  its own encoded `lanUrl` with `fetch(..., { mode: 'no-cors' })`. An
+  opaque resolution means *something* is listening on that LAN
+  interface:port (the phone will connect); a rejection means nothing is
+  — the exact failure the phone would hit. Re-probes when `lanUrl`
+  changes, when the Connect tab is opened, and after toggling LAN.
+- When the probe fails the card shows a warning instead of silently
+  printing a QR for a dead address: dev mode names the real fix
+  ("restart the dev server — `npm run dev` in `frontend/`"), production
+  says relaunch VDock, and both mention firewall as the remaining
+  suspect once the server is LAN-bound.
+- The QR stays visible while the warning shows — it starts working the
+  moment the server rebinds; the warning is state, not a dead end.
+
+### Verified live
+
+- Restarted the Vite dev server after `allow_lan` was already `true` →
+  bound `0.0.0.0:3000`, `http://10.255.4.170:3000` returns 200 from the
+  LAN side. Phone target is real again.

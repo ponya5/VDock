@@ -51,6 +51,16 @@ describe('migrateBackground', () => {
   })
 })
 
+describe('factory default (DL-106)', () => {
+  test('a fresh install seeds Floating Bubbles; the "default" sentinel stays the migration fallback', () => {
+    setActivePinia(createPinia())
+    expect(useSettingsStore().background).toBe('bubble-float')
+    // Existing users whose stored file lacks a background key keep the
+    // classic gradient — the new default is out-of-box only.
+    expect(migrateBackground({})).toBe('default')
+  })
+})
+
 describe('loadSettingsFromServer migration', () => {
   test('a legacy-only server response migrates into store.background', async () => {
     setActivePinia(createPinia())

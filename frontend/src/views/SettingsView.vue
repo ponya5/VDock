@@ -4,7 +4,6 @@
       <div class="nav-brand">
         <span class="nav-mark"><img :src="'/assets/branding/vdock-logo.jpg'" alt="" class="nav-mark-img" /></span>
         <span class="nav-name">VDock</span>
-        <span class="nav-ver">{{ appVersion }}</span>
       </div>
       <div class="nav-search">
         <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="nav-search-icon" />
@@ -1288,6 +1287,16 @@
                     </button>
                   </div>
                 </div>
+                <div v-if="lanUrl && lanReachable === false" class="row">
+                  <div class="note warn qr-offline">
+                    <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+                    <div>
+                      <b>{{ lanUrl }}</b> isn't answering on the network yet — the code below won't
+                      connect a device until it does. {{ lanDeadHint }}
+                      If it still won't load after that, check the PC's firewall allows the port.
+                    </div>
+                  </div>
+                </div>
                 <div v-if="lanUrl" class="row stack">
                   <div class="qr-row">
                     <div class="qr-code-col">
@@ -1527,16 +1536,16 @@
                   </div>
                   <p class="muted about-desc">A virtual stream interface for controlling your computer with customisable buttons, macros, system metrics and intelligent app integration.</p>
                   <div class="about-actions">
-                    <button type="button" class="btn primary" data-tour="about-help" @click="activeTab = 'guide'">
-                      <FontAwesomeIcon :icon="['fas', 'circle-question']" /> Help &amp; guide
+                    <!-- Launch tutorial leads the row in the primary accent —
+                         the one action here that changes app state. Help lives
+                         in the Guide tab (side nav) and the repo link in the
+                         Build card + dock credit, so neither repeats here. -->
+                    <button type="button" class="btn primary" @click="launchTutorial">
+                      <FontAwesomeIcon :icon="['fas', 'route']" /> Launch tutorial
                     </button>
                     <button type="button" class="btn" @click="showFeatureRequest = true">
                       <FontAwesomeIcon :icon="['fas', 'lightbulb']" /> Request a feature
                     </button>
-                    <button type="button" class="btn" @click="launchTutorial">
-                      <FontAwesomeIcon :icon="['fas', 'route']" /> Launch tutorial
-                    </button>
-                    <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fab', 'github']" /> GitHub</a>
                     <a class="btn" href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'bug']" /> Report an issue</a>
                     <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'star']" /> Star the repo</a>
                   </div>
@@ -1784,6 +1793,35 @@ async function renderQr() {
 
 watch([lanUrl, () => serverConfig.value?.lan_reachable], renderQr, { immediate: false })
 
+// Whether anything actually answers on the LAN address+port the QR
+// encodes. In dev that's the Vite dev server, whose bind is decided at
+// ITS startup — enabling "Allow LAN access" afterwards leaves Vite
+// loopback-only while the card cheerfully prints a QR for a dead URL
+// (DL-069 follow-up). Probing from this page is exactly the request the
+// phone would make: an opaque no-cors response means the interface is
+// bound and the phone will connect; a rejection means nothing is
+// listening there yet.
+const lanReachable = ref<boolean | null>(null)
+async function probeLanReachability() {
+  const url = lanUrl.value
+  if (!url) { lanReachable.value = null; return }
+  try {
+    await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    lanReachable.value = true
+  } catch {
+    lanReachable.value = false
+  }
+}
+watch(lanUrl, probeLanReachability)
+
+// What to tell the user when the QR target is dead. In dev the broken
+// link is almost always the Vite dev server still bound to localhost —
+// it read allow_lan once at ITS startup, so it needs its own restart,
+// not just a VDock/backend relaunch.
+const lanDeadHint = import.meta.env.DEV
+  ? 'Restart the dev server so it re-binds with LAN access on — stop and re-run npm run dev in frontend/ (relaunching VDock alone doesn\u2019t restart Vite).'
+  : 'Relaunch VDock — the bind address is chosen at startup.'
+
 async function toggleAllowLan(event: Event) {
   const enabled = (event.target as HTMLInputElement).checked
   const ok = await settingsStore.updateServerConfig({ allow_lan: enabled })
@@ -1897,6 +1935,10 @@ const toastLevelOptions = [
 ] as const
 
 const activeTab = ref('appearance')
+// Re-probe whenever the Connect page is opened — the deck address may
+// have come up (or gone down) since the last visit.
+watch(activeTab, tab => { if (tab === 'connect') probeLanReachability() })
+onMounted(probeLanReachability)
 const appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')
 
 // DL-054: Appearance children are full pages in the sidebar now — the old

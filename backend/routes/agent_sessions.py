@@ -114,6 +114,9 @@ def list_agent_sessions():
             'project': (hook or {}).get('project')
                        or (os.path.basename(cwd) if cwd else ''),
             'state': (hook or {}).get('state'),
+            # Whether the session ever got a user prompt — waiting cues
+            # suppress for never-prompted (just-launched) sessions (DL-105).
+            'prompted': bool((hook or {}).get('prompted')),
             # What the hook last saw this session do — the current task or
             # the last prompt. Pids don't identify a window to a human;
             # "fix the login bug" does.

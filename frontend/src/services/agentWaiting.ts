@@ -17,6 +17,10 @@ import type { AppIntegration, Scene } from '@/types'
  * A snoozed entry (see `dismissAgentWaiting`) reports false until the agent
  * records a fresh event, so every waiting surface quiets down together and
  * re-arms on the next waiting episode.
+ *
+ * A `ready` state only counts once the session was actually prompted
+ * (DL-105): a freshly launched agent is idle too, but nothing was ever
+ * asked of it — no alert.
  */
 export function sceneAgentIsWaiting(
   scene: Pick<Scene, 'id' | 'name' | 'appId' | 'triggeredByApp' | 'pages'>,
@@ -34,7 +38,7 @@ export function sceneWaitingAgent(
   const profile = sceneAppProfile(scene, integrations)
   const source = profile?.status_source
   const entry = agentStateEntry(source)
-  if (entry?.state !== 'ready' || isAgentWaitingDismissed(source)) return null
+  if (entry?.state !== 'ready' || !entry.prompted || isAgentWaitingDismissed(source)) return null
   return { profile, entry }
 }
 

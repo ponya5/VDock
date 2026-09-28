@@ -64,7 +64,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     // Desktop scene pills; the mobile/touch chrome swaps in a rail.
     target: '.enhanced-scene-nav, .mc-scene-rail',
     title: 'Scenes & Pages',
-    text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch — or just swipe left/right anywhere on the deck.',
+    text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch — or swipe right/left anywhere on the dashboard to move between scenes.',
     placement: 'bottom',
     optional: true,
   },
@@ -110,7 +110,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     route: '/',
     title: 'You\'re all set',
-    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Help & Guide lives in Settings → About — re-run this tour anytime from there.',
+    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Guide lives in Settings → Guide — re-run this tour anytime from Settings → About.',
   },
 ]
 

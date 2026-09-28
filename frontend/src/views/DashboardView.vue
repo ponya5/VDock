@@ -124,14 +124,14 @@
     </main>
 
     <!-- Decomposed Footer component — replaced by the page steppers in
-         MobileDeckChrome on phones. DL-097: only mounts when it has
-         content — edit controls (edit mode), the docked reveal pill
-         (header hidden) or page dots (multi-page) — and slides up from
-         below the viewport edge / down off it. Outside those states the
-         grid reclaims the strip. -->
+         MobileDeckChrome on phones. Only mounts when it has content —
+         edit controls (edit mode) or page dots (multi-page) — and slides
+         up from below the viewport edge / down off it. Outside those
+         states the grid reclaims the strip; the header reveal is a
+         floating button now (DL-102), not footer content. -->
     <Transition name="footer-slide">
       <DeckFooter
-        v-if="!isMobileViewport && (isEditMode || !settingsStore.showHeader || (currentScene?.pages.length || 1) > 1)"
+        v-if="footerVisible"
         :is-edit-mode="isEditMode"
       :total-pages="currentScene?.pages.length || 1"
       :current-page-index="currentPageIndex"
@@ -144,6 +144,31 @@
       @update-rows="updateGridRows"
       @update-cols="updateGridCols"
       />
+    </Transition>
+
+    <!-- DL-102: independent header reveal — a compact floating button, not
+         a docked pill. Bottom-RIGHT: the docked sidebar owns the left edge
+         and page dots/edit controls sit footer-left/center, so the right
+         corner is the only spot that never collides. When the footer is
+         mounted it lifts above the strip. Tap or swipe down reveals —
+         the same gesture the header dismisses with (swipe up), reversed. -->
+    <Transition name="reveal-fab">
+      <button
+        v-if="!isMobileViewport && !settingsStore.showHeader"
+        ref="revealFabRef"
+        type="button"
+        class="header-reveal-fab"
+        :class="{ 'above-footer': footerVisible }"
+        title="Swipe down or tap to show header"
+        aria-label="Show header"
+        @click="revealHeader"
+      >
+        <!-- Mini window-with-header glyph (DL-104): a tiny panel whose
+             accent header band is what's summoned — reads as "drop the
+             header down", not a generic arrow. -->
+        <span class="fab-head" aria-hidden="true"></span>
+        <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="fab-caret" />
+      </button>
     </Transition>
 
     <!-- Screen Saver overlay — wrapped in a dissolve Transition (DL-003
@@ -692,6 +717,12 @@ const currentPage = computed(() => dashboardStore.currentPage)
 const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
 const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
 const isEditMode = computed(() => dashboardStore.isEditMode)
+// DL-102: the footer only earns its strip for real content — edit controls
+// or multi-page dots. The header reveal floats independently and lifts
+// above the strip via .above-footer whenever this is true.
+const footerVisible = computed(() =>
+  !isMobileViewport.value && (isEditMode.value || (currentScene.value?.pages.length || 1) > 1)
+)
 // Phones: hide the docked sidebar (config-bound dead width), let the
 // header overlay instead of squeezing the deck, and reserve a slim top
 // strip so the header-reveal pill never sits on buttons.
@@ -942,6 +973,19 @@ function previousScene() {
 // scene rails dissolve the active segment 1:1 under the finger.
 const mainContentRef = ref<HTMLElement | null>(null)
 const sceneTransitionName = ref('scene-wipe-next')
+const revealFabRef = ref<HTMLElement | null>(null)
+
+function revealHeader() {
+  settingsStore.showHeader = true
+}
+
+// Swipe down on the reveal button reveals too — the same gesture the
+// header dismisses with (swipe up) in reverse.
+useSwipe(revealFabRef, {
+  onSwipeEnd: (direction) => {
+    if (direction === 'DOWN') revealHeader()
+  }
+})
 let sceneSwipeArmed = false
 let swipeAxisBlocked = { horizontal: false, vertical: false }
 
@@ -1382,6 +1426,100 @@ onUnmounted(() => {
 .no-profile-icon {
   font-size: clamp(3.20rem, 2vw + 2.00rem, 4.80rem);
   opacity: 0.5;
+}
+
+/* DL-102 + DL-104: floating header reveal — a mini "window" whose accent
+   header band is the thing being summoned (reference: a form with a green
+   header). Bottom-right because the left edge belongs to the docked
+   sidebar and the footer's left/center to page dots and edit controls.
+   Glass chrome, translucent enough that the corner tile it grazes stays
+   readable; ≥44px touch floor on both axes. */
+.header-reveal-fab {
+  position: fixed;
+  right: var(--spacing-touch-md, var(--spacing-md));
+  bottom: var(--spacing-touch-md, var(--spacing-md));
+  width: max(56px, calc(56px * min(var(--touch-multiplier, 1), 1.4)));
+  height: max(46px, calc(46px * min(var(--touch-multiplier, 1), 1.4)));
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(10, 8, 32, 0.66);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  opacity: 0.8;
+  transition: opacity 0.2s ease, transform 0.2s ease, bottom 0.3s var(--ease-io, ease);
+  z-index: 95;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  animation: fab-breathe 3s ease-in-out infinite;
+}
+
+/* The accent "header" band across the top of the mini window — the part
+   the button summons. It bobs down a couple px on a loop: a tactile
+   "the header drops" hint legible where hover never fires. */
+.fab-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(180deg, #40B3A2 0%, #2e8b7d 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  animation: fab-head-drop 2.6s ease-in-out infinite;
+}
+
+@keyframes fab-head-drop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
+}
+
+/* Caret in the "body" area below the band — the pull-down cue. */
+.fab-caret {
+  position: absolute;
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.4));
+}
+
+.header-reveal-fab.above-footer {
+  bottom: calc(max(44px, calc(56px * var(--touch-multiplier, 1))) + 10px);
+}
+
+.header-reveal-fab:hover,
+.header-reveal-fab:focus-visible,
+.header-reveal-fab:active {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* A soft periodic ring keeps the control discoverable on touchscreens,
+   where hover never fires — a bare icon button would read as decoration. */
+@keyframes fab-breathe {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 255, 255, 0.18); }
+  50% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 6px rgba(255, 255, 255, 0); }
+}
+
+.reveal-fab-enter-active,
+.reveal-fab-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.reveal-fab-enter-from,
+.reveal-fab-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-reveal-fab,
+  .fab-head { animation: none; transition: none; }
+  .reveal-fab-enter-active,
+  .reveal-fab-leave-active { transition: none; }
 }
 
 .action-toast {

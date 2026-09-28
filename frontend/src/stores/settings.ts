@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
 import socketClient from '@/api/socket'
-import { DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
+import { DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID, FACTORY_BACKGROUND_ID } from '@/data/backgrounds'
 import {
   defaultScreensaverLayout,
   normalizeScreensaverLayout,
@@ -49,7 +49,7 @@ export const SETTINGS_DEFAULTS = {
   dockedSidebarEnabled: true,
   dockedSidebarWidth: 190,
   dockedButtonHeight: 84,
-  background: DEFAULT_BACKGROUND_ID,
+  background: FACTORY_BACKGROUND_ID,
   toastLevel: 'errors-only' as const,
   touchMode: 'normal' as const,
   buttonDefaultAnimation: 'none',
@@ -79,6 +79,30 @@ export const SETTINGS_DEFAULTS = {
   marketTickers: '',
   worldClockTimezones: '',
 } as const
+
+// DL-101: the pre-DL-098 screensaver default — all five optional widgets.
+// Still present verbatim in settings files written before the slim default
+// shipped; `applySettingsFromRemote` upgrades it only when the file provably
+// predates the clock flag (see below), so the swap is one-shot.
+const LEGACY_SCREENSAVER_WIDGETS = ['weather', 'news', 'sports', 'market', 'worldclock']
+
+/** True only when the stored screensaver keys are all still the untouched
+ *  pre-DL-098 values — flag absent, widget list set-equal to the legacy five,
+ *  layout absent or factory-default. Any customization fails the check. */
+function isUntouchedLegacyScreensaver(settings: Partial<PersistedUserSettings>): boolean {
+  const widgets = settings.screensaverWidgets
+  if (!Array.isArray(widgets)
+      || widgets.length !== LEGACY_SCREENSAVER_WIDGETS.length
+      || !widgets.every((w) => LEGACY_SCREENSAVER_WIDGETS.includes(w))) {
+    return false
+  }
+  const layout = settings.screensaverLayout
+  if (layout !== undefined
+      && JSON.stringify(normalizeScreensaverLayout(layout)) !== JSON.stringify(defaultScreensaverLayout())) {
+    return false
+  }
+  return true
+}
 
 export interface PersistedUserSettings {
   buttonSize: number
@@ -172,7 +196,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // Independent of width so docked buttons don't have to be square — a tall
   // sidebar of wide-but-short buttons is far easier to hit on small touch panels.
   const dockedButtonHeight = ref(84)
-  const background = ref<string>(DEFAULT_BACKGROUND_ID)
+  const background = ref<string>(FACTORY_BACKGROUND_ID)
   const uiBrightness = ref(100)
   // Ephemeral UI state (not persisted/synced): whether the auto-hiding header
   // is currently shown. Each window/tab manages its own header visibility
@@ -314,6 +338,23 @@ export const useSettingsStore = defineStore('settings', () => {
   async function applySettingsFromRemote(
     remoteSettings: Partial<PersistedUserSettings> & LegacyBackgroundFields
   ) {
+    // DL-101: upgrade untouched pre-DL-098 screensaver settings to the slim
+    // default (Clock + Weather + News + Markets). `screensaverClockEnabled`
+    // was introduced by DL-098 — a stored payload without it was written by a
+    // build that only knew the all-five widget list. The flag doubles as the
+    // one-shot marker: after any save by a current build the key exists, so
+    // this can never fire again — a user who later re-picks all five widgets
+    // by choice keeps them. Runs before remoteSettingsDiffer so a local state
+    // that already equals the legacy remote still gets migrated.
+    if (remoteSettings.screensaverClockEnabled === undefined
+        && isUntouchedLegacyScreensaver(remoteSettings)) {
+      remoteSettings = {
+        ...remoteSettings,
+        screensaverWidgets: [...SETTINGS_DEFAULTS.screensaverWidgets],
+        screensaverClockEnabled: true,
+      }
+    }
+
     const currentSettings = buildSettingsPayload()
     if (!remoteSettingsDiffer(currentSettings, remoteSettings)) {
       return

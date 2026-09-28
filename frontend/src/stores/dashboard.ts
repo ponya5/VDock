@@ -9,6 +9,8 @@ import {
   createFactoryIdeScene,
   isFactoryIdeSceneName,
   isUntouchedLegacyCursorScene,
+  isLegacyHomeScene,
+  isLegacyClaudeScene,
   FACTORY_SEED_SCENES
 } from '@/utils/defaultProfile'
 import { useMobileViewport } from '@/utils/mobileViewport'
@@ -40,6 +42,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
   function setProfile(profile: Profile) {
     // Migrate old profiles from pages to scenes structure
     const migratedProfile = migrateProfileToScenes(profile)
+
+    // DL-100: one-time prune of untouched legacy scenes (the pre-rename 'Home'
+    // default and the template-gallery 'Claude' scene superseded by the real
+    // Claude Code scene). Runs only while the factorySeedsApplied marker is
+    // absent — the same first-load pass the backfill below completes — so a
+    // scene added under the new seed set (e.g. re-applying the Claude template
+    // by choice) is never eligible. Detection is byte-exact, so a customized
+    // Home/Claude scene always survives. Runs before the isDefault ensure so
+    // a pruned legacy default can't leave the profile without one.
+    if (!migratedProfile.factorySeedsApplied) {
+      migratedProfile.scenes = migratedProfile.scenes.filter(
+        (scene) => !isLegacyHomeScene(scene) && !isLegacyClaudeScene(scene)
+      )
+    }
 
     // Every profile must have exactly one isDefault scene. Older/existing profiles
     // won't have one yet — append the factory default scene. Appending (rather than

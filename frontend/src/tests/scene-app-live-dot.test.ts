@@ -61,6 +61,19 @@ describe('backend detected-profiles endpoint', () => {
   })
 })
 
+describe('scene-pill label legibility (DL-107)', () => {
+  it('segments never compress — the rail scrolls instead of truncating', () => {
+    const segmentRule = selector.match(/\.segment\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+    expect(segmentRule).toContain('flex-shrink: 0')
+  })
+
+  it('labels get a generous cap and slim pills on narrow headers', () => {
+    const labelRule = selector.match(/\.segment-label\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+    expect(labelRule).toContain('max-width: 200px')
+    expect(selector).toContain('@media (max-width: 1100px)')
+  })
+})
+
 describe('sceneAppIsLive behavior', () => {
   let loadedServices: Array<typeof import('@/services/appDetection')> = []
 

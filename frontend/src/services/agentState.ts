@@ -22,6 +22,9 @@ export interface AgentStateEntry {
   prompt?: string
   /** The agent's last reply, plain text. */
   reply?: string
+  /** True once this session saw a user prompt — waiting alerts only
+      fire for prompted sessions (DL-105). */
+  prompted?: boolean
   ts: number
   /** Live sessions of this agent folded into this entry. */
   session_count?: number

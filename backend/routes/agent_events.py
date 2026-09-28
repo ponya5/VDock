@@ -149,12 +149,20 @@ def post_agent_event():
     if state not in agent_state.ALLOWED_STATES:
         return jsonify({'success': False, 'error': 'Unknown state'}), 400
 
-    agent_state.record(source, state, message=message, cwd=cwd,
-                       project=project, session_id=session_id,
-                       prompt=str(data.get('prompt') or ''),
-                       reply=str(data.get('reply') or ''))
+    entry = agent_state.record(source, state, message=message, cwd=cwd,
+                               project=project, session_id=session_id,
+                               prompt=str(data.get('prompt') or ''),
+                               reply=str(data.get('reply') or ''),
+                               prompted=bool(data.get('prompted')))
     _broadcast_states()
-    _update_alert(source, _wants_attention(data, state), message, project, cwd)
+    raise_alert = _wants_attention(data, state)
+    if raise_alert and state != agent_state.STATE_PERMISSION \
+            and not entry.get('prompted'):
+        # A fresh session's idle notification is not "waiting for you" —
+        # nothing was ever asked of it (DL-105). Permission stays exempt:
+        # it is a real blocker, and legacy 'waiting' events map there.
+        raise_alert = False
+    _update_alert(source, raise_alert, message, project, cwd)
     return jsonify({'success': True})
 
 

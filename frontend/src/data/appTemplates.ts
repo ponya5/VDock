@@ -97,7 +97,7 @@ const aiCoding: AppTemplate[] = [
     { label: "Quick Open", icon: ["fas","magnifying-glass"], action: { type: "antigravity_quick_open", config: {} }, tooltip: "Jump to a file (Ctrl+P)" },
     { label: "Open Antigravity", icon: ["fas","window-maximize"], action: prog("antigravity"), tooltip: "Launch the Antigravity app" },
   ]},
-  { id: "cursor", name: "Cursor", description: "Cursor AI editor agent controls", icon: ["fas","i-cursor"], color: "#000000", buttons: [
+  { id: "cursor", name: "Cursor", description: "Cursor AI editor agent controls", icon: ["fas","i-cursor"], logo: "/logos/cursor.png", color: "#000000", buttons: [
     // Live controls: keystrokes into the focused Cursor window.
     { label: "New Agent", icon: ["fas","paper-plane"], action: { type: "cursor_prompt", config: {} }, tooltip: "New agent chat + prompt (Ctrl+Shift+L)" },
     { label: "Continue", icon: ["fas","forward"], action: { type: "cursor_followup", config: { text: "continue" } }, tooltip: "Type \"continue\" and send it" },

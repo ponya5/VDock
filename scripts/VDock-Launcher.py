@@ -530,6 +530,12 @@ def launch_electron():
         npx = find_npx()
         electron_log = open_log_file(ELECTRON_LOG)
         electron_env = os.environ.copy()
+        # ELECTRON_RUN_AS_NODE leaks in when the launcher is invoked from a
+        # shell inside an Electron-based tool (IDEs, CI agents). With it set,
+        # the electron binary runs as plain Node: require('electron') returns
+        # a path string, ipcMain is undefined, and main.js dies instantly —
+        # the launcher then silently falls back to the browser.
+        electron_env.pop("ELECTRON_RUN_AS_NODE", None)
         electron_env["VDOCK_FULLSCREEN"] = "1"
         electron_env["VDOCK_USE_SMALLEST_DISPLAY"] = "1"
         electron_env["VDOCK_FRONTEND_PORT"] = str(DEFAULT_FRONTEND_PORT)

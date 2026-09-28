@@ -1,11 +1,13 @@
 import { test, expect } from 'vitest'
-import { createDefaultProfile, createDefaultScene } from '../utils/defaultProfile'
+import { createDefaultProfile, createDefaultScene, createFactoryIdeScene } from '../utils/defaultProfile'
 
-test('createDefaultProfile seeds Media + Claude Code + Cursor + Websites scenes', () => {
+test('createDefaultProfile seeds Media + Claude Code scenes', () => {
   const profile = createDefaultProfile()
 
+  // DL-100: the out-of-box set is Media + Claude Code. Cursor/Websites
+  // stay reachable via the template gallery, not the seeded profile.
   const names = profile.scenes.map((s) => s.name)
-  expect(names).toEqual(['Media', 'Claude Code', 'Cursor', 'Websites'])
+  expect(names).toEqual(['Media', 'Claude Code'])
 
   const home = profile.scenes[0]
   expect(home.isDefault).toBe(true)
@@ -65,8 +67,10 @@ test('Claude grid leaves state-dependent actions to the agent action bar', () =>
 // silently regress again, and confirms Cursor's own state-dependent actions
 // (Submit/Continue/Stop/Accept/Reject, backend/integrations/keymaps/cursor.py)
 // stay out of the grid the same way Claude's do.
+// DL-100: Cursor is no longer seeded into the default profile, but the
+// template stays reachable via createFactoryIdeScene — test that builder.
 test('Cursor grid matches Claude\'s density and leaves state-dependent actions to the agent action bar', () => {
-  const cursorScene = createDefaultProfile().scenes.find((scene) => scene.name === 'Cursor')!
+  const cursorScene = createFactoryIdeScene('Cursor')!
   const buttons = cursorScene.pages[0].buttons
   const barOwnedTypes = new Set(['cursor_submit', 'cursor_followup', 'cursor_cancel', 'cursor_accept', 'cursor_reject'])
 

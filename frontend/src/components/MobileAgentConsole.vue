@@ -38,7 +38,7 @@
           :class="{
             active: s.pid === pinnedPid,
             'is-resolved': s.pid === resolvedPid && pinnedPid === null,
-            waiting: waitingGlowOn && s.state === 'ready',
+            waiting: waitingGlowOn && s.state === 'ready' && s.prompted === true,
           }"
           role="radio"
           :aria-checked="s.pid === pinnedPid"
