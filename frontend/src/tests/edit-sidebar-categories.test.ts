@@ -55,6 +55,31 @@ test('category header keeps its >=44px touch floor', () => {
   expect(hasFloor, '.category-header must keep a px min-height baseline').toBe(true)
 })
 
+// DL-097 follow-up: categories open collapsed everywhere — the sidebar reads
+// as a compact category index, and an active search expands every matching
+// category so results are never hidden inside collapsed groups.
+test('ButtonActionsSidebar tracks expanded (not collapsed) categories, empty by default', () => {
+  const sidebar = readSrc('components/ButtonActionsSidebar.vue')
+  expect(sidebar.includes('collapsedCategories'), 'collapsedCategories must be gone').toBe(false)
+  expect(/expandedCategories\s*=\s*ref<string\[\]>\(\[\]\)/.test(sidebar),
+    'expandedCategories must start empty (all collapsed)').toBe(true)
+  // search still force-expands matches
+  expect(/searchQuery\.value\.trim\(\)\)\s*return true/s.test(sidebar),
+    'isExpanded must return true for every category while searching').toBe(true)
+})
+
+test('DashboardView seeds no expanded categories and auto-expands on search', () => {
+  const view = readSrc('views/DashboardView.vue')
+  expect(/expandedCategories\s*=\s*ref<string\[\]>\(\[\]\)/.test(view),
+    'expandedCategories must start empty (all collapsed)').toBe(true)
+  expect(view.includes('effectiveExpandedCategories'),
+    'EditSidebar must receive the search-aware expanded list').toBe(true)
+  expect(/:expanded-categories="effectiveExpandedCategories"/.test(view),
+    'EditSidebar :expanded-categories must bind effectiveExpandedCategories').toBe(true)
+  expect(/actionSearch\.value\.trim\(\)/.test(view),
+    'effectiveExpandedCategories must key off the search box').toBe(true)
+})
+
 test('footer only mounts when it has content, with a slide transition', () => {
   const view = readSrc('views/DashboardView.vue')
   const footerBlock = view.match(/<DeckFooter[^>]*>/)?.[0] ?? ''

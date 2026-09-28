@@ -96,11 +96,19 @@ open header's left strip. Wrapper bumped to `z-index:200`: above the
 sidebar, still below the narrow-mode drawer (999), toasts (1000) and
 modals (2000). header-reveal tests green, build clean.
 
-## Follow-up 2026-09-28 (b): band carries the word "Header"
+## Follow-up 2026-09-28 (b): button carries the word "Header"
 
-User asked the reveal button to name what it opens. `.fab-head` now
-flex-centers a `.fab-head-text` label ("Header", 0.62rem uppercase,
-white on the teal band) so the glyph is self-describing even before the
-caret reads. Button widened 56→68px to fit the word; height, caret, and
-overlay behavior unchanged. Test pin added (`fab-head-text` + label
-content); header-reveal tests green, build clean.
+User asked the reveal button to name what it opens. The word sits in a
+`.fab-body` row under the band (`.fab-label` + caret inline), so it's on
+the button itself — more prominent than inside the thin band. Button
+widened 56→68px; height, band, and overlay behavior unchanged. Test pin
+added (`fab-label` + label content); header-reveal tests green, build
+clean.
+
+## Follow-up 2026-09-28 (c): header starts closed at launch
+
+`showHeader` is ephemeral per-window state (never persisted/synced); it
+initialised `true`, so every launch opened the header until a manual
+hide. Now `ref(false)` — the deck launches full-grid with the labelled
+FAB visible; revealing still arms the 5s auto-hide, short-viewport
+auto-hide logic unchanged.

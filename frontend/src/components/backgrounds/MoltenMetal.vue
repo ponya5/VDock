@@ -127,7 +127,7 @@ float fbm(vec2 p, float t, float mouseHeat) {
   for (int i = 0; i < 6; i += 1) {
     if (float(i) >= uDetail + 2.0) break;
     q = swirlField(q + vec2(t * 0.18, -t * 0.12), uSwirl * (0.65 + 0.4 * amp));
-    float n = noise(q * uFold + vec2(t * 0.35, -t * 0.28) + i * 1.7);
+    float n = noise(q * uFold + vec2(t * 0.35, -t * 0.28) + float(i) * 1.7);
     n = pow(n, 1.1 + uGlow * 0.5);
     v += n * amp;
     q = rotate(q, 0.65 + amp * 0.2);

@@ -95,9 +95,9 @@ const emit = defineEmits<{
 const catalog = useActionCatalogStore()
 const searchQuery = ref('')
 
-// Categories the user has collapsed. Defaulting to expanded means a newly
-// added category is visible without touching this component.
-const collapsedCategories = ref<string[]>([])
+// Categories the user has expanded. The picker opens fully collapsed so it
+// reads as a compact category index; a click drills into one.
+const expandedCategories = ref<string[]>([])
 
 onMounted(() => {
   catalog.load()
@@ -118,15 +118,15 @@ const visibleCategories = computed(() =>
 function isExpanded(categoryId: string): boolean {
   // While searching, show every category that still has matches.
   if (searchQuery.value.trim()) return true
-  return !collapsedCategories.value.includes(categoryId)
+  return expandedCategories.value.includes(categoryId)
 }
 
 function toggleCategory(categoryId: string) {
-  const index = collapsedCategories.value.indexOf(categoryId)
+  const index = expandedCategories.value.indexOf(categoryId)
   if (index >= 0) {
-    collapsedCategories.value.splice(index, 1)
+    expandedCategories.value.splice(index, 1)
   } else {
-    collapsedCategories.value.push(categoryId)
+    expandedCategories.value.push(categoryId)
   }
 }
 

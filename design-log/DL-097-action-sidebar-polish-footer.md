@@ -138,3 +138,26 @@ previous session passed this run); `npm run build` clean, `dist/` rebuilt.
 Screenshots: `design-log/refs/edit-sidebar-polish.png` (expanded Quick
 Launch row + accent-railed action item), `edit-sidebar-header.png`
 (row close-up).
+
+## Follow-up (2026-10-02): categories start collapsed
+
+User feedback on the Button Actions picker: opening it with every
+category expanded is a wall of items — categories should start
+collapsed so the list reads as a compact category index.
+
+- `ButtonActionsSidebar.vue` — inverted the tracking model:
+  `collapsedCategories` (default expanded) → `expandedCategories`
+  (default collapsed). Search still force-expands every category with
+  matches (`isExpanded` returns true while `searchQuery` is non-empty).
+- `DashboardView.vue` — the edit-mode `EditSidebar` shared the same
+  all-expanded default: `expandedCategories` seed dropped from all 11
+  category ids to `[]`. New `effectiveExpandedCategories` computed is
+  what reaches the sidebar: an active `actionSearch` expands every
+  filtered category, matching the modal picker's search behavior (no
+  results hidden inside collapsed groups).
+- `ButtonEditor.vue`'s macro/shortcut sections already defaulted to
+  collapsed (`ref([])`) — untouched.
+- Pins added to `edit-sidebar-categories.test.ts` (2 tests): empty
+  seeds, inverted tracking in the modal, `effectiveExpandedCategories`
+  binding, and the search-expansion contract.
+- vitest + vue-tsc + build verified; `dist/` rebuilt.

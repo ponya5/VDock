@@ -115,7 +115,7 @@
       <EditSidebar
         v-if="isEditMode"
         v-model:action-search="actionSearch"
-        :expanded-categories="expandedCategories"
+        :expanded-categories="effectiveExpandedCategories"
         :filtered-categories="filteredCategories"
         @toggle-category="toggleCategory"
         @select-action="selectAction"
@@ -154,7 +154,7 @@
          the same gesture the header dismisses with (swipe up), reversed. -->
     <Transition name="reveal-fab">
       <button
-        v-if="!isMobileViewport && !settingsStore.showHeader"
+        v-if="!isMobileViewport && !settingsStore.showHeader && !isEditMode"
         ref="revealFabRef"
         type="button"
         class="header-reveal-fab"
@@ -165,10 +165,13 @@
       >
         <!-- Mini window-with-header glyph (DL-104): a tiny panel whose
              accent header band is what's summoned — reads as "drop the
-             header down", not a generic arrow. The band is literally
-             labelled so first-time users don't have to guess. -->
-        <span class="fab-head" aria-hidden="true"><span class="fab-head-text">Header</span></span>
-        <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="fab-caret" />
+             header down", not a generic arrow. The word sits on the
+             button body so it can't be missed. -->
+        <span class="fab-head" aria-hidden="true"></span>
+        <span class="fab-body">
+          <span class="fab-label">Header</span>
+          <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="fab-caret" />
+        </span>
       </button>
     </Transition>
 
@@ -447,12 +450,10 @@ function handleKeypadClose() {
   activeInputElement = null
 }
 
-// Sidebar categories state
+// Sidebar categories state — categories start collapsed so the sidebar
+// opens as a compact category index; a click drills into one.
 const actionSearch = ref('')
-const expandedCategories = ref<string[]>([
-  'quick-launch', 'system', 'audio', 'media', 'window-management', 
-  'web', 'text', 'metrics', 'time', 'weather', 'navigation'
-])
+const expandedCategories = ref<string[]>([])
 
 const actionCategories = ref([
   {
@@ -711,6 +712,14 @@ const filteredCategories = computed(() => {
     )
   })).filter(category => category.actions.length > 0)
 })
+
+// What EditSidebar renders as open: while a search is active every matching
+// category expands so results aren't hidden inside collapsed groups.
+const effectiveExpandedCategories = computed(() =>
+  actionSearch.value.trim()
+    ? filteredCategories.value.map(category => category.id)
+    : expandedCategories.value
+)
 
 const currentProfile = computed(() => dashboardStore.currentProfile)
 const currentScene = computed(() => dashboardStore.currentScene)
@@ -1467,22 +1476,9 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 40%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: linear-gradient(180deg, #40B3A2 0%, #2e8b7d 100%);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
   animation: fab-head-drop 2.6s ease-in-out infinite;
-}
-
-/* The band IS the header it summons — say so on it. */
-.fab-head-text {
-  color: #ffffff;
-  font-size: calc(0.62rem * min(var(--touch-multiplier, 1), 1.4));
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes fab-head-drop {
@@ -1490,14 +1486,31 @@ onUnmounted(() => {
   50% { transform: translateY(2px); }
 }
 
-/* Caret in the "body" area below the band — the pull-down cue. */
-.fab-caret {
+/* Body row under the band: the label names the control, the caret is
+   the pull-down cue. */
+.fab-body {
   position: absolute;
-  left: 50%;
-  bottom: 10%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.fab-label {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: calc(0.72rem * min(var(--touch-multiplier, 1), 1.4));
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.fab-caret {
   color: rgba(255, 255, 255, 0.9);
-  font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.4));
+  font-size: calc(0.78rem * min(var(--touch-multiplier, 1), 1.4));
 }
 
 .header-reveal-fab.above-footer {

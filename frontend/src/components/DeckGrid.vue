@@ -421,8 +421,14 @@ function handleButtonDoubleTap(button: Button) {
   emit('doubleTap', button)
 }
 
-function handleButtonLongPress(button: Button) {
+function handleButtonLongPress(button: Button, pointerType?: string) {
   emit('longPress', button)
+  // View mode: the emit alone is the feature (enters edit mode + opens the
+  // editor). The ghost drag is edit-mode only, and the touchscreen
+  // substitute for HTML5 drag — a mouse already reorders natively and can
+  // never fire the touchmove/touchend this path relies on for cleanup, so
+  // starting it for a mouse leaves a frozen clone on the deck.
+  if (!props.isEditMode || pointerType === 'mouse') return
   startTouchDrag(button)
 }
 
@@ -466,6 +472,19 @@ function startTouchDrag(button: Button) {
 
   document.addEventListener('touchmove', onTouchMoveDrag, { passive: false })
   document.addEventListener('touchend', onTouchEndDrag, { passive: true })
+  document.addEventListener('touchcancel', onTouchCancelDrag, { passive: true })
+  document.addEventListener('pointerup', onTouchEndDrag, { passive: true })
+  document.addEventListener('pointercancel', onTouchCancelDrag, { passive: true })
+  window.addEventListener('blur', onTouchCancelDrag)
+}
+
+function removeTouchDragListeners() {
+  document.removeEventListener('touchmove', onTouchMoveDrag)
+  document.removeEventListener('touchend', onTouchEndDrag)
+  document.removeEventListener('touchcancel', onTouchCancelDrag)
+  document.removeEventListener('pointerup', onTouchEndDrag)
+  document.removeEventListener('pointercancel', onTouchCancelDrag)
+  window.removeEventListener('blur', onTouchCancelDrag)
 }
 
 function onTouchMoveDrag(e: TouchEvent) {
@@ -502,8 +521,19 @@ function onTouchMoveDrag(e: TouchEvent) {
 }
 
 function onTouchEndDrag() {
-  document.removeEventListener('touchmove', onTouchMoveDrag)
-  document.removeEventListener('touchend', onTouchEndDrag)
+  finishDrag(true)
+}
+
+// touchcancel/pointercancel/blur — the drag never landed, so no drop.
+// Without these a cancelled touch (scroll takeover, gesture conflict,
+// backgrounded app) leaves the fixed ghost + armed listeners forever.
+function onTouchCancelDrag() {
+  finishDrag(false)
+}
+
+function finishDrag(executeDrop: boolean) {
+  if (!isDraggingActive.value) return
+  removeTouchDragListeners()
 
   // Clean up ghost
   if (dragGhostEl) {
@@ -518,7 +548,7 @@ function onTouchEndDrag() {
   }
 
   // Execute drop: swap with an occupied cell, move into an empty one
-  if (dropTargetEl && dragSourceId) {
+  if (executeDrop && dropTargetEl && dragSourceId) {
     dropTargetEl.classList.remove('drop-target-active')
     const targetId = dropTargetEl.dataset.buttonId
 
@@ -642,13 +672,8 @@ onUnmounted(() => {
   hostObserver?.disconnect()
   document.removeEventListener('keydown', handleEscapeKey)
   document.removeEventListener('vdock-touch-drop', handleGlobalTouchDrop as EventListener)
-  // Clean up any lingering touch drag listeners
-  document.removeEventListener('touchmove', onTouchMoveDrag)
-  document.removeEventListener('touchend', onTouchEndDrag)
-  if (dragGhostEl) {
-    dragGhostEl.remove()
-    dragGhostEl = null
-  }
+  // Clean up any in-flight drag: ghost, listeners, drop-target highlight.
+  finishDrag(false)
 })
 
 // ── HTML5 drag and drop ────────────────────────────────────────────────────
