@@ -9,69 +9,68 @@
 
     <div class="sidebar-content">
       <div class="search-section">
-        <input 
-          :value="actionSearch"
-          @input="emit('update:actionSearch', ($event.target as HTMLInputElement).value)"
-          type="text" 
-          placeholder="Search actions..." 
-          class="search-input"
-        />
+        <div class="search-box">
+          <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="search-icon" />
+          <input
+            :value="actionSearch"
+            @input="emit('update:actionSearch', ($event.target as HTMLInputElement).value)"
+            type="text"
+            placeholder="Search actions..."
+            class="search-input"
+          />
+        </div>
       </div>
 
       <div class="categories-section">
-        <div 
-          v-for="(category, index) in filteredCategories" 
+        <div
+          v-for="category in filteredCategories"
           :key="category.id"
           class="category-group"
+          :style="{ '--cat-accent': catAccent(category.id) }"
         >
-          <div 
-            class="category-header" 
+          <!-- DL-097: the row itself toggles (there are no expand/collapse or
+               reorder buttons); icon chip + full name + count + chevron. -->
+          <div
+            class="category-header"
+            :class="{ open: expandedCategories.includes(category.id) }"
+            role="button"
+            tabindex="0"
+            :aria-expanded="expandedCategories.includes(category.id)"
             @click="emit('toggleCategory', category.id)"
+            @keydown.enter.prevent="emit('toggleCategory', category.id)"
+            @keydown.space.prevent="emit('toggleCategory', category.id)"
           >
-            <div class="category-title">
-              <FontAwesomeIcon 
-                :icon="['fas', expandedCategories.includes(category.id) ? 'chevron-down' : 'chevron-right']" 
-              />
-              <span>{{ category.name }}</span>
-            </div>
-            <div class="category-controls" v-if="!actionSearch" @click.stop>
-              <button 
-                class="btn-control touch-target" 
-                @click="emit('moveCategoryUp', index)"
-                :disabled="index === 0"
-                title="Move Up"
-              >
-                <FontAwesomeIcon :icon="['fas', 'chevron-up']" />
-              </button>
-              <button 
-                class="btn-control touch-target" 
-                @click="emit('moveCategoryDown', index)"
-                :disabled="index === filteredCategories.length - 1"
-                title="Move Down"
-              >
-                <FontAwesomeIcon :icon="['fas', 'chevron-down']" />
-              </button>
-            </div>
+            <span class="category-icon">
+              <FontAwesomeIcon :icon="normalizeFaIcon(category.icon)" />
+            </span>
+            <span class="category-name">{{ category.name }}</span>
+            <span class="category-count">{{ category.actions.length }}</span>
+            <FontAwesomeIcon
+              :icon="['fas', 'chevron-down']"
+              class="category-chevron"
+              :class="{ open: expandedCategories.includes(category.id) }"
+            />
           </div>
 
-          <div 
-            v-show="expandedCategories.includes(category.id)"
-            class="category-actions"
-          >
-            <div 
-              v-for="action in category.actions" 
-              :key="action.id"
-              :ref="(element) => setActionItemRef(action.id, element as Element | null)"
-              class="action-item touch-target"
-              draggable="true"
-              @dragstart="handleDragStart($event, action)"
-              @dragend="emit('dragend')"
-              @click="handleActionClick(action)"
-            >
-              <FontAwesomeIcon :icon="normalizeFaIcon(action.icon)" class="action-icon" />
-              <span class="action-name">{{ action.name }}</span>
+          <!-- Collapse keeps items mounted (visibility, not v-if) so the
+               touch-drag bindings registered at mount stay live. -->
+          <Collapse :open="expandedCategories.includes(category.id)">
+            <div class="category-actions">
+              <div
+                v-for="action in category.actions"
+                :key="action.id"
+                :ref="(element) => setActionItemRef(action.id, element as Element | null)"
+                class="action-item touch-target"
+                draggable="true"
+                @dragstart="handleDragStart($event, action)"
+                @dragend="emit('dragend')"
+                @click="handleActionClick(action)"
+              >
+                <FontAwesomeIcon :icon="normalizeFaIcon(action.icon)" class="action-icon" />
+                <span class="action-name">{{ action.name }}</span>
+              </div>
             </div>
-          </div>
+          </Collapse>
         </div>
       </div>
     </div>
@@ -81,6 +80,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import Collapse from '@/components/Collapse.vue'
 import { useTouchActionDrag } from '@/composables/useTouchActionDrag'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 
@@ -94,12 +94,39 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:actionSearch': [value: string]
   toggleCategory: [id: string]
-  moveCategoryUp: [index: number]
-  moveCategoryDown: [index: number]
   selectAction: [action: any]
   dragend: []
   close: []
 }>()
+
+/* DL-097: per-category accent hue drives the icon chip, the open row's
+   border/background tint and the items' left rail, so each section reads
+   as its own colour-coded group like the deck buttons. Catalog-appended
+   categories (catalog-*) get their own entries; unknown ids fall back to
+   the deck's primary blue. */
+const CATEGORY_ACCENTS: Record<string, string> = {
+  'quick-launch': '#f5a623',
+  'system': '#9aa5b1',
+  'audio': '#2dd4bf',
+  'media': '#a78bfa',
+  'window-management': '#38bdf8',
+  'web': '#4aa3ff',
+  'text': '#fb7185',
+  'metrics': '#34d399',
+  'time': '#fb923c',
+  'weather': '#22d3ee',
+  'navigation': '#818cf8',
+  'streaming': '#f87171',
+  'custom': '#e879f9',
+  'catalog-ai': '#c084fc',
+  'catalog-dev': '#4ade80',
+  'catalog-sliders': '#14b8a6'
+}
+const DEFAULT_ACCENT = '#4aa3ff'
+
+function catAccent(id: string) {
+  return CATEGORY_ACCENTS[id] ?? DEFAULT_ACCENT
+}
 
 const { bindTouchDragSource, isTouchDragActive } = useTouchActionDrag()
 const actionItemRefs = ref<Map<string, HTMLElement>>(new Map())
@@ -238,9 +265,24 @@ watch(
   border-bottom: 1px solid var(--color-border);
 }
 
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: calc(12px * var(--touch-multiplier, 1));
+  color: var(--color-text-secondary);
+  font-size: calc(0.8rem * min(var(--touch-multiplier, 1), 1.3));
+  pointer-events: none;
+}
+
 .search-input {
   width: 100%;
   padding: var(--spacing-touch-xs, var(--spacing-xs)) var(--spacing-touch-sm, var(--spacing-sm));
+  padding-left: calc(34px * var(--touch-multiplier, 1));
   min-height: 44px;
   min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
   background-color: rgba(255, 255, 255, 0.05);
@@ -249,6 +291,13 @@ watch(
   color: var(--color-text);
   font-family: inherit;
   font-size: calc(0.9rem * var(--touch-multiplier, 1));
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+
+.search-input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(74, 163, 255, 0.28);
 }
 
 .categories-section {
@@ -272,81 +321,116 @@ watch(
 }
 
 .category-group {
-  margin-bottom: var(--spacing-touch-xs, var(--spacing-xs));
+  margin-bottom: calc(4px * var(--touch-multiplier, 1));
+  padding: 0 var(--spacing-touch-sm, var(--spacing-sm));
 }
 
+/* The whole row is the toggle — icon chip, full name, count, chevron. */
 .category-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-touch-xs, var(--spacing-xs)) var(--spacing-touch-md, var(--spacing-md));
+  gap: var(--spacing-touch-sm, var(--spacing-sm));
+  padding: var(--spacing-touch-xs, var(--spacing-xs)) var(--spacing-touch-sm, var(--spacing-sm));
   min-height: 44px;
   min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-md);
   cursor: pointer;
   user-select: none;
-  /* Capped so category names stay on one line next to the up/down
-     controls instead of wrapping underneath them. */
+  /* Capped so category names stay on one line at large touch scales. */
   font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.3));
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text);
-  transition: background-color 0.2s var(--ease-out);
+  transition:
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
 }
 
 .category-header:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
-.category-title {
-  display: flex;
+.category-header:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Open rows take the category accent — tinted bg + border — so the active
+   section is identifiable by colour, matching its icon chip. */
+.category-header.open {
+  background-color: rgba(255, 255, 255, 0.06);
+  background-color: color-mix(in srgb, var(--cat-accent, #4aa3ff) 12%, transparent);
+  border-color: rgba(255, 255, 255, 0.2);
+  border-color: color-mix(in srgb, var(--cat-accent, #4aa3ff) 38%, transparent);
+}
+
+.category-icon {
+  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-touch-sm, var(--spacing-sm));
-  min-width: 0;
+  justify-content: center;
+  width: calc(30px * min(var(--touch-multiplier, 1), 1.3));
+  height: calc(30px * min(var(--touch-multiplier, 1), 1.3));
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--cat-accent, #4aa3ff);
+  background-color: rgba(255, 255, 255, 0.06);
+  background-color: color-mix(in srgb, var(--cat-accent, #4aa3ff) 16%, transparent);
+  font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.3));
+  transition: background-color 0.2s var(--ease-out);
 }
 
-/* One line, ellipsis rather than wrapping under the chevron controls. */
-.category-title span {
+.category-header.open .category-icon {
+  background-color: color-mix(in srgb, var(--cat-accent, #4aa3ff) 26%, transparent);
+}
+
+.category-name {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.category-controls {
-  display: flex;
-  gap: calc(4px * var(--touch-multiplier, 1));
-}
-
-.btn-control {
-  background: none;
-  border: none;
+.category-count {
+  flex-shrink: 0;
+  min-width: calc(22px * min(var(--touch-multiplier, 1), 1.3));
+  padding: 1px calc(7px * var(--touch-multiplier, 1));
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.08);
   color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: calc(4px * var(--touch-multiplier, 1));
-  border-radius: var(--radius-xs);
-  transition: all 0.2s var(--ease-out);
-  min-height: 44px; /* Touch target size */
-  min-width: 44px;
-  min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  min-width: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
-  font-size: calc(0.875rem * var(--touch-multiplier, 1));
+  font-size: calc(0.7rem * min(var(--touch-multiplier, 1), 1.3));
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
-.btn-control:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--color-text);
+/* Single chevron rotated -90° when collapsed — transform transition
+   instead of an icon swap (same pattern as Settings' chevron-open). */
+.category-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: calc(0.75rem * min(var(--touch-multiplier, 1), 1.3));
+  transform: rotate(-90deg);
+  transition: transform 0.25s var(--ease-out), color 0.2s var(--ease-out);
 }
 
-.btn-control:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.category-chevron.open {
+  transform: rotate(0deg);
+  color: var(--cat-accent, var(--color-primary));
 }
 
+/* Items indent under a thin accent rail aligned to the icon chip centre,
+   so they read as belonging to the category rather than a flat list. */
 .category-actions {
-  padding: var(--spacing-touch-xs, var(--spacing-xs)) var(--spacing-touch-md, var(--spacing-md));
   display: grid;
   grid-template-columns: 1fr;
   gap: calc(6px * var(--touch-multiplier, 1));
-  background-color: rgba(0, 0, 0, 0.1);
+  padding: calc(6px * var(--touch-multiplier, 1)) var(--spacing-touch-sm, var(--spacing-sm)) calc(4px * var(--touch-multiplier, 1));
+  margin-left: calc(15px * min(var(--touch-multiplier, 1), 1.3));
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  border-left-color: color-mix(in srgb, var(--cat-accent, #4aa3ff) 30%, transparent);
 }
 
 .action-item {
@@ -354,25 +438,29 @@ watch(
   align-items: center;
   gap: var(--spacing-touch-sm, var(--spacing-sm));
   padding: var(--spacing-touch-xs, var(--spacing-xs)) var(--spacing-touch-sm, var(--spacing-sm));
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-sm);
   cursor: grab;
   user-select: none;
   touch-action: none;
   font-size: calc(0.8rem * var(--touch-multiplier, 1));
-  transition: all 0.2s var(--ease-out);
+  transition:
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
   min-height: 44px;
   min-height: max(var(--min-touch-target, 44px), calc(44px * var(--touch-multiplier, 1)));
 }
 
 .action-item:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.09);
   border-color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--cat-accent, #4aa3ff) 45%, transparent);
 }
 
 .action-icon {
-  color: #4aa3ff;
+  color: var(--cat-accent, #4aa3ff);
+  opacity: 0.85;
   font-size: calc(0.9rem * var(--touch-multiplier, 1));
 }
 </style>
