@@ -95,3 +95,12 @@ The overlay's `z-index:100` tied the `.docked-sidebar`'s `z-index:100` —
 open header's left strip. Wrapper bumped to `z-index:200`: above the
 sidebar, still below the narrow-mode drawer (999), toasts (1000) and
 modals (2000). header-reveal tests green, build clean.
+
+## Follow-up 2026-09-28 (b): band carries the word "Header"
+
+User asked the reveal button to name what it opens. `.fab-head` now
+flex-centers a `.fab-head-text` label ("Header", 0.62rem uppercase,
+white on the teal band) so the glyph is self-describing even before the
+caret reads. Button widened 56→68px to fit the word; height, caret, and
+overlay behavior unchanged. Test pin added (`fab-head-text` + label
+content); header-reveal tests green, build clean.

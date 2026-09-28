@@ -59,6 +59,11 @@ test('the FAB is a compact window-glyph that keeps the >=44px touch floor', () =
   const headRule = styles.match(/\.fab-head\s*\{([^}]*)\}/)?.[1] ?? ''
   expect(headRule.includes('top: 0') && /background/.test(headRule),
     'fab-head should be an accent band across the top of the mini window').toBe(true)
+  // DL-104 follow-up: the band is labelled — the glyph names what it summons.
+  expect(view.includes('fab-head-text'), 'the header band should carry a label').toBe(true)
+  expect(view.includes('>Header<'), 'the label should read "Header"').toBe(true)
+  const labelRule = styles.match(/\.fab-head-text\s*\{([^}]*)\}/)?.[1] ?? ''
+  expect(labelRule.length, 'fab-head-text should be styled').toBeGreaterThan(0)
   // 44px touch floor on both axes.
   expect(/\d{2}px/.test(base), 'the FAB should size around the touch floor').toBe(true)
   // Compact: no fixed multi-hundred-px width like the old pill had.

@@ -165,8 +165,9 @@
       >
         <!-- Mini window-with-header glyph (DL-104): a tiny panel whose
              accent header band is what's summoned — reads as "drop the
-             header down", not a generic arrow. -->
-        <span class="fab-head" aria-hidden="true"></span>
+             header down", not a generic arrow. The band is literally
+             labelled so first-time users don't have to guess. -->
+        <span class="fab-head" aria-hidden="true"><span class="fab-head-text">Header</span></span>
         <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="fab-caret" />
       </button>
     </Transition>
@@ -1438,7 +1439,7 @@ onUnmounted(() => {
   position: fixed;
   right: var(--spacing-touch-md, var(--spacing-md));
   bottom: var(--spacing-touch-md, var(--spacing-md));
-  width: max(56px, calc(56px * min(var(--touch-multiplier, 1), 1.4)));
+  width: max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)));
   height: max(46px, calc(46px * min(var(--touch-multiplier, 1), 1.4)));
   border-radius: 12px;
   overflow: hidden;
@@ -1466,9 +1467,22 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(180deg, #40B3A2 0%, #2e8b7d 100%);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
   animation: fab-head-drop 2.6s ease-in-out infinite;
+}
+
+/* The band IS the header it summons — say so on it. */
+.fab-head-text {
+  color: #ffffff;
+  font-size: calc(0.62rem * min(var(--touch-multiplier, 1), 1.4));
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes fab-head-drop {
