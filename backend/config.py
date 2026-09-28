@@ -5,7 +5,7 @@ import re
 import socket
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 
 def _default_data_dir(base_dir: Path) -> Path:
@@ -25,24 +25,93 @@ def _default_data_dir(base_dir: Path) -> Path:
     return Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local' / 'share'))) / 'vdock'
 
 
-def lan_ip() -> Optional[str]:
-    """Primary LAN IPv4 — the address the 'Connect a device' QR card uses.
+def _probe_ip() -> Optional[str]:
+    """IPv4 of the interface the default route would use.
 
-    The UDP-connect trick picks the right interface without sending traffic;
-    falls back to the hostname lookup, then None when there is no route.
+    UDP-connect trick — no packets are actually sent; the kernel just
+    reports which source address it would pick for the target.
     """
     try:
         probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            probe.connect(('192.168.255.255', 1))  # unroutable — no packets sent
+            probe.connect(('192.168.255.255', 1))  # unroutable
             return probe.getsockname()[0]
         finally:
             probe.close()
     except OSError:
+        return None
+
+
+# Interface-name fragments that can never serve a device on the physical
+# LAN: VM/container bridges, VPN/overlay tunnels, loopback adapters.
+# When a VPN captures the default route the probe lands on one of these.
+_VIRTUAL_IFACE_HINTS = (
+    'vethernet', 'hyper-v', 'wsl', 'vmware', 'virtualbox', 'loopback',
+    'bluetooth', 'tailscale', 'zerotier', 'wireguard', '_wg_', 'wg-',
+    'openvpn', 'wintun', 'tap-', 'vpn', 'tunnel', 'docker', 'br-',
+)
+
+
+def _iface_candidates() -> List[Tuple[str, str]]:
+    """(interface name, IPv4) for every up interface — loopback and
+    link-local addresses excluded."""
+    try:
+        import psutil
+        stats = psutil.net_if_stats()
+        out: List[Tuple[str, str]] = []
+        for iface, addrs in psutil.net_if_addrs().items():
+            st = stats.get(iface)
+            if not st or not st.isup:
+                continue
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    ip = addr.address
+                    if not ip.startswith(('127.', '169.254.')):
+                        out.append((iface, ip))
+        return out
+    except Exception:
+        return []
+
+
+def _lan_rank(ip: str) -> int:
+    """Preference order for a physical-LAN guess: the classic home-LAN
+    class first, then 10/8, then 172.16/12, then anything else."""
+    if ip.startswith('192.168.'):
+        return 0
+    if ip.startswith('10.'):
+        return 1
+    if ip.startswith('172.'):
         try:
-            return socket.gethostbyname(socket.gethostname())
-        except OSError:
-            return None
+            return 2 if 16 <= int(ip.split('.')[1]) <= 31 else 3
+        except (IndexError, ValueError):
+            return 3
+    return 3
+
+
+def lan_ip() -> Optional[str]:
+    """Primary LAN IPv4 — the address the 'Connect a device' QR card uses.
+
+    The UDP probe answers "which interface would the default route use" —
+    but a VPN/overlay adapter can capture that route, which advertises an
+    address a phone on Wi-Fi cannot reach. So when the probe lands on a
+    virtual interface, pick the best physical adapter instead (DL-056
+    follow-up).
+    """
+    probe_ip = _probe_ip()
+    reals = [(name, ip) for name, ip in _iface_candidates()
+             if not any(h in name.lower() for h in _VIRTUAL_IFACE_HINTS)]
+    if probe_ip and any(ip == probe_ip for _, ip in reals):
+        return probe_ip
+    if reals:
+        return sorted(reals, key=lambda item: _lan_rank(item[1]))[0][1]
+    if probe_ip:
+        # Every interface is virtual/overlay — e.g. a Tailscale-only box;
+        # a device on the same overlay can still reach the probe address.
+        return probe_ip
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except OSError:
+        return None
 
 
 # Bare hostname or IPv4 — the 'Connect a device' deck-address override.

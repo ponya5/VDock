@@ -80,6 +80,11 @@
               class="row-pick"
               @click="chooseTarget(s.pid)"
             >
+              <span
+                class="row-badge"
+                :style="{ background: s.accent }"
+                aria-hidden="true"
+              >{{ s.badge || '·' }}</span>
               <span class="row-dot" :class="`dot-${s.state || 'idle'}`" />
               <span class="row-text">
                 <span class="row-main">
@@ -526,6 +531,23 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 .row-icon {
   color: var(--agent-accent);
   flex-shrink: 0;
+}
+
+/* Per-session identity chip — accent-colored, carries the host-app
+   initials (WT/CU/PS); distinguishes sessions at a glance (DL-071 #11). */
+.row-badge {
+  flex-shrink: 0;
+  min-width: calc(30px * var(--touch-multiplier, 1));
+  height: calc(30px * var(--touch-multiplier, 1));
+  padding: 0 5px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #10131a;
+  font-size: calc(0.78rem * var(--touch-multiplier, 1));
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .row-dot {

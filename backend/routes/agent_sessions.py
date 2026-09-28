@@ -123,6 +123,9 @@ def list_agent_sessions():
             'detail': (hook or {}).get('message')
                       or (hook or {}).get('prompt')
                       or '',
+            # Which app owns the host window — 'Windows Terminal',
+            # 'Cursor', 'VS Code' — so rows can say where a session lives.
+            'host': host.get('host'),
             'started': host.get('create_time'),
         })
 

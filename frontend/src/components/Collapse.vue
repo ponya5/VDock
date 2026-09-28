@@ -14,7 +14,10 @@ defineProps<{ open: boolean }>()
 .collapse {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 250ms var(--ease-out);
+  /* --ease-io (symmetric in-out) instead of --ease-out: the fast-start
+     curve made large sections travel most of their height in the first
+     ~50ms, which read as a snap rather than a glide. */
+  transition: grid-template-rows 320ms var(--ease-io);
 }
 
 .collapse.open {
@@ -26,11 +29,11 @@ defineProps<{ open: boolean }>()
   min-height: 0;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-6px);
+  transform: translateY(-8px);
   transition:
-    opacity 200ms ease,
-    transform 250ms var(--ease-out),
-    visibility 250ms;
+    opacity 240ms var(--ease-out),
+    transform 320ms var(--ease-io),
+    visibility 320ms;
 }
 
 .collapse.open .collapse-inner {

@@ -428,3 +428,66 @@ wrong terminal).
 - Note: the backend needed a manual restart for the route change; the
   panel's socket reconnected cleanly. In-memory agent state cleared —
   the real Claude session re-posts on its next hook event.
+
+## Follow-up #11: informative session names (project · host · ordinal)
+
+Rows were labelled `project || title || 'pid N'` with `· #pid` on
+collision — two sessions in `VDock2/backend` rendered "backend · #25712"
+and "backend · #10228", and a Cursor-hosted CLI looked identical to a
+Windows-Terminal-hosted one.
+
+Backend: `list_session_hosts` gains `host` — the friendly name of the
+process that owns the session's host window (`windowsterminal.exe` →
+"Windows Terminal", `cursor.exe` → "Cursor", `code.exe` → "VS Code",
+conhost/openconsole → "Console", unknown exes title-cased from the
+stem). Route passes it through.
+
+Frontend (`useAgentTargets.sessionRows` → `buildSessionRows`, exported
+pure for tests):
+
+- same base label, different cwds → two-segment cwd tail
+  (`VDock2/backend` vs `other/backend`)
+- identical final labels → ` #1`, ` #2` ordinals by `started`
+  (stable across polls; replaces raw `#pid`)
+- `· {host}` appended whenever the backend names the window owner —
+  "backend · Cursor" vs "backend · Windows Terminal" tells you which
+  surface each session lives in
+
+### Implementation Results (follow-up #11)
+
+- `backend/utils/window_focus.py`: `_FRIENDLY_HOST_NAMES` map +
+  `_host_display_name(owner_pid)`; `list_session_hosts` builds
+  hwnd→owner-pid from `_visible_windows_by_pid()` and adds `host` to
+  every row.
+- `backend/routes/agent_sessions.py`: rows pass `host` through.
+- `frontend/src/api/agentSessions.ts`: `AgentSessionInfo.host?`.
+- `frontend/src/composables/useAgentTargets.ts`: label logic extracted
+  to exported pure `buildSessionRows`; sessionRows delegates to it.
+- Tests: +3 backend pins (friendly terminal name, IDE + self-owned,
+  unknown-exe stem) — `test_session_targeting.py` 22/22 green; new
+  `agent-session-labels.test.ts` 6/6; sibling agent suites 43/43.
+- Verified live: spawned `claude_continue` via `/api/actions/execute`,
+  `/api/agent-sessions` row carries `"host": "Windows Terminal"`;
+  `vue-tsc` clean, `dist/` rebuilt.
+
+Example labels: `backend · Windows Terminal`, `backend #1 · Cursor`,
+`VDock2/backend · Windows Terminal` (vs `other/backend`).
+
+### Visual identity (follow-up #11, second part)
+
+Each row now carries `accent` (a per-session color) and `badge`
+(host-app initials) next to the state dot:
+
+- `buildSessionRows` assigns accents from a 10-color pastel palette:
+  `pid % 10` preferred slot, linear-probe on collision, claimed
+  oldest-first — a session keeps its color as siblings join/leave, and
+  concurrent sessions never share one.
+- `hostBadge()`: uppercase letters first ('Windows Terminal'→'WT',
+  'PowerShell'→'PS'), else word initials, else first two letters.
+- `AgentActionBar` rows render a 30px accent chip with the initials
+  before the state dot; `MobileAgentConsole` chips render a 22px
+  variant. State dot stays state-colored; waiting/active styling
+  unchanged.
+- Tests: accent distinctness + stability + badge initials pinned in
+  `agent-session-labels.test.ts` (12/12); sibling suites 43/43;
+  `vue-tsc` clean, `dist/` rebuilt.

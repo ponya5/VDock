@@ -45,6 +45,11 @@
           :title="s.cwd || s.title"
           @click="chooseTarget(s.pid)"
         >
+          <span
+            class="mac-session-badge"
+            :style="{ background: s.accent }"
+            aria-hidden="true"
+          >{{ s.badge || '·' }}</span>
           <span class="mac-session-dot" :class="`dot-${s.state || 'idle'}`" aria-hidden="true" />
           <span class="mac-session-label">{{ s.label }}</span>
           <FontAwesomeIcon
@@ -450,6 +455,22 @@ trackAgentSurfaceVisibility(
 }
 
 .mac-session:active:not(:disabled) { transform: scale(0.96); }
+
+/* Per-session identity chip — accent color + host initials (DL-071 #11). */
+.mac-session-badge {
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #10131a;
+  font-size: 0.68em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
 
 .mac-session-dot {
   width: 9px;
