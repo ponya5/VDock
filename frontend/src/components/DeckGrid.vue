@@ -968,7 +968,9 @@ function handlePlaceholderTouchEnd(row: number, col: number) {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.button-placeholder:hover {
+/* Hover reveal only in edit mode — outside it the "+" tiles stay invisible
+   (clicks still quick-add; drags still highlight via .is-highlighted). */
+.button-placeholder.is-edit-mode:hover {
   background-color: rgba(255, 255, 255, 0.12);
   border-color: rgba(74, 163, 255, 0.7);
   color: #fff;
