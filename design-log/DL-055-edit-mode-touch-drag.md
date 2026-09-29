@@ -65,3 +65,32 @@ gesture did fire:
   move-grab path, overlay exclusion, editor early-return, slider gate,
   drop routing, and the double-tap distance guard.
 - `vue-tsc` clean (0 errors); 238/238 tests pass.
+
+## Follow-up — view-mode long-press→edit removed (2026-09-29)
+
+On the 7" touch panel, resting a finger a beat too long on any button (or
+holding still mid-decision) popped the button editor — edit mode entered by
+accident, an editor modal under the user's finger.
+
+**Removed:**
+
+- `DashboardView`: `@long-press="handleDeckButtonLongPress"` and
+  `@placeholder-long-press="handlePlaceholderLongPress"` bindings gone.
+- `useButtonActions`: both handlers deleted (`toggleEditMode` +
+  `editingButton` on a hold); `useMobileViewport` import dropped with them.
+- `DockedSidebar`: `@long-press="handleButtonEdit"` on docked buttons gone —
+  same gesture, same accidental editor.
+- `DeckGrid`: the upward `emit('longPress')` and the placeholder long-press
+  timer chain (`handlePlaceholderTouchStart/End`, `placeholderTimeouts`,
+  `placeholderLongPress` emit + the five pointer bindings) deleted — dead
+  signal, no listener.
+
+**Kept:** the `longPress` emit itself — in edit mode it is still the touch
+drag-grab (`startTouchDrag`), and `DeckButton`'s press-and-move path is
+unchanged. Edit mode is now entered only via the header "Toggle Edit Mode"
+button (or Ctrl+E).
+
+**Verified live** (built bundle, Playwright): 900 ms hold on a deck button —
+no edit mode, no editor modal. Explicit toggle → edit mode on; 700 ms hold +
+move in edit mode → `.dragging-source` + z-9999 ghost (drag-grab intact);
+no editor mid-drag. 365/365 frontend tests, `vue-tsc` clean, `dist` rebuilt.

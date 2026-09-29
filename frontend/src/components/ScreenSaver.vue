@@ -28,13 +28,13 @@
       v-if="showWeatherWidget"
       :ref="el => setWidgetEl('weather', el)"
       class="ss-pos ss-weather"
-      :class="{ 'ss-editing': layoutEdit }"
+      :class="{ 'ss-editing': layoutEdit, 'is-unavailable': weatherUnavailable }"
       :style="[posStyle('weather'), { '--ss-weather-scale': String(weatherScale) }]"
       @pointerdown="startDrag('weather', $event)"
     >
       <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-icon" />
       <div class="ss-weather-info">
-        <span class="ss-weather-loc">{{ location }}</span>
+        <span class="ss-weather-loc" :title="weatherError || undefined">{{ location }}</span>
         <span class="ss-weather-temp">{{ tempStr }}</span>
       </div>
       <span
@@ -310,7 +310,13 @@ const { isMobileViewport } = useMobileViewport()
 const time = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval> | null = null
 
-const { weather, start: startWeather, stop: stopWeather } = useWeather()
+const {
+  weather,
+  loading: weatherLoading,
+  error: weatherError,
+  start: startWeather,
+  stop: stopWeather
+} = useWeather()
 const {
   windowed: newsWindow,
   error: newsError,
@@ -373,9 +379,19 @@ const dateStr = computed(() => {
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 
-const weatherIcon = computed(() => weather.value?.icon || ['fas', 'cloud-sun'])
+// The chip has three states: live data, first load, and "never got data".
+// The last one swaps the gold sun for a muted plain cloud plus the reason
+// (useWeather already phrases it actionably, e.g. "set a city in Settings")
+// so a dead --°C doesn't read as a bug — markets/news do the same via
+// .ss-empty. A failure with stale data keeps showing the last reading.
+const weatherUnavailable = computed(() => !weather.value && !!weatherError.value)
+const weatherIcon = computed(() =>
+  weather.value?.icon || (weatherUnavailable.value ? ['fas', 'cloud'] : ['fas', 'cloud-sun'])
+)
 const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C` : '--°C')
-const location = computed(() => weather.value?.location || '—')
+const location = computed(() =>
+  weather.value?.location || weatherError.value || (weatherLoading.value ? 'Locating…' : '—')
+)
 
 // On phones the screensaver gets a curated set (DL-063 follow-up):
 // clock + weather + world clock always; headlines too when they fit
@@ -1141,6 +1157,12 @@ onUnmounted(() => {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
+  /* Long reasons ("Location unavailable — set a city in Settings") stay on
+     one ellipsized line so the pill can't grow into the clock. */
+  max-width: calc(clamp(160px, 26vw, 340px) * var(--ss-weather-scale));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ss-weather-temp {
@@ -1148,6 +1170,16 @@ onUnmounted(() => {
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.94);
+}
+
+/* Unavailable: the pill keeps its slot (layout editor still drags it) but
+   drops the accent so it reads "no reading", not "zero degrees". */
+.ss-weather.is-unavailable .ss-weather-icon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ss-weather.is-unavailable .ss-weather-temp {
+  opacity: 0.4;
 }
 
 /* --- Market: left-aligned serif quote rows ----------------------------------- */

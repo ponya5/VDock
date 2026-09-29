@@ -8,7 +8,6 @@ import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
-import { useMobileViewport } from '@/utils/mobileViewport'
 
 export function useButtonActions() {
   const dashboardStore = useDashboardStore()
@@ -252,32 +251,6 @@ export function useButtonActions() {
       }
       editingButton.value = button
     }
-  }
-
-  function handlePlaceholderLongPress(position: { row: number; col: number }) {
-    if (useMobileViewport().isMobileViewport.value) return
-    if (!dashboardStore.isEditMode) {
-      dashboardStore.toggleEditMode()
-    }
-    const newButton: Button = {
-      id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      position: position,
-      size: { rows: 1, cols: 1 },
-      enabled: true,
-      shape: 'rectangle'
-    }
-    editingButton.value = newButton
-  }
-
-  function handleDeckButtonLongPress(button: Button) {
-    // In edit mode the emit is the drag-grab gesture — DeckGrid already turned
-    // it into a touch reorder. Opening the editor here would pop a modal
-    // under the user's finger mid-drag.
-    if (dashboardStore.isEditMode) return
-    // Phones don't edit — long-press does nothing on a button there.
-    if (useMobileViewport().isMobileViewport.value) return
-    dashboardStore.toggleEditMode()
-    editingButton.value = { ...button }
   }
 
   function handleAddDockedButton(position: { row: number; col: number }) {
@@ -546,8 +519,6 @@ export function useButtonActions() {
     handleSliderShrink,
     handleActionDrop,
     handlePlaceholderClick,
-    handlePlaceholderLongPress,
-    handleDeckButtonLongPress,
     handleAddDockedButton,
     handleDockedButtonDelete,
     handleDockedButtonDrop,

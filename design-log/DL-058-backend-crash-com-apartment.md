@@ -71,3 +71,68 @@ window instead of one per failed request.
 - Frontend: 500/502/503/504 share an 8s toast window (`last5xxTime`) — a
   dead backend yields one toast per window instead of one per request.
 - 782/782 backend tests, vue-tsc + production build pass.
+
+## Follow-up — cached endpoint pinned to a stale output device (2026-09-29)
+
+**Symptom:** volume slider drags "succeeded" (badge updated, `volume_set`
+returned success) but no audible change.
+
+**Root cause:** the worker's `endpoint_box` latched the
+`IAudioEndpointVolume` pointer for the process lifetime — resolved once
+on first use and never re-queried. On a machine where the default output
+changes (wireless headset docked, HDMI/panel audio, manual device
+switch), the slider kept controlling whatever was default at first touch.
+Verified live: backend `volume_get` returned 56 — the exact level of the
+Lenovo H600 headset — while the active Realtek output sat at 34, proving
+the running worker was pinned to the headset endpoint.
+
+**Fix:** `get_endpoint()` now resolves `AudioUtilities.GetSpeakers()`
+(the eMultimedia default, matching the Windows volume UI) fresh on every
+job instead of caching. The DL-058 invariant is preserved — the pointer
+is created inside the job on the COM thread and released there when the
+job's reference drops; per-call errors (device unplugged) now recover
+instead of latching permanently.
+
+**Verification:** standalone script through the backend venv — get → 52,
+set 30 → get 30, set 25 → get 25 (each call a fresh endpoint resolve).
+936/936 backend tests pass. Requires a backend restart to reach the
+running process.
+
+## Follow-up 2 — the real crash mechanism: `cast()` aliasing, not just thread affinity (2026-09-29)
+
+The previous follow-up's per-call re-resolution made the backend crash *worse* —
+the process died under sustained volume traffic. The investigation found the
+actual fault beneath both crashes:
+
+**Root cause:** `cast(interface, POINTER(IAudioEndpointVolume))` does not AddRef —
+the cast wrapper and `interface` alias the **same** native COM reference. The
+original code leaked `interface` forever, which accidentally kept the endpoint
+alive. Once cleanup released `interface` (or tracebacks carried wrappers to a
+foreign GC), the COM object was freed while `endpoint` still pointed at it —
+`GetMasterVolumeLevelScalar` then read a vtable at `0xFFFFFFFFFFFFFFFF`.
+"Pointer churn" blamed earlier was mostly this use-after-free plus off-thread
+`__del__`→Release from comtypes' self-cycled wrappers (bound-method caches mean
+refcounting never frees them — only cyclic GC does, on whatever thread runs it).
+
+**Fix (now in `cross_platform_action.py`):**
+
+- `endpoint = interface.QueryInterface(IAudioEndpointVolume)` — a real second
+  reference; `interface`/`devices` can be released independently.
+- `_compointer_base.__del__` is patched once (`_install_com_gc_guard`):
+  finalization on a foreign thread is deferred onto the audio worker's job
+  queue instead of releasing in place — covers pycaw-internal leaks too.
+- `_release_com` marks wrappers `_vdock_released` so no release fires twice.
+- Endpoint lifetime is **cache + invalidate** (re-resolve on op failure, an
+  `IMMNotificationClient` default-device-change callback on an MTA thread, or
+  a 60 s TTL) with a 3 s resolve rate-limit so a flapping device cannot
+  amplify churn.
+- `gc.collect(0)` on the worker after each job sweeps wrapper cycles on the
+  safe thread.
+
+**Verification:** 300 reads + 50 sets across 3 threads with forced caller GC —
+0 errors, process survived (previously exit 139 within seconds). Sustained
+monitor polling + 25 rapid `volume_get` HTTP calls on the live backend —
+stable. 936/936 tests.
+
+This supersedes the "resolve per call" approach above: correctness (follows
+device switches) now comes from invalidation signals, not churn.

@@ -1,10 +1,12 @@
 """Cross-platform system actions for shutdown, restart, sleep, lock, volume, brightness, and media control."""
 import platform
 import queue
+import re
 import subprocess
 import os
 import sys
 import threading
+import time
 from typing import Dict, Any, Optional
 from .base_action import BaseAction, ActionResult
 
@@ -36,33 +38,215 @@ else:
 # pointers must be created AND released on the same initialized thread —
 # creating them on Flask workers left __del__→Release() to GC on arbitrary
 # threads, which raised access violations and could kill the process silently.
+#
+# What makes this subtle: comtypes pointer wrappers are self-cycled (their
+# bound-method cache points back at the instance), so refcounting NEVER frees
+# them — only the cyclic GC does, on whatever thread happens to collect, and
+# __del__→Release() off the owning apartment is the access violation. `del`
+# is therefore useless as cleanup. The guard below defers every off-worker
+# __del__ back onto this thread's job queue, and _release_com marks wrappers
+# so a second release can never fire.
 _audio_worker_lock = threading.Lock()
 _audio_worker_thread = None
 _audio_worker_queue = None
+_worker_tid = None
+
+
+def _release_com(*ptrs):
+    """Release() COM pointers on the calling thread and disarm the wrapper.
+
+    The ``_vdock_released`` flag makes the patched __del__ skip any later
+    release — without it, GC of the (self-cycled) wrapper would Release()
+    the already-freed object, the same access violation from the other side.
+    """
+    for p in ptrs:
+        if p is None or getattr(p, '__dict__', {}).get('_vdock_released'):
+            continue
+        try:
+            p._vdock_released = True
+            p.Release()
+        except Exception:
+            pass
+
+
+def _install_com_gc_guard():
+    """Defer off-thread COM pointer finalization to the audio worker.
+
+    A wrapper GC'd on a foreign thread would Release() outside the owning
+    apartment → access violation. The patched __del__ instead enqueues the
+    release onto the audio worker (same `(fn, done, box)` job shape), so
+    pycaw-internal pointers this code cannot reach are also made safe.
+    Runs on the worker or before it exists → fall through to the original.
+    """
+    if _SYSTEM != 'Windows':
+        return
+    try:
+        from comtypes._post_coinit.unknwn import _compointer_base
+    except ImportError:
+        try:
+            # Private module moved (older/newer comtypes): fish the base out
+            # of a pointer class's MRO instead.
+            from ctypes import POINTER
+            import comtypes
+            _compointer_base = next(
+                c for c in POINTER(comtypes.IUnknown).mro()
+                if c.__name__ == '_compointer_base')
+        except Exception:
+            return
+    if getattr(_compointer_base, '_vdock_guard', False):
+        return
+    orig_del = _compointer_base.__del__
+
+    def _com_pointer_del(self, _debug=None):
+        if self.__dict__.get('_vdock_released') or not self:
+            return
+        if (_worker_tid is not None
+                and threading.get_ident() != _worker_tid
+                and _audio_worker_queue is not None):
+            try:
+                done = threading.Event()
+                _audio_worker_queue.put_nowait(
+                    (lambda ctx: _release_com(self), done, {}))
+                return  # the worker will release it; wrapper stays inert
+            except Exception:
+                pass
+        orig_del(self)
+
+    _compointer_base.__del__ = _com_pointer_del
+    _compointer_base._vdock_guard = True
+
+
+_install_com_gc_guard()
 
 
 def _audio_worker_loop(work_q):
-    """Single-tenant COM thread: CoInitialize once, own the endpoint forever."""
+    """Single-tenant COM thread: initialize once, own the endpoint lifecycle."""
+    global _worker_tid
     import comtypes
+    import gc as _gc
     comtypes.CoInitialize()
-    endpoint_box = {'endpoint': None, 'err': None}
+    _worker_tid = threading.get_ident()
+
+    # Cached endpoint + how it gets invalidated. Per-call re-resolution was
+    # tried and abandoned: on a machine whose wireless headset flaps the
+    # default output, every CoCreateInstance/Activate rolls the dice on an
+    # access violation. Hold the endpoint; Windows tells us when the default
+    # render device changes, and a TTL hedge covers notifications that never
+    # arrive.
+    state = {'endpoint': None, 'resolved_at': 0.0}
+    dirty = {'device': True}
+    ENDPOINT_TTL_SECONDS = 60
+    # Flap guard: while a device is connecting/disconnecting the default
+    # endpoint can change repeatedly; each resolve creates COM pointers, and
+    # pointer churn on an unstable stack is the crash fuel. Never resolve
+    # more often than this — the stale endpoint (or a clean error) is served
+    # until the gap has passed.
+    RESOLVE_MIN_GAP_SECONDS = 3.0
+
+    def _notifier_thread():
+        """Owns the IMMNotificationClient. MTA so Windows dispatches
+        callbacks on COM threads without needing a message pump on this
+        thread — the callback only flips a Python flag, no COM calls."""
+        try:
+            comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
+        except Exception:
+            return
+        try:
+            from pycaw.callbacks import MMNotificationClient
+            from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
+            from pycaw.constants import CLSID_MMDeviceEnumerator
+
+            class _Notifier(MMNotificationClient):
+                def on_default_device_changed(
+                        self, flow, flow_id, role, role_id, device_id):
+                    # eRender + eMultimedia/eConsole — the roles volume uses
+                    if flow == 'eRender' and role in ('eMultimedia', 'eConsole'):
+                        dirty['device'] = True
+            enumerator = comtypes.CoCreateInstance(
+                CLSID_MMDeviceEnumerator, IMMDeviceEnumerator,
+                comtypes.CLSCTX_INPROC_SERVER)
+            notifier = _Notifier()
+            enumerator.RegisterEndpointNotificationCallback(notifier)
+            # Park forever — the frame keeps enumerator + notifier alive.
+            threading.Event().wait()
+        except Exception:
+            pass  # TTL refresh still covers device switches
+
+    threading.Thread(
+        target=_notifier_thread, name='vdock-audio-notify', daemon=True
+    ).start()
 
     def get_endpoint():
-        if endpoint_box['endpoint'] is None and endpoint_box['err'] is None:
+        """The cached default render endpoint; re-resolve only when dirty.
+
+        Dirty sources: the device-change notification, a failed op (callers
+        invalidate via ctx['invalidate']()), or the TTL. The pointer is
+        created on this thread and stays referenced here until replaced —
+        the DL-058 crash class does not apply to an object that never dies.
+        """
+        now = time.time()
+        stale = dirty['device'] or (now - state['resolved_at'] > ENDPOINT_TTL_SECONDS)
+        if now - state['resolved_at'] < RESOLVE_MIN_GAP_SECONDS:
+            if state['endpoint'] is not None:
+                return state['endpoint'], None
+            return None, 'Audio device is still settling'
+        if state['endpoint'] is not None and not stale:
+            return state['endpoint'], None
+
+        devices = interface = endpoint = None
+        ok = False
+        try:
+            from comtypes import CLSCTX_ALL
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(
+                IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            # QueryInterface, not cast(): cast aliases Activate's single
+            # native reference, so releasing `interface` would free the COM
+            # object out from under `endpoint` (vtable reads 0xFFFF...).
+            # QI gives endpoint its own reference — interface can be
+            # released safely below.
+            endpoint = interface.QueryInterface(IAudioEndpointVolume)
+            ok = True
+        except ImportError:
+            return None, 'pycaw not installed (pip install pycaw)'
+        except Exception as e:
+            return None, f'Audio device unavailable: {e}'
+        finally:
+            _release_com(devices, interface)
+            if not ok:
+                _release_com(endpoint)
+        if ok:
+            _release_com(state['endpoint'])
+            state['endpoint'] = endpoint
+            state['resolved_at'] = time.time()
+            dirty['device'] = False
+        return state['endpoint'], None
+
+    def invalidate():
+        dirty['device'] = True
+        _release_com(state['endpoint'])
+        state['endpoint'] = None
+
+    def endpoint_op(fn):
+        """Run fn(endpoint) against the cached endpoint; on failure invalidate
+        and retry once against a freshly-resolved one. Returns (result, err)
+        where result is whatever fn returned."""
+        endpoint, err = get_endpoint()
+        if endpoint is None:
+            return None, err
+        try:
+            return fn(endpoint), None
+        except Exception as e:
+            invalidate()
+            endpoint, err = get_endpoint()
+            if endpoint is None:
+                return None, err or str(e)
             try:
-                from ctypes import cast, POINTER
-                from comtypes import CLSCTX_ALL
-                from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-                devices = AudioUtilities.GetSpeakers()
-                interface = devices.Activate(
-                    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-                endpoint_box['endpoint'] = cast(
-                    interface, POINTER(IAudioEndpointVolume))
-            except ImportError:
-                endpoint_box['err'] = 'pycaw not installed (pip install pycaw)'
-            except Exception as e:
-                endpoint_box['err'] = f'Audio device unavailable: {e}'
-        return endpoint_box['endpoint'], endpoint_box['err']
+                return fn(endpoint), None
+            except Exception as e2:
+                invalidate()
+                return None, str(e2)
 
     def app_volume(process, set_value=None):
         """Per-app session volume. set_value 0.0-1.0 or None to read.
@@ -77,8 +261,8 @@ def _audio_worker_loop(work_q):
             return None, 'No process configured'
         if not proc.endswith('.exe'):
             proc += '.exe'
+        vol = None
         try:
-            matched = None
             for session in AudioUtilities.GetAllSessions():
                 name = ''
                 try:
@@ -87,17 +271,18 @@ def _audio_worker_loop(work_q):
                 except Exception:
                     name = ''
                 if name == proc:
-                    matched = session
+                    vol = session.SimpleAudioVolume
                     break
-            if matched is None:
+            if vol is None:
                 return None, f'No audio session for {proc}'
-            vol = matched.SimpleAudioVolume
             if set_value is None:
                 return round(vol.GetMasterVolume() * 100), None
             vol.SetMasterVolume(set_value, None)
             return True, None
         except Exception as e:
             return None, str(e)
+        finally:
+            _release_com(vol)
 
     while True:
         job = work_q.get()
@@ -105,10 +290,19 @@ def _audio_worker_loop(work_q):
             break
         fn, done, box = job
         try:
-            box['result'] = fn({'endpoint': get_endpoint, 'app_volume': app_volume})
+            box['result'] = fn({
+                'endpoint': get_endpoint,
+                'endpoint_op': endpoint_op,
+                'invalidate': invalidate,
+                'app_volume': app_volume,
+            })
         except Exception as e:
             box['error'] = e
         done.set()
+        # Reclaim any wrappers that slipped into cycles (pycaw internals,
+        # frames captured by tracebacks) while still on the COM thread —
+        # cheaper to sweep here than to wait for a foreign-thread collect.
+        _gc.collect(0)
     comtypes.CoUninitialize()
 
 
@@ -130,6 +324,60 @@ def _run_on_audio_thread(fn, timeout=5):
     if 'error' in box:
         raise box['error']
     return box.get('result')
+
+
+def read_output_volume():
+    """Current default-output level and mute state for the host OS.
+
+    Returns (percent|None, muted|None, err|None). Shared by volume_get and
+    the system-volume monitor so the deck tracks changes made elsewhere —
+    the Windows read rides the COM worker, which resolves the *current*
+    default endpoint per call (device switches are followed, not cached).
+    """
+    if _SYSTEM == 'Windows':
+        def job(ctx):
+            # endpoint_op retries once on a fresh endpoint when the cached
+            # one faulted — e.g. the device vanished mid-flight.
+            return ctx['endpoint_op'](lambda ep: (
+                int(round(ep.GetMasterVolumeLevelScalar() * 100)),
+                bool(ep.GetMute()),
+                None,
+            ))
+        try:
+            inner, err = _run_on_audio_thread(job)
+        except Exception as e:
+            return (None, None, f'Volume read failed: {e}')
+        if inner is None:
+            return (None, None, err or 'Volume read unavailable on Windows')
+        return inner
+    if _SYSTEM == 'Darwin':
+        result = subprocess.run(
+            'osascript -e "get volume settings"',
+            shell=True, capture_output=True, text=True, timeout=5
+        )
+        if result.returncode != 0:
+            return (None, None, 'Could not read volume (osascript)')
+        # e.g. "output volume:56, input volume:50, alert volume:100, output muted:false"
+        vol = re.search(r'output volume:(\d+)', result.stdout)
+        muted = re.search(r'output muted:(true|false)', result.stdout)
+        if not vol:
+            return (None, None, 'Could not read volume (osascript)')
+        return (
+            int(vol.group(1)),
+            (muted.group(1) == 'true') if muted else None,
+            None,
+        )
+    if _SYSTEM == 'Linux':
+        result = subprocess.run(
+            'amixer get Master',
+            shell=True, capture_output=True, text=True, timeout=5
+        )
+        # e.g. "Mono: Playback 49152 [75%] [-20.00dB] [on]"
+        match = re.search(r'\[(\d+)%\][^\[]*\[(on|off)\]', result.stdout)
+        if result.returncode == 0 and match:
+            return (int(match.group(1)), match.group(2) == 'off', None)
+        return (None, None, 'Could not read volume (amixer)')
+    return (None, None, f'Volume control not supported on {_SYSTEM}')
 
 
 class CrossPlatformAction(BaseAction):
@@ -425,16 +673,12 @@ class CrossPlatformAction(BaseAction):
         Returns (level_percent | True, None) or (None, error).
         """
         def job(ctx):
-            endpoint, err = ctx['endpoint']()
-            if endpoint is None:
-                return None, err
-            try:
+            def use(endpoint):
                 if set_value is None:
-                    return round(endpoint.GetMasterVolumeLevelScalar() * 100), None
+                    return round(endpoint.GetMasterVolumeLevelScalar() * 100)
                 endpoint.SetMasterVolumeLevelScalar(set_value, None)
-                return True, None
-            except Exception as e:
-                return None, str(e)
+                return True
+            return ctx['endpoint_op'](use)
 
         try:
             return _run_on_audio_thread(job)
@@ -478,34 +722,10 @@ class CrossPlatformAction(BaseAction):
 
     def _volume_get(self) -> ActionResult:
         """Current output volume 0-100 — sliders fetch this on mount."""
-        if _SYSTEM == 'Windows':
-            value, err = self._volume_scalar()
-            if value is not None:
-                return ActionResult(True, f'Volume {value}%', {'value': value})
-            return ActionResult(False, err or 'Volume read unavailable on Windows')
-        elif _SYSTEM == 'Darwin':
-            result = subprocess.run(
-                'osascript -e "output volume of (get volume settings)"',
-                shell=True, capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0 and result.stdout.strip().isdigit():
-                return ActionResult(
-                    True, f"Volume {result.stdout.strip()}%",
-                    {'value': int(result.stdout.strip())}
-                )
-            return ActionResult(False, 'Could not read volume (osascript)')
-        elif _SYSTEM == 'Linux':
-            result = subprocess.run(
-                "amixer get Master | grep -oP '\\d+%' | head -1 | tr -d '%'",
-                shell=True, capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0 and result.stdout.strip().isdigit():
-                return ActionResult(
-                    True, f"Volume {result.stdout.strip()}%",
-                    {'value': int(result.stdout.strip())}
-                )
-            return ActionResult(False, 'Could not read volume (amixer)')
-        return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
+        value, _muted, err = read_output_volume()
+        if value is None:
+            return ActionResult(False, err or 'Could not read volume')
+        return ActionResult(True, f'Volume {value}%', {'value': value})
 
     def _app_volume_process(self):
         return str(self.config.get('process') or self.config.get('app') or '').strip()

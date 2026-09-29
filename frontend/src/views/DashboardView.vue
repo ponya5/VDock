@@ -83,12 +83,10 @@
                   @button-delete="handleButtonDelete"
                   @action-drop="handleActionDrop"
                   @placeholder-click="onPlaceholderClick"
-                  @placeholder-long-press="handlePlaceholderLongPress"
                   @button-move="handleButtonMove"
                   @button-swap="handleButtonSwap"
                   @slider-expand="handleSliderExpand"
                   @slider-shrink="handleSliderShrink"
-                  @long-press="handleDeckButtonLongPress"
                   @double-tap="handleButtonClick"
                   @exit-edit-mode="dashboardStore.toggleEditMode"
                 />
@@ -308,8 +306,6 @@ const {
   handleSliderShrink,
   handleActionDrop,
   handlePlaceholderClick,
-  handlePlaceholderLongPress,
-  handleDeckButtonLongPress,
   handleDockedButtonDelete,
   handleDockedButtonDrop,
   handleDockedPlaceholderClick,
@@ -1023,7 +1019,7 @@ useSwipe(mainContentRef, {
       !isEditMode.value &&
       (currentProfile.value?.scenes.length ?? 0) > 1 &&
       !(e.target as HTMLElement).closest(
-        'input, textarea, select, [contenteditable="true"], .agent-target-popover, .onscreen-keypad'
+        'input, textarea, select, [contenteditable="true"], .agent-target-popover, .onscreen-keypad, .slider-face'
       )
     swipeAxisBlocked = sceneSwipeArmed
       ? scrollableAxes(e.target as HTMLElement)

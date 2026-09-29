@@ -29,6 +29,7 @@ from actions import ActionExecutor
 from plugins import PluginManager
 from utils import FileManager, setup_logger
 from services.job_runner import get_job_runner
+from services import volume_monitor
 
 # Import route blueprints
 from routes.auth import auth_bp
@@ -128,6 +129,11 @@ job_runner.set_spawner(socketio.start_background_task)
 set_agent_events_emitter(lambda event, payload: socketio.emit(event, payload))
 # Toggle side changes reach every client too — same deck, same switch state.
 set_actions_emitter(lambda event, payload: socketio.emit(event, payload))
+# Volume changed anywhere (keys, flyout, another surface) → every client
+# follows. Same spawn contract as job_runner: a thread the server did not
+# spawn cannot emit in threading mode.
+volume_monitor.set_emitter(lambda event, payload: socketio.emit(event, payload))
+volume_monitor.set_spawner(socketio.start_background_task)
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -445,6 +451,10 @@ if __name__ == '__main__':
     if Config.DEBUG:
         logger.warning("Running in DEBUG mode - not suitable for production!")
         logger.info("To disable this warning, set DEBUG=False in your .env file")
+
+    # Follows OS-side volume changes and pushes them to every client. Started
+    # here rather than at module level so test imports never spawn the loop.
+    volume_monitor.start()
 
     socketio.run(
         app,
