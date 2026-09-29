@@ -554,7 +554,6 @@ def launch_electron():
         # a path string, ipcMain is undefined, and main.js dies instantly —
         # the launcher then silently falls back to the browser.
         electron_env.pop("ELECTRON_RUN_AS_NODE", None)
-        electron_env["VDOCK_FULLSCREEN"] = "1"
         electron_env["VDOCK_USE_SMALLEST_DISPLAY"] = "1"
         electron_env["VDOCK_FRONTEND_PORT"] = str(DEFAULT_FRONTEND_PORT)
         electron_env["VDOCK_BACKEND_PORT"] = str(DEFAULT_BACKEND_PORT)
@@ -577,7 +576,7 @@ def launch_electron():
             env=electron_env,
             **detached_popen_args(),
         )
-        print("[OK] Electron launched in full-screen mode on smallest display")
+        print("[OK] Electron launched on smallest display")
         print(f"      Log: {ELECTRON_LOG}")
         return True
     except Exception as error:
