@@ -159,3 +159,18 @@ crossfade, and the segment sweep animation is disabled.
   dots/‹ › steppers.
 - `UserGuideModal` Scenes bullet gained the same swipe tip.
 - Verified live in the tour; `vue-tsc` clean, `dist` rebuilt.
+
+## Follow-up — slider drags no longer arm scene swipe (2026-09-29)
+
+Dragging a volume slider horizontally past the 50px threshold fired
+`onSwipeEnd` → scene switch mid-drag, fighting the slider's own gesture.
+
+Fix: `.slider-face` joined the `onSwipeStart` exclusion list in
+`DashboardView.vue` — a pointerdown anywhere inside a slider widget
+(track, preset chips, head) never arms the scene swipe. The slider's own
+pointerdown/apply is untouched, so the drag still sets the value.
+
+Verified live on the dev server: 120px leftward drag on the slider track
+kept the deck on Media (0→0) while the volume dispatched; the same drag
+on empty space still switched Media → Claude Code (0→1). `vue-tsc` clean,
+`dist` rebuilt.

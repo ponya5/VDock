@@ -31,7 +31,7 @@
       @long-press="handleButtonLongPress"
     />
 
-    <!-- Button placeholders for empty slots - only show in edit mode or when receiving long-press -->
+    <!-- Button placeholders for empty slots - edit mode only -->
     <div
       v-for="placeholder in emptySlots"
       :key="`placeholder-${placeholder.row}-${placeholder.col}`"
@@ -46,11 +46,6 @@
       :style="placeholderStyle"
       :data-button-id="`placeholder-${placeholder.row}-${placeholder.col}`"
       @click="handlePlaceholderClick(placeholder.row, placeholder.col)"
-      @touchstart="handlePlaceholderTouchStart(placeholder.row, placeholder.col)"
-      @touchend="handlePlaceholderTouchEnd(placeholder.row, placeholder.col)"
-      @mousedown="handlePlaceholderTouchStart(placeholder.row, placeholder.col)"
-      @mouseup="handlePlaceholderTouchEnd(placeholder.row, placeholder.col)"
-      @mouseleave="handlePlaceholderTouchEnd(placeholder.row, placeholder.col)"
       @dragover="handlePlaceholderDragOver"
       @dragenter="(e) => handlePlaceholderDragEnter(e, placeholder)"
       @dragleave="(e) => handlePlaceholderDragLeave(e, placeholder)"
@@ -142,13 +137,11 @@ const emit = defineEmits<{
   buttonDelete: [buttonId: string]
   actionDrop: [action: any, position: { row: number; col: number }]
   placeholderClick: [position: { row: number; col: number }]
-  placeholderLongPress: [position: { row: number; col: number }]
   buttonMove: [buttonId: string, newPosition: { row: number; col: number }]
   buttonSwap: [sourceId: string, targetId: string]
   sliderExpand: [id: string]
   sliderShrink: [id: string]
   doubleTap: [button: Button]
-  longPress: [button: Button]
   exitEditMode: []
 }>()
 
@@ -442,12 +435,12 @@ function handleButtonDoubleTap(button: Button) {
 }
 
 function handleButtonLongPress(button: Button, pointerType?: string) {
-  emit('longPress', button)
-  // View mode: the emit alone is the feature (enters edit mode + opens the
-  // editor). The ghost drag is edit-mode only, and the touchscreen
-  // substitute for HTML5 drag — a mouse already reorders natively and can
-  // never fire the touchmove/touchend this path relies on for cleanup, so
-  // starting it for a mouse leaves a frozen clone on the deck.
+  // Edit-mode only: the touch substitute for HTML5 drag. The view-mode
+  // long-press→edit gesture was removed — nothing listens to a 'longPress'
+  // emit upward anymore, so the emit itself is gone. A mouse already
+  // reorders natively and can never fire the touchmove/touchend this path
+  // relies on for cleanup, so starting it for a mouse leaves a frozen
+  // clone on the deck.
   if (!props.isEditMode || pointerType === 'mouse') return
   startTouchDrag(button)
 }
@@ -779,10 +772,6 @@ function handlePlaceholderClick(row: number, col: number) {
   }
 }
 
-// Since useLongPress is attached via ref/element usually, we'll manually watch placeholders,
-// but for simplicity in a v-for list, we'll implement a basic inline long-press timeout
-// for the empty slots when NOT in edit mode to trigger edit mode.
-let placeholderTimeouts: Record<string, NodeJS.Timeout> = {}
 function handlePlaceholderDragEnter(e: DragEvent, placeholder: { row: number; col: number }) {
   e.preventDefault()
   e.stopPropagation()
@@ -797,22 +786,6 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   }
 }
 
-// Emulate long press for placeholders
-function handlePlaceholderTouchStart(row: number, col: number) {
-  if (props.isEditMode) return;
-  const key = `${row}-${col}`;
-  placeholderTimeouts[key] = setTimeout(() => {
-    emit('placeholderLongPress', { row, col })
-  }, 500)
-}
-
-function handlePlaceholderTouchEnd(row: number, col: number) {
-  const key = `${row}-${col}`;
-  if (placeholderTimeouts[key]) {
-    clearTimeout(placeholderTimeouts[key]);
-    delete placeholderTimeouts[key];
-  }
-}
 </script>
 
 <style scoped>

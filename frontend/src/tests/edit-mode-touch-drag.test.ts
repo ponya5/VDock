@@ -26,6 +26,10 @@ const gestures = readFileSync(
   resolve(__dirname, '../composables/useGestures.ts'),
   'utf-8'
 )
+const view = readFileSync(
+  resolve(__dirname, '../views/DashboardView.vue'),
+  'utf-8'
+)
 
 describe('edit-mode touch drag', () => {
   it('emits the grab gesture in edit mode, not only in view mode', () => {
@@ -55,12 +59,15 @@ describe('edit-mode touch drag', () => {
     expect(button).toContain('overlayControlSelector')
   })
 
-  it('does not open the button editor when already in edit mode', () => {
-    const fn = actions.slice(
-      actions.indexOf('function handleDeckButtonLongPress'),
-      actions.indexOf('function handleDeckButtonLongPress') + 600
-    )
-    expect(fn).toMatch(/isEditMode\) return/)
+  it('no longer opens the button editor from a long-press at all', () => {
+    // DL-055 follow-up: view-mode long-press→edit was removed entirely —
+    // an accidental hold on the touch panel kept popping the editor. The
+    // handler is deleted and no surface binds the emit upward.
+    expect(actions).not.toContain('handleDeckButtonLongPress')
+    expect(view).not.toMatch(/@long-press=/)
+    // The grab emit survives — the edit-mode touch drag still needs it.
+    expect(button).toContain("emit('longPress'")
+    expect(grid).toMatch(/handleButtonLongPress[\s\S]*startTouchDrag/)
   })
 
   it('keeps the slider face inert in edit mode', () => {
@@ -117,10 +124,6 @@ describe('edit-mode touch drag', () => {
   })
 
   it('hides the header reveal FAB while editing (it overlapped Delete Page)', () => {
-    const view = readFileSync(
-      resolve(__dirname, '../views/DashboardView.vue'),
-      'utf-8'
-    )
     const fab = view.slice(
       view.indexOf('header-reveal-fab') - 300,
       view.indexOf('header-reveal-fab')

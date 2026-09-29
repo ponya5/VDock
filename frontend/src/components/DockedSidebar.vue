@@ -47,7 +47,6 @@
             @edit="handleButtonEdit"
             @copy="handleButtonCopy"
             @delete="handleButtonDelete"
-            @long-press="handleButtonEdit"
           />
 
           <!-- Empty slot placeholder in edit mode -->

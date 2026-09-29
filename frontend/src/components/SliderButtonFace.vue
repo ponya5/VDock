@@ -64,13 +64,14 @@
  * under the track — `config.show_presets` (default true) turns it off for
  * buttons too small to fit it.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Button } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useButtonStateStore } from '@/stores/buttonState'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
+import socketClient from '@/api/socket'
 import { vibrate } from '@/utils/haptics'
 
 const props = defineProps<{ button: Button; compact?: boolean; buttonSize?: number }>()
@@ -88,6 +89,7 @@ const step = computed(() => Math.max(1, Number(cfg.value.step ?? 1)))
 
 const value = ref<number>(Number(cfg.value.value ?? min.value))
 const dragging = ref(false)
+const muted = ref(false)
 const trackRef = ref<HTMLElement | null>(null)
 let lastDispatch = 0
 let wheelTimer: number | undefined
@@ -113,7 +115,7 @@ const faceStyle = computed(() => {
 
 const targetIcon = computed(() => {
   if (target.value === 'volume') {
-    return value.value <= 0 ? ['fas', 'volume-mute'] : value.value < 50 ? ['fas', 'volume-down'] : ['fas', 'volume-up']
+    return value.value <= 0 || muted.value ? ['fas', 'volume-mute'] : value.value < 50 ? ['fas', 'volume-down'] : ['fas', 'volume-up']
   }
   if (target.value === 'brightness') return ['fas', 'sun']
   if (target.value === 'app_volume') return ['fas', 'headphones']
@@ -248,10 +250,25 @@ function onWheel(e: WheelEvent) {
   wheelTimer = window.setTimeout(() => apply(value.value, true), 160)
 }
 
+// The backend monitor broadcasts system_volume when the OS level or mute
+// changes (volume keys, Quick Settings, another client). While the finger
+// is down the local thumb is authoritative — the post-release echo lands on
+// the same value anyway — so inbound updates are skipped mid-drag. The
+// badge follows reality too, or the head number and chip would disagree
+// after an OS-side change.
+function onSystemVolume(data: { value?: number; muted?: boolean }) {
+  if (typeof data?.value !== 'number') return
+  if (typeof data.muted === 'boolean') muted.value = data.muted
+  if (dragging.value) return
+  value.value = clamp(data.value)
+  buttonStateStore.set(props.button.id, { badge: `${Math.round(data.value)}%` })
+}
+
 onMounted(() => {
   // Show the REAL level, not the last-saved config — the OS may have moved
   // since this button was made. Best effort: stay silent on failure.
   if (target.value === 'volume') {
+    socketClient.on('system_volume', onSystemVolume)
     dashboardStore.executeAction(
       { type: 'cross_platform', config: { action: 'volume_get' } },
       props.button.id
@@ -272,6 +289,11 @@ onMounted(() => {
   } else if (target.value === 'ui_brightness') {
     value.value = clamp(settingsStore.uiBrightness)
   }
+})
+
+onUnmounted(() => {
+  socketClient.off('system_volume', onSystemVolume)
+  window.clearTimeout(wheelTimer)
 })
 </script>
 
