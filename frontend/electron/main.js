@@ -136,7 +136,9 @@ function stopBackend() {
 function createWindow() {
   const targetDisplay = resolveTargetDisplay()
   const workArea = targetDisplay.workArea
-  const isCompactDisplay = workArea.width <= 1100 || workArea.height <= 650
+  // Both dimensions must be small — a portrait monitor (narrow but tall) or an
+  // ultrawide-but-short one is a normal display, not a tiny embedded touch panel.
+  const isCompactDisplay = workArea.width <= 1100 && workArea.height <= 650
   const shouldStartFullscreen =
     process.env.VDOCK_FULLSCREEN === '1' ||
     process.env.VDOCK_KIOSK === '1' ||
