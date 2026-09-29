@@ -341,7 +341,27 @@ function createTray() {
   })
 }
 
+function toggleFullscreen() {
+  if (!mainWindow) return false
+
+  const enteringFullscreen = !mainWindow.isFullScreen()
+  mainWindow.setFullScreen(enteringFullscreen)
+  mainWindow.setMenuBarVisibility(!enteringFullscreen)
+
+  if (enteringFullscreen) {
+    mainWindow.setAlwaysOnTop(false)
+  }
+
+  return enteringFullscreen
+}
+
 function registerGlobalShortcuts() {
+  // Global shortcut so fullscreen can always be escaped even when the deck
+  // header (which holds the in-app toggle button) is collapsed/hidden.
+  globalShortcut.register('CommandOrControl+Shift+F', () => {
+    toggleFullscreen()
+  })
+
   // Global shortcut to summon the deck at the cursor (Ctrl+Shift+D). On show it
   // also opens the quick-deck overlay — press a key, it dismisses itself.
   globalShortcut.register('CommandOrControl+Shift+D', () => {
@@ -435,17 +455,7 @@ ipcMain.handle('window-summon-to-cursor', () => {
 })
 
 ipcMain.handle('window-toggle-fullscreen', () => {
-  if (!mainWindow) return false
-
-  const enteringFullscreen = !mainWindow.isFullScreen()
-  mainWindow.setFullScreen(enteringFullscreen)
-  mainWindow.setMenuBarVisibility(!enteringFullscreen)
-
-  if (enteringFullscreen) {
-    mainWindow.setAlwaysOnTop(false)
-  }
-
-  return enteringFullscreen
+  return toggleFullscreen()
 })
 
 ipcMain.handle('window-is-fullscreen', () => {
