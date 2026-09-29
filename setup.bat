@@ -253,6 +253,7 @@ powershell -NoProfile -NonInteractive -Command ^
   "$ws = New-Object -ComObject WScript.Shell;" ^
   "$sc = $ws.CreateShortcut('%SHORTCUT%');" ^
   "$sc.TargetPath = '%LAUNCHER%';" ^
+  "$sc.Arguments = '--in-console';" ^
   "$sc.WorkingDirectory = '%ROOT%';" ^
   "if (Test-Path '%ICON%') { $sc.IconLocation = '%ICON%' };" ^
   "$sc.Description = 'VDock Virtual Stream Deck';" ^
@@ -345,7 +346,7 @@ if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
 )
 echo.
 echo   Starting VDock...
-start "" "%ROOT%\launch.bat"
+start "VDock Launcher" cmd /c ""%ROOT%\launch.bat" --in-console"
 exit /b 0
 
 :setup_complete

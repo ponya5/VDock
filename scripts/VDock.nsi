@@ -37,12 +37,13 @@ Section "Install VDock"
 
   ; Create shortcuts — launch.bat is the supported entry point (it runs the
   ; same VDock-Launcher.py the PyInstaller exe wraps, without requiring a
-  ; separate exe build).
+  ; separate exe build). --in-console: a shortcut-spawned console owns its
+  ; window and self-closes, so skip launch.bat's transient re-dispatch (DL-113).
   SetOutPath "$INSTDIR"
   CreateDirectory "$SMPROGRAMS\VDock"
-  CreateShortcut "$SMPROGRAMS\VDock\VDock.lnk" "$INSTDIR\launch.bat"
+  CreateShortcut "$SMPROGRAMS\VDock\VDock.lnk" "$INSTDIR\launch.bat" "--in-console"
   CreateShortcut "$SMPROGRAMS\VDock\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$DESKTOP\VDock.lnk" "$INSTDIR\launch.bat"
+  CreateShortcut "$DESKTOP\VDock.lnk" "$INSTDIR\launch.bat" "--in-console"
 
   ; Store installation folder
   WriteRegStr HKCU "Software\VDock" "" $INSTDIR
