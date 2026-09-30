@@ -1294,20 +1294,52 @@
           <p class="form-help">Adjust the clock font size (0.5x to 2.0x)</p>
         </div>
 
-        <!-- Timer Configuration -->
+        <!-- Timer / Stopwatch Configuration (DL-122): tap toggles
+             start/pause; an expired countdown re-arms on tap. -->
         <div v-if="actionType === 'time_timer'" class="form-group">
-          <label>Timer Duration (seconds)</label>
-          <input 
-            v-model.number="actionConfig.timer_duration" 
-            type="number" 
-            class="input" 
-            min="0"
-            placeholder="0"
-          />
-          <p class="form-help">Initial duration (0 for stopwatch mode)</p>
+          <label>Mode</label>
+          <select v-model="actionConfig.mode" class="select">
+            <option value="countdown">Countdown</option>
+            <option value="stopwatch">Stopwatch</option>
+          </select>
         </div>
 
-        <div v-if="actionType === 'time_timer'" class="form-group">
+        <div v-if="isTimerType && timerMode === 'countdown'" class="form-group">
+          <label>Duration (seconds)</label>
+          <input
+            v-model.number="actionConfig.duration_s"
+            type="number"
+            class="input"
+            min="1"
+            placeholder="300"
+          />
+          <p class="form-help">Countdown length — 300 is a 5-minute timer.</p>
+        </div>
+
+        <div v-if="isTimerType" class="form-group">
+          <label class="checkbox-label">
+            <input v-model="timerAutoStart" type="checkbox" class="checkbox" />
+            Start automatically when the button is shown
+          </label>
+        </div>
+
+        <div v-if="isTimerType && timerMode === 'countdown'" class="form-group">
+          <label class="checkbox-label">
+            <input v-model="timerAlarm" type="checkbox" class="checkbox" />
+            Alarm — flash the button and toast when it finishes
+          </label>
+        </div>
+
+        <div v-if="isTimerType && timerMode === 'countdown'" class="form-group">
+          <label>Action on finish (optional)</label>
+          <SubActionEditor v-model="timerOnFinish" />
+          <p class="form-help">
+            Runs when the countdown hits 0:00 — e.g. an HTTP request or a
+            hotkey. Works even if you've switched scenes since starting it.
+          </p>
+        </div>
+
+        <div v-if="isTimerType" class="form-group">
           <label>Font Size</label>
           <div class="font-size-controls">
             <input 
@@ -1484,6 +1516,83 @@
           <input v-model="editedButton.tooltip" type="text" class="input" placeholder="Button description" />
         </div>
 
+        <!-- Conditional style (DL-122): "when X, then restyle" rules.
+             First matching rule wins; evaluated live on the client. -->
+        <div class="rules-editor">
+          <div class="rules-head">
+            <label>Conditional style</label>
+            <button type="button" class="add-step-btn rule-add" @click="addRule">
+              <FontAwesomeIcon :icon="['fas', 'plus']" />
+              Add Rule
+            </button>
+          </div>
+          <p class="form-help">
+            When the condition is true the first matching rule restyles this
+            button — e.g. <em>volume muted → critical + "Muted"</em>.
+          </p>
+          <div v-for="(rule, index) in ruleRows" :key="index" class="rule-card">
+            <div class="rule-line">
+              <select v-model="rule.source" class="select rule-source">
+                <option v-for="s in RULE_SOURCES" :key="s.value" :value="s.value">
+                  {{ s.label }}
+                </option>
+              </select>
+              <input
+                v-if="rule.source === 'agent'"
+                v-model="rule.agentSource"
+                type="text"
+                class="input rule-agent-src"
+                placeholder="claude"
+              />
+              <select v-model="rule.op" class="select rule-op">
+                <option v-for="o in RULE_OPS" :key="o.value" :value="o.value">
+                  {{ o.label }}
+                </option>
+              </select>
+              <input
+                v-if="rule.op !== 'truthy'"
+                v-model="rule.value"
+                type="text"
+                class="input rule-value"
+                placeholder="value"
+              />
+              <button
+                type="button"
+                class="btn-icon danger"
+                title="Remove rule"
+                @click="ruleRows.splice(index, 1)"
+              ><FontAwesomeIcon :icon="['fas', 'times']" /></button>
+            </div>
+            <div class="rule-line rule-then">
+              <span class="rule-then-arrow">then</span>
+              <select v-model="rule.tone" class="select rule-tone">
+                <option value="">No tone</option>
+                <option value="warning">Warning ring</option>
+                <option value="critical">Critical ring</option>
+                <option value="success">Success ring</option>
+                <option value="accent">Accent ring</option>
+              </select>
+              <input
+                v-model="rule.icon"
+                type="text"
+                class="input rule-icon"
+                placeholder="icon (fas:name)"
+                title="FontAwesome icon, e.g. fas:volume-mute"
+              />
+              <input
+                v-model="rule.sublabel"
+                type="text"
+                class="input rule-sublabel"
+                placeholder="sublabel"
+              />
+              <label class="checkbox-label rule-dim">
+                <input v-model="rule.dim" type="checkbox" class="checkbox" />
+                Dim
+              </label>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class="modal-footer">
@@ -1567,7 +1676,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
-import type { Button, ButtonAction, ActionType, EffectType } from '@/types'
+import type { Button, ButtonAction, ActionType, EffectType, ButtonRule } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDashboardStore } from '@/stores/dashboard'
 import IconPicker from './IconPicker.vue'
@@ -1664,6 +1773,136 @@ const toggleOffColor = ref(props.button.action?.config?.off_color ?? '#2c3e50')
 const pressTrigger = ref<'press' | 'release'>(props.button.action?.trigger ?? 'release')
 const releaseAction = ref(props.button.action?.release_action)
 const pushToTalk = ref(!!props.button.action?.release_action)
+
+// Timer buttons (DL-122): mode/duration live in actionConfig; these wrap
+// the optional fields so checkboxes and the nested action stay in sync.
+const isTimerType = computed(() =>
+  actionType.value === 'time_timer' || actionType.value === 'time_stopwatch'
+)
+const timerMode = computed(() => {
+  if (actionType.value === 'time_stopwatch') return 'stopwatch'
+  const m = actionConfig.value.mode
+  if (m === 'countdown' || m === 'stopwatch') return m
+  // Legacy `timer_duration` schema: >0 was a countdown, 0 a stopwatch.
+  const legacy = Number(actionConfig.value.duration_s ?? actionConfig.value.timer_duration ?? 0)
+  return legacy > 0 ? 'countdown' : 'stopwatch'
+})
+const timerAutoStart = computed<boolean>({
+  get: () => actionConfig.value.auto_start === true,
+  set: (v) => { actionConfig.value.auto_start = v }
+})
+const timerAlarm = computed<boolean>({
+  get: () => actionConfig.value.alarm !== false,
+  set: (v) => { actionConfig.value.alarm = v }
+})
+const timerOnFinish = ref(props.button.action?.config?.on_finish)
+
+// Legacy configs carry no `mode` — pin it so the select shows the
+// effective mode instead of visually defaulting to 'countdown'.
+if (isTimerType.value && actionConfig.value.mode == null) {
+  actionConfig.value.mode = timerMode.value
+}
+
+// Conditional-style rules (DL-122): edited as flat rows, serialised into
+// button.rules on save. `source === 'agent'` expands to
+// `agent.<agentSource>.state`.
+interface RuleRow {
+  source: string
+  agentSource: string
+  op: NonNullable<ButtonRule['when']['op']>
+  value: string
+  tone: string
+  icon: string
+  sublabel: string
+  dim: boolean
+}
+
+const RULE_SOURCES = [
+  { value: 'volume.muted', label: 'Volume: muted' },
+  { value: 'volume.level', label: 'Volume: level' },
+  { value: 'now_playing.playing', label: 'Media: playing' },
+  { value: 'now_playing.source_app', label: 'Media: source app' },
+  { value: 'now_playing.title', label: 'Media: track title' },
+  { value: 'spectrum.live', label: 'Audio spectrum: live' },
+  { value: 'spectrum.level', label: 'Audio spectrum: level' },
+  { value: 'timer.running', label: 'Timer: running' },
+  { value: 'time.hour', label: 'Time: hour (0-23)' },
+  { value: 'time.minute', label: 'Time: minute (0-59)' },
+  { value: 'agent', label: 'Agent state…' },
+] as const
+
+const RULE_OPS = [
+  { value: 'eq', label: '=' },
+  { value: 'neq', label: '≠' },
+  { value: 'lt', label: '<' },
+  { value: 'lte', label: '≤' },
+  { value: 'gt', label: '>' },
+  { value: 'gte', label: '≥' },
+  { value: 'truthy', label: 'is truthy' },
+] as const
+
+function parseIconText(text: string): [string, string] | undefined {
+  const t = text.trim()
+  if (!t) return undefined
+  // Accept 'fas:volume-mute' or 'fas fa-volume-mute'.
+  const m = /^([a-z]+)[: ](?:fa-)?(.+)$/.exec(t)
+  if (m) return [m[1], m[2]]
+  return ['fas', t.replace(/^fa-/, '')]
+}
+
+function ruleToRow(rule: ButtonRule): RuleRow {
+  const agentMatch = /^agent\.([^.]+)\.state$/.exec(rule.when?.source ?? '')
+  const icon = Array.isArray(rule.then?.icon) ? rule.then.icon.join(':') : ''
+  return {
+    source: agentMatch ? 'agent' : (rule.when?.source ?? 'volume.muted'),
+    agentSource: agentMatch?.[1] ?? 'claude',
+    op: rule.when?.op ?? 'eq',
+    value: rule.when?.value === undefined ? '' : String(rule.when.value),
+    tone: rule.then?.tone ?? '',
+    icon,
+    sublabel: rule.then?.sublabel ?? '',
+    dim: rule.then?.dim === true,
+  }
+}
+
+const ruleRows = ref<RuleRow[]>((props.button.rules ?? []).map(ruleToRow))
+
+function addRule() {
+  ruleRows.value.push({
+    source: 'volume.muted',
+    agentSource: 'claude',
+    op: 'eq',
+    value: 'true',
+    tone: 'critical',
+    icon: '',
+    sublabel: '',
+    dim: false,
+  })
+}
+
+function serializeRule(row: RuleRow): ButtonRule | null {
+  const source = row.source === 'agent'
+    ? `agent.${(row.agentSource || 'claude').trim()}.state`
+    : row.source
+  if (!source || !row.op) return null
+
+  const then: ButtonRule['then'] = {}
+  if (row.tone) then.tone = row.tone as ButtonRule['then']['tone']
+  const icon = parseIconText(row.icon)
+  if (icon) then.icon = icon
+  if (row.sublabel.trim()) then.sublabel = row.sublabel.trim()
+  if (row.dim) then.dim = true
+  if (!Object.keys(then).length) return null // a rule that does nothing
+
+  return {
+    when: {
+      source,
+      op: row.op,
+      ...(row.op !== 'truthy' && row.value !== '' ? { value: row.value } : {}),
+    },
+    then,
+  }
+}
 
 // Sliders and display-only widgets have no meaningful press/release split —
 // the trigger row only makes sense for actions that actually dispatch.
@@ -1890,6 +2129,11 @@ function applyTemplate(template: ButtonTemplate) {
   if (template.style) {
     editedButton.value.style.backgroundColor = template.style.backgroundColor || '#667eea'
     editedButton.value.style.textColor = template.style.textColor || '#ffffff'
+  }
+
+  // Widget templates may carry a cell span (DL-129: Now Playing is 2×1)
+  if (template.size) {
+    editedButton.value.size = { ...template.size }
   }
 
   // Ensure button is enabled
@@ -2360,6 +2604,7 @@ function getActionTypeDisplayName(actionType: string): string {
     'calendar': 'Calendar',
     'time_world_clock': 'World Time',
     'time_timer': 'Timer',
+    'time_stopwatch': 'Stopwatch',
     'time_countdown': 'Countdown',
     'weather': 'Weather Query',
     'system_control': 'System Control',
@@ -2536,8 +2781,29 @@ function handleSave() {
       editedButton.value.action.config.temperature_unit = actionConfig.value.temperature_unit || 'C'
       editedButton.value.action.config.refresh_interval = actionConfig.value.refresh_interval || 15
     }
+
+    // Timers (DL-122): pin the mode (a stopwatch button stays a stopwatch
+    // even if the mode select is hidden) and carry the nested on_finish
+    // action only when one is actually picked.
+    if (isTimerType.value) {
+      const cfg = editedButton.value.action.config
+      cfg.mode = timerMode.value
+      if (cfg.mode !== 'countdown') delete cfg.duration_s
+      cfg.on_finish = timerOnFinish.value?.type
+        ? { type: timerOnFinish.value.type, config: { ...timerOnFinish.value.config } }
+        : undefined
+      // The legacy schema used timer_duration; drop it so the engine sees
+      // one canonical key.
+      delete cfg.timer_duration
+    }
   }
-  
+
+  // Conditional-style rules (DL-122): serialise the editor rows; an empty
+  // list stays [] rather than being dropped so the field round-trips.
+  editedButton.value.rules = ruleRows.value
+    .map(serializeRule)
+    .filter((r): r is ButtonRule => r !== null)
+
   emit('save', editedButton.value)
 }
 
@@ -3864,6 +4130,94 @@ onUnmounted(() => {
 
 .select-inline {
   min-height: 44px;
+}
+
+/* --- Conditional-style rule editor (DL-122) ---------------------------------- */
+.rules-editor {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+}
+
+.rules-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.rules-head label {
+  margin: 0;
+}
+
+.rule-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rule-card {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-sm, 8px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.rule-line {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.rule-line .select,
+.rule-line .input {
+  min-height: 40px;
+  min-width: 0;
+}
+
+.rule-source {
+  flex: 1.4;
+}
+
+.rule-agent-src {
+  flex: 0.6;
+}
+
+.rule-op {
+  flex: 0.5;
+}
+
+.rule-value {
+  flex: 0.8;
+}
+
+.rule-then-arrow {
+  color: var(--color-text-muted, #9aa0b4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.rule-tone {
+  flex: 0.9;
+}
+
+.rule-icon {
+  flex: 0.9;
+}
+
+.rule-sublabel {
+  flex: 1;
+}
+
+.rule-dim {
+  flex-shrink: 0;
+  font-size: 0.8rem;
 }
 </style>
 

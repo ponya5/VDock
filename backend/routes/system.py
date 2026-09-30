@@ -4,6 +4,7 @@ import socket
 from flask import Blueprint, request, jsonify
 from pathlib import Path
 from auth import require_auth
+from config import project_root, backend_dir, write_env_keys, read_env_key
 
 system_bp = Blueprint('system', __name__)
 
@@ -14,10 +15,6 @@ _MANAGED_ORIGIN = re.compile(
 )
 
 
-def _project_root() -> Path:
-    return Path(__file__).parent.parent.parent.absolute()
-
-
 # ── Port configuration ─────────────────────────────────────────────────
 # Mirrors setup.bat's :configure_ports — ports live in the .env files and
 # only take effect on restart, so this endpoint validates, probes for
@@ -25,52 +22,19 @@ def _project_root() -> Path:
 # restart is required.
 
 def _backend_dir() -> Path:
-    return _project_root() / 'backend'
+    return backend_dir()
 
 
 def _frontend_dir() -> Path:
-    return _project_root() / 'frontend'
+    return project_root() / 'frontend'
 
 
 def _read_env_key(env_file: Path, key: str) -> str:
-    if not env_file.exists():
-        return ''
-    try:
-        for line in env_file.read_text().splitlines():
-            stripped = line.strip()
-            if stripped.upper().startswith(f'{key.upper()}='):
-                return stripped.split('=', 1)[1].strip()
-    except OSError:
-        pass
-    return ''
+    return read_env_key(env_file, key)
 
 
 def _write_env_keys(env_file: Path, updates: dict) -> None:
-    """Replace ``KEY=value`` lines in place; append keys that are missing.
-
-    Unlike setup.bat's findstr strip, this preserves comments, blank lines
-    and unrelated keys.
-    """
-    env_file.parent.mkdir(parents=True, exist_ok=True)
-    lines = []
-    if env_file.exists():
-        lines = env_file.read_text().splitlines()
-
-    remaining = dict(updates)
-    out = []
-    for line in lines:
-        replaced = False
-        for key in list(remaining):
-            if line.strip().upper().startswith(f'{key.upper()}='):
-                out.append(f'{key}={remaining.pop(key)}')
-                replaced = True
-                break
-        if not replaced:
-            out.append(line)
-    for key, value in remaining.items():
-        out.append(f'{key}={value}')
-
-    env_file.write_text('\n'.join(out) + '\n')
+    write_env_keys(env_file, updates)
 
 
 def _port_in_use(port: int) -> bool:

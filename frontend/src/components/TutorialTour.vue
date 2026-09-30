@@ -115,16 +115,11 @@ async function prepareStep() {
   if (token !== prepareToken) return
   if (s.target) {
     const el = await waitForEl(s.target)
-    // Conditional UI (agent bar, mobile chrome swaps) may be absent or
-    // zero-sized (display:none still resolves querySelector) — treat both
-    // as missing so optional steps skip instead of spotlighting a void.
+    // Conditional UI (agent bar, hidden header, mobile chrome swaps) may
+    // be absent or zero-sized — a missing target renders as a centered
+    // card. The tour NEVER advances on its own: only Next/Back/Skip.
     const box = el?.getBoundingClientRect()
-    const missing = !el || !box || (box.width === 0 && box.height === 0)
-    if (missing && s.optional && !tour.isLast.value) {
-      tour.next()
-      return
-    }
-    if (missing) targetRect.value = null
+    if (!el || !box || (box.width === 0 && box.height === 0)) targetRect.value = null
   }
   if (token !== prepareToken) return
   measure()
@@ -133,18 +128,42 @@ async function prepareStep() {
 }
 
 watch(() => tour.state.stepIndex, prepareStep)
-watch(() => tour.state.active, (active) => { if (active) prepareStep() })
-// The user (or a Back step) may change routes mid-tour — re-anchor, or
-// auto-advance when the step declares advanceOnPath (e.g. the Profiles
-// step completes itself when the user lands on the dashboard).
+watch(() => tour.state.active, (active) => {
+  if (active) {
+    prepareStep()
+    // Keep the ring honest while a step is open: the target can slide
+    // away (header auto-hide), unmount (chrome swaps), or arrive late —
+    // none of those fire resize/scroll. ~3×/s re-measure follows the box
+    // (including transform-driven moves) and drops to a centered card if
+    // the target vanishes, instead of leaving a stale ring floating over
+    // whatever slid underneath.
+    startReanchor()
+  } else {
+    stopReanchor()
+  }
+})
+// The user (or a Back step) may change routes mid-tour — re-anchor onto
+// whatever the step's target resolves to on the new screen.
 watch(() => route.path, () => {
   if (!tour.state.active) return
-  if (step.value?.advanceOnPath && route.path === step.value.advanceOnPath) {
-    tour.next()
-    return
-  }
   prepareStep()
 })
+
+let reanchorTimer: ReturnType<typeof setInterval> | null = null
+function startReanchor() {
+  stopReanchor()
+  reanchorTimer = setInterval(() => {
+    if (!tour.state.active) return
+    const sel = step.value?.target
+    if (!sel) { targetRect.value = null; return }
+    const el = firstVisible(sel)
+    const r = el?.getBoundingClientRect()
+    targetRect.value = r && (r.width > 0 || r.height > 0) ? r : null
+  }, 350)
+}
+function stopReanchor() {
+  if (reanchorTimer) { clearInterval(reanchorTimer); reanchorTimer = null }
+}
 
 onMounted(() => {
   measure()
@@ -152,6 +171,7 @@ onMounted(() => {
   window.addEventListener('scroll', measure, true)
 })
 onUnmounted(() => {
+  stopReanchor()
   window.removeEventListener('resize', measure)
   window.removeEventListener('scroll', measure, true)
 })

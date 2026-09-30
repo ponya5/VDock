@@ -43,6 +43,13 @@ _INVOCABLE_EXTS = ('.exe', '.cmd', '.bat', '.com', '.js', '.mjs', '.cjs',
 _DESKTOP_APP_DIRS = ('anthropicclaude', 'windowsapps', r'packages\claude_',
                      'chromenativehost')
 
+#: IDE binaries that share a marker's name but are never sessions, matched as
+#: an exe-path suffix. The Devin IDE's process tree all runs
+#: ``<install>\Programs\Devin\Devin.exe`` (main, gpu, renderer, extension
+#: hosts); the real devin CLI ships deeper under ``resources\``, so only the
+#: binary at the install root is excluded.
+_DESKTOP_APP_BINS = (r'programs\devin\devin.exe',)
+
 
 def _is_desktop_app(info: dict, needle: str) -> bool:
     """True when the process lives under the desktop app's install dirs.
@@ -55,6 +62,8 @@ def _is_desktop_app(info: dict, needle: str) -> bool:
     exe = (info.get('exe') or '').lower()
     cmdline = info.get('cmdline') or []
     argv0 = str(cmdline[0]).lower() if cmdline else ''
+    if any(exe.endswith(b) for b in _DESKTOP_APP_BINS):
+        return True
     return any(d in exe or d in argv0 for d in _DESKTOP_APP_DIRS)
 
 
@@ -80,7 +89,12 @@ def _matches(info: dict, needle: str) -> bool:
     cmdline = info.get('cmdline') or []
     for i, token in enumerate(cmdline):
         if i == 0:
-            if needle in token.lower():
+            # Basename only: helpers whose exe merely lives under a directory
+            # named like the marker (OpenConsole.exe under Programs\Devin\)
+            # are not sessions — ``...bin\devin.exe`` still matches.
+            base = str(token).strip().strip('\'"').replace('/', os.sep)
+            base = base.rsplit(os.sep, 1)[-1].lower()
+            if needle in base:
                 return True
         elif _invocable_token(token, needle):
             return True

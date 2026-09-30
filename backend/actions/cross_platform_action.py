@@ -395,6 +395,7 @@ class CrossPlatformAction(BaseAction):
         'brightness_up', 'brightness_down', 'brightness_set',
         # Media control
         'media_play_pause', 'media_next', 'media_previous', 'media_stop',
+        'media_play_stop',
         # Web & Apps
         'open_url', 'open_app', 'open_folder', 'open_file', 'screenshot',
         'run_command', 'close_app', 'empty_recycle_bin',
@@ -458,6 +459,8 @@ class CrossPlatformAction(BaseAction):
                 return self._media_previous()
             elif action == 'media_stop':
                 return self._media_stop()
+            elif action == 'media_play_stop':
+                return self._media_play_stop()
             elif action == 'open_url':
                 return self._open_url()
             elif action == 'open_app':
@@ -485,13 +488,15 @@ class CrossPlatformAction(BaseAction):
 
     def _run_command(self, command: str, shell: bool = True) -> ActionResult:
         """Run a system command safely."""
+        from utils.subprocess_runner import child_env
         try:
             result = subprocess.run(
                 command,
                 shell=shell,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                env=child_env()
             )
             if result.returncode == 0:
                 return ActionResult(True, f'Command executed successfully')
@@ -1092,6 +1097,22 @@ class CrossPlatformAction(BaseAction):
             return ActionResult(False, 'Media control not available')
         else:
             return ActionResult(False, f'Media control not supported on {_SYSTEM}')
+
+    def _media_play_stop(self) -> ActionResult:
+        """DL-128: state-split transport — Stop while media plays, Play
+        otherwise. Decides from the now-playing service's last SMTC
+        snapshot so the choice matches what the deck face shows; absent
+        or unreadable state resolves to play/pause."""
+        playing = False
+        try:
+            from services import now_playing
+            snap = now_playing.snapshot() or {}
+            playing = snap.get('playing') is True
+        except Exception:
+            pass
+        if playing:
+            return self._media_stop()
+        return self._media_play_pause()
 
     def _media_stop(self) -> ActionResult:
         """Stop playback."""

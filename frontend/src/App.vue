@@ -18,6 +18,8 @@
     <TutorialTour />
     <QuickDeckOverlay v-if="!isStandaloneSettings" />
     <AgentAlertOverlay />
+    <!-- The lock screen sits above everything, including standalone settings -->
+    <AuthGate />
   </div>
 </template>
 
@@ -36,8 +38,11 @@ import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import TutorialTour from '@/components/TutorialTour.vue'
 import QuickDeckOverlay from '@/components/QuickDeckOverlay.vue'
 import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
+import AuthGate from '@/components/AuthGate.vue'
+import { probeAuth } from '@/services/auth'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { useToggleSync } from '@/services/toggleSync'
+import { initTriggerEvents } from '@/services/triggerEvents'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import type { AppIntegration } from '@/types'
@@ -65,6 +70,11 @@ onMounted(async () => {
 
   apiClient.setNotificationsStore(notificationsStore)
 
+  // Auth before anything else that talks to the server (DL-126): when the
+  // deck is locked the probe raises the gate and the calls below fail
+  // quietly — a successful unlock reloads the page and starts clean.
+  await probeAuth()
+
   await settingsStore.ensureSettingsLoaded()
   await settingsStore.loadServerConfig()
 
@@ -74,6 +84,7 @@ onMounted(async () => {
 
   socketClient.connect()
   useAgentAlerts().init()
+  initTriggerEvents()
   useToggleSync().init()
   stopLiveSettingsSync = settingsStore.initLiveSync()
 

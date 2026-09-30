@@ -117,13 +117,14 @@
 
 /* Base Styles */
 body {
-  background: var(--color-background);
-  /* Dark theme layers the violet backdrop image over its flat navy
-     --color-background; in light theme --app-backdrop is undefined so this
-     declaration is dropped and the shorthand gradient above wins. */
-  background-image: var(--app-backdrop);
-  background-attachment: fixed;
-  color: var(--color-text);
+  /* DL-124: keep this a literal colour — the themed vars (--color-background,
+     --app-backdrop) are defined on #app.theme-dark, a DESCENDANT of body, so
+     they never resolve here; worse, `background-image: var(--app-backdrop)`
+     is invalid at computed-value time on body and resets the image layer to
+     none, so even a gradient-valued --color-background left the canvas
+     transparent → white wherever the app under-fills the viewport. */
+  background: #0f1726;
+  color: var(--color-text, #e9eff8);
   min-height: 100vh;
   min-height: 100dvh; /* iOS Safari dynamic toolbar */
   font-size: clamp(13px, 1vw + 10px, 18px);

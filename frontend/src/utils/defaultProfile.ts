@@ -24,8 +24,9 @@ export function createDefaultScene(): Scene {
 
   // Volume controls share row 0, transport controls share row 1 — grouping
   // by function (rather than the previous volume/play-pause/volume/transport
-  // interleave) and ordering transport as Previous → Play/Pause → Next → Stop
-  // reads the same way a physical remote's button row does.
+  // interleave) and ordering transport as Previous → Play/Stop → Next.
+  // DL-129: the two-cell Now Playing card fills the rest of row 1, and
+  // DL-128's Play/Stop is the contextual transport (standalone Stop is gone).
   const buttons: Button[] = [
     makeButton({
       id: `btn-${Date.now()}-3`,
@@ -64,11 +65,11 @@ export function createDefaultScene(): Scene {
     }),
     makeButton({
       id: `btn-${Date.now()}-4`,
-      label: 'Play/Pause',
+      label: 'Play / Stop',
       icon: ['fas', 'play'],
       style: { backgroundColor: '#9b59b6', textColor: '#ffffff', iconSize: 32 },
       layers: { effect: { type: 'neon', tint: 'brand' } },
-      action: { type: 'cross_platform', config: { action: 'media_play_pause' } },
+      action: { type: 'cross_platform', config: { action: 'media_play_stop' } },
       position: { row: 1, col: 1 }
     }),
     makeButton({
@@ -81,11 +82,12 @@ export function createDefaultScene(): Scene {
     }),
     makeButton({
       id: `btn-${Date.now()}-7`,
-      label: 'Stop',
-      icon: ['fas', 'stop'],
-      style: { backgroundColor: '#c0392b', textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'cross_platform', config: { action: 'media_stop' } },
-      position: { row: 1, col: 3 }
+      label: 'Now Playing',
+      icon: ['fas', 'music'],
+      style: { backgroundColor: '#1e3264', textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'now_playing', config: {} },
+      position: { row: 1, col: 3 },
+      size: { rows: 1, cols: 2 }
     })
   ]
 

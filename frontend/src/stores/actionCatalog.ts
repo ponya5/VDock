@@ -54,9 +54,15 @@ export interface CategorySpec {
 /**
  * Used only until the catalog loads (or if it fails to). Every widget action
  * type in backend/actions/catalog.py matches one of these shapes.
+ *
+ * `time_` is not a blanket prefix: DL-122 made time_timer/time_stopwatch
+ * interactive (a tap toggles the timer), so the two remaining display-only
+ * clock faces are named exactly.
  */
-const FALLBACK_DISPLAY_ONLY_PREFIXES = ['metric_', 'time_'] as const
-const FALLBACK_DISPLAY_ONLY_EXACT = ['weather', 'calendar'] as const
+const FALLBACK_DISPLAY_ONLY_PREFIXES = ['metric_'] as const
+const FALLBACK_DISPLAY_ONLY_EXACT = [
+  'weather', 'calendar', 'time_world_clock', 'time_countdown'
+] as const
 
 const FALLBACK_DISPLAY_ONLY_TYPES: ReadonlySet<string> = {
   has: (value: string) =>

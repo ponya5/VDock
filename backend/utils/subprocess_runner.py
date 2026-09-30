@@ -297,3 +297,17 @@ def spawn(
         shell=False,
         creationflags=creation_flags,
     )
+
+
+def child_env() -> Dict[str, str]:
+    """os.environ minus vars that would poison spawned GUI apps.
+
+    When VDock itself is launched from an Electron/IDE shell it inherits
+    ``ELECTRON_RUN_AS_NODE=1`` (and friends). Passing that env through makes
+    every Electron-based child (Cursor, VS Code, Discord, ...) run as bare
+    Node and exit instantly -- the launch reports success but no window ever
+    appears. Strip the whole ``ELECTRON_*`` namespace; a child that truly
+    needs one can have it set in its own command.
+    """
+    return {k: v for k, v in os.environ.items()
+            if not k.startswith('ELECTRON_')}

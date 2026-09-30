@@ -132,6 +132,57 @@ def _read_env_port(env_file: Path, key: str, default: int) -> int:
     return default
 
 
+# Shared .env helpers — routes that persist launch-time configuration
+# (ports, auth password) write through these so comments, blank lines and
+# unrelated keys survive the rewrite.
+
+def project_root() -> Path:
+    return Path(__file__).parent.parent.absolute()
+
+
+def backend_dir() -> Path:
+    return project_root() / 'backend'
+
+
+def read_env_key(env_file: Path, key: str) -> str:
+    """Return the value of ``KEY`` in a .env file ('' when absent)."""
+    if not env_file.exists():
+        return ''
+    try:
+        for line in env_file.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.upper().startswith(f'{key.upper()}='):
+                return stripped.split('=', 1)[1].strip()
+    except OSError:
+        pass
+    return ''
+
+
+def write_env_keys(env_file: Path, updates: Dict[str, str]) -> None:
+    """Replace ``KEY=value`` lines in place; append keys that are missing.
+
+    Preserves comments, blank lines and unrelated keys.
+    """
+    env_file.parent.mkdir(parents=True, exist_ok=True)
+    lines = env_file.read_text().splitlines() if env_file.exists() else []
+
+    remaining = dict(updates)
+    out = []
+    for line in lines:
+        replaced = False
+        for key in list(remaining):
+            if line.strip().upper().startswith(f'{key.upper()}='):
+                out.append(f'{key}={remaining.pop(key)}')
+                replaced = True
+                break
+        if not replaced:
+            out.append(line)
+    for key, value in remaining.items():
+        out.append(f'{key}={value}')
+
+    env_file.write_text('\n'.join(out) + '\n')
+
+
 class Config:
     """Application configuration."""
     

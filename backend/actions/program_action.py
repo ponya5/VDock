@@ -23,6 +23,9 @@ class ProgramAction(BaseAction):
         working_dir = self.config.get('working_dir')
         
         try:
+            from utils.subprocess_runner import child_env
+            env = child_env()
+
             # Check if path exists; a bare app name (e.g. "cursor") falls
             # back to the app_paths override (DL-084), then PATH.
             if not Path(path).exists():
@@ -44,14 +47,16 @@ class ProgramAction(BaseAction):
                     cwd=working_dir,
                     shell=True,
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    env=env
                 )
             else:
                 subprocess.Popen(
                     cmd,
                     cwd=working_dir,
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    env=env
                 )
             
             return ActionResult(True, f'Launched: {Path(path).name}')

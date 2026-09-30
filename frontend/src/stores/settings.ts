@@ -64,11 +64,18 @@ export const SETTINGS_DEFAULTS = {
   screensaverWeatherSize: 100,
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_SCREENSAVER_BACKGROUND_ID,
+  screensaverStyle: 'widgets' as const,
+  spectrumSkin: 'winamp',
+  spectrumShuffle: false,
+  spectrumShuffleMinutes: 10,
+  spectrumMediaBar: true,
   dashboardFont: 'default' as const,
   appScanningEnabled: false,
   agentAlertsEnabled: true,
   agentWaitingGlowEnabled: true,
   agentWaitingGlowStyle: 'flash' as const,
+  agentWaitingDockEnabled: true,
+  mcpEnabled: true,
   tutorialCompleted: false,
   activeProfileId: null as string | null,
   pressSoundEnabled: true,
@@ -157,11 +164,27 @@ export interface PersistedUserSettings {
   worldClockTimezones: string
   screensaverWidgetSize: number
   screensaverBackground: string
+  /**
+   * DL-123/125: what the idle timeout shows. 'widgets' is the classic
+   * clock/weather/markets dashboard; 'spectrum' replaces the whole surface
+   * with the fullscreen audio visualizer + media bar; 'stats' swaps in the
+   * fullscreen system monitor.
+   */
+  screensaverStyle: 'widgets' | 'spectrum' | 'stats'
+  /** Spectrum skin id — see services/spectrumSkins.ts registry. */
+  spectrumSkin: string
+  /** Ephemeral skin rotation while the spectrum saver is on. */
+  spectrumShuffle: boolean
+  spectrumShuffleMinutes: number
+  /** Bottom transport pill inside the spectrum saver. */
+  spectrumMediaBar: boolean
   dashboardFont: 'default' | 'editorial' | 'mono'
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
   agentWaitingGlowEnabled: boolean
   agentWaitingGlowStyle: 'flash' | 'pulse' | 'orbit'
+  agentWaitingDockEnabled: boolean
+  mcpEnabled: boolean
   tutorialCompleted: boolean
   /**
    * Id of the profile most recently loaded on ANY window/device connected to
@@ -279,6 +302,12 @@ export const useSettingsStore = defineStore('settings', () => {
   // 'default' keeps the classic dark look; any other catalog id or uploaded
   // image URL paints behind the screensaver widgets.
   const screensaverBackground = ref<string>(DEFAULT_SCREENSAVER_BACKGROUND_ID)
+  // DL-123 spectrum screensaver mode + skin/shuffle/media-bar prefs.
+  const screensaverStyle = ref<'widgets' | 'spectrum' | 'stats'>('widgets')
+  const spectrumSkin = ref<string>('winamp')
+  const spectrumShuffle = ref(false)
+  const spectrumShuffleMinutes = ref(10)
+  const spectrumMediaBar = ref(true)
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   const appScanningEnabled = ref(false)
   const agentAlertsEnabled = ref(true)
@@ -287,6 +316,8 @@ export const useSettingsStore = defineStore('settings', () => {
   // Frame style for the waiting alert — flash double-blinks, pulse breathes
   // softly, orbit runs the travelling comet (DL-080 follow-up #2).
   const agentWaitingGlowStyle = ref<'flash' | 'pulse' | 'orbit'>('flash')
+  const agentWaitingDockEnabled = ref(true)
+  const mcpEnabled = ref(true)
   // Persisted onboarding flag — true once the tour is finished or skipped.
   // Server-backed (not localStorage) so it survives cache clears and is
   // shared by every window/device on this backend.
@@ -445,11 +476,18 @@ export const useSettingsStore = defineStore('settings', () => {
       worldClockTimezones: worldClockTimezones.value,
       screensaverWidgetSize: screensaverWidgetSize.value,
       screensaverBackground: screensaverBackground.value,
+      screensaverStyle: screensaverStyle.value,
+      spectrumSkin: spectrumSkin.value,
+      spectrumShuffle: spectrumShuffle.value,
+      spectrumShuffleMinutes: spectrumShuffleMinutes.value,
+      spectrumMediaBar: spectrumMediaBar.value,
       dashboardFont: dashboardFont.value,
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
       agentWaitingGlowEnabled: agentWaitingGlowEnabled.value,
       agentWaitingGlowStyle: agentWaitingGlowStyle.value,
+      agentWaitingDockEnabled: agentWaitingDockEnabled.value,
+      mcpEnabled: mcpEnabled.value,
       tutorialCompleted: tutorialCompleted.value,
       activeProfileId: activeProfileId.value,
       pressSoundEnabled: pressSoundEnabled.value,
@@ -514,11 +552,24 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.worldClockTimezones !== undefined) worldClockTimezones.value = settings.worldClockTimezones
     if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
     if (settings.screensaverBackground !== undefined) screensaverBackground.value = settings.screensaverBackground
+    if (
+      settings.screensaverStyle === 'widgets' ||
+      settings.screensaverStyle === 'spectrum' ||
+      settings.screensaverStyle === 'stats'
+    ) {
+      screensaverStyle.value = settings.screensaverStyle
+    }
+    if (settings.spectrumSkin !== undefined) spectrumSkin.value = settings.spectrumSkin
+    if (settings.spectrumShuffle !== undefined) spectrumShuffle.value = settings.spectrumShuffle
+    if (settings.spectrumShuffleMinutes !== undefined) spectrumShuffleMinutes.value = settings.spectrumShuffleMinutes
+    if (settings.spectrumMediaBar !== undefined) spectrumMediaBar.value = settings.spectrumMediaBar
     if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
     if (settings.agentWaitingGlowEnabled !== undefined) agentWaitingGlowEnabled.value = settings.agentWaitingGlowEnabled
     if (settings.agentWaitingGlowStyle !== undefined) agentWaitingGlowStyle.value = settings.agentWaitingGlowStyle
+    if (settings.agentWaitingDockEnabled !== undefined) agentWaitingDockEnabled.value = settings.agentWaitingDockEnabled
+    if (settings.mcpEnabled !== undefined) mcpEnabled.value = settings.mcpEnabled
     if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
     if (settings.activeProfileId !== undefined) activeProfileId.value = settings.activeProfileId
     if (settings.pressSoundEnabled !== undefined) pressSoundEnabled.value = settings.pressSoundEnabled
@@ -583,11 +634,18 @@ export const useSettingsStore = defineStore('settings', () => {
         worldClockTimezones: settings.worldClockTimezones ?? '',
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
         screensaverBackground: settings.screensaverBackground ?? DEFAULT_SCREENSAVER_BACKGROUND_ID,
+        screensaverStyle: settings.screensaverStyle ?? 'widgets',
+        spectrumSkin: settings.spectrumSkin ?? 'winamp',
+        spectrumShuffle: settings.spectrumShuffle === true,
+        spectrumShuffleMinutes: settings.spectrumShuffleMinutes ?? 10,
+        spectrumMediaBar: settings.spectrumMediaBar ?? true,
         dashboardFont: settings.dashboardFont ?? 'default',
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         agentWaitingGlowEnabled: settings.agentWaitingGlowEnabled ?? true,
         agentWaitingGlowStyle: settings.agentWaitingGlowStyle ?? 'flash',
+        agentWaitingDockEnabled: settings.agentWaitingDockEnabled ?? true,
+        mcpEnabled: settings.mcpEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
         activeProfileId: settings.activeProfileId ?? null,
         pressSoundEnabled: settings.pressSoundEnabled ?? true,
@@ -740,6 +798,11 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverWidgets,
       screensaverClockEnabled,
       screensaverWeatherSize,
+      screensaverStyle,
+      spectrumSkin,
+      spectrumShuffle,
+      spectrumShuffleMinutes,
+      spectrumMediaBar,
       newsApiKey,
       newsFeeds,
       sportsFeeds,
@@ -755,6 +818,8 @@ export const useSettingsStore = defineStore('settings', () => {
       agentAlertsEnabled,
       agentWaitingGlowEnabled,
       agentWaitingGlowStyle,
+      agentWaitingDockEnabled,
+      mcpEnabled,
       tutorialCompleted,
       activeProfileId,
       pressSoundEnabled,
@@ -963,11 +1028,18 @@ export const useSettingsStore = defineStore('settings', () => {
     worldClockTimezones,
     screensaverWidgetSize,
     screensaverBackground,
+    screensaverStyle,
+    spectrumSkin,
+    spectrumShuffle,
+    spectrumShuffleMinutes,
+    spectrumMediaBar,
     dashboardFont,
     appScanningEnabled,
     agentAlertsEnabled,
     agentWaitingGlowEnabled,
     agentWaitingGlowStyle,
+    agentWaitingDockEnabled,
+    mcpEnabled,
     tutorialCompleted,
     activeProfileId,
     pressSoundEnabled,
@@ -981,6 +1053,7 @@ export const useSettingsStore = defineStore('settings', () => {
     addRecentAction,
     clearRecentActions,
     saveSettings,
+    saveSettingsLocalOnly,
     loadSettings,
     loadSettingsFromServer,
     ensureSettingsLoaded,

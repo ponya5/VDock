@@ -14,6 +14,7 @@ import {
   FACTORY_SEED_SCENES
 } from '@/utils/defaultProfile'
 import { useMobileViewport } from '@/utils/mobileViewport'
+import timerButtons from '@/services/timerButtons'
 
 export const LAST_PROFILE_STORAGE_KEY = 'vdock_last_profile'
 
@@ -617,7 +618,32 @@ export const useDashboardStore = defineStore('dashboard', () => {
       setScene(index)
       return { success: true, message: `Scene: ${scenes[index].name}` }
     }
-    
+
+    // DL-129: the Now Playing card is a transport too — tap toggles
+    // play/pause through the normal cross-platform path.
+    if (button.action.type === 'now_playing') {
+      return executeAction(
+        { type: 'cross_platform', config: { action: 'media_play_pause' } },
+        button.id
+      )
+    }
+
+    // Timer buttons (DL-122): the engine lives in services/timerButtons —
+    // module-level, so a running countdown survives scene switches. Tap
+    // toggles start/pause; a tap on an expired countdown acknowledges the
+    // alarm and re-arms it. ('time_countdown' is still a display-only
+    // widget upstream — the include is defensive.)
+    if (button.action.type === 'time_timer' ||
+        button.action.type === 'time_stopwatch' ||
+        button.action.type === 'time_countdown') {
+      return timerButtons.toggle(
+        button.id,
+        button.action.config ?? {},
+        button.label,
+        button.action.type
+      )
+    }
+
     return executeAction(button.action, button.id)
   }
 

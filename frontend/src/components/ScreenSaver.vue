@@ -6,6 +6,12 @@
     @click="onRootTap"
     @touchstart.passive="onRootTap"
   >
+    <!-- DL-123/125: 'spectrum' and 'stats' styles each replace the whole
+         surface; widget mode (below) stays untouched. -->
+    <SpectrumStage v-if="spectrumMode" />
+    <StatsStage v-else-if="statsMode" />
+
+    <template v-else>
     <!-- Custom screensaver background on its own layer so it never has to
          fight the base color for specificity. Component-kind entries
          (WebGL/CSS effects) mount directly; a scrim keeps text readable. -->
@@ -244,6 +250,57 @@
       ></span>
     </div>
 
+    <!-- Standalone component widgets (DL-116/117/118): now-playing, audio
+         spectrum and system stats own their data plumbing entirely — the
+         .ss-pos wrapper only positions, drags and resizes them. -->
+    <div
+      v-if="showNowPlayingWidget"
+      :ref="el => setWidgetEl('nowplaying', el)"
+      class="ss-pos"
+      :class="{ 'ss-editing': layoutEdit }"
+      :style="posStyle('nowplaying', widgetScaleNum)"
+      @pointerdown="startDrag('nowplaying', $event)"
+    >
+      <NowPlayingWidget :layout-edit="layoutEdit" />
+      <span
+        v-if="layoutEdit"
+        class="ss-resize"
+        @pointerdown.stop="startResize('nowplaying', $event)"
+      ></span>
+    </div>
+
+    <div
+      v-if="showSpectrumWidget"
+      :ref="el => setWidgetEl('spectrum', el)"
+      class="ss-pos"
+      :class="{ 'ss-editing': layoutEdit }"
+      :style="posStyle('spectrum', widgetScaleNum)"
+      @pointerdown="startDrag('spectrum', $event)"
+    >
+      <SpectrumWidget :layout-edit="layoutEdit" />
+      <span
+        v-if="layoutEdit"
+        class="ss-resize"
+        @pointerdown.stop="startResize('spectrum', $event)"
+      ></span>
+    </div>
+
+    <div
+      v-if="showSystemStatsWidget"
+      :ref="el => setWidgetEl('systemstats', el)"
+      class="ss-pos"
+      :class="{ 'ss-editing': layoutEdit }"
+      :style="posStyle('systemstats', widgetScaleNum)"
+      @pointerdown="startDrag('systemstats', $event)"
+    >
+      <SystemStatsWidget :layout-edit="layoutEdit" />
+      <span
+        v-if="layoutEdit"
+        class="ss-resize"
+        @pointerdown.stop="startResize('systemstats', $event)"
+      ></span>
+    </div>
+
     <!-- Alignment guides — full-span dashed rules shown while a dragged
          widget snaps to another widget's edge/center or the viewport
          center line. -->
@@ -276,6 +333,7 @@
       <button type="button" class="ss-edit-btn ss-edit-btn-primary" @click="saveLayout">Save</button>
       <button type="button" class="ss-edit-btn" @click="emit('dismiss')">Done</button>
     </div>
+    </template>
   </div>
 </template>
 
@@ -294,6 +352,11 @@ import { useSettingsStore } from '@/stores/settings'
 import { resolveBackground, DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
+import NowPlayingWidget from '@/components/screensaver/NowPlayingWidget.vue'
+import SpectrumWidget from '@/components/screensaver/SpectrumWidget.vue'
+import SystemStatsWidget from '@/components/screensaver/SystemStatsWidget.vue'
+import SpectrumStage from '@/components/screensaver/SpectrumStage.vue'
+import StatsStage from '@/components/screensaver/StatsStage.vue'
 import {
   defaultScreensaverLayout,
   type ScreensaverLayout,
@@ -431,6 +494,20 @@ const visibleNewsItems = computed(() =>
 const showMarketWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('market'))
 const showWorldClockWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('worldclock'))
 const showSportsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('sports'))
+// DL-116/117/118 widgets stay desktop-only like markets — the mobile
+// screensaver keeps its curated small set.
+// DL-123: 'spectrum' style swaps the entire surface for the visualizer —
+// layoutEdit still forces the widget dashboard (it edits that layout).
+const spectrumMode = computed(() =>
+  settingsStore.screensaverStyle === 'spectrum' && !props.layoutEdit
+)
+// DL-125: same swap for the fullscreen system monitor.
+const statsMode = computed(() =>
+  settingsStore.screensaverStyle === 'stats' && !props.layoutEdit
+)
+const showNowPlayingWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('nowplaying'))
+const showSpectrumWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('spectrum'))
+const showSystemStatsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('systemstats'))
 
 // User-tunable text scale for the info widgets (Settings → Screensaver →
 // Widget size), amplified in touch modes. Capped at 1.35 so the three-across
@@ -543,6 +620,7 @@ function clampCenter(id: ScreensaverWidgetId, x: number, y: number, scale: numbe
 // Info widgets take the widget-size slider on top of the layout scale.
 const usesWidgetScale = (id: ScreensaverWidgetId) =>
   id === 'market' || id === 'news' || id === 'sports' || id === 'worldclock'
+  || id === 'nowplaying' || id === 'spectrum' || id === 'systemstats'
 
 // Effective scale for a widget, capped by the measured viewport: a widget
 // that renders taller than ~46% of the screen (or wider than ~62%) can never
@@ -569,6 +647,9 @@ const mountedWidgets = computed<ScreensaverWidgetId[]>(() => {
   if (showNewsWidget.value) ids.push('news')
   if (showSportsWidget.value) ids.push('sports')
   if (showWorldClockWidget.value) ids.push('worldclock')
+  if (showNowPlayingWidget.value) ids.push('nowplaying')
+  if (showSpectrumWidget.value) ids.push('spectrum')
+  if (showSystemStatsWidget.value) ids.push('systemstats')
   return ids
 })
 
@@ -979,10 +1060,13 @@ onMounted(() => {
     })
     for (const el of widgetEls.values()) widgetObserver.observe(el)
   }
-  if (showWeatherWidget.value) startWeather()
-  if (showNewsWidget.value) startNews()
-  if (showSportsWidget.value) startSports()
-  if (showMarketWidget.value) startMarket()
+  // Spectrum mode doesn't render the widgets — don't poll their feeds.
+  if (!spectrumMode.value) {
+    if (showWeatherWidget.value) startWeather()
+    if (showNewsWidget.value) startNews()
+    if (showSportsWidget.value) startSports()
+    if (showMarketWidget.value) startMarket()
+  }
 })
 
 onUnmounted(() => {

@@ -82,3 +82,37 @@ tooltip rather than replaced by a vague "Unavailable".
   364/365 pass — the single failure is the randomized `property8`
   clamp() sampler catching a pre-existing `font-size: 19px` in
   `SettingsView.vue` (untouched by this change).
+
+## Follow-up — automatic mode uses the machine's IP location
+
+**Symptom reported:** the widget chip showed `LOCATION UNAVAILABLE — SET A
+…` / `--°C` forever on the panel — the only "automatic" source was
+`navigator.geolocation`, which the kiosk webview denies, so no fix was
+ever possible without typing a city.
+
+**Fix:** the backend resolves *its own* machine's public IP to a
+city-level fix — that IS "the local machine's location", requires no
+permission prompt and no GPS, and works identically on the panel and any
+browser.
+
+- `backend/services/geolocation.py` — `resolve()` queries `ipwho.is`
+  (free, key-less, HTTPS), returns `{latitude, longitude, label}`
+  ("City, CC"); result TTL-cached 6 h, failures back off 60 s so a dead
+  uplink can't stall every refresh.
+- `backend/routes/geo.py` — `GET /api/geo` →
+  `{success, location}` or 503; `@require_auth` like every other route.
+- `useWeather.refresh()` automatic chain is now: **machine IP fix →
+  browser geolocation → saved manual city → honest error**. Manual mode
+  is unchanged (saved city first, always).
+- Settings copy corrected: "Automatic (this device)" and the note now
+  says the machine's location is detected without a permission prompt.
+
+**Verified**
+
+- `pytest tests/test_geo.py` → 6 passed (success, 503, TTL cache,
+  negative-cache backoff, ipwho.is field mapping + failure raise).
+- New `weather-machine-location.test.ts` → 5 passed (machine-first,
+  browser fallback, city fallback, manual unchanged, terminal error).
+- Live: restarted backend, `GET /api/geo` → real fix
+  (Modiin-Maccabim-Reut, IL); `/api/now-playing` unaffected.
+- Full suites: 1073 backend, 460 frontend, `npm run build` clean.

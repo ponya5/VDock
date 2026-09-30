@@ -20,6 +20,7 @@ from config import Config  # noqa: E402
 
 _GUARDED_SETTINGS = (
     'REQUIRE_AUTH',
+    'AUTH_PASSWORD',
     'ALLOW_COMMAND_EXECUTION',
     'REQUIRE_COMMAND_CONFIRMATION',
     'ENABLE_PLUGINS',

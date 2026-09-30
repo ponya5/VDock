@@ -60,14 +60,13 @@
         :icon-size="button.style?.iconSize || 32"
       />
 
-      <!-- Timer -->
-      <TimeOptionsButton
-        v-else-if="button.action?.type === 'time_timer'"
-        time-option="timer"
-        :timer-duration="button.action?.config?.timer_duration || 0"
+      <!-- Timer / Stopwatch (DL-122): engine-backed face; the tap toggles
+           via the normal press path, so this face is display-only. -->
+      <TimerButtonFace
+        v-else-if="button.action?.type === 'time_timer' || button.action?.type === 'time_stopwatch'"
+        :button="button"
         :compact="compact"
         :font-size="button.action?.config?.font_size || 1.0"
-        :icon-size="button.style?.iconSize || 32"
       />
 
       <!-- Countdown -->
@@ -101,6 +100,12 @@
         :button="button"
         :compact="compact"
         :button-size="buttonSize"
+      />
+
+      <!-- Now Playing (DL-129): live SMTC track card; tap toggles play/pause. -->
+      <NowPlayingButtonFace
+        v-else-if="button.action?.type === 'now_playing'"
+        :compact="compact"
       />
 
       <div v-else-if="isFolderStyle || resolvedVisual.icon.type !== 'none' || (resolvedVisual.fill.type === 'image' && resolvedVisual.fill.value)" class="button-icon">
@@ -151,11 +156,11 @@
       </div>
 
       <div
-        v-if="(liveState?.sublabel || resolvedVisual.label.secondary) && showLabels && !isSpecialActionType"
+        v-if="(rulePatch?.sublabel || liveState?.sublabel || resolvedVisual.label.secondary) && showLabels && !isSpecialActionType"
         class="button-secondary-label"
         :style="secondaryLabelStyle"
       >
-        {{ liveState?.sublabel || resolvedVisual.label.secondary }}
+        {{ rulePatch?.sublabel || liveState?.sublabel || resolvedVisual.label.secondary }}
       </div>
     </div>
 
@@ -217,9 +222,14 @@ import { vibrate } from '@/utils/haptics'
 import { usePressFeedback } from '@/composables/usePressFeedback'
 import PerformanceMonitorButton from './PerformanceMonitorButton.vue'
 import SliderButtonFace from './SliderButtonFace.vue'
+import TimerButtonFace from './TimerButtonFace.vue'
+import NowPlayingButtonFace from './NowPlayingButtonFace.vue'
 import TimeOptionsButton from './TimeOptionsButton.vue'
 import WeatherQueryButton from './WeatherQueryButton.vue'
 import CalendarButton from './CalendarButton.vue'
+import conditionalState from '@/services/conditionalState'
+import { evaluateRules } from '@/services/buttonRules'
+import timerButtons from '@/services/timerButtons'
 import { useButtonStateStore } from '@/stores/buttonState'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
@@ -318,7 +328,7 @@ function endEditModeGrab() {
 // Check if this is a special action type that renders its own content
 const isSpecialActionType = computed(() => {
   const type = props.button.action?.type
-  return type?.startsWith('metric_') || type?.startsWith('time_') || type === 'weather' || type === 'slider'
+  return type?.startsWith('metric_') || type?.startsWith('time_') || type === 'weather' || type === 'slider' || type === 'now_playing'
 })
 
 // Check if this is a metric action type
@@ -352,6 +362,20 @@ const getMetricFromActionType = computed(() => {
 const { playPressSound } = usePressFeedback()
 
 /**
+ * Conditional-style rules (DL-122): first matching rule wins, evaluated
+ * against the shared conditionalState feed plus this button's own timer
+ * state. No rules → null → the stock face renders untouched.
+ */
+const rulePatch = computed(() => {
+  const rules = props.button.rules
+  if (!rules?.length) return null
+  return evaluateRules(rules, {
+    ...conditionalState,
+    timer: { running: timerButtons.isRunning(props.button.id) }
+  })
+})
+
+/**
  * Toggle buttons render their current side: side 1 ("on" ran last) applies the
  * configured on-icon/on-color/on-label; side 0 the off- set. The backend owns
  * the state — this only paints what `buttonStateStore` already recorded.
@@ -359,23 +383,48 @@ const { playPressSound } = usePressFeedback()
 const resolvedVisual = computed(() => {
   const vis = resolveButtonVisual(props.button)
   const cfg = props.button.action?.config
-  if (props.button.action?.type !== 'toggle' || !cfg) return vis
+  let out = vis
 
-  const on = liveState.value?.toggleSide === 1
-  const icon = on ? cfg.on_icon : cfg.off_icon
-  const color = on ? cfg.on_color : cfg.off_color
-  const stateLabel = on ? cfg.on_label : cfg.off_label
+  if (props.button.action?.type === 'toggle' && cfg) {
+    const on = liveState.value?.toggleSide === 1
+    const icon = on ? cfg.on_icon : cfg.off_icon
+    const color = on ? cfg.on_color : cfg.off_color
+    const stateLabel = on ? cfg.on_label : cfg.off_label
 
-  return {
-    ...vis,
-    icon: icon
-      ? { ...vis.icon, type: 'fontawesome' as const, value: icon }
-      : vis.icon,
-    fill: color ? { type: 'solid' as const, value: color } : vis.fill,
-    label: stateLabel
-      ? { ...vis.label, secondary: stateLabel }
-      : vis.label,
+    out = {
+      ...vis,
+      icon: icon
+        ? { ...vis.icon, type: 'fontawesome' as const, value: icon }
+        : vis.icon,
+      fill: color ? { type: 'solid' as const, value: color } : vis.fill,
+      label: stateLabel
+        ? { ...vis.label, secondary: stateLabel }
+        : vis.label,
+    }
   }
+
+  // DL-128: Play/Stop is a state-split transport — the face follows the
+  // live SMTC feed so it always shows what the press will do.
+  if (props.button.action?.type === 'cross_platform' &&
+      cfg?.action === 'media_play_stop') {
+    const playing = conditionalState.nowPlaying.playing
+    out = {
+      ...out,
+      icon: { ...out.icon, type: 'fontawesome' as const, value: playing ? ['fas', 'stop'] : ['fas', 'play'] },
+      label: { ...out.label, secondary: playing ? 'Stop' : 'Play' },
+    }
+  }
+
+  // A rule's icon override beats even the toggle's per-side icon — the
+  // rule is the more specific, state-driven user config.
+  const iconOverride = rulePatch.value?.icon
+  if (iconOverride) {
+    out = {
+      ...out,
+      icon: { ...out.icon, type: 'fontawesome' as const, value: iconOverride }
+    }
+  }
+  return out
 })
 
 const buttonClasses = computed(() => {
@@ -433,7 +482,14 @@ const buttonClasses = computed(() => {
     'btn-scale': anim === 'scale',
     'btn-slide': anim === 'slide',
     'btn-fade': anim === 'fade',
-    'btn-spin': anim === 'spin'
+    'btn-spin': anim === 'spin',
+
+    // Conditional-style rule patch (DL-122): ring tint + dim.
+    'rule-tone-warning': rulePatch.value?.tone === 'warning',
+    'rule-tone-critical': rulePatch.value?.tone === 'critical',
+    'rule-tone-success': rulePatch.value?.tone === 'success',
+    'rule-tone-accent': rulePatch.value?.tone === 'accent',
+    'rule-dim': !!rulePatch.value?.dim
   }
 })
 
@@ -1020,6 +1076,7 @@ function triggerRipple(event: PointerEvent) {
 /* Special action types that render full content */
 .button-content > .performance-monitor,
 .button-content > .time-options,
+.button-content > .timer-face,
 .button-content > .weather-query {
   width: 100%;
   height: 100%;
@@ -1311,6 +1368,45 @@ function triggerRipple(event: PointerEvent) {
 .button-badge.tone-critical {
   background: rgba(220, 38, 38, 0.9);
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* --- Conditional-style rule patches (DL-122) --------------------------------
+   then.tone tints the key's edge; then.dim fades the face contents. */
+.deck-button.rule-tone-warning {
+  border-color: rgba(217, 119, 6, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(8, 6, 30, 0.28),
+    0 0 0 2px rgba(217, 119, 6, 0.45);
+}
+
+.deck-button.rule-tone-critical {
+  border-color: rgba(220, 38, 38, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(8, 6, 30, 0.28),
+    0 0 0 2px rgba(220, 38, 38, 0.55);
+}
+
+.deck-button.rule-tone-success {
+  border-color: rgba(34, 197, 94, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(8, 6, 30, 0.28),
+    0 0 0 2px rgba(34, 197, 94, 0.45);
+}
+
+.deck-button.rule-tone-accent {
+  border-color: var(--color-primary, #5b8cff);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(8, 6, 30, 0.28),
+    0 0 0 2px color-mix(in srgb, var(--color-primary, #5b8cff) 55%, transparent);
+}
+
+.deck-button.rule-dim .button-content {
+  opacity: 0.45;
+  filter: saturate(0.55);
 }
 
 /* The running state is a progress indicator, not decoration. */

@@ -61,6 +61,13 @@ ALLOWED_USER_SETTING_KEYS = {
     'screensaverWidgetSize',
     'screensaverBackground',
     'screensaverLayout',
+    # DL-123: fullscreen spectrum saver — style, skin, shuffle, media bar.
+    'screensaverStyle',
+    'spectrumSkin',
+    'spectrumShuffle',
+    'spectrumShuffleMinutes',
+    'spectrumMediaBar',
+    'dashboardFont',
     'tutorialCompleted',
     # Id of the profile most recently loaded on any window/device — lets a
     # second device (e.g. a phone connecting for the first time) land on
@@ -68,6 +75,12 @@ ALLOWED_USER_SETTING_KEYS = {
     'activeProfileId',
     'appScanningEnabled',
     'agentAlertsEnabled',
+    # DL-119: waiting glow on/off + style, and the pinned waiting-dock chips.
+    'agentWaitingGlowEnabled',
+    'agentWaitingGlowStyle',
+    'agentWaitingDockEnabled',
+    # DL-121: MCP server on/off (routes/mcp.py reads it back per request).
+    'mcpEnabled',
     'pressSoundEnabled',
     'pressSoundStyle',
 }

@@ -4,6 +4,7 @@ import {
   geocodeCity,
   reverseGeocode,
   getBrowserLocation,
+  getMachineLocation,
   fetchCurrentWeather,
   type WeatherResult
 } from '@/services/weatherService'
@@ -29,6 +30,16 @@ export function useWeather() {
           return
         }
         weather.value = await fetchCurrentWeather(geocoded, geocoded.label)
+        return
+      }
+
+      // Automatic mode: this machine's public-IP fix first — the backend
+      // IS the local machine, so it works on the kiosk panel where
+      // navigator.geolocation is denied. Browser geolocation is the
+      // fallback (more precise where the browser allows it).
+      const machine = await getMachineLocation().catch(() => null)
+      if (machine) {
+        weather.value = await fetchCurrentWeather(machine, machine.label)
         return
       }
 

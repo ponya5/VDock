@@ -146,7 +146,7 @@ export function presetToButton(preset: ButtonPreset, position: ButtonPosition): 
     icon_type: iconType,
     shape: 'rounded',
     position: { row: position.row, col: position.col },
-    size: { rows: 1, cols: 1 },
+    size: preset.size ? { ...preset.size } : { rows: 1, cols: 1 },
     style: {
       // preset.effect uses the broader Phase-3 EffectType (adds fire/plasma/etc, not
       // yet implemented as CSS classes per task 5.5); only forward it when it maps
