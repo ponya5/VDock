@@ -13,8 +13,9 @@ POSTs are accepted only from localhost: this is a local webhook surface
 for agent hooks, not a network API.
 """
 import logging
+import threading
 import time
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
 
@@ -31,7 +32,12 @@ agent_events_bp = Blueprint('agent_events', __name__)
 # ---------------------------------------------------------------------------
 
 _emitter: Optional[Callable[[str, Dict[str, Any]], None]] = None
-_current_alert: Optional[Dict[str, Any]] = None
+
+#: One live alert per agent source (DL-119) — a second waiting agent no
+#: longer overwrites the first, and each source dismisses independently.
+#: Hook POSTs arrive on request threads, so reads/mutations take the lock.
+_alerts: Dict[str, Dict[str, Any]] = {}
+_alerts_lock = threading.Lock()
 
 # Alerts go stale — if the agent was killed mid-prompt nothing clears it.
 ALERT_TTL_SECONDS = agent_state.STATE_TTL_SECONDS
@@ -57,7 +63,9 @@ def _emit(event_name: str, payload: Dict[str, Any]) -> None:
 
 
 def _broadcast_alert() -> None:
-    _emit('agent_alert', {'alert': _current_alert})
+    alerts = _alerts_list()
+    _emit('agent_alert', {'alert': alerts[0] if alerts else None,
+                          'alerts': alerts})
 
 
 def _broadcast_states() -> None:
@@ -68,11 +76,13 @@ def _is_expired(alert: Dict[str, Any]) -> bool:
     return (time.time() - alert.get('ts', 0)) > ALERT_TTL_SECONDS
 
 
-def _current() -> Optional[Dict[str, Any]]:
-    global _current_alert
-    if _current_alert and _is_expired(_current_alert):
-        _current_alert = None
-    return _current_alert
+def _alerts_list() -> List[Dict[str, Any]]:
+    """Live alerts newest-first; expired entries drop out on read."""
+    with _alerts_lock:
+        for source in [s for s, a in _alerts.items() if _is_expired(a)]:
+            del _alerts[source]
+        return sorted(_alerts.values(),
+                      key=lambda alert: alert.get('ts', 0), reverse=True)
 
 
 def _localhost_only() -> bool:
@@ -97,21 +107,23 @@ def _wants_attention(data: Dict[str, Any], state: Optional[str]) -> bool:
 
 def _update_alert(source: str, raise_alert: bool, message: str,
                   project: str, cwd: str) -> None:
-    global _current_alert
     if raise_alert:
-        _current_alert = {
-            'source': source,
-            'message': message or 'Agent is waiting for input',
-            'project': project,
-            'cwd': cwd,
-            'ts': time.time(),
-        }
+        with _alerts_lock:
+            _alerts[source] = {
+                'source': source,
+                'message': message or 'Agent is waiting for input',
+                'project': project,
+                'cwd': cwd,
+                'ts': time.time(),
+            }
         logger.info('Agent attention: %s — %s', source, message)
-    elif _current_alert and _current_alert.get('source') == source:
+    else:
         combined = agent_state.get(source) or {}
-        # Another session of this agent may still be blocked on a prompt.
+        # Another session of this agent may still be blocked on a prompt —
+        # and other sources' alerts are untouched either way (DL-119).
         if combined.get('state') != agent_state.STATE_PERMISSION:
-            _current_alert = None
+            with _alerts_lock:
+                _alerts.pop(source, None)
     _broadcast_alert()
 
 
@@ -176,16 +188,26 @@ def get_agent_states():
 @agent_events_bp.route('/api/agent-events/current', methods=['GET'])
 @require_auth
 def get_current_alert():
-    """Current pending alert — clients fetch on load/reconnect."""
-    return jsonify({'success': True, 'alert': _current()})
+    """Pending alerts — clients fetch on load/reconnect.
+
+    ``alert`` stays the newest (legacy shape); ``alerts`` is the full list,
+    newest first (DL-119)."""
+    alerts = _alerts_list()
+    return jsonify({'success': True,
+                    'alert': alerts[0] if alerts else None,
+                    'alerts': alerts})
 
 
 @agent_events_bp.route('/api/agent-events/current', methods=['DELETE'])
 @require_auth
 def clear_current_alert():
-    """Dismiss the current alert (user pressed Dismiss)."""
-    global _current_alert
-    _current_alert = None
+    """Dismiss alerts — ``?source=<s>`` clears one, no param clears all."""
+    source = request.args.get('source')
+    with _alerts_lock:
+        if source:
+            _alerts.pop(agent_state.normalise_source(source), None)
+        else:
+            _alerts.clear()
     _broadcast_alert()
     return jsonify({'success': True})
 

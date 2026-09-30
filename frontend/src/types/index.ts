@@ -26,10 +26,13 @@ export type ActionType =
   | 'time_world_clock'
   | 'time_timer'
   | 'time_countdown'
+  | 'time_stopwatch'
   // Weather
   | 'weather'
   // Calendar widget
   | 'calendar'
+  // Live now-playing track card (SMTC)
+  | 'now_playing'
   | 'cross_platform'
   | 'folder'
   | 'plugin'
@@ -151,6 +154,29 @@ export interface ButtonStyle {
   [key: string]: any
 }
 
+/**
+ * Conditional-style rule (DL-122): when `when` matches the live
+ * conditional state, `then` patches the button's appearance for that
+ * render — first matching rule wins. Evaluated client-side by
+ * `services/buttonRules.ts`; the backend stores it verbatim.
+ */
+export interface ButtonRule {
+  when: {
+    /** e.g. 'volume.muted', 'now_playing.playing', 'agent.claude.state',
+        'timer.running', 'time.hour' */
+    source: string
+    op: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'truthy'
+    value?: unknown
+  }
+  then: {
+    tone?: 'warning' | 'critical' | 'success' | 'accent'
+    /** FontAwesome [prefix, name] pair, e.g. ['fas', 'volume-mute']. */
+    icon?: [string, string]
+    sublabel?: string
+    dim?: boolean
+  }
+}
+
 export interface Button {
   id: string
   label: string
@@ -167,6 +193,7 @@ export interface Button {
   layers?: ButtonLayers
   tooltip?: string
   enabled: boolean
+  rules?: ButtonRule[]
 }
 
 export interface GridConfig {
@@ -305,5 +332,9 @@ export interface ServerConfig {
   deck_host?: string | null
   /** True when the server binds broadly enough for LAN devices to reach it. */
   lan_reachable?: boolean
+  /** A deck password exists — the password itself is never returned (DL-126). */
+  auth_password_set?: boolean
+  /** Write-only: set/change the deck password via PUT /api/config (DL-126). */
+  auth_password?: string
 }
 

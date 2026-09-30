@@ -34,4 +34,6 @@ export interface ButtonPreset {
   loop?: IconLoop // per-icon animation
   action: ButtonAction
   keywords?: string[] // "chatgpt" also matches "gpt", "openai"
+  /** Cell span — display widgets like Now Playing come in at 2×1. */
+  size?: { rows: number; cols: number }
 }

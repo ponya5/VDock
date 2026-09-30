@@ -101,6 +101,28 @@
         </div>
       </div>
       <div class="autohide-progress" :style="{ width: progressWidth + '%' }"></div>
+      <!-- Auto-hide countdown chip: the 4px line alone never told the user
+           how long they had. Gradient-border pill (star/glow layers behind
+           the face) with live seconds; a tap pins the header open — the
+           collapse handle/swipe still works from pinned. -->
+      <button
+        type="button"
+        class="autohide-pill"
+        :class="{ pinned: autohidePaused }"
+        :title="autohidePaused ? 'Header pinned — tap to resume auto-hide' : `Header hides in ${secondsLeft}s — tap to keep it open`"
+        :aria-label="autohidePaused ? 'Header pinned — tap to resume auto-hide' : `Header hides in ${secondsLeft} seconds — tap to keep it open`"
+        @click="toggleAutohidePin"
+      >
+        <span class="pill-stars" aria-hidden="true"></span>
+        <span class="pill-glow" aria-hidden="true">
+          <span class="pill-circle"></span>
+          <span class="pill-circle"></span>
+        </span>
+        <span class="pill-face">
+          <FontAwesomeIcon :icon="['fas', autohidePaused ? 'thumbtack' : 'clock']" class="pill-icon" />
+          <span class="pill-secs">{{ autohidePaused ? 'Pinned' : `${secondsLeft}s` }}</span>
+        </span>
+      </button>
       <!-- Visible collapse affordance — mirrors the reveal handle so hiding the
            header (swipe up) isn't only discoverable via an invisible gesture -->
       <button
@@ -240,11 +262,26 @@ async function handleRefreshVdock() {
 }
 let autohideTimer: ReturnType<typeof setInterval> | null = null
 let autohideRemainingMs = 5000
+// Refs mirror the tick for the countdown pill's face.
+const secondsLeft = ref(5)
+const autohidePaused = ref(false)
 const AUTOHIDE_MS = 5000
 const TICK_MS = 50
 
+function toggleAutohidePin() {
+  autohidePaused.value = !autohidePaused.value
+  if (autohidePaused.value) {
+    stopAutohide()
+  } else {
+    // Resume from where it paused rather than restarting at 5s —
+    // unpinning should not silently grant a fresh window.
+    startAutohide(autohideRemainingMs)
+  }
+}
+
 function collapseHeader() {
   stopAutohide()
+  autohidePaused.value = false
   settingsStore.showHeader = false
 }
 
@@ -268,12 +305,14 @@ function autoHideOnShortViewport() {
   }
 }
 
-function startAutohide() {
+function startAutohide(fromMs: number = AUTOHIDE_MS) {
   stopAutohide()
-  autohideRemainingMs = AUTOHIDE_MS
-  progressWidth.value = 100
+  autohideRemainingMs = fromMs
+  secondsLeft.value = Math.ceil(autohideRemainingMs / 1000)
+  progressWidth.value = (autohideRemainingMs / AUTOHIDE_MS) * 100
   autohideTimer = setInterval(() => {
     autohideRemainingMs -= TICK_MS
+    secondsLeft.value = Math.max(0, Math.ceil(autohideRemainingMs / 1000))
     progressWidth.value = Math.max(0, (autohideRemainingMs / AUTOHIDE_MS) * 100)
     if (autohideRemainingMs <= 0) {
       stopAutohide()
@@ -307,6 +346,7 @@ watch(() => settingsStore.showHeader, (visible) => {
     startAutohide()
   } else {
     stopAutohide()
+    autohidePaused.value = false
   }
 })
 
@@ -613,6 +653,133 @@ onUnmounted(() => {
   border-radius: 0 2px 2px 0;
   transition: width 0.1s linear;
   pointer-events: none;
+}
+
+/* Auto-hide countdown pill — gradient-border glass chip (animated
+   border-clip trick), a drifting star layer and two blurred glow blobs
+   behind the face. Bottom-right mirrors the reveal FAB's corner. Tap =
+   pin the header open. */
+.autohide-pill {
+  position: absolute;
+  bottom: 8px;
+  right: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(rgba(14, 12, 36, 0.88), rgba(14, 12, 36, 0.88)),
+    linear-gradient(137.48deg, #ffdb3b 10%, #fe53bb 45%, #8f51ea 67%, #0044ff 87%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 300% 300%;
+  animation: pill-border-sweep 5s ease infinite;
+  overflow: hidden;
+  color: #fff;
+  font-size: calc(0.72rem * var(--touch-multiplier, 1));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: transform 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes pill-border-sweep {
+  0% { background-position: 0% 0%, 0% 50%; }
+  50% { background-position: 0% 0%, 100% 50%; }
+  100% { background-position: 0% 0%, 0% 50%; }
+}
+
+/* Star field — one grid of 1px dots drifting up by exactly one period
+   (22px) per loop, so the wrap is seamless and transform-composited. */
+.pill-stars {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pill-stars::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 22px);
+  background-image: radial-gradient(#ffffff 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  opacity: 0.26;
+  animation: pill-stars-drift 3.6s linear infinite;
+}
+
+@keyframes pill-stars-drift {
+  to { transform: translateY(-22px); }
+}
+
+.pill-glow {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.pill-circle {
+  width: 60%;
+  height: 150%;
+  margin-top: -6%;
+  filter: blur(12px);
+  animation: pill-glow-pulse 4s ease-in-out infinite;
+}
+
+.pill-circle:nth-of-type(1) { background: rgba(254, 83, 186, 0.5); }
+.pill-circle:nth-of-type(2) { background: rgba(142, 81, 234, 0.55); }
+
+@keyframes pill-glow-pulse {
+  0%, 100% { transform: scale(0.8); }
+  50% { transform: scale(1.08); }
+}
+
+.pill-face {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill-icon { font-size: 0.8em; opacity: 0.9; }
+.pill-secs { min-width: 3.4ch; text-align: left; font-variant-numeric: tabular-nums; }
+
+/* Pinned: the countdown is stopped, so the chip stops asking for
+   attention — gradient freezes mid-sweep, glow dims. */
+.autohide-pill.pinned {
+  animation-play-state: paused;
+}
+
+.autohide-pill.pinned .pill-stars::before,
+.autohide-pill.pinned .pill-circle {
+  animation: none;
+}
+
+.autohide-pill.pinned .pill-circle { opacity: 0.4; }
+
+@media (hover: hover) and (pointer: fine) {
+  .autohide-pill:hover { transform: scale(1.06); }
+}
+
+.autohide-pill:active { transform: scale(0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  .autohide-pill,
+  .autohide-pill .pill-stars::before,
+  .autohide-pill .pill-circle {
+    animation: none;
+  }
 }
 
 /* Enhanced scene nav sizing */

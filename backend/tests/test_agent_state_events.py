@@ -22,11 +22,11 @@ from scripts import vdock_agent_hook as hook
 def client():
     app.config['TESTING'] = True
     agent_state.reset()
-    agent_events._current_alert = None
+    agent_events._alerts.clear()
     with app.test_client() as test_client:
         yield test_client
     agent_state.reset()
-    agent_events._current_alert = None
+    agent_events._alerts.clear()
 
 
 @pytest.fixture
@@ -389,6 +389,83 @@ def test_a_pending_permission_prompt_outranks_newer_activity(client, emitted):
 
     assert agent_state.get('claude')['state'] == 'permission'
     assert client.get('/api/agent-events/current').get_json()['alert'] is not None
+
+
+# ---------------------------------------------------------------------------
+# DL-119 — per-source alerts
+# ---------------------------------------------------------------------------
+
+def _raise(client, source, message='needs you', **kw):
+    return client.post('/api/agent-events', json={
+        'source': source, 'state': 'permission', 'attention': True,
+        'message': message, **kw,
+    })
+
+
+def test_two_agents_keep_their_own_alerts_newest_first(client, emitted):
+    _raise(client, 'claude', 'Claude blocked on Bash')
+    _raise(client, 'cursor', 'Cursor blocked on Write')
+
+    body = client.get('/api/agent-events/current').get_json()
+    assert [a['source'] for a in body['alerts']] == ['cursor', 'claude']
+    # Legacy field keeps pointing at the newest alert.
+    assert body['alert']['source'] == 'cursor'
+
+    broadcast = [p for n, p in emitted if n == 'agent_alert'][-1]
+    assert broadcast['alert']['source'] == 'cursor'
+    assert [a['source'] for a in broadcast['alerts']] == ['cursor', 'claude']
+
+
+def test_a_fresh_alert_replaces_the_same_sources_old_one(client, emitted):
+    _raise(client, 'claude', 'first prompt')
+    _raise(client, 'claude', 'second prompt')
+
+    body = client.get('/api/agent-events/current').get_json()
+    assert len(body['alerts']) == 1
+    assert body['alert']['message'] == 'second prompt'
+
+
+def test_delete_with_source_clears_only_that_alert(client, emitted):
+    _raise(client, 'claude')
+    _raise(client, 'cursor')
+
+    response = client.delete('/api/agent-events/current?source=claude')
+    assert response.status_code == 200
+
+    body = client.get('/api/agent-events/current').get_json()
+    assert [a['source'] for a in body['alerts']] == ['cursor']
+    assert body['alert']['source'] == 'cursor'
+
+
+def test_delete_without_source_clears_everything(client, emitted):
+    _raise(client, 'claude')
+    _raise(client, 'cursor')
+
+    client.delete('/api/agent-events/current')
+    body = client.get('/api/agent-events/current').get_json()
+    assert body['alert'] is None and body['alerts'] == []
+
+
+def test_a_state_event_clears_only_its_own_sources_alert(client, emitted):
+    _raise(client, 'claude')
+    _raise(client, 'cursor')
+
+    client.post('/api/agent-events', json={
+        'source': 'claude', 'state': 'working', 'attention': False,
+    })
+    body = client.get('/api/agent-events/current').get_json()
+    assert [a['source'] for a in body['alerts']] == ['cursor']
+
+
+def test_an_alert_still_expires_on_its_own(client, emitted, monkeypatch):
+    _raise(client, 'claude')
+    _raise(client, 'cursor')
+
+    real_time = agent_events.time.time
+    monkeypatch.setattr(agent_events.time, 'time',
+                        lambda: real_time() + agent_events.ALERT_TTL_SECONDS + 1)
+    body = client.get('/api/agent-events/current').get_json()
+    assert body['alert'] is None and body['alerts'] == []
 
 
 def test_hook_body_flags_prompt_implying_events():

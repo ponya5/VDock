@@ -132,10 +132,14 @@ describe('action catalog store', () => {
     // Backend unreachable: widgets must still not dispatch.
     expect(store.displayOnlyTypes.has('metric_cpu_temperature')).toBe(true)
     expect(store.displayOnlyTypes.has('metric_cpu_power')).toBe(true)
-    expect(store.displayOnlyTypes.has('time_timer')).toBe(true)
+    expect(store.displayOnlyTypes.has('time_world_clock')).toBe(true)
+    expect(store.displayOnlyTypes.has('time_countdown')).toBe(true)
     expect(store.displayOnlyTypes.has('weather')).toBe(true)
     expect(store.displayOnlyTypes.has('calendar')).toBe(true)
-    // ...and real actions must still dispatch.
+    // ...and real actions must still dispatch — including DL-122's timer
+    // types, which are interactive now, not widgets.
+    expect(store.displayOnlyTypes.has('time_timer')).toBe(false)
+    expect(store.displayOnlyTypes.has('time_stopwatch')).toBe(false)
     expect(store.displayOnlyTypes.has('cross_platform')).toBe(false)
     expect(store.displayOnlyTypes.has('hotkey')).toBe(false)
   })

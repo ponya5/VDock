@@ -55,6 +55,9 @@ class ActionType(str, Enum):
     PLUGIN = 'plugin'
     CALENDAR = 'calendar'
     WEATHER = 'weather'
+    # DL-129: live now-playing track card; the tap is orchestrated
+    # client-side (media_play_pause), never dispatched to the backend.
+    NOW_PLAYING = 'now_playing'
     # Individual performance metrics
     METRIC_MEMORY = 'metric_memory'
     METRIC_CPU_USAGE = 'metric_cpu_usage'
@@ -76,6 +79,7 @@ class ActionType(str, Enum):
     TIME_WORLD_CLOCK = 'time_world_clock'
     TIME_TIMER = 'time_timer'
     TIME_COUNTDOWN = 'time_countdown'
+    TIME_STOPWATCH = 'time_stopwatch'
     # Navigation
     NEXT_PAGE = 'next_page'
     PREVIOUS_PAGE = 'previous_page'
@@ -170,6 +174,10 @@ class Button:
     layers: Optional[Dict[str, Any]] = None
     tooltip: str = ''
     enabled: bool = True
+    # Conditional-style rules (DL-122): [{when:{source,op,value?},
+    # then:{tone?,icon?,sublabel?,dim?}}] — evaluated on the client,
+    # first match wins. Persisted verbatim; the backend never evaluates.
+    rules: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -202,6 +210,7 @@ class Button:
             style=data.get('style', {}),
             layers=data.get('layers'),
             tooltip=data.get('tooltip', ''),
-            enabled=data.get('enabled', True)
+            enabled=data.get('enabled', True),
+            rules=data.get('rules') or []
         )
 

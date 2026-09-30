@@ -1,54 +1,104 @@
 <template>
   <Teleport to="body">
-    <Transition name="alert-pop">
-      <div v-if="alerts.alert.value && enabled && !isCoveredByActionBar" class="agent-alert" role="alert">
+    <!-- The stack stays mounted so the last card's leave transition still
+         plays; empty renders a zero-height invisible div. -->
+    <TransitionGroup name="alert-pop" tag="div" class="agent-alert-stack">
+      <div
+        v-for="card in cards"
+        :key="card.kind === 'rollup' ? 'rollup' : card.alert.source"
+        class="agent-alert"
+        role="alert"
+      >
         <div class="alert-icon">
           <FontAwesomeIcon :icon="['fas', 'robot']" />
           <span class="alert-pulse"></span>
         </div>
         <div class="alert-body">
-          <div class="alert-title">{{ alerts.sourceLabel.value }} needs you</div>
-          <div class="alert-message">{{ alerts.alert.value.message }}</div>
-          <div v-if="alerts.alert.value.project" class="alert-project">
-            <FontAwesomeIcon :icon="['fas', 'folder']" /> {{ alerts.alert.value.project }}
-          </div>
+          <template v-if="card.kind === 'rollup'">
+            <div class="alert-title">{{ card.alerts.length }} agents need you</div>
+            <div class="alert-message">{{ rollupLabel(card.alerts) }}</div>
+          </template>
+          <template v-else>
+            <div class="alert-title">{{ alerts.sourceLabelFor(card.alert.source) }} needs you</div>
+            <div class="alert-message">{{ card.alert.message }}</div>
+            <div v-if="card.alert.project" class="alert-project">
+              <FontAwesomeIcon :icon="['fas', 'folder']" /> {{ card.alert.project }}
+            </div>
+          </template>
         </div>
-        <button class="alert-dismiss" @click="alerts.dismiss">
-          <FontAwesomeIcon :icon="['fas', 'check']" /> Got it
+        <button
+          class="alert-dismiss"
+          @click="card.kind === 'rollup' ? alerts.dismiss() : alerts.dismiss(card.alert.source)"
+        >
+          <FontAwesomeIcon :icon="['fas', 'check']" /> {{ card.kind === 'rollup' ? 'Dismiss all' : 'Got it' }}
         </button>
       </div>
-    </Transition>
+    </TransitionGroup>
   </Teleport>
+  <!-- Persistent "who needs you" chips — they outlive the banner dismiss -->
+  <AgentWaitingDock />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useAgentAlerts } from '@/services/agentAlerts'
+import type { AgentAlert } from '@/services/agentAlerts'
 import { useSettingsStore } from '@/stores/settings'
 import { isAgentBarVisible } from '@/services/agentState'
+import AgentWaitingDock from '@/components/AgentWaitingDock.vue'
 
 const alerts = useAgentAlerts()
 const settingsStore = useSettingsStore()
 const enabled = computed(() => settingsStore.agentAlertsEnabled !== false)
-const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value?.source))
+
+// DL-119: one card per waiting source. A source whose action bar is already
+// on screen stands down — the bar shows the state + Approve/Deny itself.
+const visibleAlerts = computed(() =>
+  alerts.alerts.value.filter((a) => !isAgentBarVisible(a.source))
+)
+
+type AlertCard =
+  | { kind: 'alert'; alert: AgentAlert }
+  | { kind: 'rollup'; alerts: AgentAlert[] }
+
+// Up to two stacked cards; more collapse into a single "N agents need you"
+// rollup so a crowded panel stays readable (and one-tap clearable).
+const cards = computed<AlertCard[]>(() => {
+  if (!enabled.value) return []
+  const list = visibleAlerts.value
+  if (list.length > 2) return [{ kind: 'rollup', alerts: list }]
+  return list.map((alert) => ({ kind: 'alert' as const, alert }))
+})
+
+function rollupLabel(list: AgentAlert[]): string {
+  return list.map((a) => alerts.sourceLabelFor(a.source)).join(' · ')
+}
 </script>
 
 <style scoped>
 /* Sits above everything — dashboard (1000/2000), screensaver (500),
-   tutorial (10000) — the whole point is you can't miss it. */
+   tutorial (10000) — the whole point is you can't miss it. The dock sits
+   just under at 29000 so its chips never cover the banner's buttons. */
 /* Readable from arm's length on a 7" panel: every size follows the
    viewport, so it is large at 1024x600 and still fits a phone. */
-.agent-alert {
+.agent-alert-stack {
   position: fixed;
   top: clamp(12px, 3vh, 28px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 30000;
   display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2vh, 18px);
+  width: min(880px, calc(100vw - 24px));
+}
+
+.agent-alert {
+  display: flex;
   align-items: center;
   gap: clamp(14px, 2.4vw, 26px);
-  width: min(880px, calc(100vw - 24px));
+  width: 100%;
   box-sizing: border-box;
   padding: clamp(14px, 3vh, 26px) clamp(16px, 2.6vw, 30px);
   border-radius: clamp(16px, 2.6vh, 24px);
@@ -179,7 +229,7 @@ const isCoveredByActionBar = computed(() => isAgentBarVisible(alerts.alert.value
 }
 .alert-pop-enter-from,
 .alert-pop-leave-to {
-  transform: translateX(-50%) translateY(-16px);
+  transform: translateY(-16px);
   opacity: 0;
 }
 </style>

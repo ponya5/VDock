@@ -208,6 +208,139 @@ def test_config_deck_host_clear_restores_auto(client):
 
 
 # ---------------------------------------------------------------------------
+# DL-126 — usable authentication: set/change the password and toggle
+# require_auth from the Settings UI without a restart, with the bootstrap
+# ordering that keeps the enabling session valid. .env writes are redirected
+# to tmp_path so tests never touch the repo's real env file.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def auth_env(tmp_path, monkeypatch):
+    monkeypatch.setattr('routes.config.backend_dir', lambda: tmp_path)
+    # PUT /api/config persists to the real data/config.json — restore it
+    # after the test so require_auth doesn't leak onto disk.
+    saved_config = Config.load_config()
+    import routes.auth as auth_routes
+    auth_routes._attempts.clear()
+    yield tmp_path
+    auth_routes._attempts.clear()
+    Config.save_config(saved_config)
+
+
+def test_config_exposes_auth_password_set(client, auth_env):
+    resp = client.get('/api/config')
+    assert resp.status_code == 200
+    assert resp.get_json()['config']['auth_password_set'] is False
+
+
+def test_set_password_persists_env_and_applies(client, auth_env):
+    resp = client.put('/api/config', json={'auth_password': 'deck1234'})
+    assert resp.status_code == 200
+    assert Config.AUTH_PASSWORD == 'deck1234'
+    env = (auth_env / '.env').read_text()
+    assert 'AUTH_PASSWORD=deck1234' in env
+    # The signing key is persisted alongside it so tokens outlive restarts.
+    assert 'SECRET_KEY=' in env
+    # The password itself is never returned by GET — only the flag.
+    body = client.get('/api/config').get_json()
+    assert body['config']['auth_password_set'] is True
+    assert 'auth_password' not in body['config']
+
+
+def test_enable_auth_without_password_rejected(client, auth_env):
+    resp = client.put('/api/config', json={'require_auth': True})
+    assert resp.status_code == 400
+    assert 'password' in resp.get_json()['error'].lower()
+    assert Config.REQUIRE_AUTH is False
+    # …and nothing was persisted either.
+    assert 'require_auth' not in Config.load_config() or \
+        Config.load_config()['require_auth'] is not True
+
+
+def test_password_and_enable_in_one_request(client, auth_env):
+    resp = client.put('/api/config',
+                      json={'auth_password': 'deck1234',
+                            'require_auth': True})
+    assert resp.status_code == 200
+    assert Config.REQUIRE_AUTH is True
+    assert Config.AUTH_PASSWORD == 'deck1234'
+
+
+def test_bootstrap_session_stays_valid(client, auth_env):
+    """The device that enables auth can immediately log in and keep
+    calling protected routes — no locked-out gap."""
+    client.put('/api/config',
+               json={'auth_password': 'deck1234', 'require_auth': True})
+    # Unauthenticated writes now 401…
+    assert client.put('/api/config', json={}).status_code == 401
+    # …but the password just set logs straight in.
+    token = client.post('/api/auth/login',
+                        json={'password': 'deck1234'}).get_json()['token']
+    resp = client.put('/api/config', json={'allow_lan': True},
+                      headers={'Authorization': f'Bearer {token}'})
+    assert resp.status_code == 200
+    assert Config.ALLOW_LAN is True
+
+
+def test_disable_auth_with_token(client, auth_env):
+    client.put('/api/config',
+               json={'auth_password': 'deck1234', 'require_auth': True})
+    token = client.post('/api/auth/login',
+                        json={'password': 'deck1234'}).get_json()['token']
+    resp = client.put('/api/config', json={'require_auth': False},
+                      headers={'Authorization': f'Bearer {token}'})
+    assert resp.status_code == 200
+    assert Config.REQUIRE_AUTH is False
+    assert client.put('/api/config', json={}).status_code == 200
+
+
+def test_change_password_while_enabled(client, auth_env):
+    client.put('/api/config',
+               json={'auth_password': 'deck1234', 'require_auth': True})
+    token = client.post('/api/auth/login',
+                        json={'password': 'deck1234'}).get_json()['token']
+    resp = client.put('/api/config', json={'auth_password': 'newpass9'},
+                      headers={'Authorization': f'Bearer {token}'})
+    assert resp.status_code == 200
+    assert Config.AUTH_PASSWORD == 'newpass9'
+    assert Config.REQUIRE_AUTH is True
+    # Old password rejected, new one accepted.
+    assert client.post('/api/auth/login',
+                       json={'password': 'deck1234'}).status_code == 401
+    assert client.post('/api/auth/login',
+                       json={'password': 'newpass9'}).status_code == 200
+
+
+@pytest.mark.parametrize('bad', ['', '   ', 'abc', 123, None, 'x' * 129])
+def test_password_validation(client, auth_env, bad):
+    resp = client.put('/api/config', json={'auth_password': bad})
+    assert resp.status_code == 400
+    assert Config.AUTH_PASSWORD == ''
+
+
+def test_login_rate_limited(client, auth_env):
+    client.put('/api/config',
+               json={'auth_password': 'deck1234', 'require_auth': True})
+    for _ in range(5):
+        assert client.post('/api/auth/login',
+                           json={'password': 'wrong'}).status_code == 401
+    # Sixth attempt is throttled before the password is even checked.
+    assert client.post('/api/auth/login',
+                       json={'password': 'wrong'}).status_code == 429
+    assert client.post('/api/auth/login',
+                       json={'password': 'deck1234'}).status_code == 429
+
+
+def test_login_success_clears_throttle_window(client, auth_env):
+    client.put('/api/config',
+               json={'auth_password': 'deck1234', 'require_auth': True})
+    for _ in range(4):
+        client.post('/api/auth/login', json={'password': 'wrong'})
+    assert client.post('/api/auth/login',
+                       json={'password': 'deck1234'}).status_code == 200
+
+
+# ---------------------------------------------------------------------------
 # lan_ip() — must advertise a phone-reachable address (DL-056 follow-up).
 # A VPN/overlay adapter that captures the default route makes the UDP
 # probe answer with a tunnel IP; the fix prefers the physical NIC.

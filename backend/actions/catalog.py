@@ -319,6 +319,22 @@ _MEDIA: Tuple[ActionSpec, ...] = (
         keywords=('music', 'halt'),
     ),
     ActionSpec(
+        id='media_play_stop', label='Play / Stop', category='media',
+        icon=('fas', 'play'), action_type='cross_platform',
+        default_config=_xp('media_play_stop'),
+        description='One button for both: stops while media plays, plays when stopped.',
+        keywords=('music', 'video', 'play', 'stop', 'transport'),
+    ),
+    ActionSpec(
+        # DL-129: the face renders the live SMTC track; the tap is
+        # client-orchestrated (toggles play/pause), never a backend dispatch.
+        id='now_playing', label='Now Playing', category='media',
+        icon=('fas', 'music'), action_type='now_playing',
+        runs_on=RUNS_FRONTEND,
+        description='Live track card — album art, title, artist. Tap toggles play/pause.',
+        keywords=('music', 'track', 'song', 'album', 'art', 'spotify', 'playing'),
+    ),
+    ActionSpec(
         id='volume_up', label='Volume Up', category='media',
         icon=('fas', 'volume-up'), action_type='cross_platform',
         default_config=_xp('volume_up'), description='Raise system volume.',
@@ -512,11 +528,42 @@ _TIME: Tuple[ActionSpec, ...] = (
     ActionSpec(
         id='time_timer', label='Timer', category='time',
         icon=('fas', 'stopwatch'), action_type='time_timer',
-        runs_on=RUNS_WIDGET, description='Count up from zero.',
-        keywords=('stopwatch', 'timer', 'elapsed'),
+        runs_on=RUNS_FRONTEND,
+        default_config={'mode': 'countdown', 'duration_s': 300,
+                        'alarm': True},
+        description='A countdown timer on the button face — tap to '
+                    'start/pause, flashes and toasts when it finishes.',
+        keywords=('timer', 'countdown', 'pomodoro', 'alarm'),
         config_fields=(
-            ConfigField('timer_duration', 'Duration (seconds)', 'number',
-                        default=300),
+            ConfigField('mode', 'Mode', 'select', required=True,
+                        default='countdown', options=(
+                            {'value': 'countdown', 'label': 'Countdown'},
+                            {'value': 'stopwatch', 'label': 'Stopwatch'},
+                        )),
+            ConfigField('duration_s', 'Duration (seconds)', 'number',
+                        default=300,
+                        help='Countdown length; unused in stopwatch mode.'),
+            ConfigField('auto_start', 'Start on show', 'boolean',
+                        default=False,
+                        help='Start the moment the button is displayed.'),
+            ConfigField('alarm', 'Alarm on finish', 'boolean', default=True,
+                        help='Flash the button and show a toast at 0:00.'),
+            ConfigField('on_finish', 'Action on finish', 'steps',
+                        help='Optional nested action run when the countdown '
+                             'expires (e.g. a hotkey or HTTP request).'),
+        ),
+    ),
+    ActionSpec(
+        id='time_stopwatch', label='Stopwatch', category='time',
+        icon=('fas', 'stopwatch-20'), action_type='time_stopwatch',
+        runs_on=RUNS_FRONTEND,
+        default_config={'mode': 'stopwatch'},
+        description='Counts up from zero — tap to start/pause.',
+        keywords=('stopwatch', 'elapsed', 'timer', 'lap'),
+        config_fields=(
+            ConfigField('auto_start', 'Start on show', 'boolean',
+                        default=False,
+                        help='Start the moment the button is displayed.'),
         ),
     ),
     ActionSpec(

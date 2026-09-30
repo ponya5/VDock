@@ -120,6 +120,27 @@ export const systemPresets: ButtonPreset[] = [
     keywords: ['media']
   },
   {
+    // DL-128: one cell does both — face follows the live play state.
+    id: 'play-stop',
+    name: 'Play / Stop',
+    category: 'system',
+    brand: { primary: '#8e44ad' },
+    icon: { type: 'fontawesome', value: 'fas:play' },
+    action: { type: 'cross_platform', config: { action: 'media_play_stop' } },
+    keywords: ['media', 'transport', 'toggle']
+  },
+  {
+    // DL-129: two cells wide — a live track card that toggles on tap.
+    id: 'now-playing',
+    name: 'Now Playing',
+    category: 'system',
+    brand: { primary: '#1e3264' },
+    icon: { type: 'fontawesome', value: 'fas:music' },
+    action: { type: 'now_playing', config: {} },
+    keywords: ['media', 'track', 'song', 'art', 'spotify'],
+    size: { rows: 1, cols: 2 }
+  },
+  {
     id: 'screenshot',
     name: 'Screenshot',
     category: 'system',

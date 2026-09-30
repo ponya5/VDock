@@ -80,6 +80,8 @@ backend/data/vdock.log
 # Data directories (keep structure, ignore content)
 backend/data/config.json
 backend/data/user_settings.json
+backend/data/triggers.json
+backend/data/now_playing_art.bin
 backend/data/profiles/*.json
 backend/data/uploads/*
 backend/data/plugins/*

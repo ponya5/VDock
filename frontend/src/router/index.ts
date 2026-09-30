@@ -27,12 +27,18 @@ const router = createRouter({
       name: 'settings',
       component: SettingsView,
       meta: { canBeStandalone: true }
+    },
+    {
+      path: '/guide',
+      name: 'guide',
+      component: () => import('@/views/GuideView.vue'),
+      meta: { canBeStandalone: true }
     }
   ]
 })
 
 router.beforeEach((to) => {
-  if (to.query.standalone === '1' && to.path !== '/settings') {
+  if (to.query.standalone === '1' && !to.meta.canBeStandalone) {
     return {
       path: '/settings',
       query: { ...to.query, standalone: '1' },

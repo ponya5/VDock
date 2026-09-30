@@ -36,28 +36,13 @@
           <button
             type="button"
             class="nav-item nav-rail-item"
-            :class="{ 'is-open': activeTab === 'appearance' }"
             :aria-current="activeTab === 'appearance' ? 'page' : undefined"
-            :aria-expanded="activeTab === 'appearance'"
             data-tour="nav-appearance"
             @click="activeTab = 'appearance'"
           >
             <FontAwesomeIcon :icon="['fas', 'palette']" />
             <span>Appearance</span>
-            <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="nav-item-chevron" :class="{ 'chevron-open': activeTab === 'appearance' }" />
           </button>
-          <Collapse :open="activeTab === 'appearance'">
-            <div class="nav-sub" data-tour="appearance-tabs">
-              <button
-                v-for="sub in appearanceSubs"
-                :key="sub.id"
-                type="button"
-                :aria-current="appearanceSubTab === sub.id ? 'true' : undefined"
-                :data-tour="sub.id === 'screensaver' ? 'subtab-screensaver' : undefined"
-                @click="selectAppearanceSub(sub.id)"
-              >{{ sub.name }}</button>
-            </div>
-          </Collapse>
         </div>
         <div class="nav-group">
           <button
@@ -125,12 +110,13 @@
           <button
             type="button"
             class="nav-item nav-rail-item"
-            :aria-current="activeTab === 'guide' ? 'page' : undefined"
             data-tour="nav-guide"
-            @click="activeTab = 'guide'"
+            title="Open the guide in a new window"
+            @click="openGuide"
           >
             <FontAwesomeIcon :icon="['fas', 'circle-question']" />
             <span>Guide</span>
+            <FontAwesomeIcon :icon="['fas', 'up-right-from-square']" class="nav-item-ext" />
           </button>
         </div>
         <div class="nav-group">
@@ -187,7 +173,7 @@
             </button>
           </template>
           <button
-            v-else-if="activeTab !== 'about' && activeTab !== 'logs' && activeTab !== 'guide'"
+            v-else-if="activeTab !== 'about' && activeTab !== 'logs'"
             type="button"
             class="btn primary sm"
             title="Save settings and refresh the dashboard"
@@ -201,6 +187,16 @@
           </button>
         </div>
       </header>
+
+        <div v-if="subTabsForTab.length" class="subtab-bar" role="tablist" :aria-label="`${topbarMeta.title} sections`">
+          <button
+            v-for="sub in subTabsForTab" :key="sub.id"
+            type="button" role="tab" class="subtab"
+            :aria-selected="currentSubTab === sub.id"
+            :data-tour="sub.id === 'screensaver' ? 'subtab-screensaver' : undefined"
+            @click="selectSubTab(sub.id)"
+          >{{ sub.name }}</button>
+        </div>
 
         <!-- ── Appearance → Buttons ── -->
         <div v-if="activeTab === 'appearance' && appearanceSubTab === 'buttons'" class="content has-rail">
@@ -753,6 +749,104 @@
               </div>
             </section>
 
+            <!-- DL-123/125: fullscreen saver styles — the shared style
+                 picker, then spectrum skin/shuffle/media-bar prefs. Widget-
+                 mode controls below still apply when 'Widget dashboard' is
+                 selected. -->
+            <section class="panel" id="ss-spectrum">
+              <div class="panel-head">
+                <h2>Screensaver style</h2>
+                <span class="hint">Swap the widget dashboard for a fullscreen visualizer or live system monitor.</span>
+                <span class="spacer"></span>
+                <SettingResetButton label="Spectrum screensaver" :at-default="spectrumAtDefault" @reset="resetSpectrumSettings" />
+              </div>
+              <div class="panel-body">
+                <div class="row">
+                  <div class="row-text">
+                    <span class="label">When idle, show</span>
+                    <p>The idle delay and Test button open whichever style is picked here.</p>
+                  </div>
+                  <div class="row-control">
+                    <select v-model="settingsStore.screensaverStyle" class="select" aria-label="Screensaver style">
+                      <option value="widgets">Widget dashboard</option>
+                      <option value="spectrum">Spectrum visualizer</option>
+                      <option value="stats">System stats</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="note" v-if="settingsStore.screensaverStyle === 'stats'">
+                  <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+                  <div>Not in use while <strong>System stats</strong> is picked — the options below belong to the <strong>Spectrum visualizer</strong> style.</div>
+                </div>
+
+                <div class="row stack">
+                  <div class="row-head">
+                    <div class="row-text">
+                      <span class="label">Skin</span>
+                      <p>Live previews. Applies while the spectrum saver is showing.</p>
+                    </div>
+                  </div>
+                  <div class="row-control">
+                    <div class="skin-grid" role="radiogroup" aria-label="Spectrum skin">
+                      <button
+                        v-for="skin in spectrumSkins"
+                        :key="skin.id"
+                        type="button"
+                        class="skin-card"
+                        :class="{ 'skin-active': settingsStore.spectrumSkin === skin.id }"
+                        :aria-checked="settingsStore.spectrumSkin === skin.id"
+                        role="radio"
+                        @click="settingsStore.spectrumSkin = skin.id"
+                      >
+                        <span class="skin-thumb"><SkinPreview :skin-id="skin.id" /></span>
+                        <span class="skin-name">{{ skin.label }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="row-text">
+                    <span class="label">Shuffle skins</span>
+                    <p>Rotate to a random skin on an interval while the saver is up.</p>
+                  </div>
+                  <div class="row-control">
+                    <select
+                      v-model.number="settingsStore.spectrumShuffleMinutes"
+                      class="select"
+                      :disabled="!settingsStore.spectrumShuffle"
+                      aria-label="Shuffle interval"
+                    >
+                      <option :value="1">1 min</option>
+                      <option :value="5">5 min</option>
+                      <option :value="10">10 min</option>
+                      <option :value="30">30 min</option>
+                    </select>
+                    <label class="switch">
+                      <span class="sr-only">Shuffle skins</span>
+                      <input type="checkbox" :checked="settingsStore.spectrumShuffle" @change="settingsStore.spectrumShuffle = !settingsStore.spectrumShuffle" />
+                      <span class="track"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="row-text">
+                    <span class="label">Media controls</span>
+                    <p>Now-playing card with transport controls pinned to the bottom of the visualizer — taps inside it don't exit the saver; a tap anywhere else does.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="switch">
+                      <span class="sr-only">Media controls</span>
+                      <input type="checkbox" :checked="settingsStore.spectrumMediaBar" @change="settingsStore.spectrumMediaBar = !settingsStore.spectrumMediaBar" />
+                      <span class="track"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section class="panel" id="ss-background">
               <div class="panel-head">
                 <h2>Screensaver background</h2>
@@ -761,6 +855,10 @@
                 <SettingResetButton label="Screensaver background" :at-default="settings.screensaverBackground === SETTINGS_DEFAULTS.screensaverBackground" @reset="settings.screensaverBackground = SETTINGS_DEFAULTS.screensaverBackground" />
               </div>
               <div class="panel-body">
+                <div class="note" v-if="settingsStore.screensaverStyle !== 'widgets'">
+                  <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — this background belongs to the <strong>Widget dashboard</strong> style.</div>
+                </div>
                 <div class="row stack picker-row">
                   <BackgroundPicker
                     v-model="settings.screensaverBackground"
@@ -803,6 +901,10 @@
                 <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
               </div>
               <div class="panel-body">
+                <div class="note" v-if="settingsStore.screensaverStyle !== 'widgets'">
+                  <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — these widgets show on the <strong>Widget dashboard</strong> style.</div>
+                </div>
                 <!-- DL-098: the clock is a real toggle — its own persisted
                      flag, not a widgets-array entry (saved lists predate
                      'clock', so array membership could never distinguish
@@ -824,7 +926,7 @@
                     </div>
                     <div class="row-control">
                       <button
-                        v-if="settingsStore.screensaverWidgets.includes(w.id)"
+                        v-if="widgetHasOptions(w.id) && settingsStore.screensaverWidgets.includes(w.id)"
                         type="button"
                         class="btn quiet sm"
                         :aria-expanded="openWidgetCard === w.id"
@@ -840,7 +942,7 @@
                       </label>
                     </div>
                   </div>
-                  <Collapse v-if="settingsStore.screensaverWidgets.includes(w.id)" :open="openWidgetCard === w.id">
+                  <Collapse v-if="widgetHasOptions(w.id) && settingsStore.screensaverWidgets.includes(w.id)" :open="openWidgetCard === w.id">
                     <div class="row stack row-inset widget-detail">
                       <!-- weather: location + widget size -->
                       <template v-if="w.id === 'weather'">
@@ -848,7 +950,7 @@
                           <label class="stack-8">
                             <span class="muted field-label">Location</span>
                             <select v-model="settings.weatherLocationMode" class="select" aria-label="Weather location source">
-                              <option value="auto">Use my current location</option>
+                              <option value="auto">Automatic (this device)</option>
                               <option value="manual">Set a city manually</option>
                             </select>
                           </label>
@@ -861,7 +963,7 @@
                             <input type="range" min="50" max="300" step="10" :value="settingsStore.screensaverWeatherSize" @input="settingsStore.screensaverWeatherSize = Number(($event.target as HTMLInputElement).value)" :style="sliderFill(settingsStore.screensaverWeatherSize, 50, 300)" class="slider-bare" aria-label="Weather widget size" />
                           </label>
                         </div>
-                        <p v-if="settings.weatherLocationMode !== 'manual'" class="muted field-note">Uses your browser location — falls back to a manual city if denied. Also feeds the docked weather card.</p>
+                        <p v-if="settings.weatherLocationMode !== 'manual'" class="muted field-note">Detects this machine's location automatically — no permission prompt needed. Falls back to a manual city if unavailable. Also feeds the docked weather card.</p>
                       </template>
                       <!-- news -->
                       <template v-else-if="w.id === 'news'">
@@ -1192,10 +1294,61 @@
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Authentication</span>
-                    <p>{{ serverConfig?.require_auth ? 'On. Requests must prove identity.' : 'Off. Anyone on your network who can reach the address below can control this deck.' }}</p>
+                    <p>{{ serverConfig?.require_auth ? 'On. Every device unlocks with the deck password.' : 'Off. Anyone on your network who can reach the address below can control this deck.' }}</p>
                   </div>
                   <div class="row-control">
-                    <span class="chip" :class="{ 'chip-warn': !serverConfig?.require_auth }">{{ serverConfig?.require_auth ? 'Enabled' : 'Disabled' }}</span>
+                    <label class="switch"><span class="sr-only">Require authentication</span><input type="checkbox" :checked="serverConfig?.require_auth ?? false" @change="toggleAuth" /><span class="track"></span></label>
+                  </div>
+                </div>
+                <div v-if="authSetupOpen" class="row">
+                  <div class="row-text">
+                    <span class="label">Choose a deck password</span>
+                    <p>Needed once per device — the panel, your phone, your browser. 4–128 characters.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="sr-only" for="auth-pw-new">New password</label>
+                    <input id="auth-pw-new" v-model="authPwNew" type="password" class="input w-110" placeholder="Password" autocomplete="new-password" />
+                    <label class="sr-only" for="auth-pw-confirm">Confirm password</label>
+                    <input id="auth-pw-confirm" v-model="authPwConfirm" type="password" class="input w-110" placeholder="Confirm" autocomplete="new-password" @keyup.enter="saveAuthPassword(true)" />
+                    <button type="button" class="btn primary sm" :disabled="authPwBusy" @click="saveAuthPassword(true)">
+                      Enable
+                    </button>
+                    <button type="button" class="btn sm" :disabled="authPwBusy" @click="cancelAuthSetup">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <div v-if="authSetupOpen && authPwError" class="row row-status-row">
+                  <div class="row-text">
+                    <p class="status-msg status-error">{{ authPwError }}</p>
+                  </div>
+                </div>
+                <div v-if="serverConfig?.require_auth" class="row">
+                  <div class="row-text">
+                    <span class="label">Deck password</span>
+                    <p>{{ authChangeOpen ? 'Already-unlocked devices stay unlocked — the new password applies to the next unlock.' : 'Change the password devices use to unlock.' }}</p>
+                  </div>
+                  <div class="row-control">
+                    <template v-if="authChangeOpen">
+                      <label class="sr-only" for="auth-pw-change">New password</label>
+                      <input id="auth-pw-change" v-model="authPwNew" type="password" class="input w-110" placeholder="New password" autocomplete="new-password" />
+                      <label class="sr-only" for="auth-pw-change2">Confirm new password</label>
+                      <input id="auth-pw-change2" v-model="authPwConfirm" type="password" class="input w-110" placeholder="Confirm" autocomplete="new-password" @keyup.enter="saveAuthPassword(false)" />
+                      <button type="button" class="btn primary sm" :disabled="authPwBusy" @click="saveAuthPassword(false)">
+                        Save
+                      </button>
+                      <button type="button" class="btn sm" :disabled="authPwBusy" @click="authChangeOpen = false">
+                        Cancel
+                      </button>
+                    </template>
+                    <button v-else type="button" class="btn sm" @click="authChangeOpen = true">
+                      <FontAwesomeIcon :icon="['fas', 'key']" /> Change password
+                    </button>
+                  </div>
+                </div>
+                <div v-if="authChangeOpen && authPwError" class="row row-status-row">
+                  <div class="row-text">
+                    <p class="status-msg status-error">{{ authPwError }}</p>
                   </div>
                 </div>
                 <div class="row">
@@ -1331,7 +1484,7 @@
         <!-- ── Integrations ── -->
         <div v-if="activeTab === 'integration'" class="content">
           <div class="col">
-            <section class="panel" id="auto-switch">
+            <section v-if="integrationSubTab === 'apps'" class="panel" id="auto-switch">
               <div class="panel-head"><h2>Auto scene switching</h2><span class="hint">Scenes follow the app in focus.</span></div>
               <div class="panel-body">
                 <div class="row">
@@ -1352,7 +1505,7 @@
               </div>
             </section>
 
-            <section class="panel" id="agent-alerts">
+            <section v-if="integrationSubTab === 'alerts'" class="panel" id="agent-alerts">
               <div class="panel-head">
                 <h2>Agent attention alerts</h2>
                 <span class="spacer"></span>
@@ -1393,6 +1546,15 @@
                     </select>
                   </div>
                 </div>
+                <div class="row" v-if="settingsStore.agentAlertsEnabled">
+                  <div class="row-text">
+                    <span class="label">Pin waiting agents on the deck</span>
+                    <p>Keeps a small chip per idle agent under the top bar — tap one to jump straight to that agent's scene.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="switch"><span class="sr-only">Agent waiting chips</span><input type="checkbox" :checked="settingsStore.agentWaitingDockEnabled" @change="toggleWaitingDock" /><span class="track"></span></label>
+                  </div>
+                </div>
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Agent hooks</span>
@@ -1413,7 +1575,55 @@
               </div>
             </section>
 
-            <section class="panel" id="running-apps">
+            <!-- DL-120: headless automation — time/app/agent/webhook triggers
+                 fire deck actions, scene switches and panel notifications. -->
+            <TriggersPanel v-if="integrationSubTab === 'triggers'" />
+
+            <!-- DL-121: the panel is also an MCP server — local agents can
+                 drive it bidirectionally over JSON-RPC/HTTP. -->
+            <section v-if="integrationSubTab === 'mcp'" class="panel" id="mcp-server">
+              <div class="panel-head">
+                <h2>MCP server</h2>
+                <span class="hint">Let local agents act on the deck.</span>
+                <span class="spacer"></span>
+                <button
+                  type="button"
+                  class="btn ghost sm"
+                  title="What MCP exposes, how to connect a client, and a self-test"
+                  @click="mcpHelpOpen = true"
+                >
+                  <FontAwesomeIcon :icon="['fas', 'circle-question']" /> Help &amp; test
+                </button>
+              </div>
+              <div class="panel-body">
+                <div class="row">
+                  <div class="row-text">
+                    <span class="label">Enable MCP server</span>
+                    <p>When off, the endpoint below answers "disabled" — nothing on this machine can drive the deck through it.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="switch"><span class="sr-only">Enable MCP server</span><input type="checkbox" :checked="settingsStore.mcpEnabled" @change="toggleMcpEnabled" /><span class="track"></span></label>
+                  </div>
+                </div>
+                <div class="row" v-if="settingsStore.mcpEnabled">
+                  <div class="row-text">
+                    <span class="label">Endpoint</span>
+                    <p>Agents on this machine can press buttons, switch scenes, post notifications and read state. Point an MCP client at:</p>
+                  </div>
+                  <div class="row-control">
+                    <code class="kv-code">{{ mcpEndpoint }}</code>
+                  </div>
+                </div>
+                <div class="row" v-if="settingsStore.mcpEnabled">
+                  <div class="row-text">
+                    <span class="label">Tools</span>
+                    <p>press_button, run_action, switch_scene, show_notification, get/set_volume, get_now_playing, get_agent_states, list_scenes, list_buttons, deck_info. Localhost-only (or Bearer auth when password protection is on). Setup: <code class="kv-code">docs/mcp.md</code>.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section v-if="integrationSubTab === 'apps'" class="panel" id="running-apps">
               <div class="panel-head">
                 <h2>Running applications</h2>
                 <span class="hint">Periodically detected apps — powers the live scene dots and this list.</span>
@@ -1501,7 +1711,7 @@
               </div>
             </section>
 
-            <section class="panel" id="recent-actions">
+            <section v-if="integrationSubTab === 'triggers'" class="panel" id="recent-actions">
               <div class="panel-head">
                 <h2>Recent actions</h2>
                 <span class="spacer"></span>
@@ -1518,9 +1728,8 @@
         </div>
 
         <!-- ── Guide ── -->
-        <div v-if="activeTab === 'guide'" class="content guide-page">
-          <UserGuide />
-        </div>
+        <!-- The guide is a standalone page now — the sidebar entry opens
+             /guide in a new window (DL-132). -->
 
         <!-- ── About ── -->
         <div v-if="activeTab === 'about'" class="content">
@@ -1536,8 +1745,9 @@
                   <p class="muted about-desc">A virtual stream interface for controlling your computer with customisable buttons, macros, system metrics and intelligent app integration.</p>
                   <div class="about-actions">
                     <!-- Launch tutorial leads the row in the primary accent —
-                         the one action here that changes app state. Help lives
-                         in the Guide tab (side nav) and the repo link in the
+                         the one action here that changes app state. The Guide
+                         opens in a new window from the side nav, and the repo
+                         link lives in the
                          Build card + dock credit, so neither repeats here. -->
                     <button type="button" class="btn primary" @click="launchTutorial">
                       <FontAwesomeIcon :icon="['fas', 'route']" /> Launch tutorial
@@ -1589,24 +1799,11 @@
 
     </main>
 
-    <footer class="settings-dock">
-      <div class="dock-credit">
-        <span class="dock-credit-text">Created by Daniel S. · v{{ appVersion }}</span>
-        <div class="dock-credit-links">
-          <a href="https://www.linkedin.com/in/daniel-shalom-13987a1a/" target="_blank" rel="noopener" class="dock-credit-link" title="Daniel Shalom on LinkedIn" aria-label="LinkedIn">
-            <FontAwesomeIcon :icon="['fab', 'linkedin']" />
-          </a>
-          <a href="https://github.com/ponya5/ponya5" target="_blank" rel="noopener" class="dock-credit-link" title="Daniel Shalom on GitHub" aria-label="GitHub">
-            <FontAwesomeIcon :icon="['fab', 'github']" />
-          </a>
-          <a href="https://www.daniel-shalom.com/" target="_blank" rel="noopener" class="dock-credit-link dock-credit-site" title="daniel-shalom.com" aria-label="Daniel Shalom's website">
-            <img :src="'/assets/branding/daniel-shalom-logo.jpg'" alt="" class="dock-credit-logo" />
-          </a>
-        </div>
-      </div>
-    </footer>
+    <SiteFooter class="settings-dock" />
 
     <FeatureRequestModal v-if="showFeatureRequest" @close="showFeatureRequest = false" />
+
+    <McpInfoModal v-if="mcpHelpOpen" :endpoint="mcpEndpoint" @close="mcpHelpOpen = false" />
 
     <!-- Shortcut Manager Modal -->
     <AppShortcutManager
@@ -1651,11 +1848,12 @@ import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
 import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppShortcut, type AppProfileDto } from '@/api/appProfiles'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
-import type { RunningApp, Scene, Button } from '@/types'
+import type { RunningApp, Scene, Button, ServerConfig } from '@/types'
 import { useWeather } from '@/composables/useWeather'
 import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { sendUiCommand } from '@/composables/useUiCommands'
+import { authState, clearAuthToken } from '@/services/auth'
 import { useTutorial } from '@/services/tutorial'
 import { confirmDialog } from '@/composables/useConfirm'
 import { testNewsConnection, parseFeedList, DEFAULT_SPORTS_FEEDS } from '@/services/newsService'
@@ -1666,8 +1864,12 @@ import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations } from '@
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
 import AppPathEditor from '@/components/AppPathEditor.vue'
-import UserGuide from '@/components/UserGuide.vue'
+import SiteFooter from '@/components/SiteFooter.vue'
 import FeatureRequestModal from '@/components/FeatureRequestModal.vue'
+import TriggersPanel from '@/components/settings/TriggersPanel.vue'
+import McpInfoModal from '@/components/settings/McpInfoModal.vue'
+import SkinPreview from '@/components/screensaver/SkinPreview.vue'
+import { SPECTRUM_SKINS } from '@/services/spectrumSkins'
 import { appPaths, loadAppPaths, templateAppKey } from '@/api/appPaths'
 
 const router = useRouter()
@@ -1685,7 +1887,11 @@ function openSettingsInBrowserTab() {
     router,
     query: {
       tab: activeTab.value,
-      ...(activeTab.value === 'appearance' ? { sub: appearanceSubTab.value } : {}),
+      ...(
+        activeTab.value === 'appearance' ? { sub: appearanceSubTab.value }
+        : activeTab.value === 'integration' ? { sub: integrationSubTab.value }
+        : {}
+      ),
     },
     returnMainWindowToDashboard: true,
   })
@@ -1750,6 +1956,14 @@ function handleSettingsBack() {
 
 const settings = computed(() => settingsStore)
 const serverConfig = computed(() => settingsStore.serverConfig)
+
+// MCP clients always hit the backend port (never the Vite dev server).
+const mcpEndpoint = computed(() => {
+  const host = serverConfig.value?.deck_host || serverConfig.value?.lan_ip || '127.0.0.1'
+  const port = serverConfig.value?.port ?? 5000
+  return `http://${host}:${port}/api/mcp`
+})
+const mcpHelpOpen = ref(false)
 
 // --- Connect a device (QR) ----------------------------------------------------
 // The URL a phone needs is the one actually serving live code. In a built
@@ -1839,6 +2053,118 @@ async function saveDeckHost() {
       : 'Could not save — use a bare hostname or IPv4 (no http://, port, or path).'
   )
   if (ok) { await nextTick(); renderQr() }
+}
+
+// ── Authentication (DL-126) ──────────────────────────────────────────────
+// require_auth writes through the same /api/config channel as the other
+// toggles, but the switch is bound to serverConfig so its visual state must
+// be reverted by hand whenever the change is cancelled or rejected.
+// Enabling locks THIS device too: after a successful enable the lock screen
+// takes over and the user unlocks once with the password they just set.
+const authSetupOpen = ref(false)
+const authChangeOpen = ref(false)
+const authPwNew = ref('')
+const authPwConfirm = ref('')
+const authPwError = ref('')
+const authPwBusy = ref(false)
+let authSwitchEl: HTMLInputElement | null = null
+
+function revertAuthSwitch(enabled: boolean) {
+  if (authSwitchEl) authSwitchEl.checked = !enabled
+}
+
+async function applyAuthToggle(enabled: boolean, password?: string) {
+  const payload: Partial<ServerConfig> = { require_auth: enabled }
+  if (password !== undefined) payload.auth_password = password
+  const ok = await settingsStore.updateServerConfig(payload)
+  if (!ok) {
+    notificationsStore.error('Could not save', 'Server rejected the change.')
+    revertAuthSwitch(enabled)
+    return
+  }
+  if (enabled) {
+    // The server now demands a token this device doesn't hold — the gate
+    // takes over; unlocking with the just-set password reloads clean.
+    authState.required = true
+    authState.unlocked = false
+  } else {
+    authState.required = false
+    clearAuthToken()
+    notificationsStore.success('Authentication off', 'Devices no longer need the deck password.')
+  }
+}
+
+async function toggleAuth(event: Event) {
+  authSwitchEl = event.target as HTMLInputElement
+  const enabling = authSwitchEl.checked
+  if (enabling) {
+    if (!serverConfig.value?.auth_password_set) {
+      // No password on file — the server rejects a bare enable anyway, so
+      // collect one inline and send password + toggle in a single PUT.
+      authSetupOpen.value = true
+      authChangeOpen.value = false
+      authPwError.value = ''
+      authPwNew.value = ''
+      authPwConfirm.value = ''
+      return
+    }
+    const ok = await confirmDialog({
+      title: 'Require authentication?',
+      message: 'This device — and every device that connects — will need the deck password.',
+      confirmLabel: 'Enable',
+      danger: false,
+      icon: 'lock',
+    })
+    if (!ok) { revertAuthSwitch(true); return }
+    await applyAuthToggle(true)
+  } else {
+    const ok = await confirmDialog({
+      title: 'Turn off authentication?',
+      message: 'Any device on your network will be able to control this deck without a password.',
+      confirmLabel: 'Turn off',
+      icon: 'lock-open',
+    })
+    if (!ok) { revertAuthSwitch(false); return }
+    await applyAuthToggle(false)
+  }
+}
+
+function cancelAuthSetup() {
+  authSetupOpen.value = false
+  authPwError.value = ''
+  revertAuthSwitch(true)
+}
+
+async function saveAuthPassword(enableAfter: boolean) {
+  authPwError.value = ''
+  const pw = authPwNew.value.trim()
+  if (pw.length < 4 || pw.length > 128) {
+    authPwError.value = 'Password must be 4–128 characters.'
+    return
+  }
+  if (pw !== authPwConfirm.value.trim()) {
+    authPwError.value = "Passwords don't match."
+    return
+  }
+  authPwBusy.value = true
+  try {
+    if (enableAfter) {
+      await applyAuthToggle(true, pw)
+      authSetupOpen.value = false
+    } else {
+      const ok = await settingsStore.updateServerConfig({ auth_password: pw })
+      if (ok) {
+        authChangeOpen.value = false
+        notificationsStore.success('Password updated', 'New devices will need it at the lock screen.')
+      } else {
+        authPwError.value = 'Server rejected the change.'
+      }
+    }
+  } finally {
+    authPwBusy.value = false
+    authPwNew.value = ''
+    authPwConfirm.value = ''
+  }
 }
 
 function copyLanUrl() {
@@ -1943,6 +2269,33 @@ const appearanceSubs = [
 ] as const
 type AppearanceSubId = (typeof appearanceSubs)[number]['id']
 
+// DL-127: Integrations is sectioned the same way — top tabs in the content
+// header instead of one long scroll.
+const integrationSubTab = ref<'apps' | 'alerts' | 'triggers' | 'mcp'>('apps')
+const integrationSubs = [
+  { id: 'apps', name: 'Apps & scenes' },
+  { id: 'alerts', name: 'Agent alerts' },
+  { id: 'triggers', name: 'Triggers' },
+  { id: 'mcp', name: 'MCP server' },
+] as const
+type IntegrationSubId = (typeof integrationSubs)[number]['id']
+
+const subTabsForTab = computed(() =>
+  activeTab.value === 'appearance' ? appearanceSubs
+  : activeTab.value === 'integration' ? integrationSubs
+  : []
+)
+const currentSubTab = computed(() =>
+  activeTab.value === 'appearance' ? appearanceSubTab.value
+  : activeTab.value === 'integration' ? integrationSubTab.value
+  : ''
+)
+function selectSubTab(id: string) {
+  if (activeTab.value === 'appearance') appearanceSubTab.value = id as AppearanceSubId
+  else if (activeTab.value === 'integration') integrationSubTab.value = id as IntegrationSubId
+  scrollContentTop()
+}
+
 const PAGE_META: Record<string, { crumb: string; title: string; blurb: string }> = {
   'appearance/buttons': { crumb: 'Appearance · Buttons', title: 'Buttons', blurb: 'Sizing, motion and press feedback for every deck key.' },
   'appearance/layout': { crumb: 'Appearance · Layout & sidebar', title: 'Layout & sidebar', blurb: 'The docked sidebar, dashboard font and notifications.' },
@@ -1951,24 +2304,27 @@ const PAGE_META: Record<string, { crumb: string; title: string; blurb: string }>
   templates: { crumb: 'Templates', title: 'App templates', blurb: 'Drop-in scenes for popular apps.' },
   server: { crumb: 'Server', title: 'Server', blurb: 'Ports, LAN access and startup behaviour.' },
   integration: { crumb: 'Integrations', title: 'Integrations', blurb: 'Scenes that follow the app in focus.' },
+  'integration/apps': { crumb: 'Integrations · Apps & scenes', title: 'Apps & scenes', blurb: 'Scenes that follow the app in focus.' },
+  'integration/alerts': { crumb: 'Integrations · Agent alerts', title: 'Agent alerts', blurb: 'Banner, glow and deck chips when an agent needs you.' },
+  'integration/triggers': { crumb: 'Integrations · Triggers', title: 'Triggers', blurb: 'Schedules, app focus, agent state and webhooks firing deck actions.' },
+  'integration/mcp': { crumb: 'Integrations · MCP server', title: 'MCP server', blurb: 'Let local agents act on the deck.' },
   connect: { crumb: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.' },
   logs: { crumb: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.' },
-  guide: { crumb: 'Guide', title: 'User guide', blurb: 'How VDock works — gestures, features and troubleshooting.' },
+
   about: { crumb: 'About', title: 'About VDock', blurb: 'Version, help and project links.' },
 }
 const topbarMeta = computed(() =>
-  PAGE_META[activeTab.value === 'appearance' ? `appearance/${appearanceSubTab.value}` : activeTab.value]
+  PAGE_META[
+    activeTab.value === 'appearance' ? `appearance/${appearanceSubTab.value}`
+    : activeTab.value === 'integration' ? `integration/${integrationSubTab.value}`
+    : activeTab.value
+  ]
   ?? PAGE_META.about
 )
 
 const mainEl = ref<HTMLElement | null>(null)
 function scrollContentTop() {
   void nextTick(() => mainEl.value?.scrollTo({ top: 0 }))
-}
-function selectAppearanceSub(id: AppearanceSubId) {
-  activeTab.value = 'appearance'
-  appearanceSubTab.value = id
-  scrollContentTop()
 }
 // Panels carry ids so nav sub-items and search results can land on the exact
 // section rather than just the page.
@@ -2199,6 +2555,11 @@ function resetAppearanceSection() {
       settingsStore.screensaverWeatherSize = D.screensaverWeatherSize
       settingsStore.screensaverWidgetSize = D.screensaverWidgetSize
       settingsStore.screensaverBackground = D.screensaverBackground
+      settingsStore.screensaverStyle = D.screensaverStyle
+      settingsStore.spectrumSkin = D.spectrumSkin
+      settingsStore.spectrumShuffle = D.spectrumShuffle
+      settingsStore.spectrumShuffleMinutes = D.spectrumShuffleMinutes
+      settingsStore.spectrumMediaBar = D.spectrumMediaBar
       break
   }
   notificationsStore.success('Section reset', 'Defaults restored for this section.')
@@ -2507,7 +2868,14 @@ const screensaverWidgetOptions = [
   { id: 'sports', label: 'Sports News', description: 'Sports headlines from free RSS feeds' },
   { id: 'market', label: 'Stocks / Crypto', description: 'Free stock & crypto quotes — no key' },
   { id: 'worldclock', label: 'World Clock', description: 'Time in a few other cities' },
+  { id: 'nowplaying', label: 'Now Playing', description: 'Current track, artist and album art (Windows)' },
+  { id: 'spectrum', label: 'Spectrum', description: 'Live audio spectrum analyzer (Windows)' },
+  { id: 'systemstats', label: 'System Stats', description: 'CPU, memory, disk and network meters' },
 ]
+
+// Only these widgets have an Options card — the rest are self-contained.
+const widgetHasOptions = (id: string) =>
+  ['weather', 'news', 'sports', 'market', 'worldclock'].includes(id)
 
 // Widget config cards collapse to a header row — tap to expand one at a
 // time so the tab fits a 600px touchscreen without scrolling.
@@ -2541,6 +2909,33 @@ const screensaverWidgetsAtDefault = computed(() =>
 function resetScreensaverWidgets() {
   settingsStore.screensaverWidgets = [...SETTINGS_DEFAULTS.screensaverWidgets]
   settingsStore.screensaverClockEnabled = SETTINGS_DEFAULTS.screensaverClockEnabled
+}
+
+// DL-123: spectrum screensaver mode — skin registry for the swatch grid.
+const spectrumSkins = SPECTRUM_SKINS
+
+// DL-125: the "not in use" notes name whichever fullscreen style is picked.
+const screensaverStyleLabel = computed(() =>
+  settingsStore.screensaverStyle === 'spectrum'
+    ? 'Spectrum visualizer'
+    : settingsStore.screensaverStyle === 'stats'
+      ? 'System stats'
+      : 'Widget dashboard'
+)
+
+const spectrumAtDefault = computed(() =>
+  settingsStore.screensaverStyle === SETTINGS_DEFAULTS.screensaverStyle &&
+  settingsStore.spectrumSkin === SETTINGS_DEFAULTS.spectrumSkin &&
+  settingsStore.spectrumShuffle === SETTINGS_DEFAULTS.spectrumShuffle &&
+  settingsStore.spectrumShuffleMinutes === SETTINGS_DEFAULTS.spectrumShuffleMinutes &&
+  settingsStore.spectrumMediaBar === SETTINGS_DEFAULTS.spectrumMediaBar
+)
+function resetSpectrumSettings() {
+  settingsStore.screensaverStyle = SETTINGS_DEFAULTS.screensaverStyle
+  settingsStore.spectrumSkin = SETTINGS_DEFAULTS.spectrumSkin
+  settingsStore.spectrumShuffle = SETTINGS_DEFAULTS.spectrumShuffle
+  settingsStore.spectrumShuffleMinutes = SETTINGS_DEFAULTS.spectrumShuffleMinutes
+  settingsStore.spectrumMediaBar = SETTINGS_DEFAULTS.spectrumMediaBar
 }
 
 // ── Session Logs tab (DL-029) ──
@@ -2863,7 +3258,6 @@ const tabs = [
   { id: 'integration', name: 'Integrations', icon: ['fas', 'plug'] },
   { id: 'connect', name: 'Connect a device', icon: ['fas', 'mobile-screen-button'] },
   { id: 'logs', name: 'Logs', icon: ['fas', 'file-lines'] },
-  { id: 'guide', name: 'Guide', icon: ['fas', 'circle-question'] },
   { id: 'about', name: 'About', icon: ['fas', 'info-circle'] }
 ]
 
@@ -2871,9 +3265,9 @@ interface SettingsSearchEntry {
   label: string
   keywords: string
   tabId: string
-  subTab?: 'buttons' | 'layout' | 'background' | 'screensaver'
+  subTab?: AppearanceSubId | IntegrationSubId
   /** Nested tab inside 'buttons' (DL-035) or 'screensaver' (DL-032). */
-  deepTab?: 'display' | 'preview' | 'touch' | 'widgets' | 'settings' | 'backgrounds'
+  deepTab?: 'display' | 'preview' | 'touch' | 'widgets' | 'settings' | 'backgrounds' | 'spectrum'
   icon: [string, string]
 }
 
@@ -2884,7 +3278,11 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Notifications', keywords: 'notifications toast alerts', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'bell'] },
   { label: 'Sidebar', keywords: 'docked sidebar width', tabId: 'appearance', subTab: 'layout', icon: ['fas', 'columns'] },
   { label: 'Screensaver Delay', keywords: 'screensaver idle timeout sleep', tabId: 'appearance', subTab: 'screensaver', deepTab: 'settings', icon: ['fas', 'moon'] },
-  { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'grip'] },
+  { label: 'Screensaver Widgets', keywords: 'screensaver widgets weather news stocks crypto world clock now playing spectrum system stats', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'grip'] },
+  { label: 'Spectrum Screensaver', keywords: 'spectrum visualizer audio skin winamp aurora ember scope shuffle media controls fullscreen', tabId: 'appearance', subTab: 'screensaver', deepTab: 'spectrum', icon: ['fas', 'wave-square'] },
+  { label: 'Agent Attention Alerts', keywords: 'agent alerts waiting glow banner chips dock notification permission idle', tabId: 'integration', subTab: 'alerts', icon: ['fas', 'user-clock'] },
+  { label: 'Triggers & Schedules', keywords: 'triggers schedules automation time app foreground agent webhook scene switch pause resume', tabId: 'integration', subTab: 'triggers', icon: ['fas', 'bolt'] },
+  { label: 'MCP Server', keywords: 'mcp server agents model context protocol tools press button enable disable', tabId: 'integration', subTab: 'mcp', icon: ['fas', 'robot'] },
   { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Background', keywords: 'background animation particles waves aurora image wallpaper gradient', tabId: 'appearance', subTab: 'background', icon: ['fas', 'image'] },
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', tabId: 'logs', icon: ['fas', 'file-lines'] },
@@ -2894,8 +3292,8 @@ const settingsSearchIndex: SettingsSearchEntry[] = [
   { label: 'Startup', keywords: 'launcher terminal close debug new tab', tabId: 'server', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', tabId: 'server', icon: ['fas', 'up-right-from-square'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', tabId: 'appearance', subTab: 'screensaver', deepTab: 'widgets', icon: ['fas', 'cloud-sun'] },
-  { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', icon: ['fas', 'shuffle'] },
-  { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', tabId: 'integration', icon: ['fas', 'desktop'] },
+  { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications', tabId: 'integration', subTab: 'apps', icon: ['fas', 'shuffle'] },
+  { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', tabId: 'integration', subTab: 'apps', icon: ['fas', 'desktop'] },
   { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck', tabId: 'connect', icon: ['fas', 'mobile-screen-button'] },
   { label: 'About VDock', keywords: 'version about info', tabId: 'about', icon: ['fas', 'info-circle'] }
 ]
@@ -2918,17 +3316,34 @@ const deepTabAnchor: Record<string, string> = {
   widgets: 'ss-widgets',
   settings: 'ss-activation',
   backgrounds: 'ss-background',
+  spectrum: 'ss-spectrum',
+}
+
+function openGuide() {
+  // The guide is a standalone landing page (DL-132) — a new window so the
+  // deck and the guide can sit side by side.
+  window.open(`${window.location.origin}/guide`, '_blank', 'noopener')
 }
 
 function searchEntryCrumb(match: SettingsSearchEntry): string {
+  if (match.tabId === 'guide') return 'Guide ↗ new window'
   const tab = tabs.find(t => t.id === match.tabId)?.name ?? match.tabId
-  const sub = match.subTab ? appearanceSubs.find(s => s.id === match.subTab)?.name : undefined
+  const subs = match.tabId === 'integration' ? integrationSubs : appearanceSubs
+  const sub = match.subTab ? subs.find(s => s.id === match.subTab)?.name : undefined
   return sub ? `${tab} · ${sub}` : tab
 }
 
 function jumpToSearchResult(match: SettingsSearchEntry) {
+  if (match.tabId === 'guide') {
+    openGuide()
+    settingsSearch.value = ''
+    return
+  }
   activeTab.value = match.tabId
-  if (match.subTab) appearanceSubTab.value = match.subTab
+  if (match.subTab) {
+    if (match.tabId === 'integration') integrationSubTab.value = match.subTab as IntegrationSubId
+    else appearanceSubTab.value = match.subTab as AppearanceSubId
+  }
   settingsSearch.value = ''
   const anchor = match.deepTab ? deepTabAnchor[match.deepTab] : undefined
   if (anchor) scrollToPanel(anchor)
@@ -3021,6 +3436,14 @@ function toggleAgentAlerts() {
 
 function toggleWaitingGlow() {
   settingsStore.agentWaitingGlowEnabled = !settingsStore.agentWaitingGlowEnabled
+}
+
+function toggleWaitingDock() {
+  settingsStore.agentWaitingDockEnabled = !settingsStore.agentWaitingDockEnabled
+}
+
+function toggleMcpEnabled() {
+  settingsStore.mcpEnabled = !settingsStore.mcpEnabled
 }
 
 function agentHookButtonLabel(agent: HookAgentId): string {
@@ -3198,16 +3621,20 @@ async function toggleAutoSwitching() {
 
 function applySettingsRouteQuery() {
   const tabQuery = route.query.tab
+  // 'guide' is no longer a tab — a stale ?tab=guide link still lands the
+  // user on the guide page.
+  if (tabQuery === 'guide') openGuide()
   if (typeof tabQuery === 'string' && tabs.some((tab) => tab.id === tabQuery)) {
     activeTab.value = tabQuery
   }
 
   const subQuery = route.query.sub
-  if (
-    typeof subQuery === 'string' &&
-    appearanceSubs.some(s => s.id === subQuery)
-  ) {
-    appearanceSubTab.value = subQuery as AppearanceSubId
+  if (typeof subQuery === 'string') {
+    if (activeTab.value === 'appearance' && appearanceSubs.some(s => s.id === subQuery)) {
+      appearanceSubTab.value = subQuery as AppearanceSubId
+    } else if (activeTab.value === 'integration' && integrationSubs.some(s => s.id === subQuery)) {
+      integrationSubTab.value = subQuery as IntegrationSubId
+    }
   }
 }
 
@@ -4052,7 +4479,12 @@ onMounted(async () => {
   grid-template-columns: var(--nav-w) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   width: 100%;
-  height: 100vh;
+  /* DL-124: track #app's resolved height instead of re-resolving vh — where
+     100dvh (on #app) and 100vh disagree, a vh-sized child would paint past
+     #app's clipped box and expose the page canvas below. */
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
@@ -4062,7 +4494,7 @@ onMounted(async () => {
   -webkit-tap-highlight-color: transparent;
 }
 
-.settings-app .btn, .settings-app .select, .nav-item, .nav-sub button,
+.settings-app .btn, .settings-app .select, .nav-item, .subtab,
 .nav-result, .switch, .seg label, .pick, .category-header,
 .log-file-row, .app-item {
   touch-action: manipulation;
@@ -4213,37 +4645,6 @@ onMounted(async () => {
   font-weight: 600;
 }
 .nav-item svg { flex: none; color: currentColor; opacity: 0.9; }
-.nav-item-chevron { margin-left: auto; font-size: var(--fs-xs); transition: transform 0.2s var(--ease-out, ease); }
-
-/* indented sub-items under the open group — replaces the old tab rows */
-.nav-sub {
-  margin: 2px 0 6px;
-  margin-left: 19px;
-  padding-left: 19px;
-  border-left: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.nav-sub button {
-  padding: 6px 10px;
-  min-height: calc(var(--target) - 4px);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text-2);
-  font: inherit;
-  font-size: var(--fs-sm);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .nav-sub button:hover { background: #0e1a2c; color: var(--text); }
-}
-.nav-sub button:active { transform: scale(0.98); }
-.nav-sub button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.nav-sub button[aria-current="true"] { background: var(--accent-ghost); color: #b9d3ff; font-weight: 600; }
 
 /* --- dock footer bar ------------------------------------------------------- */
 
@@ -4265,22 +4666,8 @@ onMounted(async () => {
   border-top: 1px solid var(--line-soft);
   background: var(--bg-sunken);
 }
-.dock-credit { display: flex; align-items: center; gap: 10px; }
-.dock-credit-text { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
-.dock-credit-links { display: flex; align-items: center; gap: 4px; }
-.dock-credit-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  font-size: 19px;
-  border-radius: var(--radius-sm);
-  color: var(--text-3);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
-}
-.dock-credit-link:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.07); }
-.dock-credit-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; display: block; }
+/* the credit block itself is SiteFooter.vue (shared with /guide). */
+.nav-item-ext { font-size: 0.62em; opacity: 0.45; margin-left: auto; }
 
 /* --- main column ---------------------------------------------------------- */
 
@@ -4319,6 +4706,41 @@ onMounted(async () => {
 }
 .draft-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); flex: none; }
 
+/* DL-127: in-content sub-tabs — a fixed strip between topbar and content,
+   scrolls sideways when the labels overflow a narrow panel. */
+.subtab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px var(--gutter);
+  border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+}
+.subtab-bar::-webkit-scrollbar { display: none; }
+.subtab {
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--target) - 12px);
+  padding: 5px 14px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .subtab:hover { color: var(--text); background: #0e1a2c; }
+}
+.subtab:active { transform: scale(0.97); }
+.subtab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.subtab[aria-selected="true"] { background: var(--accent-2); color: #fff; }
+
 .content {
   flex: 1 1 auto;
   min-height: 0;
@@ -4332,8 +4754,7 @@ onMounted(async () => {
 .content.has-rail { grid-template-columns: minmax(0, 1fr) var(--rail-w); align-items: start; }
 .content:not(.has-rail) .col { max-width: 1000px; }
 /* Guide tab — the panel fills the viewport and scrolls internally. */
-.content.guide-page { display: flex; flex-direction: column; }
-.content.guide-page > .user-guide { flex: 1 1 auto; min-height: 0; }
+
 .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .rail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 16px; }
 
@@ -4966,8 +5387,47 @@ onMounted(async () => {
   .about-meta { margin-left: 0; text-align: left; }
 }
 
+/* DL-123: spectrum skin picker — live canvas swatches. */
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.skin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.skin-card:hover {
+  border-color: var(--border-bright, rgba(255, 255, 255, 0.25));
+}
+.skin-card.skin-active {
+  border-color: var(--accent, #7ab8ff);
+  background: rgba(122, 184, 255, 0.08);
+}
+.skin-thumb {
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #050510;
+}
+.skin-name {
+  font-size: clamp(11px, 1.1vw, 13px);
+  color: var(--text);
+  font-weight: 500;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .nav-item, .nav-sub button, .nav-result, .chev, .nav-item-chevron,
+  .nav-item, .subtab, .nav-result, .chev,
   .switch .track, .switch .track::after, .seg label, .pick,
   .category-header, .settings-app .btn,
   .settings-app .select, .settings-app .input,

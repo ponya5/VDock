@@ -800,7 +800,8 @@ const shouldUseCompactMode = computed(() => {
     const actionType = button.action?.type
     return actionType === 'weather' || 
            actionType === 'time_world_clock' || 
-           actionType === 'time_timer' || 
+           actionType === 'time_timer' ||
+           actionType === 'time_stopwatch' ||
            actionType === 'time_countdown'
   })
 })
@@ -1444,9 +1445,9 @@ onUnmounted(() => {
   position: fixed;
   right: var(--spacing-touch-md, var(--spacing-md));
   bottom: var(--spacing-touch-md, var(--spacing-md));
-  width: max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)));
-  height: max(46px, calc(46px * min(var(--touch-multiplier, 1), 1.4)));
-  border-radius: 12px;
+  width: max(92px, calc(92px * min(var(--touch-multiplier, 1), 1.4)));
+  height: max(58px, calc(58px * min(var(--touch-multiplier, 1), 1.4)));
+  border-radius: 14px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(10, 8, 32, 0.66);
@@ -1493,12 +1494,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .fab-label {
   color: rgba(255, 255, 255, 0.95);
-  font-size: calc(0.72rem * min(var(--touch-multiplier, 1), 1.4));
+  font-size: calc(0.86rem * min(var(--touch-multiplier, 1), 1.4));
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -1506,7 +1507,7 @@ onUnmounted(() => {
 
 .fab-caret {
   color: rgba(255, 255, 255, 0.9);
-  font-size: calc(0.78rem * min(var(--touch-multiplier, 1), 1.4));
+  font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.4));
 }
 
 .header-reveal-fab.above-footer {

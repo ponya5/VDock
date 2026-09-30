@@ -16,6 +16,8 @@ export interface ButtonTemplate {
     backgroundColor?: string
     textColor?: string
   }
+  /** Cell span for display widgets (DL-129: Now Playing is 2×1). */
+  size?: { rows: number; cols: number }
 }
 
 export const BUTTON_TEMPLATES: ButtonTemplate[] = [
@@ -64,6 +66,39 @@ export const BUTTON_TEMPLATES: ButtonTemplate[] = [
       backgroundColor: '#10b981',
       textColor: '#ffffff'
     }
+  },
+  {
+    // DL-128: shows Stop while media plays, Play otherwise.
+    id: 'media-play-stop',
+    name: 'Play / Stop',
+    description: 'Stops while playing, plays when stopped',
+    icon: ['fas', 'play'],
+    category: 'media',
+    action: {
+      type: 'cross_platform',
+      config: { action: 'media_play_stop' }
+    },
+    style: {
+      backgroundColor: '#8e44ad',
+      textColor: '#ffffff'
+    }
+  },
+  {
+    // DL-129: two cells wide — live track card, tap toggles play/pause.
+    id: 'now-playing',
+    name: 'Now Playing',
+    description: 'Live track card — art, title, artist; tap toggles play',
+    icon: ['fas', 'music'],
+    category: 'media',
+    action: {
+      type: 'now_playing',
+      config: {}
+    },
+    style: {
+      backgroundColor: '#1e3264',
+      textColor: '#ffffff'
+    },
+    size: { rows: 1, cols: 2 }
   },
   {
     id: 'volume-up',

@@ -30,6 +30,9 @@ from plugins import PluginManager
 from utils import FileManager, setup_logger
 from services.job_runner import get_job_runner
 from services import volume_monitor
+from services import now_playing
+from services import audio_spectrum
+from services import triggers as triggers_service
 
 # Import route blueprints
 from routes.auth import auth_bp
@@ -51,6 +54,11 @@ from routes.logs import logs_bp
 from routes.agent_events import agent_events_bp, set_emitter as set_agent_events_emitter
 from routes.agent_sessions import agent_sessions_bp
 from routes.feedback import feedback_bp
+from routes.now_playing import now_playing_bp
+from routes.geo import geo_bp
+from routes.triggers import triggers_bp
+from routes.mcp import mcp_bp, set_emitter as set_mcp_emitter, \
+    set_executor as set_mcp_executor
 from routes.actions import set_emitter as set_actions_emitter
 
 # Initialize Flask app
@@ -134,6 +142,25 @@ set_actions_emitter(lambda event, payload: socketio.emit(event, payload))
 # spawn cannot emit in threading mode.
 volume_monitor.set_emitter(lambda event, payload: socketio.emit(event, payload))
 volume_monitor.set_spawner(socketio.start_background_task)
+# Now-playing (SMTC) and spectrum monitors share the same spawn contract —
+# their emits must come from a thread Socket.IO spawned. Both idle quietly
+# when their optional deps / platform are missing.
+now_playing.set_emitter(lambda event, payload: socketio.emit(event, payload))
+now_playing.set_spawner(socketio.start_background_task)
+audio_spectrum.set_emitter(lambda event, payload: socketio.emit(event, payload))
+audio_spectrum.set_spawner(socketio.start_background_task)
+# WASAPI loopback capture is a Windows-only feature today; elsewhere the
+# service stays inert and the widget shows its honest unavailable state.
+audio_spectrum.set_enabled(sys.platform == 'win32')
+# Triggers run headless: time/app/agent/webhook events fire deck actions,
+# scene navigations and panel notifications.
+triggers_service.set_emitter(lambda event, payload: socketio.emit(event, payload))
+triggers_service.set_spawner(socketio.start_background_task)
+triggers_service.set_executor(action_executor)
+# MCP tools act on the deck through the same executor + emitter so agents
+# can drive the panel (DL-121).
+set_mcp_emitter(lambda event, payload: socketio.emit(event, payload))
+set_mcp_executor(action_executor)
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -155,6 +182,10 @@ app.register_blueprint(logs_bp)
 app.register_blueprint(agent_events_bp)
 app.register_blueprint(agent_sessions_bp)
 app.register_blueprint(feedback_bp)
+app.register_blueprint(now_playing_bp)
+app.register_blueprint(geo_bp, url_prefix='/api')
+app.register_blueprint(triggers_bp)
+app.register_blueprint(mcp_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
@@ -191,6 +222,15 @@ limiter.exempt(agent_events_bp)
 # cap that alone exhausts the quota, after which the picker silently shows
 # "No session" while real sessions run. Localhost enumeration, not abuse.
 limiter.exempt(agent_sessions_bp)
+# Now-playing track + art are read on widget mount/refresh — same
+# self-refreshing-data class as the other widgets.
+limiter.exempt(now_playing_bp)
+# Trigger CRUD is low-volume settings traffic and fire/<key> is a
+# localhost webhook — neither is an abuse surface.
+limiter.exempt(triggers_bp)
+# MCP clients may poll tools/call rapidly; the endpoint is localhost-only
+# (or Bearer-authenticated) already.
+limiter.exempt(mcp_bp)
 
 
 # ============================================================================
@@ -455,6 +495,11 @@ if __name__ == '__main__':
     # Follows OS-side volume changes and pushes them to every client. Started
     # here rather than at module level so test imports never spawn the loop.
     volume_monitor.start()
+    # SMTC now-playing + spectrum capture idle gracefully where unsupported.
+    now_playing.start()
+    audio_spectrum.start()
+    # Headless automation: time/app/agent/webhook triggers.
+    triggers_service.start()
 
     socketio.run(
         app,

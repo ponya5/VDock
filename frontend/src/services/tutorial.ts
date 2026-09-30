@@ -6,10 +6,10 @@ import { useSettingsStore } from '@/stores/settings'
  * (auto-start / pending launch), SettingsView ("Launch Tutorial" button)
  * and the single <TutorialTour> mounted in App.vue can drive the tour.
  *
- * Steps can declare `route` (navigate first), `activate` (click a
- * selector — e.g. open a sub-tab) and `advanceOnPath` (auto-advance when
- * the app lands on that path — used so loading a profile moves the tour
- * from the Profiles screen onto the dashboard).
+ * Steps can declare `route` (navigate first) and `activate` (click a
+ * selector — e.g. open a sub-tab). Steps NEVER auto-advance: only the
+ * user's Next/Back/Skip moves the tour — a step whose target is absent
+ * renders as a centered card instead of skipping itself.
  *
  * Completion lives in the server-persisted `tutorialCompleted` setting —
  * a real boolean shared by every window — not localStorage. The legacy
@@ -36,12 +36,9 @@ export interface TutorialStep {
   route?: string
   /** Selector clicked before measuring — e.g. to open a settings sub-tab. */
   activate?: string
-  /** Auto-advance when the app navigates to this path (e.g. user loads a
-      profile and lands on '/'). */
-  advanceOnPath?: string
   /** Target may legitimately be absent (conditional UI like the agent
-      bar or docked sidebar). When it never appears, auto-advance
-      instead of showing a dead centered card. Ignored on the last step. */
+      bar, a hidden header, or the docked sidebar). When it is, the step
+      shows as a centered card — it never skips itself. */
   optional?: boolean
 }
 
@@ -57,7 +54,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Pick a Profile',
     text: 'A profile is a full deck: scenes, pages, buttons. Tap ▶ on "My VDock" to load the starter — or "+ New Profile" to start blank and customize later.',
     placement: 'bottom',
-    advanceOnPath: '/',
   },
   {
     route: '/',

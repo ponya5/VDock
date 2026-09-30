@@ -39,7 +39,8 @@ test('seeded buttons use only no-key action types', () => {
     'url', 'hotkey', 'cross_platform', 'macro',
     'claude_continue', 'claude_slash', 'claude_prompt', 'claude_open',
     'cc_prompt',
-    'cursor_new_chat', 'cursor_prompt', 'cursor_inline_edit', 'cursor_toggle_terminal'
+    'cursor_new_chat', 'cursor_prompt', 'cursor_inline_edit', 'cursor_toggle_terminal',
+    'now_playing' // DL-129: the SMTC track card — local feed, no key needed
   ])
 
   for (const scene of profile.scenes) {

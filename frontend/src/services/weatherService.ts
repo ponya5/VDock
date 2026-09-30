@@ -63,6 +63,18 @@ export async function reverseGeocode(coords: Coordinates): Promise<string> {
   return city ? `${city}, ${data.countryCode || data.countryName || ''}`.replace(/, $/, '') : 'Current Location'
 }
 
+/** City-level fix for the machine hosting the backend, from its public
+ * IP — zero-config, works where the browser denies geolocation (the
+ * panel's kiosk webview). Returns null when the backend can't resolve. */
+export async function getMachineLocation(): Promise<(Coordinates & { label: string }) | null> {
+  const response = await fetch('/api/geo')
+  if (!response.ok) return null
+  const data = await response.json()
+  const loc = data?.location
+  if (!loc || typeof loc.latitude !== 'number' || typeof loc.longitude !== 'number') return null
+  return { latitude: loc.latitude, longitude: loc.longitude, label: loc.label || 'Current location' }
+}
+
 export function getBrowserLocation(): Promise<Coordinates> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {

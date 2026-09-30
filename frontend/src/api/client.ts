@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosError } from 'axios'
+import { getAuthToken, markUnauthorized } from '@/services/auth'
 
 class ApiClient {
   private client: AxiosInstance
@@ -19,7 +20,13 @@ class ApiClient {
           config.headers['Content-Type'] = 'application/json'
         }
         // For FormData, axios will automatically set the correct Content-Type with boundary
-        
+
+        // Bearer token when the deck is locked behind a password (DL-126).
+        const token = getAuthToken()
+        if (token) {
+          config.headers['Authorization'] = `Bearer ${token}`
+        }
+
         return config
       },
       (error) => {
@@ -31,6 +38,13 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
+        // A 401 outside the login attempt means a stale/missing token —
+        // raise the lock screen regardless of whether notifications are
+        // wired up yet. Login's own 401 ("wrong password") is the caller's.
+        if (error.response?.status === 401
+            && !error.config?.url?.includes('/auth/login')) {
+          markUnauthorized()
+        }
         this.handleError(error)
         return Promise.reject(error)
       }
@@ -74,11 +88,8 @@ class ApiClient {
     // Handle specific status codes
     switch (response.status) {
       case 401:
-        this.notificationsStore.error(
-          'Unauthorized',
-          'The server rejected this request as unauthenticated.',
-          { duration: 6000 }
-        )
+        // The lock screen (raised by the interceptor) is the feedback —
+        // a toast would just stack under it.
         break
 
       case 403:

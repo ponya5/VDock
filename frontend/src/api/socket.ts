@@ -1,5 +1,6 @@
 import { io, type Socket } from 'socket.io-client'
 import type { ActionResult } from '@/types'
+import { getAuthToken, onAuthTokenChanged, probeAuth } from '@/services/auth'
 
 type SocketListener = (...args: any[]) => void
 
@@ -12,6 +13,7 @@ class SocketClient {
   }> = new Map()
   private actionIdCounter = 0
   private pendingListeners: Array<{ event: string; callback: SocketListener }> = []
+  private lastAuthProbe = 0
 
   connect() {
     // The socket lives on the backend port, not necessarily the page's origin:
@@ -24,7 +26,10 @@ class SocketClient {
       || `${window.location.protocol}//${window.location.hostname}:${backendPort}`
 
     this.socket = io(url, {
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      // Bearer token at handshake when the deck requires auth (DL-126).
+      // Callback form so a reconnect always reads the freshest token.
+      auth: (cb) => cb({ token: getAuthToken() })
     })
 
     for (const { event, callback } of this.pendingListeners) {
@@ -53,6 +58,14 @@ class SocketClient {
 
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error)
+      // A rejected handshake may mean the token expired — re-probe so the
+      // lock screen appears instead of retrying forever. Throttled: socket.io
+      // retries fast and this is a real request per error.
+      const now = Date.now()
+      if (now - this.lastAuthProbe > 5000) {
+        this.lastAuthProbe = now
+        void probeAuth()
+      }
     })
 
     this.socket.on('disconnect', () => {
@@ -70,6 +83,11 @@ class SocketClient {
       this.socket.disconnect()
       this.socket = null
     }
+  }
+
+  reconnect() {
+    this.disconnect()
+    this.connect()
   }
 
   isConnected(): boolean {
@@ -152,5 +170,10 @@ class SocketClient {
   }
 }
 
-export default new SocketClient()
+const socketClient = new SocketClient()
+
+// A token set/clear must reach the next handshake — reconnect carries it.
+onAuthTokenChanged(() => socketClient.reconnect())
+
+export default socketClient
 
