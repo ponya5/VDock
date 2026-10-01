@@ -26,7 +26,7 @@ from playwright.sync_api import sync_playwright
 ORIG_SCENE = json.loads(
     (Path(__file__).parent / "cursor-scene-original.json").read_text()
 )
-SHOT_DIR = Path(r"C:\Users\Daniel\CursorRepo\VDock2")
+SHOT_DIR = Path(r"C:\Users\Daniel\CursorRepo\VDock2") / "design-log" / "refs"
 
 
 def _key_labels(page):
