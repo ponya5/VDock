@@ -357,6 +357,7 @@ import SpectrumWidget from '@/components/screensaver/SpectrumWidget.vue'
 import SystemStatsWidget from '@/components/screensaver/SystemStatsWidget.vue'
 import SpectrumStage from '@/components/screensaver/SpectrumStage.vue'
 import StatsStage from '@/components/screensaver/StatsStage.vue'
+import { pickNextSaverType, type ScreensaverType } from '@/services/screensaverTypes'
 import {
   defaultScreensaverLayout,
   type ScreensaverLayout,
@@ -496,15 +497,53 @@ const showWorldClockWidget = computed(() => isMobileViewport.value || settingsSt
 const showSportsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('sports'))
 // DL-116/117/118 widgets stay desktop-only like markets — the mobile
 // screensaver keeps its curated small set.
-// DL-123: 'spectrum' style swaps the entire surface for the visualizer —
-// layoutEdit still forces the widget dashboard (it edits that layout).
+// DL-123/133: 'spectrum'/'stats' swap the entire surface; 'shuffle' rotates
+// the effective style on an interval. layoutEdit always forces widgets.
+const shufflePick = ref<ScreensaverType>('widgets')
+const effectiveStyle = computed(() =>
+  settingsStore.screensaverStyle === 'shuffle'
+    ? shufflePick.value
+    : settingsStore.screensaverStyle
+)
 const spectrumMode = computed(() =>
-  settingsStore.screensaverStyle === 'spectrum' && !props.layoutEdit
+  effectiveStyle.value === 'spectrum' && !props.layoutEdit
 )
 // DL-125: same swap for the fullscreen system monitor.
 const statsMode = computed(() =>
-  settingsStore.screensaverStyle === 'stats' && !props.layoutEdit
+  effectiveStyle.value === 'stats' && !props.layoutEdit
 )
+
+// The shuffle timer only exists while the saver itself is mounted —
+// it can never leak into the dashboard. Random start (a shuffled session
+// shouldn't always open on the same view); picks never repeat.
+let shuffleTimer: ReturnType<typeof setInterval> | null = null
+function armTypeShuffle(): void {
+  if (shuffleTimer) clearInterval(shuffleTimer)
+  shuffleTimer = null
+  const minutes = Number(settingsStore.screensaverShuffleMinutes)
+  if (settingsStore.screensaverStyle !== 'shuffle' || props.layoutEdit
+      || !Number.isFinite(minutes) || minutes <= 0) return
+  shuffleTimer = setInterval(() => {
+    shufflePick.value = pickNextSaverType(shufflePick.value)
+  }, minutes * 60_000)
+}
+watch(
+  () => [settingsStore.screensaverStyle, settingsStore.screensaverShuffleMinutes],
+  armTypeShuffle,
+  { immediate: true },
+)
+// Mid-session rotations: widget feeds sleep while a fullscreen style is
+// on stage and wake when shuffle lands back on the dashboard.
+watch(spectrumMode, (isSpectrum) => {
+  if (isSpectrum) {
+    stopWeather(); stopNews(); stopSports(); stopMarket()
+  } else {
+    if (showWeatherWidget.value) startWeather()
+    if (showNewsWidget.value) startNews()
+    if (showSportsWidget.value) startSports()
+    if (showMarketWidget.value) startMarket()
+  }
+})
 const showNowPlayingWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('nowplaying'))
 const showSpectrumWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('spectrum'))
 const showSystemStatsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('systemstats'))
@@ -1060,6 +1099,9 @@ onMounted(() => {
     })
     for (const el of widgetEls.values()) widgetObserver.observe(el)
   }
+  // Shuffle starts on a random style — landing on widgets every time
+  // would make the type picker pointless. '' excludes nothing → full pool.
+  shufflePick.value = pickNextSaverType('')
   // Spectrum mode doesn't render the widgets — don't poll their feeds.
   if (!spectrumMode.value) {
     if (showWeatherWidget.value) startWeather()
@@ -1074,6 +1116,7 @@ onUnmounted(() => {
   ssObserver = null
   if (clockTimer) clearInterval(clockTimer)
   if (driftTimer) clearInterval(driftTimer)
+  if (shuffleTimer) clearInterval(shuffleTimer)
   widgetObserver?.disconnect()
   widgetObserver = null
   endInteraction()

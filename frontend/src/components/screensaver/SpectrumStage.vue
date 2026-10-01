@@ -388,16 +388,16 @@ function media(action: string): void {
   min-width: 0;
 }
 
-/* With a live track the pill becomes a compact now-playing card — art
-   presented properly, controls beneath — still anchored bottom-center so
-   it never dwarfs the visualizer. */
+/* With a live track the pill becomes a now-playing card — art presented
+   properly, controls beneath — still anchored bottom-center so it never
+   dwarfs the visualizer (≲ a third of the screen height). */
 .spectrum-media.has-track {
   flex-direction: column;
   align-items: stretch;
-  gap: clamp(10px, 1.6vh, 14px);
-  width: min(92vw, 400px);
-  padding: clamp(12px, 2vh, 18px) clamp(16px, 2.4vw, 22px);
-  border-radius: clamp(16px, 2.6vh, 22px);
+  gap: clamp(12px, 1.8vh, 18px);
+  width: min(94vw, 560px);
+  padding: clamp(14px, 2.4vh, 22px) clamp(18px, 3vw, 28px);
+  border-radius: clamp(18px, 2.8vh, 26px);
 }
 
 .spectrum-media.has-track .spectrum-media-head {
@@ -420,9 +420,9 @@ function media(action: string): void {
 }
 
 .spectrum-media.has-track .spectrum-media-art {
-  width: clamp(72px, 13vh, 104px);
-  height: clamp(72px, 13vh, 104px);
-  border-radius: 12px;
+  width: clamp(88px, 15vh, 120px);
+  height: clamp(88px, 15vh, 120px);
+  border-radius: 14px;
 }
 
 .spectrum-media-art-icon {
@@ -435,7 +435,7 @@ function media(action: string): void {
 
 .spectrum-media-kicker {
   color: rgba(255, 255, 255, 0.38);
-  font-size: clamp(9px, 1.05vw, 11px);
+  font-size: clamp(10px, 1.2vw, 13px);
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -476,12 +476,12 @@ function media(action: string): void {
 }
 
 .spectrum-media.has-track .spectrum-media-title {
-  font-size: clamp(14px, 1.9vw, 19px);
+  font-size: clamp(16px, 2.3vw, 24px);
   max-width: none;
 }
 
 .spectrum-media.has-track .spectrum-media-artist {
-  font-size: clamp(11px, 1.4vw, 13px);
+  font-size: clamp(13px, 1.7vw, 16px);
   max-width: none;
 }
 
@@ -491,7 +491,7 @@ function media(action: string): void {
 
 .spectrum-media-progress {
   margin-top: 3px;
-  height: 3px;
+  height: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
@@ -515,13 +515,13 @@ function media(action: string): void {
 }
 
 .spectrum-media-btn {
-  width: clamp(34px, 5.4vh, 44px);
-  height: clamp(34px, 5.4vh, 44px);
+  width: clamp(42px, 7vh, 56px);
+  height: clamp(42px, 7vh, 56px);
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.85);
-  font-size: clamp(12px, 1.6vh, 15px);
+  font-size: clamp(14px, 2.2vh, 19px);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -534,11 +534,11 @@ function media(action: string): void {
 }
 
 .spectrum-media-play {
-  width: clamp(40px, 6.4vh, 52px);
-  height: clamp(40px, 6.4vh, 52px);
+  width: clamp(50px, 8.6vh, 68px);
+  height: clamp(50px, 8.6vh, 68px);
   background: rgba(255, 255, 255, 0.92);
   color: #0a0a16;
-  font-size: clamp(14px, 1.9vh, 17px);
+  font-size: clamp(17px, 2.6vh, 22px);
 }
 
 .spectrum-media-play:active {

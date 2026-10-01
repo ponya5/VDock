@@ -55,6 +55,7 @@ FULL_SETTINGS_PAYLOAD = {
     'screensaverWidgetSize': 1.0,
     'screensaverBackground': 'default',
     'screensaverStyle': 'spectrum',
+    'screensaverShuffleMinutes': 5,
     'spectrumSkin': 'aurora',
     'spectrumShuffle': True,
     'spectrumShuffleMinutes': 5,

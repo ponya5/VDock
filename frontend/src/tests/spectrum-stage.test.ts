@@ -243,7 +243,9 @@ describe('ScreenSaver integration (source contract)', () => {
 
   it('mounts SpectrumStage and gates it on the spectrum style', () => {
     expect(src).toContain("import SpectrumStage")
-    expect(src).toContain("screensaverStyle === 'spectrum'")
+    // DL-133: gating runs through the effective style so the 'shuffle'
+    // type can land on the spectrum mid-rotation.
+    expect(src).toContain("effectiveStyle.value === 'spectrum'")
     expect(src).toContain('<SpectrumStage')
   })
 

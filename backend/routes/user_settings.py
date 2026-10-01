@@ -62,7 +62,9 @@ ALLOWED_USER_SETTING_KEYS = {
     'screensaverBackground',
     'screensaverLayout',
     # DL-123: fullscreen spectrum saver — style, skin, shuffle, media bar.
+    # DL-133: + the Shuffle type's rotation cadence.
     'screensaverStyle',
+    'screensaverShuffleMinutes',
     'spectrumSkin',
     'spectrumShuffle',
     'spectrumShuffleMinutes',

@@ -183,7 +183,7 @@ describe('screensaver style wiring', () => {
       resolve(__dirname, '../components/ScreenSaver.vue'),
       'utf-8',
     )
-    expect(src).toContain("screensaverStyle === 'stats'")
+    expect(src).toContain("effectiveStyle.value === 'stats'")
     expect(src).toContain('StatsStage')
     expect(src).toContain('v-else-if="statsMode"')
   })

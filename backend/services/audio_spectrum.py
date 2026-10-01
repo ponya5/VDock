@@ -63,6 +63,16 @@ LIVE_HOLD_SECONDS = 0.8
 DISABLED_POLL_SECONDS = 0.4
 CAPTURE_RETRY_SECONDS = 2.0
 
+# DL-133 — follow-the-audio: the tap is pinned to whichever endpoint is
+# actually sounding, not just the default. While the captured stream stays
+# silent for SILENCE_BEFORE_PROBE_S we scan every other loopback (one ~43 ms
+# chunk each) and move to the loudest when it clears PROBE_SWITCH_PEAK.
+# A chunk under PROBE_QUIET_PEAK counts as silence — the observed endpoint
+# noise floor is ~0.01, a real mix clears 0.04 without trying.
+SILENCE_BEFORE_PROBE_S = 4.0
+PROBE_QUIET_PEAK = 0.02
+PROBE_SWITCH_PEAK = 0.04
+
 
 def _default_spawn(target: Callable[..., Any], *args: Any) -> Any:
     """Plain daemon thread, used until app.py supplies the Socket.IO spawner."""
@@ -289,6 +299,62 @@ def _default_loopback(sc: Any) -> Any:
         raise
 
 
+def _all_loopbacks(sc: Any) -> List[Any]:
+    """Every WASAPI loopback mic — one per render endpoint."""
+    try:
+        return [mic for mic in sc.all_microphones(include_loopback=True)
+                if getattr(mic, 'isloopback', False)]
+    except Exception:
+        return []
+
+
+def _probe_peak(np: Any, mic: Any) -> float:
+    """One short loopback read → that endpoint's current peak (0 on error)."""
+    try:
+        with mic.recorder(samplerate=SAMPLE_RATE,
+                          channels=CHANNELS) as recorder:
+            frames = recorder.record(numframes=CHUNK_FRAMES)
+        arr = np.asarray(frames, dtype=np.float32)
+        return float(np.max(np.abs(arr))) if arr.size else 0.0
+    except Exception:
+        return 0.0
+
+
+def _loudest_loopback(sc: Any, np: Any,
+                      exclude_name: Optional[str] = None) -> Tuple[Any, float]:
+    """(mic, peak) of the loudest loopback other than `exclude_name`."""
+    best, best_peak = None, 0.0
+    for mic in _all_loopbacks(sc):
+        if exclude_name is not None \
+                and getattr(mic, 'name', None) == exclude_name:
+            continue
+        peak = _probe_peak(np, mic)
+        if peak > best_peak:
+            best, best_peak = mic, peak
+    return best, best_peak
+
+
+def _next_capture_mic(sc: Any, np: Any, current: Any) -> Any:
+    """Silent-tap follow: where the tap should live next, or None to stay.
+
+    A clearly-sounding *other* endpoint wins (app routed off-default);
+    otherwise we drop back to the current default so a device swap mid-
+    session still lands on the right tap. Returns None when the current
+    tap is already the best available — the caller keeps recording.
+    """
+    current_name = getattr(current, 'name', None)
+    best, peak = _loudest_loopback(sc, np, exclude_name=current_name)
+    if best is not None and peak >= PROBE_SWITCH_PEAK:
+        return best
+    try:
+        default = _default_loopback(sc)
+    except Exception:
+        return None
+    if getattr(default, 'name', None) != current_name:
+        return default
+    return None
+
+
 def _emit_payload(payload: Dict[str, Any]) -> None:
     if _emit is None:
         return
@@ -308,26 +374,30 @@ def _capture_loop() -> None:
     live_state: Dict[str, float] = {}
     prev_bands = [0] * NUM_BANDS
     last_device_error: Optional[str] = None
+    mic: Any = None
     while True:
         if not _enabled.is_set():
             _enabled.wait(DISABLED_POLL_SECONDS)
             continue
-        try:
-            mic = _default_loopback(sc)
-        except Exception as e:
-            # Device churn is routine (headset swap); the same failure logs
-            # once, not every retry.
-            if str(e) != last_device_error:
-                logger.warning('Audio spectrum: no loopback device: %s', e)
-                last_device_error = str(e)
-            time.sleep(CAPTURE_RETRY_SECONDS)
-            continue
+        if mic is None:
+            try:
+                mic = _default_loopback(sc)
+            except Exception as e:
+                # Device churn is routine (headset swap); the same failure
+                # logs once, not every retry.
+                if str(e) != last_device_error:
+                    logger.warning('Audio spectrum: no loopback device: %s', e)
+                    last_device_error = str(e)
+                time.sleep(CAPTURE_RETRY_SECONDS)
+                continue
         try:
             with mic.recorder(samplerate=SAMPLE_RATE,
                               channels=CHANNELS) as recorder:
                 logger.info('Audio spectrum capturing on %s',
                             getattr(mic, 'name', 'loopback'))
                 last_device_error = None
+                last_loud_at = time.time()
+                last_probe_at = 0.0
                 while _enabled.is_set():
                     frames = recorder.record(numframes=CHUNK_FRAMES)
                     band_amps, peak = chunk_band_amps(np, frames)
@@ -340,8 +410,26 @@ def _capture_loop() -> None:
                                           emit_state)
                     if payload is not None:
                         _emit_payload(payload)
+                    if peak > PROBE_QUIET_PEAK:
+                        last_loud_at = now
+                    elif now - max(last_loud_at, last_probe_at) \
+                            >= SILENCE_BEFORE_PROBE_S:
+                        # Silent tap — maybe the sound lives on another
+                        # endpoint (off-default app, device swap). Probing
+                        # costs a fraction of a second of flat output and
+                        # only ever runs while there's nothing to show.
+                        last_probe_at = now
+                        nxt = _next_capture_mic(sc, np, mic)
+                        if nxt is not None:
+                            logger.info('Audio spectrum following output '
+                                        '%s -> %s',
+                                        getattr(mic, 'name', '?'),
+                                        getattr(nxt, 'name', '?'))
+                            mic = nxt
+                            break
         except Exception as e:
             # Recorder died (device unplugged, endpoint rebuild) — reopen on
-            # the next pass, which re-resolves the default speaker.
+            # the next pass; forgetting the mic re-resolves the default.
             logger.warning('Audio spectrum capture interrupted: %s', e)
+            mic = None
             time.sleep(CAPTURE_RETRY_SECONDS)
