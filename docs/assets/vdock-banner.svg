@@ -22,14 +22,18 @@
   <circle cx="820" cy="60" r="90" fill="#6366f1" opacity="0.18"/>
   <circle cx="120" cy="220" r="70" fill="#22d3ee" opacity="0.12"/>
   <g filter="url(#glow)">
-    <rect x="72" y="78" width="56" height="56" rx="14" fill="url(#accent)" opacity="0.95"/>
+    <rect x="72" y="78" width="56" height="56" rx="14" fill="url(#accent)" opacity="0.95">
+      <animate attributeName="opacity" values="0.95;0.55;0.95" dur="2.4s" repeatCount="indefinite"/>
+    </rect>
     <rect x="136" y="78" width="56" height="56" rx="14" fill="#334155" opacity="0.95"/>
     <rect x="200" y="78" width="56" height="56" rx="14" fill="#334155" opacity="0.95"/>
     <rect x="72" y="142" width="56" height="56" rx="14" fill="#334155" opacity="0.95"/>
-    <rect x="136" y="142" width="56" height="56" rx="14" fill="url(#accent)" opacity="0.95"/>
+    <rect x="136" y="142" width="56" height="56" rx="14" fill="url(#accent)" opacity="0.95">
+      <animate attributeName="opacity" values="0.55;0.95;0.55" dur="2.4s" repeatCount="indefinite"/>
+    </rect>
     <rect x="200" y="142" width="56" height="56" rx="14" fill="#334155" opacity="0.95"/>
   </g>
-  <text x="300" y="118" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700">VDock</text>
-  <text x="302" y="158" fill="#cbd5e1" font-family="Segoe UI, Arial, sans-serif" font-size="24">Virtual Stream Deck for your desktop</text>
-  <text x="302" y="198" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif" font-size="18">Buttons " Scenes " System control " Live widgets " Animated backgrounds</text>
+  <text x="300" y="118" fill="url(#accent)" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700">VDock</text>
+  <text x="302" y="158" fill="#f1f5f9" font-family="Segoe UI, Arial, sans-serif" font-size="24">Your PC, one tap away — on any screen you own</text>
+  <text x="302" y="198" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif" font-size="18">239 actions · Claude Code inside · Ambient screensaver · Free &amp; open source</text>
 </svg>

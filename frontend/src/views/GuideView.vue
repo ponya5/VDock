@@ -1,100 +1,154 @@
 <template>
   <div class="guide-view">
-    <!-- ── Hero ───────────────────────────────────────────────────────── -->
-    <header class="guide-hero">
-      <div class="hero-top">
-        <div class="brand">
+    <div class="guide-shell">
+      <!-- ── Side nav — fixed docs rail: search + grouped sections ────── -->
+      <aside class="guide-nav" aria-label="Guide navigation">
+        <div class="brand nav-brand">
           <span class="brand-mark">V</span>
           <span class="brand-name">Dock</span>
           <span class="brand-ver">v{{ appVersion }}</span>
         </div>
-        <router-link to="/" class="back-link">
+
+        <div class="hero-search nav-search" :class="{ 'has-query': query }">
+          <FontAwesomeIcon :icon="['fas', 'search']" class="search-ico" />
+          <input
+            ref="searchEl"
+            v-model="query"
+            type="search"
+            class="search-input"
+            placeholder="Search — “MCP”, “screensaver”…"
+            aria-label="Search the guide"
+            @keydown.enter.prevent="scrollToFirst"
+            @keydown.esc.prevent="clearSearch"
+          />
+          <button v-if="query" type="button" class="search-clear" aria-label="Clear search" @click="clearSearch">
+            <FontAwesomeIcon :icon="['fas', 'xmark']" />
+          </button>
+          <kbd class="search-kbd">/</kbd>
+        </div>
+
+        <nav class="nav-groups">
+          <div v-for="g in navGroups" :key="g.label" class="nav-group">
+            <p class="nav-group-label">{{ g.label }}</p>
+            <a
+              v-for="item in g.items"
+              :key="item.id"
+              :href="`#${item.id}`"
+              class="nav-item"
+              :class="{ active: activeId === item.id }"
+              @click.prevent="jumpTo(item.id)"
+            >
+              <FontAwesomeIcon :icon="item.icon" class="nav-ico" />
+              <span>{{ item.title }}</span>
+            </a>
+          </div>
+        </nav>
+
+        <router-link to="/" class="back-link nav-back">
           <FontAwesomeIcon :icon="['fas', 'arrow-left']" /> Back to the deck
         </router-link>
-      </div>
+      </aside>
 
-      <h1 class="hero-title">Every feature, in one place.</h1>
-      <p class="hero-sub">
-        VDock is a touch-first control deck for your PC and your AI agents —
-        scenes of buttons, live media, awareness of what your agents are
-        doing, and an MCP server so agents can drive the deck back.
-      </p>
-
-      <div class="hero-search" :class="{ 'has-query': query }">
-        <FontAwesomeIcon :icon="['fas', 'search']" class="search-ico" />
-        <input
-          ref="searchEl"
-          v-model="query"
-          type="search"
-          class="search-input"
-          placeholder="Search features — try “MCP”, “screensaver”, “scene”…"
-          aria-label="Search the guide"
-          @keydown.enter.prevent="scrollToFirst"
-          @keydown.esc.prevent="clearSearch"
-        />
-        <button v-if="query" type="button" class="search-clear" aria-label="Clear search" @click="clearSearch">
-          <FontAwesomeIcon :icon="['fas', 'xmark']" />
-        </button>
-        <kbd class="search-kbd">/</kbd>
-      </div>
-      <p v-if="query" class="search-status" role="status">
-        {{ filteredFeatures.length
-          ? `${filteredFeatures.length} section${filteredFeatures.length === 1 ? '' : 's'} match “${query}”`
-          : `Nothing matches “${query}” — try a single word like “media” or “agent”.` }}
-      </p>
-
-      <nav class="hero-chips" aria-label="Jump to a section">
-        <a
-          v-for="f in filteredFeatures"
-          :key="f.id"
-          :href="`#${f.id}`"
-          class="chip"
-          @click.prevent="jumpTo(f.id)"
-        >
-          <FontAwesomeIcon :icon="f.icon" /> {{ f.title }}
-        </a>
-      </nav>
-    </header>
-
-    <!-- ── Feature sections ───────────────────────────────────────────── -->
-    <main class="guide-main">
-      <section
-        v-for="(f, i) in filteredFeatures"
-        :key="f.id"
-        :id="f.id"
-        :ref="el => registerSection(f.id, el)"
-        class="feature"
-        :class="{ flip: i % 2 === 1 }"
-      >
-        <div class="feature-text">
-          <div class="feature-head">
-            <span class="feature-ico"><FontAwesomeIcon :icon="f.icon" /></span>
-            <div>
-              <h2>{{ f.title }}</h2>
-              <p class="feature-tagline">{{ f.tagline }}</p>
+      <!-- ── Scrollport — #app clips overflow, so this column scrolls ── -->
+      <div ref="scrollEl" class="guide-content" @scroll.passive="onScroll">
+        <header class="guide-hero">
+          <div class="hero-top">
+            <div class="brand">
+              <span class="brand-mark">V</span>
+              <span class="brand-name">Dock</span>
+              <span class="brand-ver">v{{ appVersion }}</span>
             </div>
+            <router-link to="/" class="back-link">
+              <FontAwesomeIcon :icon="['fas', 'arrow-left']" /> Back to the deck
+            </router-link>
           </div>
-          <p v-for="(para, j) in f.body" :key="j" class="feature-para" v-html="para" />
-          <ul v-if="f.points" class="feature-points">
-            <li v-for="(p, j) in f.points" :key="j" v-html="p" />
-          </ul>
-          <pre v-if="f.code" class="feature-code"><code>{{ f.code }}</code></pre>
-        </div>
-        <figure v-if="f.shot" class="feature-shot">
-          <img :src="`/guide/${f.shot}`" :alt="`${f.title} — screenshot`" loading="lazy" />
-          <figcaption>{{ f.shotCaption }}</figcaption>
-        </figure>
-      </section>
-    </main>
 
-    <SiteFooter />
+          <h1 class="hero-title">Every feature, in one place.</h1>
+          <p class="hero-sub">
+            VDock is a touch-first control deck for your PC and your AI agents —
+            scenes of buttons, live media, awareness of what your agents are
+            doing, and an MCP server so agents can drive the deck back.
+          </p>
+
+          <div class="hero-search mobile-search" :class="{ 'has-query': query }">
+            <FontAwesomeIcon :icon="['fas', 'search']" class="search-ico" />
+            <input
+              ref="mobileSearchEl"
+              v-model="query"
+              type="search"
+              class="search-input"
+              placeholder="Search features — try “MCP”, “screensaver”, “scene”…"
+              aria-label="Search the guide"
+              @keydown.enter.prevent="scrollToFirst"
+              @keydown.esc.prevent="clearSearch"
+            />
+            <button v-if="query" type="button" class="search-clear" aria-label="Clear search" @click="clearSearch">
+              <FontAwesomeIcon :icon="['fas', 'xmark']" />
+            </button>
+            <kbd class="search-kbd">/</kbd>
+          </div>
+          <p v-if="query" class="search-status" role="status">
+            {{ filteredFeatures.length
+              ? `${filteredFeatures.length} section${filteredFeatures.length === 1 ? '' : 's'} match “${query}”`
+              : `Nothing matches “${query}” — try a single word like “media” or “agent”.` }}
+          </p>
+        </header>
+
+        <!-- Sub tabs — sticky rail on narrow screens where the nav hides -->
+        <nav class="hero-chips chips-bar" aria-label="Jump to a section">
+          <a
+            v-for="f in filteredFeatures"
+            :key="f.id"
+            :href="`#${f.id}`"
+            class="chip"
+            :class="{ active: activeId === f.id }"
+            @click.prevent="jumpTo(f.id)"
+          >
+            <FontAwesomeIcon :icon="f.icon" /> {{ f.title }}
+          </a>
+        </nav>
+
+        <!-- ── Feature sections ──────────────────────────────────────── -->
+        <main class="guide-main">
+          <section
+            v-for="(f, i) in filteredFeatures"
+            :key="f.id"
+            :id="f.id"
+            :ref="el => registerSection(f.id, el)"
+            class="feature"
+            :class="{ flip: i % 2 === 1 }"
+          >
+            <div class="feature-text">
+              <div class="feature-head">
+                <span class="feature-ico"><FontAwesomeIcon :icon="f.icon" /></span>
+                <div>
+                  <h2>{{ f.title }}</h2>
+                  <p class="feature-tagline">{{ f.tagline }}</p>
+                </div>
+              </div>
+              <p v-for="(para, j) in f.body" :key="j" class="feature-para" v-html="para" />
+              <ul v-if="f.points" class="feature-points">
+                <li v-for="(p, j) in f.points" :key="j" v-html="p" />
+              </ul>
+              <pre v-if="f.code" class="feature-code"><code>{{ f.code }}</code></pre>
+            </div>
+            <figure v-if="f.shot" class="feature-shot">
+              <img :src="`/guide/${f.shot}`" :alt="`${f.title} — screenshot`" loading="lazy" />
+              <figcaption>{{ f.shotCaption }}</figcaption>
+            </figure>
+          </section>
+        </main>
+
+        <SiteFooter />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 // Dedicated guide landing page (DL-132) — replaces the embedded Settings
 // guide tab. Opens in its own browser window so the deck stays visible.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useRoute } from 'vue-router'
 import { version as appVersion } from '../../package.json'
@@ -147,6 +201,19 @@ const features: GuideFeature[] = [
     keywords: 'scene pill profile switch new add editor icon color grid size page duplicate export import deck set',
   },
   {
+    id: 'header',
+    icon: ['fas', 'window-maximize'],
+    title: 'Header, Reveal & Auto-hide',
+    tagline: 'Chrome that gets out of the way',
+    body: [
+      'Hide the header from Appearance → Layout, and it slides away. A <strong>reveal chip</strong> waits in the bottom-right corner — tap it, or swipe down from the top edge, and the header glides back.',
+      'While the header is open, a <strong>countdown pill</strong> shows the seconds until it auto-hides — with an animated gradient ring so you can spot it at a glance. Tap the pill to <em>pin the header open</em>; tap again to resume the countdown.',
+    ],
+    shot: 'guide-header.png',
+    shotCaption: 'The countdown pill — tap to pin the header open.',
+    keywords: 'header reveal auto hide countdown timer pill pin swipe fab chrome navigation clock',
+  },
+  {
     id: 'media',
     icon: ['fas', 'music'],
     title: 'Media & Now Playing',
@@ -161,17 +228,17 @@ const features: GuideFeature[] = [
     keywords: 'media now playing spotify smtc track artist album art progress play pause stop volume slider music',
   },
   {
-    id: 'header',
-    icon: ['fas', 'window-maximize'],
-    title: 'Header, Reveal & Auto-hide',
-    tagline: 'Chrome that gets out of the way',
+    id: 'screensaver',
+    icon: ['fas', 'moon'],
+    title: 'Screen Savers',
+    tagline: 'Idle, but still useful',
     body: [
-      'Hide the header from Appearance → Layout, and it slides away. A <strong>reveal chip</strong> waits in the bottom-right corner — tap it, or swipe down from the top edge, and the header glides back.',
-      'While the header is open, a <strong>countdown pill</strong> shows the seconds until it auto-hides — with an animated gradient ring so you can spot it at a glance. Tap the pill to <em>pin the header open</em>; tap again to resume the countdown.',
+      'Leave the deck alone and it becomes a glanceable display. The <strong>Stats saver</strong> tiles live widgets — clock, weather, news, system stats, now playing — each draggable on a snap grid.',
+      'The <strong>Spectrum saver</strong> is a Winamp-style audio visualizer with media controls baked in, in several skins (Aurora, Ember, Scope…). A tap wakes the deck.',
     ],
-    shot: 'guide-header.png',
-    shotCaption: 'The countdown pill — tap to pin the header open.',
-    keywords: 'header reveal auto hide countdown timer pill pin swipe fab chrome navigation clock',
+    shot: 'guide-screensaver.png',
+    shotCaption: 'The screensaver editor — pick widgets, drag to place.',
+    keywords: 'screensaver idle sleep stats widgets weather news clock system spectrum visualizer winamp aurora ember skin wake',
   },
   {
     id: 'agents',
@@ -215,19 +282,6 @@ const features: GuideFeature[] = [
     shot: 'guide-integrations.png',
     shotCaption: 'Integrations — apps, alerts, triggers, MCP.',
     keywords: 'integration trigger schedule automation app foreground switch scene webhook agent alert glow banner dock running apps monitor',
-  },
-  {
-    id: 'screensaver',
-    icon: ['fas', 'moon'],
-    title: 'Screen Savers',
-    tagline: 'Idle, but still useful',
-    body: [
-      'Leave the deck alone and it becomes a glanceable display. The <strong>Stats saver</strong> tiles live widgets — clock, weather, news, system stats, now playing — each draggable on a snap grid.',
-      'The <strong>Spectrum saver</strong> is a Winamp-style audio visualizer with media controls baked in, in several skins (Aurora, Ember, Scope…). A tap wakes the deck.',
-    ],
-    shot: 'guide-screensaver.png',
-    shotCaption: 'The screensaver editor — pick widgets, drag to place.',
-    keywords: 'screensaver idle sleep stats widgets weather news clock system spectrum visualizer winamp aurora ember skin wake',
   },
   {
     id: 'settings',
@@ -281,7 +335,18 @@ const features: GuideFeature[] = [
 
 const query = ref(typeof useRoute().query.q === 'string' ? String(useRoute().query.q) : '')
 const searchEl = ref<HTMLInputElement | null>(null)
+const mobileSearchEl = ref<HTMLInputElement | null>(null)
+const scrollEl = ref<HTMLElement | null>(null)
+const activeId = ref(features[0].id)
 const sections = new Map<string, Element>()
+
+/** Sidebar grouping — the "sub tabs" under which sections cluster. */
+const NAV_GROUPS: Array<{ label: string; ids: string[] }> = [
+  { label: 'The Deck', ids: ['deck', 'scenes', 'header'] },
+  { label: 'Media & Display', ids: ['media', 'screensaver'] },
+  { label: 'Agents & Automation', ids: ['agents', 'mcp', 'integrations'] },
+  { label: 'System', ids: ['settings', 'security', 'tour', 'connect'] },
+]
 
 function registerSection(id: string, el: Element | ComponentPublicInstance | null) {
   if (el instanceof Element) sections.set(id, el)
@@ -298,7 +363,17 @@ const filteredFeatures = computed(() => {
   })
 })
 
+/** Groups filtered down to the sections matching the current search. */
+const navGroups = computed(() => {
+  const visible = new Set(filteredFeatures.value.map(f => f.id))
+  const byId = new Map(features.map(f => [f.id, f]))
+  return NAV_GROUPS
+    .map(g => ({ label: g.label, items: g.ids.filter(id => visible.has(id)).map(id => byId.get(id)!) }))
+    .filter(g => g.items.length)
+})
+
 function jumpTo(id: string) {
+  activeId.value = id
   sections.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 function scrollToFirst() {
@@ -307,18 +382,40 @@ function scrollToFirst() {
 }
 function clearSearch() {
   query.value = ''
-  searchEl.value?.focus()
+  focusSearch()
+}
+
+/** Scroll-spy: the active section is the last one whose top passed the
+ *  mark a bit below the content column's top edge. */
+function onScroll() {
+  const el = scrollEl.value
+  if (!el) return
+  const mark = el.getBoundingClientRect().top + Math.min(220, el.clientHeight * 0.3)
+  let cur = filteredFeatures.value[0]?.id ?? ''
+  for (const f of filteredFeatures.value) {
+    const s = sections.get(f.id)
+    if (s && s.getBoundingClientRect().top <= mark) cur = f.id
+  }
+  activeId.value = cur
+}
+
+function focusSearch() {
+  const el = [searchEl.value, mobileSearchEl.value].find(e => e && e.offsetParent !== null)
+  el?.focus()
 }
 
 function onKeydown(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement)?.tagName
   if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
     e.preventDefault()
-    searchEl.value?.focus()
+    focusSearch()
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  nextTick(onScroll)
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
@@ -348,8 +445,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   --fs-md: 0.95em;
   --fs-lg: 1.07em;
 
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* The app shell (#app) is height:100dvh + overflow:hidden — the body can
+     never scroll. This view owns its scrollport: a fixed-height shell with
+     a static side rail and a scrolling content column. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background:
     radial-gradient(90% 60% at 80% -10%, rgba(74, 140, 255, 0.10) 0%, transparent 55%),
     radial-gradient(70% 50% at 5% 10%, rgba(139, 92, 246, 0.10) 0%, transparent 60%),
@@ -358,18 +459,77 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   font-size: clamp(13px, 0.86rem + 0.2vw, 15.5px);
 }
 
+.guide-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.guide-content {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── side nav rail ─────────────────────────────────────────────────────── */
+.guide-nav {
+  flex: none;
+  width: 264px;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 14px;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--line-soft);
+}
+.nav-brand { margin: 2px 4px 6px; }
+.nav-search { max-width: none; }
+.nav-search .search-input { padding: 10px 4px; font-size: var(--fs-sm); }
+.nav-search .search-kbd { display: none; }
+
+.nav-groups { display: flex; flex-direction: column; gap: 14px; }
+.nav-group-label {
+  margin: 0 4px 5px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  margin: 1px 0;
+  border-radius: var(--r-sm);
+  border-left: 2px solid transparent;
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.nav-item .nav-ico { width: 14px; flex: none; color: var(--text-3); }
+.nav-item:hover { color: var(--text); background: var(--panel); }
+.nav-item.active {
+  color: var(--text);
+  background: var(--accent-ghost);
+  border-left-color: var(--accent);
+}
+.nav-item.active .nav-ico { color: var(--accent); }
+.nav-back { margin-top: auto; justify-content: center; }
+
 /* ── hero ──────────────────────────────────────────────────────────────── */
 .guide-hero {
   max-width: 980px;
   margin: 0 auto;
-  padding: 28px var(--gutter) 8px;
+  padding: 26px var(--gutter) 8px;
 }
-.hero-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 34px;
-}
+/* Desktop: brand + back live in the side rail, not the hero. */
+.hero-top { display: none; }
 .brand { display: flex; align-items: center; gap: 9px; }
 .brand-mark {
   display: inline-flex;
@@ -458,6 +618,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   font-size: var(--fs-md);
 }
 .search-clear:hover { color: var(--text); }
+/* Desktop: the search lives in the side rail — the hero copy is mobile
+   only. Scoped after .hero-search so the two-class selector wins. */
+.hero-search.mobile-search { display: none; }
 .search-kbd {
   margin: 0 10px;
   padding: 2px 7px;
@@ -471,11 +634,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 .search-status { margin: 8px 2px 0; font-size: var(--fs-sm); color: var(--text-3); }
 
+/* Sub-tab chip rail — desktop gets the side rail instead. */
+.chips-bar { display: none; }
 .hero-chips {
-  display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 22px;
+  margin-top: 0;
 }
 .chip {
   display: inline-flex;
@@ -491,6 +655,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   transition: color var(--transition-fast), border-color var(--transition-fast);
 }
 .chip:hover { color: var(--text); border-color: var(--accent); }
+.chip.active { color: var(--text); border-color: var(--accent); background: var(--accent-ghost); }
 
 /* ── feature rows ─────────────────────────────────────────────────────── */
 .guide-main {
@@ -587,5 +752,33 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 @media (max-width: 900px) {
   .feature { grid-template-columns: 1fr; }
   .feature.flip .feature-text { order: 0; }
+}
+
+/* Narrow viewports: the rail collapses; brand/back/search return to the
+   hero and the sub tabs become a sticky, horizontally scrolling bar. */
+@media (max-width: 980px) {
+  .guide-nav { display: none; }
+  .hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+  }
+  .mobile-search { display: flex; margin-bottom: 4px; }
+  .chips-bar {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px var(--gutter);
+    background: color-mix(in srgb, var(--bg-sunken) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+    scrollbar-width: none;
+  }
+  .chips-bar::-webkit-scrollbar { display: none; }
+  .chips-bar .chip { flex: none; }
 }
 </style>

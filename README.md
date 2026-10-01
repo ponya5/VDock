@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 **▶ [Download the 1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.1.0-6ea8ff)](#whats-new-in-20)
+[![Version](https://img.shields.io/badge/Version-2.2.0-6ea8ff)](https://github.com/ponya5/VDock2/releases/latest)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#quick-start)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
@@ -34,10 +34,8 @@ https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 - [Real use cases](#real-use-cases)
 - [Quick start](#quick-start)
 - [Features](#features)
-- [What's new in 2.0](#whats-new-in-20)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
-- [What VDock isn't (yet)](#what-vdock-isnt-yet)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
@@ -75,7 +73,7 @@ Every scene is a grid you lay out yourself — any size, any mix of buttons, sli
 
 <img src="docs/assets/screens/dashboard-edit-mode.png" alt="VDock edit mode: each key shows remove, edit and duplicate badges, empty cells show a plus to add a button, a searchable Button Actions panel lists apps like Calculator, Notepad, Command Prompt, PowerShell, Paint and Snipping Tool, and the footer has grid size, Add Page, Delete Page and Save Profile" width="820" />
 
-Tap the pencil and the whole deck opens up: tap an empty cell's **+** and search all 239 actions or browse by category, every key gets **remove / edit / duplicate** badges, **drag to reorder** with a mouse or a finger, resize a slider across cells or merge two into one, and set the grid, add pages, or fill the **docked sidebar** with keys that stay put everywhere.
+Tap the pencil and the whole deck opens up: tap an empty cell's **+** to search every action or browse by category, every key gets **remove / edit / duplicate** badges, **drag to reorder** with a mouse or a finger, resize a slider across cells or merge two into one, and set the grid, add pages, or fill the **docked sidebar** with keys that stay put everywhere.
 
 Start from any of the **36 app templates** or import a scene pack someone shared — and every change saves itself.
 
@@ -88,7 +86,7 @@ Start from any of the **36 app templates** or import a scene pack someone shared
 Everything is adjustable, and nothing is guesswork — a **live preview** renders a real key with your current size, labels, touch mode, design and background, and an **in-context grid** shows a whole page before you apply anything.
 
 - **Appearance** — touch mode presets, key size/transparency/design, animations, press sound, dashboard font, docked sidebar, background, and the [screensaver](#the-screensaver)
-- **Templates** — 36 one-tap scenes for ChatGPT, Claude, Gemini, Claude Code, Copilot, Cursor, Figma, n8n and more
+- **Templates** — one-tap scenes for ChatGPT, Claude, Gemini, Claude Code, Copilot, Cursor, Figma, n8n and more
 - **Server** — connection details, ports, how Settings opens
 - **Integrations** — detected apps, auto scene switching, the Claude Code attention-alert hook
 - **Connect a device** — LAN access and the QR code for your phone, [see below](#control-it-from-your-phone)
@@ -125,6 +123,8 @@ Any phone or tablet on your Wi-Fi becomes a second deck. No app to install, no a
 
 Leave the deck idle and it turns into an ambient dashboard: a large **clock**, **weather**, rotating **news** and **sports** headlines from free RSS feeds, live **stock/crypto** quotes, and **world clocks** — all with **no API keys required**.
 
+Or pick the **music visualizer** — 14 animated spectrum skins, from classic Winamp bars to kaleidoscopic psychedelia, reacting to whatever's playing on the PC. Shuffle mode crossfades between skins on a timer, and you can layer the widgets on top.
+
 <img src="docs/assets/screens/settings-screensaver.png" alt="VDock Settings → Screen saver: idle-delay slider, Test and Customise layout buttons, a toggle and Options for each widget, widget text size, and a live screensaver preview" width="820" />
 
 Toggle each widget and open its **Options** for feeds, tickers or cities; **Customise layout** opens a live drag-and-resize editor with snap guides; an idle delay from off to 10 minutes has its own **Test** button; and it gets its own background and a text size from 80–250%. If Claude Code needs you while it's up, the amber attention alert appears on top of it.
@@ -142,7 +142,7 @@ Toggle each widget and open its **Options** for feeds, tickers or cities; **Cust
 | **Ambient dashboard when idle** | **Yes** | — | — | — |
 | **Plugin marketplace** | Templates + scene packs | Large | **Largest** | Small |
 
-**In one line:** free, agent-native, ambient, and yours — with an honest gap on ecosystem size [we're upfront about below](#what-vdock-isnt-yet).
+**In one line:** free, agent-native, ambient, and yours.
 
 ---
 
@@ -152,7 +152,7 @@ Toggle each widget and open its **Options** for feeds, tickers or cities; **Cust
 
 <img src="docs/assets/screens/claude-code-scene.png" alt="VDock's Claude Code scene: Open Claude, Review /code-review, Commit /commit, claude.ai, Explain, Write Tests, Fix Tests, Continue" width="820" />
 
-**2. A second screen that earns its desk space.** Idle, it's an ambient dashboard — clock, weather, headlines, sports, markets, world clocks, no API keys. [More on the screensaver.](#the-screensaver)
+**2. A second screen that earns its desk space.** Idle, it's an ambient dashboard — clock, weather, headlines, markets. [More on the screensaver.](#the-screensaver)
 
 **3. Calls and recording.** Mute, camera, push-to-talk (fire on press, a different action on release), OBS scene switching, and a **volume slider you drag** rather than a button you tap eleven times.
 
@@ -176,56 +176,29 @@ Windows will often route every tap to your *primary* display instead of a spare 
 
 ## Quick start
 
-### Install the app (recommended)
+### 1. Get VDock
 
-Grab the installer for your OS from the [latest release](https://github.com/ponya5/VDock2/releases/latest):
+**Easiest — install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock2/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once — Windows SmartScreen → **More info → Run anyway**; macOS → right-click → **Open**.
 
-- **Windows** — `VDock Setup x.y.z.exe`, or the standalone `VDock-Portable.exe` if you'd rather not install
-- **macOS** (Apple Silicon) — `VDock-x.y.z-arm64.dmg`, then drag VDock to Applications
-- **Linux** — `VDock-x.y.z.AppImage` (`chmod +x` and run) or the `.deb` on Debian/Ubuntu
-
-> **First-launch warning (expected):** the builds aren't code-signed yet, so your OS will warn once.
-> Windows SmartScreen → **More info → Run anyway**. macOS → right-click → **Open**
-> (or `xattr -d com.apple.quarantine /Applications/VDock.app`).
-
-### Build from source
-
-<details>
-<summary><strong>Requirements</strong> (source install only)</summary>
-
-Needs **Python 3.9+** ([python.org](https://www.python.org/downloads/) — tick "Add Python to PATH" on Windows) and **Node.js 18+** ([nodejs.org](https://nodejs.org/)). Everything else is optional — VDock runs fully without any of it; actions it can't run are greyed out **with the reason shown**, never hidden, never failing on press:
-
-- [Claude Code](https://claude.com/product/claude-code) (`npm i -g @anthropic-ai/claude-code`) → 40 Claude Code actions
-- [GitHub CLI](https://cli.github.com) (`winget install GitHub.cli` → `gh auth login`) → PRs, issues, CI checks, live badges
-- Git → repo-aware actions
-
-</details>
+**Or from source** — needs [Python 3.9+](https://www.python.org/downloads/) (tick "Add Python to PATH" on Windows) and [Node.js 18+](https://nodejs.org/):
 
 ```bash
 git clone https://github.com/ponya5/VDock2.git
 cd VDock2
 ```
 
-On **Windows**, double-click **`setup.bat`** and choose **[1] Full setup**. On **macOS/Linux**:
+- **Windows:** double-click **`setup.bat`** → choose **[1] Full setup**
+- **macOS / Linux:** `chmod +x setup.sh launch.sh && ./setup.sh`
 
-```bash
-chmod +x setup.sh launch.sh
-./setup.sh
-```
+Setup installs dependencies and puts a **VDock icon on your desktop**.
 
-Setup installs dependencies, creates a desktop shortcut, writes `backend/.env`, and reports which optional tools it found.
+### 2. Launch it
 
-### Run
+**Double-click the VDock icon on your desktop** — that's it, every day. (Or run `launch.bat` / `./launch.sh`.) It opens at `http://localhost:3000` after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes — no configuration needed.
 
-Double-click the **VDock** desktop shortcut, or run `launch.bat` / `./launch.sh`. Give it **5–10 seconds**, then it opens at **http://localhost:3000** (or the port you chose).
+**Optional tools** — none required, they unlock extra actions and stay greyed out with the reason shown until installed: [Claude Code](https://claude.com/product/claude-code) → 40 Claude actions · [GitHub CLI](https://cli.github.com) → PRs, issues, CI · Git → repo-aware actions.
 
-First launch walks you through a **13-step tour** and drops you into a starter profile with two working scenes — **Media** and **Claude Code** — every button working with no keys and no config.
-
-### Uninstall
-
-**Installed app:** Windows → uninstall via Settings → Apps (removes the program, shortcuts, and startup entry; your profiles are kept). macOS → drag VDock to Trash, then remove `~/Library/LaunchAgents/com.vdock.launcher.plist` if you enabled launch-at-login. Linux `.deb` → `sudo apt remove vdock`; AppImage → delete the file and `~/.config/autostart/vdock.desktop`. Per-user data lives in the OS app-data folder (`VDock/vdock-data`) — delete it manually if you want a full wipe.
-
-**Source checkout:** run `uninstall.bat` (Windows) or `chmod +x uninstall.sh && ./uninstall.sh` (macOS/Linux). It stops running VDock processes, removes the startup entry and desktop launcher, then tells you to delete the folder itself — user data in `backend/data/` goes with it.
+**Uninstall:** installed app → remove it like any app (your profiles are kept). Source checkout → `uninstall.bat` / `./uninstall.sh`, then delete the folder.
 
 ---
 
@@ -233,11 +206,9 @@ First launch walks you through a **13-step tour** and drops you into a starter p
 
 <img src="docs/assets/screens/deck.png" alt="VDock's Media scene with mute, volume up and down, a draggable volume slider, and transport controls" width="820" />
 
-**The deck:** scenes & pages (multiple layouts, 6 transitions, auto-switch to the focused app), a docked sidebar, sliders (merge two into one wide one), macros, two-state toggles synced across every open window, press-vs-release triggers (push-to-talk from a button), a quick-deck overlay (`` ` `` in the window, `Ctrl+Shift+D` globally), and shareable scene packs (buttons only, no secrets).
+**The deck:** scenes & pages with 6 transitions and auto-switch to the focused app, macros, two-state toggles synced across every open window, press-vs-release triggers (push-to-talk from a button), and a quick-deck overlay (`` ` `` in the window, `Ctrl+Shift+D` globally).
 
-**Build it:** tap the pencil, drag buttons around, resize the grid, search the action list, save — with a finger on a touch panel. Changes save themselves.
-
-**Integrations:** **Claude Code** (40 actions — prompts, slash commands, session resume/rewind/compact, approve/deny, transcript, your existing login), **GitHub** (`gh`-powered PRs/issues/checks plus live badges), **Cursor · Copilot · VS Code · JetBrains · Visual Studio · Devin** (102 more commands), **OBS** (scenes, sources, streaming), and **HTTP/webhooks** (any REST endpoint, response value on the button). Keystroke actions only fire when the target editor is actually focused — deliberate, so keys never land in the wrong window.
+**Integrations:** **Claude Code** (prompts, slash commands, session resume/rewind/compact, approve/deny, transcript — using your existing login), **GitHub** (`gh`-powered PRs/issues/checks plus live badges), **Cursor · Copilot · VS Code · JetBrains · Visual Studio · Devin** (102 more commands), **OBS** (scenes, sources, streaming), and **HTTP/webhooks** (any REST endpoint, response value on the button). Keystroke actions only fire when the target editor is actually focused — deliberate, so keys never land in the wrong window.
 
 <table>
 <tr>
@@ -249,20 +220,6 @@ First launch walks you through a **13-step tour** and drops you into a starter p
 <td align="center"><sub>Translucent keys over an animated background</sub></td>
 </tr>
 </table>
-
-**Look and feel:** 10 button designs and 16 overlay effects picked from live swatches (not a dropdown), 54 animated backgrounds (60 catalogue entries with gradients and your own uploads) per-scene and per-app, 3 dashboard fonts, 3 touch modes with a 44px WCAG-AA minimum target auto-selected on touch screens, and an optional synthesized press click.
-
-**Templates:** 36 ready-made scenes across AI Assistants, AI Coding, AI Image & Video, Design & Creative, Automation & Dev, and AI Models & Platforms — one tap adds a working scene.
-
-**Live widgets:** CPU · RAM · GPU · disk · network · weather · world clock · timer · countdown · RSS news · sports · free stock and crypto quotes · spinner while an action runs · PR and CI badges.
-
----
-
-## What's new in 2.0
-
-**Settings, rebuilt** — sidebar navigation, a live preview rail, search that jumps straight to the setting, per-section reset, and autosave with no fake "unsaved" counter. **Eight power features** closing the gap against Touch Portal and Elgato: macros, toggles, sliders, the quick-deck overlay, QR/LAN connect, press feedback, scene packs, and press/release triggers. **Agent attention alerts** and the **scene live dot**. **Mobile, done properly** — a dedicated phone layout, Claude Code console, pocket screensaver and one-scan connect page. A **first-run tour** and a starter profile that works with zero configuration.
-
-**Under the hood:** auth on every API route, path-traversal containment, upload type whitelist, a 16MB request cap, a service worker that reloads onto new builds instead of serving stale ones, and frontend errors shipped to logs you can read in **Settings → Logs** and export as a zip.
 
 ---
 
@@ -293,18 +250,6 @@ Secrets never reach the frontend — the action list exposes only *whether* an i
 - **Touch lands on the wrong monitor** — see [Using a touchscreen as a second monitor](#real-use-cases), a Windows display-mapping issue, not a VDock bug
 - **UI looks like an old build** — it self-heals on reload; if not, hard-refresh once
 - **Something else** — **Settings → Logs**, tail or export the backend/frontend logs with your issue
-
----
-
-## What VDock isn't (yet)
-
-Being straight about this, because a README that only lists wins isn't useful:
-
-- **No plugin marketplace.** 36 templates and shareable scene packs cover most of it, not all of it.
-- **Shallow logic model.** Two-state toggles, yes. Global variables, events and conditionals like Touch Portal's — not yet.
-- **The global summon hotkey is desktop-only.** `Ctrl+Shift+D` works everywhere in the Electron build; in a browser tab `` ` `` only works while VDock has focus (browsers can't register OS-global hotkeys).
-- **Mobile is the web UI over LAN, not a native app.** Zero install, but no push notifications or background running.
-- **macOS/Linux volume and brightness sliders** have the right fallbacks but less real-device testing than Windows. Reports welcome.
 
 ---
 
@@ -349,9 +294,9 @@ VDock2/
 
 ## Contributing
 
-Issues and pull requests are welcome — fork, branch, PR. Good first contributions: a new integration pack, an app template, a background, or a fix for something in [What VDock isn't](#what-vdock-isnt-yet).
+Issues and pull requests are welcome — fork, branch, PR. Good first contributions: a new integration pack, an app template, a background, or a bug fix. Full guide: [CONTRIBUTING.md](docs/CONTRIBUTING.md); by participating you agree to the [Code of Conduct](docs/CODE_OF_CONDUCT.md).
 
-If you're reporting a bug, **Settings → Logs → Export** gives you a zip worth attaching. Security issues: please use [GitHub security advisories](https://github.com/ponya5/VDock2/security/advisories) rather than a public issue.
+If you're reporting a bug, **Settings → Logs → Export** gives you a zip worth attaching. Security issues: report privately per [SECURITY.md](SECURITY.md) — a [GitHub security advisory](https://github.com/ponya5/VDock2/security/advisories) or ponya81@gmail.com — rather than a public issue.
 
 ---
 

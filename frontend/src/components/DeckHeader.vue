@@ -55,7 +55,12 @@
 
         <div class="header-right" @pointerdown="resetAutohide">
           <div class="header-actions-group">
-            <button v-if="!isMobileViewport" class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
+            <!-- DL-134: Profiles/Settings are reachable here on mobile too —
+                 the header only mounts on mobile after a deliberate reveal,
+                 so the DL-061 "no config affordances" surface rule doesn't
+                 apply to it. Edit stays gated: toggleEditMode is blocked on
+                 mobile upstream, so the button would be dead. -->
+            <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
               <FontAwesomeIcon :icon="['fas', 'users']" />
             </button>
             <button
@@ -75,7 +80,7 @@
             >
               <FontAwesomeIcon :icon="['fas', isFullscreen ? 'compress' : 'expand']" />
             </button>
-            <button v-if="!isMobileViewport" class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
+            <button class="btn-icon-circle animate-tap" @click="emit('navigateSettings')" title="Settings" aria-label="Settings">
               <FontAwesomeIcon :icon="['fas', 'cog']" />
             </button>
             <button
@@ -365,6 +370,12 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   window.addEventListener('resize', autoHideOnShortViewport)
   autoHideOnShortViewport()
+  // Mounting with the header already revealed (mobile reveal mounts this
+  // component only when showHeader is on — the showHeader watcher misses
+  // the transition) still gets the countdown, matching a watched reveal.
+  if (settingsStore.showHeader) {
+    startAutohide()
+  }
   getElectronFullscreen().then((value) => {
     isFullscreen.value = value
   })

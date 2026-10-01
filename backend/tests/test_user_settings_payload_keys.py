@@ -99,3 +99,21 @@ def test_full_settings_payload_round_trips(client):
     )
     for key, value in FULL_SETTINGS_PAYLOAD.items():
         assert stored[key] == value, f'{key} changed across the round-trip'
+
+
+def test_partial_put_merges_into_existing_settings(client):
+    """DL-138: clients send only changed keys — a partial PUT must merge
+    into the stored file, never replace it, so untouched settings survive
+    and a stale client cannot wipe fields it didn't send."""
+    client.put('/api/user-settings', json={'settings': FULL_SETTINGS_PAYLOAD})
+
+    patch = client.put('/api/user-settings', json={'settings': {'spectrumSkin': 'ember'}})
+    assert patch.status_code == 200
+
+    stored = client.get('/api/user-settings').get_json()['settings']
+    assert stored['spectrumSkin'] == 'ember'
+    # Every unsent key is still there with its earlier value.
+    for key, value in FULL_SETTINGS_PAYLOAD.items():
+        if key == 'spectrumSkin':
+            continue
+        assert stored[key] == value, f'{key} lost on partial PUT'

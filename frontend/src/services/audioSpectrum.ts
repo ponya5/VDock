@@ -3,7 +3,8 @@ import socketClient from '@/api/socket'
 
 /**
  * Live output-audio spectrum (DL-117): 20 log-spaced bands, pushed by the
- * backend's WASAPI loopback monitor at up to ~14 Hz.
+ * backend's WASAPI loopback monitor at up to ~22 Hz (~1 emit per audio
+ * chunk when bands move).
  *
  * `live` flips false on a ~2 s heartbeat when nothing is playing, so the
  * widget can relax to a flat baseline; `lastSeenAt` staying null means the

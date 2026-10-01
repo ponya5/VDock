@@ -37,18 +37,17 @@ Examples of behavior that contributes to creating a positive environment include
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 or higher
 - Node.js 18 or higher
 - Git
-- Docker (optional, for containerized development)
 
 ### Development Setup
 
 1. **Fork the Repository**
    ```bash
    # Fork on GitHub, then clone your fork
-   git clone https://github.com/your-username/VDock.git
-   cd VDock
+   git clone https://github.com/your-username/VDock2.git
+   cd VDock2
    ```
 
 2. **Set Up Development Environment**
@@ -67,7 +66,7 @@ Examples of behavior that contributes to creating a positive environment include
 3. **Configure Environment**
    ```bash
    # Copy environment templates
-   cp backend/env.example backend/.env
+   cp backend/.env.example backend/.env
    cp frontend/env.example frontend/.env
    
    # Edit configuration files as needed
@@ -363,8 +362,7 @@ We recognize contributors in several ways:
 
 - **GitHub Issues**: Bug reports and feature requests
 - **GitHub Discussions**: Questions and general discussion
-- **Discord**: Real-time community chat (link TBD)
-- **Email**: Direct contact for sensitive issues
+- **Email**: ponya81@gmail.com for sensitive issues
 
 ### Getting Support
 
@@ -403,9 +401,7 @@ We recognize contributors in several ways:
 
 ### Future Roadmap
 
-- **Cross-Platform**: Linux and macOS support
 - **Cloud Sync**: Profile synchronization
-- **Mobile App**: Mobile companion app
 - **Plugin Marketplace**: Community plugin system
 - **Voice Control**: Voice activation features
 
@@ -419,7 +415,7 @@ Thank you for contributing to VDock! Your contributions help make VDock better f
 
 ---
 
-**Questions?** Feel free to ask in [GitHub Discussions](https://github.com/your-org/VDock/discussions) or open an issue.
+**Questions?** Feel free to ask in [GitHub Discussions](https://github.com/ponya5/VDock2/discussions) or open an issue.
 
 **Last Updated**: 2024-01-01  
 **Version**: 1.0.0

@@ -48,7 +48,7 @@ describe('screensaver page (DL-054 merged panels)', () => {
   it('keeps widgets, timing and background as anchored panels', () => {
     for (const gate of [
       'id="ss-widgets"',
-      'id="ss-activation"',
+      'id="ss-general"',
       'id="ss-background"',
     ]) {
       expect(settingsView).toContain(gate)

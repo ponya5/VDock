@@ -11,6 +11,7 @@ import {
 } from '@/utils/screensaverLayout'
 
 const SETTINGS_STORAGE_KEY = 'vdock_settings'
+const SETTINGS_DELTA_KEY = 'vdock_settings_delta'
 const SETTINGS_BROADCAST_CHANNEL = 'vdock-settings-sync'
 const SERVER_SYNC_DELAY_MS = 400
 
@@ -70,6 +71,7 @@ export const SETTINGS_DEFAULTS = {
   spectrumShuffle: false,
   spectrumShuffleMinutes: 10,
   spectrumMediaBar: true,
+  screensaverSpectrumWidgets: false,
   dashboardFont: 'default' as const,
   appScanningEnabled: false,
   agentAlertsEnabled: true,
@@ -181,6 +183,8 @@ export interface PersistedUserSettings {
   spectrumShuffleMinutes: number
   /** Bottom transport pill inside the spectrum saver. */
   spectrumMediaBar: boolean
+  /** DL-135: let the enabled info widgets overlay the spectrum stage. */
+  screensaverSpectrumWidgets: boolean
   dashboardFont: 'default' | 'editorial' | 'mono'
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
@@ -312,6 +316,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const spectrumShuffle = ref(false)
   const spectrumShuffleMinutes = ref(10)
   const spectrumMediaBar = ref(true)
+  // DL-135: info widgets can overlay the spectrum stage — opt-in so
+  // existing spectrum users keep a clean viz.
+  const screensaverSpectrumWidgets = ref(false)
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   const appScanningEnabled = ref(false)
   const agentAlertsEnabled = ref(true)
@@ -341,6 +348,23 @@ export const useSettingsStore = defineStore('settings', () => {
   let serverSyncInFlight: Promise<void> | null = null
   let serverSyncQueued = false
   let settingsLoadPromise: Promise<void> | null = null
+  // DL-138: field-level sync. `persistedBaseline` is the last state this
+  // client agreed on — seeded from the localStorage blob at boot, merged
+  // with every server GET and remote apply, advanced by each save's diff.
+  // PUTs and broadcasts carry only keys that differ from it, so a stale or
+  // freshly-booted client can never push its untouched (default) values
+  // over newer shared state. `serverSyncEnabled` gates both paths until
+  // the first server GET resolves — before that we can't know which local
+  // values are actually ours to propagate (the compact-device defaults
+  // save at boot is exactly that case).
+  let persistedBaseline: Record<string, unknown> = {}
+  // Captured just before loadSettings() — every ref still at its factory
+  // default. A key absent from the baseline counts as changed only when it
+  // differs from this, so hydrating an old blob doesn't queue ~60 phantom
+  // edits.
+  let factoryDefaults: Record<string, unknown> = {}
+  const pendingSyncKeys = new Set<string>()
+  let serverSyncEnabled = false
   let isApplyingRemoteSettings = false
   let liveSyncInitialized = false
   let settingsBroadcastChannel: BroadcastChannel | null = null
@@ -401,6 +425,10 @@ export const useSettingsStore = defineStore('settings', () => {
     }
 
     const currentSettings = buildSettingsPayload()
+    // Remote keys are agreed state either way — merge them into the
+    // baseline even when nothing differs, so a future diff never resends a
+    // key this client never touched.
+    persistedBaseline = { ...persistedBaseline, ...remoteSettings }
     if (!remoteSettingsDiffer(currentSettings, remoteSettings)) {
       return
     }
@@ -428,10 +456,9 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  function broadcastSettingsToOtherWindows() {
-    const payload = buildSettingsPayload()
-    settingsBroadcastChannel?.postMessage(payload)
-    socketClient.broadcastSettingsChange(payload)
+  function broadcastSettingsToOtherWindows(changed: Partial<PersistedUserSettings>) {
+    settingsBroadcastChannel?.postMessage(changed)
+    socketClient.broadcastSettingsChange(changed)
   }
 
   function buildSettingsPayload(): PersistedUserSettings {
@@ -486,6 +513,7 @@ export const useSettingsStore = defineStore('settings', () => {
       spectrumShuffle: spectrumShuffle.value,
       spectrumShuffleMinutes: spectrumShuffleMinutes.value,
       spectrumMediaBar: spectrumMediaBar.value,
+      screensaverSpectrumWidgets: screensaverSpectrumWidgets.value,
       dashboardFont: dashboardFont.value,
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
@@ -570,6 +598,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.spectrumShuffle !== undefined) spectrumShuffle.value = settings.spectrumShuffle
     if (settings.spectrumShuffleMinutes !== undefined) spectrumShuffleMinutes.value = settings.spectrumShuffleMinutes
     if (settings.spectrumMediaBar !== undefined) spectrumMediaBar.value = settings.spectrumMediaBar
+    if (settings.screensaverSpectrumWidgets !== undefined) screensaverSpectrumWidgets.value = settings.screensaverSpectrumWidgets
     if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
@@ -586,8 +615,41 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  function saveSettingsLocalOnly() {
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(buildSettingsPayload()))
+  /**
+   * DL-138: keys whose JSON value differs from `persistedBaseline`. Keys
+   * absent from the baseline (new device, newly-added setting) always
+   * report changed — they need registering; the sync gate keeps pre-GET
+   * sends from leaking them.
+   */
+  function diffPersistedPayload(payload: PersistedUserSettings): Partial<PersistedUserSettings> {
+    const changed: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(payload)) {
+      const json = JSON.stringify(value)
+      if (key in persistedBaseline) {
+        if (json !== JSON.stringify(persistedBaseline[key])) changed[key] = value
+      } else if (json !== JSON.stringify(factoryDefaults[key])) {
+        // Baseline never saw the key — it counts as a change only if it
+        // isn't still sitting at its factory default.
+        changed[key] = value
+      }
+    }
+    return changed
+  }
+
+  /**
+   * Writes two keys: the full flat blob stays the boot cache
+   * (byte-compatible — older builds and tests read it as-is), and the
+   * DELTA key carries just the changed subset for the storage-event
+   * listener in sibling tabs — a stale tab must never get to apply our
+   * untouched keys. Returns `changed`.
+   */
+  function saveSettingsLocalOnly(): Partial<PersistedUserSettings> {
+    const payload = buildSettingsPayload()
+    const changed = diffPersistedPayload(payload)
+    persistedBaseline = { ...persistedBaseline, ...changed }
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload))
+    localStorage.setItem(SETTINGS_DELTA_KEY, JSON.stringify({ at: Date.now(), changed }))
+    return changed
   }
 
   function loadSettings() {
@@ -597,6 +659,9 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       const settings = JSON.parse(stored) as Partial<PersistedUserSettings> &
         LegacyBackgroundFields & { showRegularToasts?: boolean }
+      // DL-138: the stored blob is what this client last persisted — seed
+      // the baseline from it so only edits made after this point propagate.
+      persistedBaseline = { ...settings }
       applySettingsObject({
         ...settings,
         buttonSize: settings.buttonSize ?? 1.0,
@@ -647,6 +712,7 @@ export const useSettingsStore = defineStore('settings', () => {
         spectrumShuffle: settings.spectrumShuffle === true,
         spectrumShuffleMinutes: settings.spectrumShuffleMinutes ?? 10,
         spectrumMediaBar: settings.spectrumMediaBar ?? true,
+        screensaverSpectrumWidgets: settings.screensaverSpectrumWidgets === true,
         dashboardFont: settings.dashboardFont ?? 'default',
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
@@ -676,6 +742,12 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function persistSettingsToServer(): Promise<void> {
+    // DL-138: pre-sync sends are suppressed entirely — the queue stays
+    // pending until the first loadSettingsFromServer resolves, so a boot
+    // path (e.g. compact-device defaults) can't push factory values over
+    // the shared file before it has even been read.
+    if (!serverSyncEnabled) return Promise.resolve()
+
     // A PUT already on the wire carries an older payload: mark the current
     // state dirty so the loop below sends it as a trailing write, and return
     // the same promise so callers can await a fully-drained server.
@@ -688,7 +760,24 @@ export const useSettingsStore = defineStore('settings', () => {
       try {
         do {
           serverSyncQueued = false
-          await apiClient.put('/user-settings', { settings: buildSettingsPayload() })
+          // DL-138: send only the keys that changed since baseline — the
+          // server merges them into its file (per-field last-write-wins), so
+          // untouched stale values can never ride along.
+          const keys = [...pendingSyncKeys]
+          if (!keys.length) break
+          const payload = buildSettingsPayload() as Record<string, unknown>
+          const changed: Record<string, unknown> = {}
+          for (const key of keys) {
+            if (key in payload) changed[key] = payload[key]
+          }
+          if (!Object.keys(changed).length) {
+            pendingSyncKeys.clear()
+            break
+          }
+          await apiClient.put('/user-settings', { settings: changed })
+          // On failure the keys stay queued — the next save or sync retries
+          // them instead of dropping the edit silently.
+          for (const key of keys) pendingSyncKeys.delete(key)
         } while (serverSyncQueued)
       } catch (error) {
         console.warn('Failed to persist settings to server:', error)
@@ -701,11 +790,22 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function saveSettings() {
-    saveSettingsLocalOnly()
+    const changed = saveSettingsLocalOnly()
+    const changedKeys = Object.keys(changed)
+    if (!changedKeys.length) return
+
+    for (const key of changedKeys) pendingSyncKeys.add(key)
+
+    // DL-138: before the first server load we can't know which local values
+    // are ours to propagate — the compact-device defaults save at boot would
+    // otherwise push factory settings over the shared file. Queue the keys;
+    // loadSettingsFromServer flushes them once server state is known.
+    if (!serverSyncEnabled) return
+
     scheduleServerSync()
 
     if (!isApplyingRemoteSettings) {
-      broadcastSettingsToOtherWindows()
+      broadcastSettingsToOtherWindows(changed)
     }
   }
 
@@ -728,10 +828,17 @@ export const useSettingsStore = defineStore('settings', () => {
       // a microtask, so a same-tick change would otherwise slip past the
       // serverSyncTimer check.
       await nextTick()
-      if (serverSyncTimer) {
-        await flushSettingsToServer()
-      } else if (serverSyncInFlight) {
-        await serverSyncInFlight
+      // The drain protects in-session edits from being regressed by a stale
+      // read — but only once sync is established. On the FIRST load a flush
+      // would push the not-yet-synced local blob (compact-device defaults,
+      // stale localStorage) over the server file — that is the boot stomp
+      // that flipped phones back to the widget dashboard. (DL-138)
+      if (serverSyncEnabled) {
+        if (serverSyncTimer) {
+          await flushSettingsToServer()
+        } else if (serverSyncInFlight) {
+          await serverSyncInFlight
+        }
       }
 
       const response = await apiClient.get('/user-settings')
@@ -743,8 +850,24 @@ export const useSettingsStore = defineStore('settings', () => {
         // window, so each refresh pushed stale values outward and the
         // background picker visibly flickered.
         await applySettingsFromRemote(serverSettings)
+        // Post-sync the whole resolved state is agreed — adopt the full
+        // payload as baseline so the next diff reports only keys that were
+        // genuinely touched afterwards.
+        persistedBaseline = { ...persistedBaseline, ...buildSettingsPayload() }
       } else if (localStorage.getItem(SETTINGS_STORAGE_KEY)) {
-        await persistSettingsToServer()
+        // Empty server file — this device seeds it with its full state.
+        const payload = buildSettingsPayload()
+        await apiClient.put('/user-settings', { settings: payload })
+        persistedBaseline = { ...persistedBaseline, ...payload }
+      }
+
+      serverSyncEnabled = true
+      // Keys queued by pre-sync saves flush now — with post-sync values, so
+      // remote-applied keys echo back harmlessly and genuinely local edits
+      // (e.g. compact-device defaults on a key the server lacks) still
+      // reach the server.
+      if (pendingSyncKeys.size) {
+        void persistSettingsToServer()
       }
 
       applyTouchModeStyles()
@@ -812,6 +935,7 @@ export const useSettingsStore = defineStore('settings', () => {
       spectrumShuffle,
       spectrumShuffleMinutes,
       spectrumMediaBar,
+      screensaverSpectrumWidgets,
       newsApiKey,
       newsFeeds,
       sportsFeeds,
@@ -920,6 +1044,10 @@ export const useSettingsStore = defineStore('settings', () => {
     recentActions.value = []
   }
 
+  // DL-138: snapshot every ref at factory default BEFORE loadSettings
+  // hydrates them — the diff uses it to tell "key the baseline never saw"
+  // apart from "key a user actually changed".
+  factoryDefaults = { ...(buildSettingsPayload() as Record<string, unknown>) }
   loadSettings()
   detectSmallScreenDefaults()
   applyTouchModeStyles()
@@ -960,12 +1088,18 @@ export const useSettingsStore = defineStore('settings', () => {
     }
 
     const handleStorageEvent = (event: StorageEvent) => {
-      if (event.key !== SETTINGS_STORAGE_KEY || !event.newValue) {
+      // DL-138: the delta key carries the changed subset — the main blob's
+      // storage event is ignored so a stale same-browser tab can't push its
+      // untouched keys through the full-payload write.
+      if (event.key !== SETTINGS_DELTA_KEY || !event.newValue) {
         return
       }
 
       try {
-        applySettingsFromRemote(JSON.parse(event.newValue) as Partial<PersistedUserSettings>)
+        const parsed = JSON.parse(event.newValue) as { changed?: Partial<PersistedUserSettings> }
+        if (parsed.changed && typeof parsed.changed === 'object') {
+          applySettingsFromRemote(parsed.changed)
+        }
       } catch {
         // Ignore malformed cross-tab payloads
       }
@@ -977,12 +1111,22 @@ export const useSettingsStore = defineStore('settings', () => {
       }
     }
 
+    // DL-138: a reconnect re-pulls server settings — a stale long-lived
+    // client (the panel) self-heals without a page reload. The first
+    // 'connect' fires before the initial sync completes, so this is a no-op
+    // until serverSyncEnabled flips.
+    const handleSocketConnect = () => {
+      if (serverSyncEnabled) void loadSettingsFromServer()
+    }
+
     window.addEventListener('storage', handleStorageEvent)
     socketClient.on('user_settings_updated', handleSocketSettingsUpdate)
+    socketClient.on('connect', handleSocketConnect)
 
     return () => {
       window.removeEventListener('storage', handleStorageEvent)
       socketClient.off('user_settings_updated', handleSocketSettingsUpdate)
+      socketClient.off('connect', handleSocketConnect)
       settingsBroadcastChannel?.close()
       settingsBroadcastChannel = null
       liveSyncInitialized = false
@@ -1043,6 +1187,7 @@ export const useSettingsStore = defineStore('settings', () => {
     spectrumShuffle,
     spectrumShuffleMinutes,
     spectrumMediaBar,
+    screensaverSpectrumWidgets,
     dashboardFont,
     appScanningEnabled,
     agentAlertsEnabled,

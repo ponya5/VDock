@@ -11,6 +11,11 @@ export interface WeatherResult {
   windSpeed: number
   description: string
   icon: [string, string]
+  /** Raw WMO weather code — the animated glyph needs the real condition,
+   *  not a pre-resolved icon tuple. */
+  code: number
+  /** Open-Meteo `is_day` (1 = sun above horizon) — drives sun vs moon. */
+  isDay: boolean
   location: string
 }
 
@@ -31,6 +36,9 @@ const WEATHER_CODE_MAP: Record<number, { description: string; icon: [string, str
   71: { description: 'Light Snow', icon: ['fas', 'snowflake'] },
   73: { description: 'Snow', icon: ['fas', 'snowflake'] },
   75: { description: 'Heavy Snow', icon: ['fas', 'snowflake'] },
+  77: { description: 'Snow Grains', icon: ['fas', 'snowflake'] },
+  85: { description: 'Snow Showers', icon: ['fas', 'snowflake'] },
+  86: { description: 'Snow Showers', icon: ['fas', 'snowflake'] },
   80: { description: 'Rain Showers', icon: ['fas', 'cloud-showers-heavy'] },
   81: { description: 'Rain Showers', icon: ['fas', 'cloud-showers-heavy'] },
   82: { description: 'Violent Showers', icon: ['fas', 'cloud-showers-heavy'] },
@@ -90,7 +98,7 @@ export function getBrowserLocation(): Promise<Coordinates> {
 }
 
 export async function fetchCurrentWeather(coords: Coordinates, location: string): Promise<WeatherResult> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day&timezone=auto`
   const response = await fetch(url)
   if (!response.ok) throw new Error('Weather request failed')
   const data = await response.json()
@@ -103,6 +111,8 @@ export async function fetchCurrentWeather(coords: Coordinates, location: string)
     windSpeed: Math.round(current.wind_speed_10m),
     description,
     icon,
+    code: current.weather_code,
+    isDay: current.is_day === 1,
     location
   }
 }

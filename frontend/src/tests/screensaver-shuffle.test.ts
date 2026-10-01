@@ -112,12 +112,15 @@ describe('SettingsView wiring (source contract)', () => {
   const src = readFileSync(
     resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
 
-  it('the Screensaver Type select is the first panel on the tab', () => {
-    const type = src.indexOf('id="ss-type"')
-    const activation = src.indexOf('id="ss-activation"')
-    expect(type).toBeGreaterThan(-1)
-    expect(activation).toBeGreaterThan(-1)
-    expect(type).toBeLessThan(activation)
+  it('the Screensaver Type select sits in the first, generic panel on the tab', () => {
+    // DL-137: type + activation merged into one "General" panel — ss-type
+    // and ss-activation are gone, idle delay + try-it moved in.
+    const general = src.indexOf('id="ss-general"')
+    const spectrum = src.indexOf('id="ss-spectrum"')
+    expect(general).toBeGreaterThan(-1)
+    expect(spectrum).toBeGreaterThan(-1)
+    expect(general).toBeLessThan(spectrum)
+    expect(src).not.toContain('id="ss-activation"')
     expect(src).toContain('>Screensaver Type<')
     expect(src).toContain('aria-label="Screensaver type"')
   })
@@ -126,6 +129,20 @@ describe('SettingsView wiring (source contract)', () => {
     expect(src).toContain('value="shuffle"')
     expect(src).toContain('screensaverStyle === \'shuffle\'')
     expect(src).toContain('v-model.number="settingsStore.screensaverShuffleMinutes"')
+  })
+
+  it('DL-135: offers "Widgets on the visualizer" for spectrum + shuffle', () => {
+    expect(src).toContain('Widgets on the visualizer')
+    expect(src).toContain('settingsStore.screensaverSpectrumWidgets')
+    // Only offered where it can apply — spectrum directly, or shuffle
+    // rotating through spectrum windows.
+    expect(src).toContain(
+      "settingsStore.screensaverStyle === 'spectrum' || settingsStore.screensaverStyle === 'shuffle'")
+    // The widgets-panel note points at the toggle on spectrum, keeps the
+    // "not in use" explanation on stats.
+    expect(src).toContain("v-if=\"settingsStore.screensaverStyle === 'spectrum'\"")
+    expect(src).toContain('overlay the <strong>Spectrum visualizer</strong>')
+    expect(src).toContain("v-else-if=\"settingsStore.screensaverStyle === 'stats'\"")
   })
 })
 

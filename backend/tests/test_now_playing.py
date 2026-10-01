@@ -64,7 +64,8 @@ def _track_payload(**overrides):
 
 def _empty_payload():
     return {'playing': False, 'title': '', 'artist': '', 'album': '',
-            'source_app': '', 'has_art': False, 'ts': time.time()}
+            'source_app': '', 'site': '', 'has_art': False,
+            'ts': time.time()}
 
 
 def _emit_key(payload):
@@ -297,3 +298,71 @@ def test_loop_survives_unexpected_tick_error(monkeypatch, emitted):
         now_playing._loop(0)
     assert calls['n'] == 2                 # crashed tick did not end the loop
     assert emitted and emitted[-1][1]['title'] == 'Song'
+
+
+# ---------------------------------------------------------------------------
+# Site detection — browser sessions attributed to a site via window titles
+# ---------------------------------------------------------------------------
+
+def test_detect_site_known_app_skips_window_scan(monkeypatch):
+    monkeypatch.setattr(now_playing, '_visible_window_titles',
+                        lambda: pytest.fail('should not scan'))
+    assert now_playing.detect_site('Spotify.exe', 'Song') == 'spotify'
+    assert now_playing.detect_site('com.google.YouTubeMusic', 'V') == 'youtube'
+
+
+def test_detect_site_browser_matches_title_window(monkeypatch):
+    monkeypatch.setattr(now_playing, '_visible_window_titles', lambda: [
+        'Some Video Title - YouTube - Google Chrome',
+        'Inbox - Gmail',
+    ])
+    assert now_playing.detect_site('chrome.exe', 'Some Video Title') \
+        == 'youtube'
+
+
+def test_detect_site_browser_weak_match_on_known_site(monkeypatch):
+    # SMTC title doesn't appear in any window title (e.g. reformatted) —
+    # a known-site window still attributes the browser's session.
+    monkeypatch.setattr(now_playing, '_visible_window_titles', lambda: [
+        'Live: cat cam 24/7 - Twitch',
+        'VS Code - main.py',
+    ])
+    assert now_playing.detect_site('msedge.exe', 'stream title x') == 'twitch'
+
+
+def test_detect_site_browser_no_known_site_returns_empty(monkeypatch):
+    monkeypatch.setattr(now_playing, '_visible_window_titles', lambda: [
+        'Inbox - Gmail - Google Chrome',
+    ])
+    assert now_playing.detect_site('chrome.exe', 'A video') == ''
+
+
+def test_detect_site_non_browser_app_returns_empty(monkeypatch):
+    monkeypatch.setattr(now_playing, '_visible_window_titles',
+                        lambda: ['Something - YouTube - Google Chrome'])
+    assert now_playing.detect_site('SomePlayer.exe', 'A video') == ''
+
+
+def test_site_is_stamped_once_per_track(monkeypatch, emitted):
+    calls = {'n': 0}
+
+    def fake_detect(app, title):
+        calls['n'] += 1
+        return 'youtube' if 'chrome' in app else ''
+    monkeypatch.setattr(now_playing, 'detect_site', fake_detect)
+
+    p1 = _track_payload(source_app='chrome.exe', title='Video A')
+    p2 = _track_payload(source_app='chrome.exe', title='Video B',
+                        position_s=0.0)
+    monkeypatch.setattr(now_playing, '_fetch_snapshot', _fake_reader([
+        (_emit_key(p1), dict(p1), now_playing.ART_UNCHANGED),
+        (_emit_key(p1), dict(p1), now_playing.ART_UNCHANGED),
+        (_emit_key(p2), dict(p2), now_playing.ART_UNCHANGED),
+    ]))
+    state = now_playing._poll_state()
+    for _ in range(3):
+        now_playing._poll_once(state)
+
+    assert calls['n'] == 2          # once per track, not per emit
+    assert emitted[0][1]['site'] == 'youtube'
+    assert emitted[1][1]['site'] == 'youtube'

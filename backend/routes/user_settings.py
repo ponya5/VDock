@@ -69,6 +69,8 @@ ALLOWED_USER_SETTING_KEYS = {
     'spectrumShuffle',
     'spectrumShuffleMinutes',
     'spectrumMediaBar',
+    # DL-135: info widgets can overlay the spectrum stage.
+    'screensaverSpectrumWidgets',
     'dashboardFont',
     'tutorialCompleted',
     # Id of the profile most recently loaded on any window/device — lets a
@@ -131,7 +133,14 @@ def get_user_settings():
 @user_settings_bp.route('/api/user-settings', methods=['PUT'])
 @require_auth
 def update_user_settings():
-    """Persist UI settings to disk."""
+    """Persist UI settings to disk.
+
+    DL-138: clients send only the keys they changed (per-field last-write-
+    wins), so the incoming payload merges into the stored file rather than
+    replacing it — a partial write must not drop every unsent key, and a
+    stale client's save can no longer resurrect old values for untouched
+    fields.
+    """
     payload = request.get_json(silent=True) or {}
     incoming_settings = payload.get('settings')
 
@@ -139,6 +148,8 @@ def update_user_settings():
         return jsonify({'success': False, 'error': 'settings object is required'}), 400
 
     sanitized_settings = _sanitize_user_settings(incoming_settings)
-    _save_user_settings_file(sanitized_settings)
+    merged_settings = _load_user_settings_file()
+    merged_settings.update(sanitized_settings)
+    _save_user_settings_file(merged_settings)
 
-    return jsonify({'success': True, 'settings': sanitized_settings})
+    return jsonify({'success': True, 'settings': merged_settings})

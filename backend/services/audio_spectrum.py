@@ -7,7 +7,7 @@ bands (30 Hz–16 kHz) and emits::
 
     audio_spectrum  { bands: [int x20, 0-100], level: 0-100, live: bool, ts }
 
-Emits are capped at ~14 Hz and only fire when a band moved >=2 or ``live``
+Emits are capped at ~22 Hz and only fire when a band moved >=2 or ``live``
 flipped; while silent, a ``live: false`` heartbeat goes out every ~2 s so
 the widget relaxes to its baseline instead of freezing on the last frame.
 
@@ -46,11 +46,20 @@ CHUNK_FRAMES = 2048
 
 # A full-scale sine (amp 1.0) maps to 100; the -60 dBFS floor maps to 0.
 DB_FLOOR = -60.0
+# Dynamics expansion: a linear-in-dB scale parks typical music around
+# 50-80 so the bars barely move. Raising the normalized value to ~1.6
+# pushes the groove's mid band down (-30 dB → ~33) while transients
+# still slam to 100 — spikes read as spikes instead of a steady row.
+BAND_CURVE = 1.6
 # Bars rise instantly and fall with this per-chunk factor (~23 chunks/s):
 # the backend smooths, the widget adds its own slower fall on top.
-BAND_DECAY = 0.78
+BAND_DECAY = 0.70
 
-MIN_EMIT_INTERVAL = 1.0 / 14.0
+# Emit at up to ~22 Hz — just under the ~23.4 Hz chunk cadence so every
+# chunk that moved qualifies; the payload is ~20 ints, the socket cost is
+# nil, and the extra granularity is what makes the frontend's per-frame
+# band interpolation read smooth rather than stair-stepped.
+MIN_EMIT_INTERVAL = 1.0 / 22.0
 BAND_DELTA = 2
 HEARTBEAT_SECONDS = 2.0
 
@@ -157,11 +166,19 @@ def bands_from_magnitudes(amps: Sequence[float],
 
 
 def amp_to_value(amp: float) -> int:
-    """Amplitude (0..1, sine full-scale) → 0-100 on the -60 dBFS scale."""
+    """Amplitude (0..1, sine full-scale) → 0-100.
+
+    Linear in dB on the -60 dBFS floor, then expanded by ``BAND_CURVE``
+    so quiet-to-mid content sits low and real peaks reach the top —
+    a flat 50-80 row looked like a dead visualizer.
+    """
     if amp <= 0:
         return 0
-    value = int(round((20.0 * math.log10(amp) - DB_FLOOR) / -DB_FLOOR * 100))
-    return 0 if value < 0 else (100 if value > 100 else value)
+    norm = (20.0 * math.log10(amp) - DB_FLOOR) / -DB_FLOOR
+    if norm <= 0:
+        return 0
+    value = int(round((norm ** BAND_CURVE) * 100))
+    return 100 if value > 100 else value
 
 
 def bands_envelope(values: Sequence[int],

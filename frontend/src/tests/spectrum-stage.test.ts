@@ -47,10 +47,16 @@ beforeEach(() => {
 })
 
 describe('spectrum skin registry', () => {
-  it('ships seven unique skins mapped from the references', () => {
+  it('ships the full fourteen-skin catalogue', () => {
     const ids = SPECTRUM_SKINS.map(s => s.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids).toEqual(['winamp', 'mono', 'uv', 'iso', 'scope', 'aurora', 'ember'])
+    // DL-134: the research-branch set restored (rotor/swarm/wave/ring/
+    // mirror/psyche) plus the hue-drifting 'rgb' bars.
+    expect(ids).toEqual([
+      'winamp', 'mono', 'uv', 'rgb',
+      'iso', 'scope', 'aurora', 'ember',
+      'rotor', 'swarm', 'wave', 'ring', 'mirror', 'psyche',
+    ])
     for (const skin of SPECTRUM_SKINS) {
       expect(skin.label.length).toBeGreaterThan(0)
       expect(typeof skin.create().draw).toBe('function')
@@ -86,11 +92,12 @@ describe('SpectrumStage', () => {
   const mountStage = () =>
     mount(SpectrumStage, { global: { stubs: { FontAwesomeIcon: true } } })
 
-  it('mounts a fullscreen canvas and the media bar', () => {
+  it('mounts two crossfade canvas layers and the media bar', () => {
     const settings = useSettingsStore()
     settings.screensaverStyle = 'spectrum'
     const wrapper = mountStage()
-    expect(wrapper.find('.spectrum-canvas').exists()).toBe(true)
+    // DL-134: skin swaps cross-dissolve between two stacked canvases.
+    expect(wrapper.findAll('.spectrum-canvas')).toHaveLength(2)
     expect(wrapper.find('.spectrum-media').exists()).toBe(true)
     wrapper.unmount()
   })
@@ -103,16 +110,35 @@ describe('SpectrumStage', () => {
     wrapper.unmount()
   })
 
+  it('backdrop mode hides the media bar even when the pref is on', () => {
+    // DL-135: under the widget layer / layout editor the transport buttons
+    // would eat drag gestures in the bottom-center band.
+    const settings = useSettingsStore()
+    settings.spectrumMediaBar = true
+    const wrapper = mount(SpectrumStage, {
+      props: { backdrop: true },
+      global: { stubs: { FontAwesomeIcon: true } },
+    })
+    expect(wrapper.find('.spectrum-media').exists()).toBe(false)
+    expect(wrapper.findAll('.spectrum-canvas')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
   it('media buttons dispatch cross_platform media actions', async () => {
     const wrapper = mountStage()
     const buttons = wrapper.findAll('.spectrum-media-btn')
-    expect(buttons).toHaveLength(4) // prev, play/pause, stop, next
+    expect(buttons).toHaveLength(3) // prev, play/stop (state-split), next
     await buttons[0].trigger('click')
     expect(executeAction).toHaveBeenCalledWith({
       type: 'cross_platform',
       config: { action: 'media_previous' },
     })
-    await buttons[3].trigger('click')
+    await buttons[1].trigger('click')
+    expect(executeAction).toHaveBeenLastCalledWith({
+      type: 'cross_platform',
+      config: { action: 'media_play_stop' },
+    })
+    await buttons[2].trigger('click')
     expect(executeAction).toHaveBeenLastCalledWith({
       type: 'cross_platform',
       config: { action: 'media_next' },
@@ -196,6 +222,9 @@ describe('settings keys', () => {
     expect(settings.spectrumShuffle).toBe(false)
     expect(settings.spectrumShuffleMinutes).toBe(10)
     expect(settings.spectrumMediaBar).toBe(true)
+    // DL-135: the spectrum widget overlay is opt-in — existing installs
+    // keep a clean visualizer.
+    expect(settings.screensaverSpectrumWidgets).toBe(false)
     expect(settings.agentWaitingDockEnabled).toBe(true)
     expect(settings.mcpEnabled).toBe(true)
   })
@@ -220,6 +249,7 @@ describe('settings keys', () => {
     settings.spectrumShuffle = true
     settings.spectrumShuffleMinutes = 5
     settings.spectrumMediaBar = false
+    settings.screensaverSpectrumWidgets = true
     settings.agentWaitingDockEnabled = false
     settings.mcpEnabled = false
     settings.saveSettingsLocalOnly()
@@ -232,6 +262,7 @@ describe('settings keys', () => {
     expect(fresh.spectrumShuffle).toBe(true)
     expect(fresh.spectrumShuffleMinutes).toBe(5)
     expect(fresh.spectrumMediaBar).toBe(false)
+    expect(fresh.screensaverSpectrumWidgets).toBe(true)
     expect(fresh.agentWaitingDockEnabled).toBe(false)
     expect(fresh.mcpEnabled).toBe(false)
   })
@@ -249,7 +280,28 @@ describe('ScreenSaver integration (source contract)', () => {
     expect(src).toContain('<SpectrumStage')
   })
 
-  it('widget services do not start in spectrum mode', () => {
-    expect(src).toContain('if (!spectrumMode.value)')
+  it('DL-135: spectrum stays mounted as the layout editor backdrop', () => {
+    // spectrumBackdrop excludes layoutEdit no longer — the stage renders
+    // behind the editor so positions are edited on the real canvas, with
+    // the media bar suppressed.
+    expect(src).toContain(':backdrop="layoutEdit"')
+    expect(src).not.toContain('spectrumMode')
+  })
+
+  it('DL-135: widget layer gates on widgetLayerOn; component widgets stay surface-only', () => {
+    // Info widgets may overlay the spectrum (opt-in + always while
+    // editing); stats still keeps the layer off.
+    expect(src).toContain('widgetLayerOn')
+    expect(src).toContain('spectrumOverlay')
+    // nowplaying / mini-spectrum / systemstats never overlay the stage.
+    expect(src).toContain('v-if="!spectrumBackdrop"')
+  })
+
+  it('widget feeds follow the widget layer, not the stage', () => {
+    // Feeds sleep when nothing can show them (stats, or spectrum with
+    // the overlay off) and wake whenever the layer is visible.
+    expect(src).toContain('watch(widgetLayerOn')
+    expect(src).toContain('if (widgetLayerOn.value)')
+    expect(src).not.toContain('watch(spectrumMode')
   })
 })

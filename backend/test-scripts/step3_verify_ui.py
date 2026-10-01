@@ -79,8 +79,8 @@ def desktop_pass(pw):
     mac = page.locator(".mobile-agent-console").count()
     print(f"mobile-agent-console elements on desktop: {mac}")
 
-    page.screenshot(path=str(REPO / "dl131-cursor-scene.png"))
-    print("screenshot -> dl131-cursor-scene.png")
+    page.screenshot(path=str(REPO / "design-log" / "refs" / "dl131-cursor-scene.png"))
+    print("screenshot -> design-log/refs/dl131-cursor-scene.png")
     browser.close()
     return True
 
@@ -120,8 +120,8 @@ def mobile_pass(pw):
               console.locator(".mac-state-label").inner_text())
         acts = console.locator(".mac-action").all_inner_texts()
         print("console actions:", acts)
-    page.screenshot(path=str(REPO / "dl131-cursor-scene-mobile.png"))
-    print("screenshot -> dl131-cursor-scene-mobile.png")
+    page.screenshot(path=str(REPO / "design-log" / "refs" / "dl131-cursor-scene-mobile.png"))
+    print("screenshot -> design-log/refs/dl131-cursor-scene-mobile.png")
     browser.close()
 
 

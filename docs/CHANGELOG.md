@@ -28,6 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tray menu trimmed to Show / Settings / Exit
 - Install dirs and release docs consolidated (`docs/RELEASING.md`)
 
+## [2.2.0] — 2026-10-02
+
+### Added
+- **Spectrum visualizer screensaver** — 14 animated skins (Winamp, Mono Bars, UV Bars, RGB Bars, Iso Field, Scope, Aurora, Ember, Rotor 3D, Swarm, Waveform, Wave Ring, Mirror Bars, Psychedelia) reacting to desktop audio, with ambient backdrops, soft crossfade transitions, and a Shuffle mode that rotates skins on a timer
+- **Widgets over the visualizer** — clock, weather, news and system widgets can overlay the spectrum, positioned with the same drag-and-resize layout editor
+- **Animated weather glyph** — the saver's weather is a live scene: orbiting sun rays, spinning moon, rain/snow/fog/thunder, driven by the real condition and day/night
+- **Merged media transport + brand-aware now playing** — single play/stop button, playing-site detection ("YouTube — Brave"), brand icons, larger readable card
+- **Mobile header reveal** — a floating button on phones reveals the real deck header; the guide gains a side-nav rail with its own scrollport
+
+### Fixed
+- **Settings sync stomp** — a fresh mobile/compact client could overwrite server settings with factory defaults; sync is now field-level (server-side merge, changed-keys PUT/broadcast, pre-sync gate, reconnect resync)
+- **Saver frame rate** — ambient layers render into a low-res offscreen canvas, the hidden dashboard background suspends under the saver, and Swarm draws via cached sprites; all 14 skins hold a locked 60 fps
+
+### Changed
+- **README rebuilt for onboarding** — two-step per-OS quick start, deduplicated content, hero banner refresh; governance docs (Code of Conduct, Security, Contributing) linked with real contact info; repo root tidied
+
 ## [Unreleased]
 
 ### Added

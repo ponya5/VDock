@@ -8,16 +8,22 @@
  */
 import { computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useNowPlaying } from '@/services/nowPlaying'
+import {
+  nowPlayingIcon,
+  nowPlayingSourceLabel,
+  useNowPlaying,
+} from '@/services/nowPlaying'
 
 const props = defineProps<{ compact?: boolean }>()
 
 const { track, playing, available, artUrl } = useNowPlaying()
 
-const sourceLabel = computed(() => {
-  const app = track.value?.source_app ?? ''
-  return app ? app.replace(/\.exe$/i, '') : ''
-})
+// Site-aware label/icon: "YouTube" + its logo beats "chrome.exe" + a note
+// when the backend has attributed the session to a site.
+const sourceLabel = computed(() => nowPlayingSourceLabel(track.value))
+const brandIcon = computed(() => nowPlayingIcon(track.value))
+const brandClass = computed(() =>
+  track.value?.site ? `is-${track.value.site.toLowerCase()}` : '')
 
 const progressPct = computed(() => {
   const t = track.value
@@ -37,7 +43,7 @@ const stateText = computed(() => {
     <template v-if="track">
       <div class="np-art" :class="{ 'is-paused': !playing }">
         <img v-if="artUrl" :src="artUrl" alt="" class="np-art-img" />
-        <FontAwesomeIcon v-else :icon="['fas', 'music']" class="np-art-fallback" />
+        <FontAwesomeIcon v-else :icon="brandIcon || ['fas', 'music']" class="np-art-fallback np-brand" :class="brandClass" />
       </div>
       <div class="np-meta">
         <span class="np-title">{{ track.title }}</span>
@@ -97,6 +103,11 @@ const stateText = computed(() => {
   font-size: 1.4em;
   opacity: 0.5;
 }
+
+.np-brand { opacity: 0.9; }
+.np-brand.is-youtube { color: #ff4a45; }
+.np-brand.is-spotify { color: #1db954; }
+.np-brand.is-twitch { color: #9146ff; }
 
 .np-meta {
   display: flex;

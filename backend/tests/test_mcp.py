@@ -144,7 +144,7 @@ def test_initialize(client):
                                    'params': {'protocolVersion': '2025-06-18'}}))
     assert result['protocolVersion'] == '2025-06-18'
     assert result['capabilities']['tools'] == {'listChanged': False}
-    assert result['serverInfo'] == {'name': 'vdock', 'version': '2.1.0'}
+    assert result['serverInfo'] == {'name': 'vdock', 'version': '2.2.0'}
 
 
 def test_ping(client):
@@ -277,7 +277,7 @@ def test_tools_list_shape(client):
 
 def test_deck_info(client, deck_dir):
     payload = _tool_payload(_tool_call(client, 'deck_info'))
-    assert payload['version'] == '2.1.0'
+    assert payload['version'] == '2.2.0'
     assert payload['profile'] == {'id': 'prof-1', 'name': 'Test Deck'}
     assert payload['scenes'] == 2
     assert payload['buttons'] == 4      # 3 scene buttons + 1 docked
