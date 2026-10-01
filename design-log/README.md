@@ -145,3 +145,4 @@ the eventual merge into the main line.
 | [DL-130](DL-130-header-reveal-autohide-pill.md) | Bigger reveal FAB + auto-hide countdown pill | Implemented |
 | [DL-131](DL-131-manual-tour-steps.md) | Manual-only tour steps + live spotlight re-anchor | Implemented |
 | [DL-132](DL-132-guide-landing-page.md) | Standalone /guide landing page with search + screenshots | Implemented |
+| [DL-133](DL-133-spectrum-follow-and-shuffle-saver.md) | Endpoint-following spectrum capture, bigger media card, Shuffle saver type | Implemented |

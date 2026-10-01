@@ -716,6 +716,42 @@
         <!-- ── Appearance → Screen saver ── -->
         <div v-else-if="activeTab === 'appearance' && appearanceSubTab === 'screensaver'" class="content has-rail">
           <div class="col">
+            <!-- DL-133: the type pick is the first thing on the tab —
+                 'shuffle' rotates the saver view on an interval. -->
+            <section class="panel" id="ss-type">
+              <div class="panel-head"><h2>Screensaver type</h2></div>
+              <div class="panel-body">
+                <div class="row">
+                  <div class="row-text">
+                    <span class="label">Screensaver Type</span>
+                    <p>What fills the screen when the saver kicks in. Shuffle rotates between the other types while it's up.</p>
+                  </div>
+                  <div class="row-control">
+                    <select v-model="settingsStore.screensaverStyle" class="select" aria-label="Screensaver type">
+                      <option value="widgets">Widget dashboard</option>
+                      <option value="spectrum">Spectrum visualizer</option>
+                      <option value="stats">System stats</option>
+                      <option value="shuffle">Shuffle</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row" v-if="settingsStore.screensaverStyle === 'shuffle'">
+                  <div class="row-text">
+                    <span class="label">Rotate every</span>
+                    <p>How often Shuffle swaps the saver view.</p>
+                  </div>
+                  <div class="row-control">
+                    <select v-model.number="settingsStore.screensaverShuffleMinutes" class="select" aria-label="Shuffle rotation interval">
+                      <option :value="1">1 min</option>
+                      <option :value="5">5 min</option>
+                      <option :value="10">10 min</option>
+                      <option :value="30">30 min</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section class="panel" id="ss-activation">
               <div class="panel-head"><h2>Activation</h2></div>
               <div class="panel-body">
@@ -755,29 +791,15 @@
                  selected. -->
             <section class="panel" id="ss-spectrum">
               <div class="panel-head">
-                <h2>Screensaver style</h2>
-                <span class="hint">Swap the widget dashboard for a fullscreen visualizer or live system monitor.</span>
+                <h2>Spectrum visualizer</h2>
+                <span class="hint">Skin, rotation and media controls for the fullscreen spectrum style.</span>
                 <span class="spacer"></span>
                 <SettingResetButton label="Spectrum screensaver" :at-default="spectrumAtDefault" @reset="resetSpectrumSettings" />
               </div>
               <div class="panel-body">
-                <div class="row">
-                  <div class="row-text">
-                    <span class="label">When idle, show</span>
-                    <p>The idle delay and Test button open whichever style is picked here.</p>
-                  </div>
-                  <div class="row-control">
-                    <select v-model="settingsStore.screensaverStyle" class="select" aria-label="Screensaver style">
-                      <option value="widgets">Widget dashboard</option>
-                      <option value="spectrum">Spectrum visualizer</option>
-                      <option value="stats">System stats</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="note" v-if="settingsStore.screensaverStyle === 'stats'">
+                <div class="note" v-if="settingsStore.screensaverStyle === 'widgets' || settingsStore.screensaverStyle === 'stats'">
                   <FontAwesomeIcon :icon="['fas', 'circle-info']" />
-                  <div>Not in use while <strong>System stats</strong> is picked — the options below belong to the <strong>Spectrum visualizer</strong> style.</div>
+                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked — the options below belong to the <strong>Spectrum visualizer</strong> type.</div>
                 </div>
 
                 <div class="row stack">
@@ -855,9 +877,9 @@
                 <SettingResetButton label="Screensaver background" :at-default="settings.screensaverBackground === SETTINGS_DEFAULTS.screensaverBackground" @reset="settings.screensaverBackground = SETTINGS_DEFAULTS.screensaverBackground" />
               </div>
               <div class="panel-body">
-                <div class="note" v-if="settingsStore.screensaverStyle !== 'widgets'">
+                <div class="note" v-if="settingsStore.screensaverStyle === 'spectrum' || settingsStore.screensaverStyle === 'stats'">
                   <FontAwesomeIcon :icon="['fas', 'circle-info']" />
-                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — this background belongs to the <strong>Widget dashboard</strong> style.</div>
+                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — this background belongs to the <strong>Widget dashboard</strong> type.</div>
                 </div>
                 <div class="row stack picker-row">
                   <BackgroundPicker
@@ -901,9 +923,9 @@
                 <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
               </div>
               <div class="panel-body">
-                <div class="note" v-if="settingsStore.screensaverStyle !== 'widgets'">
+                <div class="note" v-if="settingsStore.screensaverStyle === 'spectrum' || settingsStore.screensaverStyle === 'stats'">
                   <FontAwesomeIcon :icon="['fas', 'circle-info']" />
-                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — these widgets show on the <strong>Widget dashboard</strong> style.</div>
+                  <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — these widgets show on the <strong>Widget dashboard</strong> type.</div>
                 </div>
                 <!-- DL-098: the clock is a real toggle — its own persisted
                      flag, not a widgets-array entry (saved lists predate
@@ -1870,6 +1892,7 @@ import TriggersPanel from '@/components/settings/TriggersPanel.vue'
 import McpInfoModal from '@/components/settings/McpInfoModal.vue'
 import SkinPreview from '@/components/screensaver/SkinPreview.vue'
 import { SPECTRUM_SKINS } from '@/services/spectrumSkins'
+import { saverTypeLabel } from '@/services/screensaverTypes'
 import { appPaths, loadAppPaths, templateAppKey } from '@/api/appPaths'
 
 const router = useRouter()
@@ -2914,17 +2937,12 @@ function resetScreensaverWidgets() {
 // DL-123: spectrum screensaver mode — skin registry for the swatch grid.
 const spectrumSkins = SPECTRUM_SKINS
 
-// DL-125: the "not in use" notes name whichever fullscreen style is picked.
-const screensaverStyleLabel = computed(() =>
-  settingsStore.screensaverStyle === 'spectrum'
-    ? 'Spectrum visualizer'
-    : settingsStore.screensaverStyle === 'stats'
-      ? 'System stats'
-      : 'Widget dashboard'
-)
+// DL-125/133: the "not in use" notes name whichever style is picked.
+const screensaverStyleLabel = computed(() => saverTypeLabel(settingsStore.screensaverStyle))
 
 const spectrumAtDefault = computed(() =>
   settingsStore.screensaverStyle === SETTINGS_DEFAULTS.screensaverStyle &&
+  settingsStore.screensaverShuffleMinutes === SETTINGS_DEFAULTS.screensaverShuffleMinutes &&
   settingsStore.spectrumSkin === SETTINGS_DEFAULTS.spectrumSkin &&
   settingsStore.spectrumShuffle === SETTINGS_DEFAULTS.spectrumShuffle &&
   settingsStore.spectrumShuffleMinutes === SETTINGS_DEFAULTS.spectrumShuffleMinutes &&
@@ -2932,6 +2950,7 @@ const spectrumAtDefault = computed(() =>
 )
 function resetSpectrumSettings() {
   settingsStore.screensaverStyle = SETTINGS_DEFAULTS.screensaverStyle
+  settingsStore.screensaverShuffleMinutes = SETTINGS_DEFAULTS.screensaverShuffleMinutes
   settingsStore.spectrumSkin = SETTINGS_DEFAULTS.spectrumSkin
   settingsStore.spectrumShuffle = SETTINGS_DEFAULTS.spectrumShuffle
   settingsStore.spectrumShuffleMinutes = SETTINGS_DEFAULTS.spectrumShuffleMinutes

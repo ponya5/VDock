@@ -65,6 +65,7 @@ export const SETTINGS_DEFAULTS = {
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_SCREENSAVER_BACKGROUND_ID,
   screensaverStyle: 'widgets' as const,
+  screensaverShuffleMinutes: 5,
   spectrumSkin: 'winamp',
   spectrumShuffle: false,
   spectrumShuffleMinutes: 10,
@@ -170,7 +171,9 @@ export interface PersistedUserSettings {
    * with the fullscreen audio visualizer + media bar; 'stats' swaps in the
    * fullscreen system monitor.
    */
-  screensaverStyle: 'widgets' | 'spectrum' | 'stats'
+  screensaverStyle: 'widgets' | 'spectrum' | 'stats' | 'shuffle'
+  /** DL-133: shuffle type rotation cadence, in minutes. */
+  screensaverShuffleMinutes: number
   /** Spectrum skin id — see services/spectrumSkins.ts registry. */
   spectrumSkin: string
   /** Ephemeral skin rotation while the spectrum saver is on. */
@@ -303,7 +306,8 @@ export const useSettingsStore = defineStore('settings', () => {
   // image URL paints behind the screensaver widgets.
   const screensaverBackground = ref<string>(DEFAULT_SCREENSAVER_BACKGROUND_ID)
   // DL-123 spectrum screensaver mode + skin/shuffle/media-bar prefs.
-  const screensaverStyle = ref<'widgets' | 'spectrum' | 'stats'>('widgets')
+  const screensaverStyle = ref<'widgets' | 'spectrum' | 'stats' | 'shuffle'>('widgets')
+  const screensaverShuffleMinutes = ref(5)
   const spectrumSkin = ref<string>('winamp')
   const spectrumShuffle = ref(false)
   const spectrumShuffleMinutes = ref(10)
@@ -477,6 +481,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverWidgetSize: screensaverWidgetSize.value,
       screensaverBackground: screensaverBackground.value,
       screensaverStyle: screensaverStyle.value,
+      screensaverShuffleMinutes: screensaverShuffleMinutes.value,
       spectrumSkin: spectrumSkin.value,
       spectrumShuffle: spectrumShuffle.value,
       spectrumShuffleMinutes: spectrumShuffleMinutes.value,
@@ -555,10 +560,12 @@ export const useSettingsStore = defineStore('settings', () => {
     if (
       settings.screensaverStyle === 'widgets' ||
       settings.screensaverStyle === 'spectrum' ||
-      settings.screensaverStyle === 'stats'
+      settings.screensaverStyle === 'stats' ||
+      settings.screensaverStyle === 'shuffle'
     ) {
       screensaverStyle.value = settings.screensaverStyle
     }
+    if (settings.screensaverShuffleMinutes !== undefined) screensaverShuffleMinutes.value = settings.screensaverShuffleMinutes
     if (settings.spectrumSkin !== undefined) spectrumSkin.value = settings.spectrumSkin
     if (settings.spectrumShuffle !== undefined) spectrumShuffle.value = settings.spectrumShuffle
     if (settings.spectrumShuffleMinutes !== undefined) spectrumShuffleMinutes.value = settings.spectrumShuffleMinutes
@@ -635,6 +642,7 @@ export const useSettingsStore = defineStore('settings', () => {
         screensaverWidgetSize: settings.screensaverWidgetSize ?? 100,
         screensaverBackground: settings.screensaverBackground ?? DEFAULT_SCREENSAVER_BACKGROUND_ID,
         screensaverStyle: settings.screensaverStyle ?? 'widgets',
+        screensaverShuffleMinutes: settings.screensaverShuffleMinutes ?? 5,
         spectrumSkin: settings.spectrumSkin ?? 'winamp',
         spectrumShuffle: settings.spectrumShuffle === true,
         spectrumShuffleMinutes: settings.spectrumShuffleMinutes ?? 10,
@@ -799,6 +807,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverClockEnabled,
       screensaverWeatherSize,
       screensaverStyle,
+      screensaverShuffleMinutes,
       spectrumSkin,
       spectrumShuffle,
       spectrumShuffleMinutes,
@@ -1029,6 +1038,7 @@ export const useSettingsStore = defineStore('settings', () => {
     screensaverWidgetSize,
     screensaverBackground,
     screensaverStyle,
+    screensaverShuffleMinutes,
     spectrumSkin,
     spectrumShuffle,
     spectrumShuffleMinutes,

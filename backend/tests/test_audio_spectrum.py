@@ -219,3 +219,121 @@ def test_silence_produces_zero_bands_and_level():
     band_amps, peak = spec.chunk_band_amps(np, frames)
     assert max(band_amps) < 1e-3
     assert spec.amp_to_value(peak) == 0
+
+
+# --- DL-133: endpoint-following capture ------------------------------------
+
+class _FakeRecorder:
+    """Context manager standing in for soundcard's recorder()."""
+
+    def __init__(self, frames):
+        self._frames = frames
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def record(self, numframes=None):
+        return self._frames
+
+
+class _FakeMic:
+    def __init__(self, name, peak, np):
+        self.name = name
+        self.isloopback = True
+        self._frames = np.full((spec.CHUNK_FRAMES, spec.CHANNELS),
+                               peak, dtype=np.float32)
+
+    def recorder(self, samplerate=None, channels=None):
+        return _FakeRecorder(self._frames)
+
+
+def _fake_sc(np, mics, default_name=None):
+    """Minimal soundcard stand-in: speaker + mic enumeration."""
+    class FakeSpeaker:
+        name = default_name or (mics[0].name if mics else 'none')
+
+    class FakeSC:
+        @staticmethod
+        def default_speaker():
+            return FakeSpeaker()
+
+        @staticmethod
+        def get_microphone(id=None, include_loopback=False):
+            for m in mics:
+                if m.name == id:
+                    return m
+            raise RuntimeError('no such mic')
+
+        @staticmethod
+        def all_microphones(include_loopback=False):
+            return list(mics)
+
+    return FakeSC
+
+
+def test_loudest_loopback_picks_the_sounding_endpoint(spectrum):
+    np = pytest.importorskip('numpy')
+    mics = [_FakeMic('quiet-a', 0.005, np), _FakeMic('loud-b', 0.6, np),
+            _FakeMic('quiet-c', 0.008, np)]
+    sc = _fake_sc(np, mics)
+    best, peak = spec._loudest_loopback(sc, np)
+    assert best.name == 'loud-b'
+    assert peak == pytest.approx(0.6)
+
+
+def test_loudest_loopback_skips_the_current_tap(spectrum):
+    np = pytest.importorskip('numpy')
+    mics = [_FakeMic('current', 0.9, np), _FakeMic('other', 0.3, np)]
+    sc = _fake_sc(np, mics)
+    best, peak = spec._loudest_loopback(sc, np, exclude_name='current')
+    # 'current' is louder but excluded — a switch must compare the rest.
+    assert best.name == 'other'
+    assert peak == pytest.approx(0.3)
+
+
+def test_next_capture_mic_moves_to_a_sounding_endpoint(spectrum):
+    np = pytest.importorskip('numpy')
+    current = _FakeMic('tap', 0.001, np)
+    sounding = _FakeMic('sounding', 0.5, np)
+    sc = _fake_sc(np, [current, sounding], default_name='tap')
+    assert spec._next_capture_mic(sc, np, current).name == 'sounding'
+
+
+def test_next_capture_mic_stays_when_nothing_sounds(spectrum):
+    np = pytest.importorskip('numpy')
+    current = _FakeMic('tap', 0.001, np)
+    other = _FakeMic('also-quiet', 0.01, np)
+    sc = _fake_sc(np, [current, other], default_name='tap')
+    # Everything below the switch threshold + already on the default →
+    # stay put, keep the heartbeat cadence.
+    assert spec._next_capture_mic(sc, np, current) is None
+
+
+def test_next_capture_mic_returns_to_a_changed_default(spectrum):
+    np = pytest.importorskip('numpy')
+    # We're parked on 'old', everything silent, but the default moved —
+    # the tap should follow the default rather than sit on a dead device.
+    old = _FakeMic('old', 0.0, np)
+    new_default = _FakeMic('new-default', 0.0, np)
+    sc = _fake_sc(np, [old, new_default], default_name='new-default')
+    assert spec._next_capture_mic(sc, np, old).name == 'new-default'
+
+
+def test_next_capture_mic_stays_when_default_unchanged(spectrum):
+    np = pytest.importorskip('numpy')
+    current = _FakeMic('tap', 0.0, np)
+    sc = _fake_sc(np, [current], default_name='tap')
+    assert spec._next_capture_mic(sc, np, current) is None
+
+
+def test_probe_peak_survives_a_failing_endpoint(spectrum):
+    np = pytest.importorskip('numpy')
+
+    class DeadMic(_FakeMic):
+        def recorder(self, samplerate=None, channels=None):
+            raise RuntimeError('endpoint gone')
+
+    assert spec._probe_peak(np, DeadMic('dead', 0.9, np)) == 0.0

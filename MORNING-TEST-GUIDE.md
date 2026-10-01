@@ -1,8 +1,8 @@
-# Morning test guide — research upgrade (DL-114 → DL-132)
+# Morning test guide — research upgrade (DL-114 → DL-133)
 
-Everything below is committed on `research_upgrade1` (`34acf1e`), built
+Everything below is committed on `research_upgrade1`, built
 into `frontend/dist`, and running live on the backend at
-`http://127.0.0.1:5000`. **528 frontend + 1104 backend tests pass.**
+`http://127.0.0.1:5000`. **541 frontend + 1111 backend tests pass.**
 
 Fresh start tip: the backend may still be the dev-spawned process. If
 anything looks stale, restart it — `cd backend && venv\Scripts\python.exe app.py`.
@@ -60,7 +60,28 @@ anything looks stale, restart it — `cd backend && venv\Scripts\python.exe app.
   (Continue / Stop / New Chat / Submit) and app-detection reports
   `cursor`.
 
-## 7. Settings / security / misc fixes
+## 7. Spectrum + screensaver fixes (DL-133 — newest)
+
+- **Spectrum follows the music.** The tap is no longer pinned to the
+  default speaker — if audio renders on another endpoint (or the default
+  device changes), the saver hops to it within ~4 s of silence. Verified
+  live: sine on the Lenovo headset loopback → bars lit, then hopped back
+  to Realtek when it stopped.
+  - ⚠️ Honest caveat: **Spotify was in Connect/remote playback during
+    testing** — its session was Active but rendered silence on every
+    endpoint (verified via the endpoint peak meter). If you see a flat
+    spectrum while Spotify "plays", check it's actually outputting on
+    this PC — when audio truly plays locally, the bars move.
+- **Bigger Now Playing card** on the spectrum saver — 560 px card,
+  ~120 px art, bigger transport buttons; still bottom-anchored, spectrum
+  keeps the screen.
+- **Screensaver Type is now the first panel** in Settings → Appearance →
+  Screen saver, with a new **Shuffle** option + "Rotate every" interval
+  (1/5/10/30 min). Shuffle opens on a random view and keeps rotating —
+  the saved pick stays "Shuffle".
+- Factory default stays **Widget dashboard**.
+
+## 8. Settings / security / misc fixes
 
 - Auth: Settings → Server → Authentication — set a password, deck locks
   itself, unlock = real session.
@@ -83,7 +104,7 @@ anything looks stale, restart it — `cd backend && venv\Scripts\python.exe app.
 
 ## If something's off
 
-Every change is documented in `design-log/DL-114` … `DL-132` with
+Every change is documented in `design-log/DL-114` … `DL-133` with
 frozen design + implementation results. `git log` / `git show 34acf1e`
 for the full diff. Profile backup before all mutations:
 `backend/data/backups/profile-pre-orchestrated-tests-*.json`.
