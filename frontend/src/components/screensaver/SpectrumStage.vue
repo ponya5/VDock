@@ -3,15 +3,18 @@
  * DL-123 — fullscreen spectrum screensaver stage.
  *
  * Mounted by ScreenSaver.vue when `screensaverStyle === 'spectrum'`: the
- * visualizer IS the screensaver — one DPR-aware canvas, one ~30 fps rAF
- * loop, and a swappable skin renderer from services/spectrumSkins.ts.
+ * visualizer IS the screensaver — two stacked DPR-aware canvases, one
+ * ~60 fps rAF loop (with a ~30 fps governor fallback + reduced-motion
+ * cadence), and swappable skin renderers from services/spectrumSkins.ts.
  *
  * - Skin: `settingsStore.spectrumSkin`, or a shuffled pick when
  *   `spectrumShuffle` rotates it every `spectrumShuffleMinutes`. Shuffle is
  *   ephemeral — the saved skin is the "home" look, rotation never rewrites
  *   settings.
- * - Skin swaps dip the canvas opacity (~260 ms) and build a fresh renderer
- *   so per-skin history buffers never bleed across looks.
+ * - Skin swaps cross-dissolve (DL-134): the incoming renderer draws on the
+ *   back canvas while both layers fade through ~850 ms, then the outgoing
+ *   renderer is retired. Fresh state per activation — per-skin history
+ *   buffers never bleed across looks.
  * - Media bar (bottom-center, `spectrumMediaBar`): SMTC track + transport
  *   via `cross_platform` media actions. Every pointer event is `.stop`-ed —
  *   only a tap OUTSIDE the bar dismisses the saver.
@@ -22,7 +25,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import socketClient from '@/api/socket'
 import { useAudioSpectrum } from '@/services/audioSpectrum'
-import { useNowPlaying } from '@/services/nowPlaying'
+import {
+  nowPlayingIcon,
+  nowPlayingSourceLabel,
+  useNowPlaying,
+} from '@/services/nowPlaying'
 import {
   getSpectrumSkin,
   pickNextSkin,
@@ -30,24 +37,37 @@ import {
   type SpectrumRenderer,
 } from '@/services/spectrumSkins'
 import { useSettingsStore } from '@/stores/settings'
+import { useMobileViewport } from '@/utils/mobileViewport'
+
+// DL-135: `backdrop` keeps the visualizer mounted under the widget layer
+// (spectrum overlay or the layout editor). Backdrop mode hides the media
+// bar — its buttons would steal the drag gestures meant for widgets.
+const props = withDefaults(defineProps<{ backdrop?: boolean }>(), { backdrop: false })
 
 const settingsStore = useSettingsStore()
 const spectrum = useAudioSpectrum()
 const nowPlaying = useNowPlaying()
+const { isMobileViewport } = useMobileViewport()
 
 const BANDS = 20
-const FRAME_MS = 33            // ~30 fps — fullscreen fluid, cheap enough
+const FRAME_MS = 16            // ~60 fps target — motion layers animate per frame
+const REDUCED_FRAME_MS = 45    // ~22 fps under prefers-reduced-motion
+const SLOW_FRAME_MS = 33       // governor fallback when draws miss budget
 const GRACE_MS = 4000          // connect + first heartbeat before "unavailable"
-const SWAP_FADE_MS = 260
 const REDUCED = typeof window !== 'undefined'
   && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+// Cross-dissolve length — ambient saver pace, not UI-snappy. Keep in sync
+// with the .spectrum-canvas opacity transition below (+reduced variant).
+const XFADE_MS = REDUCED ? 350 : 850
 
 const stageRef = ref<HTMLElement | null>(null)
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const canvasOpaque = ref(true)
+const canvasARef = ref<HTMLCanvasElement | null>(null)
+const canvasBRef = ref<HTMLCanvasElement | null>(null)
+/** Which canvas layer is on top / opaque. -1 until the first mount frame. */
+const frontLayer = ref(-1)
 const graceExpired = ref(false)
 
-/** The skin actually on screen — the saved pick, or shuffle's choice. */
+/** The skin actually on screen (or fading in) — saved pick or shuffle's. */
 const activeSkinId = ref(getSpectrumSkin(settingsStore.spectrumSkin).id)
 const activeSkinLabel = computed(() => getSpectrumSkin(activeSkinId.value).label)
 
@@ -56,23 +76,29 @@ const streamAbsent = computed(() => spectrum.lastSeenAt === null && graceExpired
 // --- renderer lifecycle ------------------------------------------------------
 
 const display = new Array<number>(BANDS).fill(0)
-let renderer: SpectrumRenderer | null = null
-let pendingSkin: string | null = null
+
+/** Each canvas owns one renderer; the back layer sits transparent until a
+ *  swap promotes it. `skinId` only tracks what the layer last hosted. */
+interface Layer { renderer: SpectrumRenderer | null; skinId: string }
+const layers: Layer[] = [{ renderer: null, skinId: '' }, { renderer: null, skinId: '' }]
+let retireTimer: number | undefined
 
 function swapSkin(id: string): void {
-  // Fade dip → swap renderer on the black dip → fade back. Keeps a hard
-  // cut (or a stale mid-decay field) from flashing across a skin change.
-  if (id === activeSkinId.value && renderer) return
-  pendingSkin = id
-  canvasOpaque.value = false
-}
-
-function applyPendingSkin(): void {
-  if (pendingSkin === null) return
-  activeSkinId.value = pendingSkin
-  pendingSkin = null
-  renderer = getSpectrumSkin(activeSkinId.value).create()
-  canvasOpaque.value = true
+  // Same id already front (or fading in) → nothing to do.
+  if (id === activeSkinId.value && layers[frontLayer.value]?.renderer) return
+  // The layer that isn't in front hosts the newcomer. A mid-flight
+  // crossfade just replaces whatever that canvas was still fading out.
+  const next = frontLayer.value === 1 ? 0 : 1
+  layers[next].renderer = getSpectrumSkin(id).create()
+  layers[next].skinId = id
+  activeSkinId.value = id
+  frontLayer.value = next
+  window.clearTimeout(retireTimer)
+  retireTimer = window.setTimeout(() => {
+    const old = frontLayer.value === 1 ? 0 : 1
+    layers[old].renderer = null
+    layers[old].skinId = ''
+  }, XFADE_MS + 120)
 }
 
 watch(() => settingsStore.spectrumSkin, (id) => {
@@ -108,69 +134,121 @@ let lastT = 0
 let startT = 0
 let resizeObserver: ResizeObserver | null = null
 let graceTimer: number | undefined
+let frameCostMs = 0 // EMA of renderer.draw cost — drives the governor
+let levelSm = 0     // smoothed overall level for the skins' glow/pulse
+
+const layerCanvases = () => [canvasARef.value, canvasBRef.value]
+// 2D contexts are cached — getContext is free-ish but called per layer
+// per frame, which is wasted work on the panel's small CPU.
+const layerCtxs: (CanvasRenderingContext2D | null)[] = [null, null]
 
 function sizeCanvas(): void {
-  const canvas = canvasRef.value
-  if (!canvas) return
   const dpr = window.devicePixelRatio || 1
-  const w = canvas.clientWidth || window.innerWidth
-  const h = canvas.clientHeight || window.innerHeight
-  canvas.width = Math.round(w * dpr)
-  canvas.height = Math.round(h * dpr)
-  const ctx = canvas.getContext('2d')
-  ctx?.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const canvases = layerCanvases()
+  for (let i = 0; i < canvases.length; i++) {
+    const canvas = canvases[i]
+    if (!canvas) continue
+    const w = canvas.clientWidth || window.innerWidth
+    const h = canvas.clientHeight || window.innerHeight
+    canvas.width = Math.round(w * dpr)
+    canvas.height = Math.round(h * dpr)
+    layerCtxs[i] = canvas.getContext('2d')
+    layerCtxs[i]?.setTransform(dpr, 0, 0, dpr, 0, 0)
+  }
 }
 
 function tick(now: number): void {
   rafId = requestAnimationFrame(tick)
-  if (now - lastFrame < FRAME_MS) return
+  // Governor: if draws consistently cost more than a 60 fps frame can
+  // spend, settle to ~30 fps rather than jank — a low-power panel still
+  // gets fluid motion instead of uneven frames.
+  const budget = REDUCED ? REDUCED_FRAME_MS
+    : frameCostMs > 14 ? SLOW_FRAME_MS : FRAME_MS
+  if (now - lastFrame < budget) return
   const dt = lastT ? Math.min((now - lastT) / 1000, 0.5) : 0.016
   lastFrame = now
   lastT = now
   if (!startT) startT = now
-  if (pendingSkin !== null) applyPendingSkin()
 
-  const ctx = canvasRef.value?.getContext('2d')
-  if (!ctx || !renderer) return
-
-  // Shared envelope: bands snap up instantly, fall with a per-second decay
-  // (~0.42s time constant). Skins never re-smooth.
-  const decay = Math.exp(-dt * 2.4)
+  // Shared envelope — asymmetric lerp: fast attack (~50 ms constant,
+  // bridging the backend's emit cadence so band steps never stair-step on
+  // screen), slower release keeps decays graceful. A jump bigger than
+  // SPIKE_SNAP skips the lerp entirely — real transients hit full height
+  // on the frame they land instead of being shaved.
+  const SPIKE_SNAP = 16
+  const attack = Math.exp(-dt * 18)
+  const release = Math.exp(-dt * 5)
   const fresh = spectrum.lastSeenAt !== null
     && Date.now() - spectrum.lastSeenAt < 4000
   const live = spectrum.live && fresh
   for (let i = 0; i < BANDS; i++) {
     const target = live ? (spectrum.bands[i] ?? 0) : 0
-    display[i] = Math.max(target, display[i] * decay)
+    if (target > display[i] + SPIKE_SNAP) {
+      display[i] = target
+    } else {
+      display[i] = target + (display[i] - target) * (target > display[i] ? attack : release)
+    }
     if (display[i] < 0.3) display[i] = 0
   }
+  // Same smoothing for the overall level the skins pulse their glow with.
+  levelSm += ((live ? spectrum.level : 0) - levelSm) * Math.min(1, dt * 12)
 
+  const stage = stageRef.value
   const frame: SpectrumFrame = {
     bands: display,
-    level: live ? spectrum.level : 0,
+    level: levelSm,
     live,
-    w: ctx.canvas.clientWidth || window.innerWidth,
-    h: ctx.canvas.clientHeight || window.innerHeight,
+    w: stage?.clientWidth || window.innerWidth,
+    h: stage?.clientHeight || window.innerHeight,
     t: (now - startT) / 1000,
     dt,
   }
-  renderer.draw(ctx, frame)
+
+  // Mobile landscape overscan: radial skins size by min(w,h), so on a
+  // wide-short panel they shrink to a small disc. Zoom the canvas about
+  // the center so the visuals keep stage presence — edges crop, which is
+  // intentional per the mobile ask ("if part of the animation is cut due
+  // to the landscape view, so be it"). sqrt() keeps it gentle: 1.7:1 →
+  // ~1.3x, 2:1 → ~1.4x. Bars-based skins just get chunkier bars.
+  const zoom = isMobileViewport.value && frame.w > frame.h
+    ? Math.min(1.45, Math.sqrt(frame.w / frame.h))
+    : 1
+
+  // Draw each live layer — during a crossfade both run at once.
+  const drawStart = performance.now()
+  for (let i = 0; i < 2; i++) {
+    const r = layers[i].renderer
+    const ctx = layerCtxs[i]
+    if (r && ctx) {
+      if (zoom > 1) {
+        ctx.save()
+        ctx.translate(frame.w / 2, frame.h / 2)
+        ctx.scale(zoom, zoom)
+        ctx.translate(-frame.w / 2, -frame.h / 2)
+        r.draw(ctx, frame)
+        ctx.restore()
+      } else {
+        r.draw(ctx, frame)
+      }
+    }
+  }
+  frameCostMs = frameCostMs * 0.92 + (performance.now() - drawStart) * 0.08
 }
 
 onMounted(() => {
-  renderer = getSpectrumSkin(activeSkinId.value).create()
+  layers[0].renderer = getSpectrumSkin(activeSkinId.value).create()
+  layers[0].skinId = activeSkinId.value
   graceTimer = window.setTimeout(() => { graceExpired.value = true }, GRACE_MS)
   if (stageRef.value && typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(sizeCanvas)
     resizeObserver.observe(stageRef.value)
   }
   sizeCanvas()
-  if (REDUCED) {
-    // Renderers still draw (bands are data), but phases barely move — the
-    // frame cap does the rest of the calming.
-    lastFrame = -Infinity
-  }
-  rafId = requestAnimationFrame(tick)
+  // Soft entrance: let the first frame paint before the layer fades in.
+  rafId = requestAnimationFrame((now) => {
+    frontLayer.value = 0
+    tick(now)
+  })
 })
 
 onUnmounted(() => {
@@ -178,15 +256,20 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
   if (shuffleTimer) clearInterval(shuffleTimer)
   window.clearTimeout(graceTimer)
+  window.clearTimeout(retireTimer)
 })
 
 // --- media bar ---------------------------------------------------------------
 
-const mediaBarOn = computed(() => settingsStore.spectrumMediaBar !== false)
+const mediaBarOn = computed(() => settingsStore.spectrumMediaBar !== false && !props.backdrop)
 const track = computed(() => nowPlaying.track.value)
 const playing = computed(() => nowPlaying.playing.value)
-// "Spotify.exe" → "Spotify" — AUMID tails trimmed for the kicker line
-const sourceLabel = computed(() => track.value?.source_app?.replace(/\.exe$/i, '') || '')
+// Site-aware label/icon: "YouTube" + its logo beats "chrome.exe" + a
+// music note when the backend has attributed the session to a site.
+const sourceLabel = computed(() => nowPlayingSourceLabel(track.value))
+const brandIcon = computed(() => nowPlayingIcon(track.value))
+const brandClass = computed(() =>
+  track.value?.site ? `is-${track.value.site.toLowerCase()}` : '')
 
 // position_s arrives per track change; while playing we extrapolate locally
 // from the moment the payload landed (server ts is not comparable to ours).
@@ -223,10 +306,18 @@ function media(action: string): void {
 
 <template>
   <div ref="stageRef" class="spectrum-stage">
+    <!-- Two stacked layers so a skin swap cross-dissolves: the newcomer
+         renders on the back canvas and rides opacity in while the old
+         skin fades out beneath it (DL-134). -->
     <canvas
-      ref="canvasRef"
+      ref="canvasARef"
       class="spectrum-canvas"
-      :class="{ 'is-fading': !canvasOpaque }"
+      :class="{ 'is-front': frontLayer === 0 }"
+    ></canvas>
+    <canvas
+      ref="canvasBRef"
+      class="spectrum-canvas"
+      :class="{ 'is-front': frontLayer === 1 }"
     ></canvas>
 
     <div v-if="streamAbsent" class="spectrum-off">
@@ -256,6 +347,12 @@ function media(action: string): void {
           alt=""
           class="spectrum-media-art"
         >
+        <FontAwesomeIcon
+          v-else-if="brandIcon"
+          :icon="brandIcon"
+          class="spectrum-media-art spectrum-media-art-icon spectrum-media-brand"
+          :class="brandClass"
+        />
         <FontAwesomeIcon v-else :icon="['fas', 'music']" class="spectrum-media-art spectrum-media-art-icon" />
 
         <div class="spectrum-media-text">
@@ -274,16 +371,16 @@ function media(action: string): void {
         <button type="button" class="spectrum-media-btn" aria-label="Previous track" @click="media('media_previous')">
           <FontAwesomeIcon :icon="['fas', 'backward-step']" />
         </button>
+        <!-- One state-split transport (DL-128/DL-137): media_play_stop
+             resolves backend-side — stop while playing, play otherwise —
+             so the face mirrors what the press will do. -->
         <button
           type="button"
           class="spectrum-media-btn spectrum-media-play"
-          :aria-label="playing ? 'Pause' : 'Play'"
-          @click="media('media_play_pause')"
+          :aria-label="playing ? 'Stop' : 'Play'"
+          @click="media('media_play_stop')"
         >
-          <FontAwesomeIcon :icon="['fas', playing ? 'pause' : 'play']" />
-        </button>
-        <button type="button" class="spectrum-media-btn" aria-label="Stop" @click="media('media_stop')">
-          <FontAwesomeIcon :icon="['fas', 'stop']" />
+          <FontAwesomeIcon :icon="['fas', playing ? 'stop' : 'play']" />
         </button>
         <button type="button" class="spectrum-media-btn" aria-label="Next track" @click="media('media_next')">
           <FontAwesomeIcon :icon="['fas', 'forward-step']" />
@@ -306,12 +403,21 @@ function media(action: string): void {
   width: 100%;
   height: 100%;
   display: block;
-  transition: opacity 260ms ease;
+  opacity: 0;
+  /* ease-in-out reads as an even dissolve — the two layers are always
+     complementary mid-fade, so total light stays roughly constant. */
+  transition: opacity 850ms ease-in-out;
 }
 
-.spectrum-canvas.is-fading {
-  opacity: 0;
+.spectrum-canvas.is-front {
+  opacity: 1;
+  z-index: 1;
 }
+
+/* Overlays always sit above whichever canvas is on top. */
+.spectrum-off { z-index: 2; }
+.spectrum-tag { z-index: 2; }
+.spectrum-media { z-index: 2; }
 
 .spectrum-off {
   position: absolute;
@@ -411,8 +517,8 @@ function media(action: string): void {
 }
 
 .spectrum-media-art {
-  width: clamp(34px, 6vh, 46px);
-  height: clamp(34px, 6vh, 46px);
+  width: clamp(44px, 7vh, 56px);
+  height: clamp(44px, 7vh, 56px);
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
@@ -430,12 +536,24 @@ function media(action: string): void {
   place-items: center;
   color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.06);
-  font-size: clamp(14px, 2vh, 18px);
+  font-size: clamp(18px, 2.6vh, 24px);
+}
+
+/* Brand glyph fallback when the app supplies no art — the site color
+   makes it recognizable at a glance. */
+.spectrum-media-brand {
+  font-size: clamp(22px, 3.4vh, 32px);
+}
+.spectrum-media-brand.is-youtube { color: #ff4a45; }
+.spectrum-media-brand.is-spotify { color: #1db954; }
+.spectrum-media-brand.is-twitch  { color: #9146ff; }
+.spectrum-media.has-track .spectrum-media-brand {
+  font-size: clamp(34px, 6vh, 48px);
 }
 
 .spectrum-media-kicker {
   color: rgba(255, 255, 255, 0.38);
-  font-size: clamp(10px, 1.2vw, 13px);
+  font-size: clamp(11px, 1.4vw, 14px);
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -458,7 +576,7 @@ function media(action: string): void {
 
 .spectrum-media-title {
   color: rgba(255, 255, 255, 0.92);
-  font-size: clamp(12px, 1.5vw, 15px);
+  font-size: clamp(15px, 2vw, 20px);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -468,7 +586,7 @@ function media(action: string): void {
 
 .spectrum-media-artist {
   color: rgba(255, 255, 255, 0.5);
-  font-size: clamp(10px, 1.2vw, 12px);
+  font-size: clamp(12px, 1.5vw, 15px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -476,12 +594,12 @@ function media(action: string): void {
 }
 
 .spectrum-media.has-track .spectrum-media-title {
-  font-size: clamp(16px, 2.3vw, 24px);
+  font-size: clamp(20px, 2.8vw, 32px);
   max-width: none;
 }
 
 .spectrum-media.has-track .spectrum-media-artist {
-  font-size: clamp(13px, 1.7vw, 16px);
+  font-size: clamp(15px, 2vw, 20px);
   max-width: none;
 }
 
@@ -546,7 +664,8 @@ function media(action: string): void {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spectrum-canvas,
+  /* Crossfade stays (opacity aids comprehension) but shortens. */
+  .spectrum-canvas { transition-duration: 350ms; }
   .spectrum-media-btn,
   .spectrum-media-progress span {
     transition: none;

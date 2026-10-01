@@ -146,7 +146,7 @@ Welcome to the VDock documentation! This directory contains comprehensive guides
 ### General Support
 - **GitHub Issues**: Report bugs and request features
 - **Discussions**: Ask questions and share ideas
-- **Email Support**: Contact support@vdock.app for urgent issues
+- **Email Support**: Contact ponya81@gmail.com for urgent issues
 
 ## 🔄 Keeping Documentation Current
 

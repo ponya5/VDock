@@ -175,7 +175,7 @@ describe('now_playing face', () => {
     })
     const wrapper = await mountFace()
     expect(wrapper.find('.np-title').text()).toBe('Song')
-    expect(wrapper.find('.np-artist').text()).toBe('Artist · spotify')
+    expect(wrapper.find('.np-artist').text()).toBe('Artist · Spotify')
     expect(wrapper.find('.np-art-img').exists()).toBe(true)
     expect(wrapper.text()).toContain('Playing')
     expect(wrapper.find('.np-progress-fill').exists()).toBe(true)

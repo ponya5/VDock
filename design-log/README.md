@@ -146,3 +146,8 @@ the eventual merge into the main line.
 | [DL-131](DL-131-manual-tour-steps.md) | Manual-only tour steps + live spotlight re-anchor | Implemented |
 | [DL-132](DL-132-guide-landing-page.md) | Standalone /guide landing page with search + screenshots | Implemented |
 | [DL-133](DL-133-spectrum-follow-and-shuffle-saver.md) | Endpoint-following spectrum capture, bigger media card, Shuffle saver type | Implemented |
+| [DL-134](DL-134-spectrum-crossfade-skin-restore-rgb.md) | Spectrum skin crossfade, restored 6-skin catalogue, RGB bars, bar-skin ambience | Implemented |
+| [DL-135](DL-135-spectrum-widget-overlay.md) | Info widgets overlay the spectrum saver; WYSIWYG layout editing on the live viz | Implemented |
+| [DL-136](DL-136-animated-weather-glyph.md) | Animated day/night weather glyph — orbiting sun rays, spinning moon, rain/snow/wind | Implemented |
+| [DL-137](DL-137-research-upgrade1-port.md) | Port remaining research_upgrade1 features: spectrum dynamics, site detection, mobile header reveal, media-bar merge, guide rail | Implemented |
+| [DL-138](DL-138-settings-sync-field-diff.md) | Field-level settings sync — changed-keys PUT/broadcast + server merge kills the compact-device boot stomp | Implemented |

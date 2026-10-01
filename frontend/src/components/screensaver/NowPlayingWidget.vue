@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useNowPlaying } from '@/services/nowPlaying'
+import {
+  nowPlayingIcon,
+  nowPlayingSourceLabel,
+  useNowPlaying,
+} from '@/services/nowPlaying'
 
 defineProps<{ layoutEdit?: boolean }>()
 
@@ -31,13 +35,12 @@ const progressPct = computed(() => {
   return duration > 0 ? Math.min(100, (displayPosition.value / duration) * 100) : 0
 })
 
-// 'Spotify.exe' / store-style AUMIDs → a short tag like 'Spotify'.
-const sourceTag = computed(() => {
-  const raw = (track.value?.source_app ?? '').trim()
-  if (!raw) return ''
-  const cleaned = raw.replace(/\.exe$/i, '').split(/[!_.]/)[0] || raw
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-})
+// Site-aware tag: "YouTube" beats "chrome.exe" when the backend has
+// attributed the browser session to a site.
+const sourceTag = computed(() => nowPlayingSourceLabel(track.value))
+const brandIcon = computed(() => nowPlayingIcon(track.value))
+const brandClass = computed(() =>
+  track.value?.site ? `is-${track.value.site.toLowerCase()}` : '')
 
 // Honest states: null = never heard yet (loading), false = unsupported,
 // true + no track = the honest "Nothing playing".
@@ -58,7 +61,7 @@ const emptyText = computed(() => {
     <div v-if="track" class="np-body">
       <div class="np-art" :class="{ 'np-art-paused': !playing }">
         <img v-if="showArt" :src="artUrl ?? ''" alt="" @error="artFailed = true" />
-        <FontAwesomeIcon v-else :icon="['fas', 'music']" class="np-art-icon" />
+        <FontAwesomeIcon v-else :icon="brandIcon || ['fas', 'music']" class="np-art-icon np-brand" :class="brandClass" />
         <span class="np-glyph">
           <FontAwesomeIcon :icon="['fas', playing ? 'play' : 'pause']" />
         </span>
@@ -150,6 +153,10 @@ const emptyText = computed(() => {
   font-size: 1.4rem;
   color: rgba(255, 255, 255, 0.4);
 }
+
+.np-brand.is-youtube { color: #ff4a45; }
+.np-brand.is-spotify { color: #1db954; }
+.np-brand.is-twitch { color: #9146ff; }
 
 .np-glyph {
   position: absolute;

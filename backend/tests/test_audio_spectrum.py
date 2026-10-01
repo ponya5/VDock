@@ -70,12 +70,24 @@ def test_bands_tolerate_short_magnitude_lists():
 # --- normalization ---------------------------------------------------------
 
 def test_amp_to_value_db_curve():
+    # -60 dB floor → 0, full scale → 100, with BAND_CURVE expansion in
+    # between: -30 dB lands at 0.5^1.6 ≈ 0.33 → 33 (was 50 linear).
     assert spec.amp_to_value(1.0) == 100
-    assert spec.amp_to_value(10 ** (-30 / 20)) == 50
+    assert spec.amp_to_value(10 ** (-30 / 20)) == 33
     assert spec.amp_to_value(10 ** (-60 / 20)) == 0
     assert spec.amp_to_value(0.0) == 0
     assert spec.amp_to_value(-1.0) == 0
     assert spec.amp_to_value(2.0) == 100  # clipped, not wrapped
+
+
+def test_amp_to_value_expands_dynamics():
+    # The curve widens the gap between groove and transient: -30 dB vs
+    # -6 dB used to sit ~30 points apart; now the spread is ~50.
+    groove = spec.amp_to_value(10 ** (-30 / 20))
+    hit = spec.amp_to_value(10 ** (-6 / 20))
+    assert groove == 33
+    assert hit == 84
+    assert hit - groove > 45  # linear-in-dB spread would be exactly 30
 
 
 def test_envelope_rises_instantly_and_decays():

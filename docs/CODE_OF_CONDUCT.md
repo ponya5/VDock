@@ -36,7 +36,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at conduct@vdock.app. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at ponya81@gmail.com. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
@@ -70,7 +70,7 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ## Reporting
 
-If you experience or witness unacceptable behavior—or have any other concerns—please report it by contacting the project team at conduct@vdock.app. All reports will be handled with discretion. In your report please include:
+If you experience or witness unacceptable behavior—or have any other concerns—please report it by contacting the project team at ponya81@gmail.com. All reports will be handled with discretion. In your report please include:
 
 - Your contact information
 - Names (real, usernames, or pseudonyms) of any individuals involved
@@ -100,6 +100,6 @@ This Code of Conduct is licensed under the [Creative Commons Attribution 4.0 Int
 
 ---
 
-**Contact**: conduct@vdock.app  
+**Contact**: ponya81@gmail.com  
 **Last Updated**: 2024-01-01  
 **Version**: 2.0

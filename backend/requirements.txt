@@ -38,9 +38,10 @@ winrt-Windows.Storage.Streams==3.2.1; sys_platform == 'win32'
 # Spectrum screensaver (DL-117): WASAPI loopback capture + FFT. Both are
 # lazy-imported — the backend runs fine without them (widget then shows its
 # honest "unavailable" state), so they're pinned Windows-only where the
-# capture path is supported.
+# capture path is supported. numpy is a range, not a pin: each 2.x release
+# drops a Python version (2.5 needs 3.12+), so pip picks the newest that fits.
 soundcard==0.4.6; sys_platform == 'win32'
-numpy==2.5.3; sys_platform == 'win32'
+numpy>=1.26,<3; sys_platform == 'win32'
 
 # Optional: only needed for the "Ask Claude (API)" action, which calls the
 # Anthropic Messages API directly. The Claude Code CLI actions do not need it,

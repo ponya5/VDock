@@ -38,7 +38,7 @@ mcp_bp = Blueprint('mcp', __name__)
 PROTOCOL_VERSION = '2025-06-18'
 #: Mirrors the version ``/api/health`` reports; app.py owns the canonical
 #: string but cannot be imported here (circular).
-SERVER_VERSION = '2.1.0'
+SERVER_VERSION = '2.2.0'
 SERVER_NAME = 'vdock'
 
 ERR_PARSE = -32700

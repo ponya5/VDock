@@ -6,12 +6,15 @@
     @click="onRootTap"
     @touchstart.passive="onRootTap"
   >
-    <!-- DL-123/125: 'spectrum' and 'stats' styles each replace the whole
-         surface; widget mode (below) stays untouched. -->
-    <SpectrumStage v-if="spectrumMode" />
+    <!-- DL-123/125/135: 'spectrum' renders the stage as the backdrop —
+         info widgets can overlay it (screensaverSpectrumWidgets) and the
+         layout editor edits them right on the canvas; 'stats' stays
+         exclusive; widget mode paints its own backdrop then widgets. -->
+    <SpectrumStage v-if="spectrumBackdrop" :backdrop="layoutEdit" />
     <StatsStage v-else-if="statsMode" />
 
-    <template v-else>
+    <!-- Widget-surface backdrop — only when no fullscreen stage is up. -->
+    <template v-if="!spectrumBackdrop && !statsMode">
     <!-- Custom screensaver background on its own layer so it never has to
          fight the base color for specificity. Component-kind entries
          (WebGL/CSS effects) mount directly; a scrim keeps text readable. -->
@@ -28,6 +31,12 @@
     <div v-if="hasCustomBg" class="ss-dim"></div>
 
     <div class="ss-glow"></div>
+    </template>
+
+    <!-- DL-135: the widget layer sits over whatever backdrop is active —
+         the widget surface, or the live spectrum when the overlay flag
+         is on (and always while editing the layout). -->
+    <template v-if="widgetLayerOn">
 
     <!-- Weather — top-left pill (editorial layout). -->
     <div
@@ -38,7 +47,13 @@
       :style="[posStyle('weather'), { '--ss-weather-scale': String(weatherScale) }]"
       @pointerdown="startDrag('weather', $event)"
     >
-      <FontAwesomeIcon :icon="weatherIcon" class="ss-weather-icon" />
+      <WeatherGlyph
+        :code="weather?.code ?? null"
+        :is-day="weather?.isDay ?? true"
+        :windy="(weather?.windSpeed ?? 0) >= 30"
+        :unavailable="weatherUnavailable"
+        class="ss-weather-icon"
+      />
       <div class="ss-weather-info">
         <span class="ss-weather-loc" :title="weatherError || undefined">{{ location }}</span>
         <span class="ss-weather-temp">{{ tempStr }}</span>
@@ -252,7 +267,11 @@
 
     <!-- Standalone component widgets (DL-116/117/118): now-playing, audio
          spectrum and system stats own their data plumbing entirely — the
-         .ss-pos wrapper only positions, drags and resizes them. -->
+         .ss-pos wrapper only positions, drags and resizes them.
+         DL-135: widget-surface only — over the spectrum they'd duplicate
+         the stage's own media bar / be the stage itself / belong to the
+         stats stage. -->
+    <template v-if="!spectrumBackdrop">
     <div
       v-if="showNowPlayingWidget"
       :ref="el => setWidgetEl('nowplaying', el)"
@@ -272,7 +291,7 @@
     <div
       v-if="showSpectrumWidget"
       :ref="el => setWidgetEl('spectrum', el)"
-      class="ss-pos"
+      class="ss-pos ss-wrap-spectrum"
       :class="{ 'ss-editing': layoutEdit }"
       :style="posStyle('spectrum', widgetScaleNum)"
       @pointerdown="startDrag('spectrum', $event)"
@@ -300,6 +319,7 @@
         @pointerdown.stop="startResize('systemstats', $event)"
       ></span>
     </div>
+    </template>
 
     <!-- Alignment guides — full-span dashed rules shown while a dragged
          widget snaps to another widget's edge/center or the viewport
@@ -341,6 +361,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useWeather } from '@/composables/useWeather'
+import WeatherGlyph from '@/components/screensaver/WeatherGlyph.vue'
 import { useNews } from '@/composables/useNews'
 import {
   DEFAULT_SPORTS_FEEDS,
@@ -449,9 +470,6 @@ const pad2 = (n: number) => String(n).padStart(2, '0')
 // so a dead --°C doesn't read as a bug — markets/news do the same via
 // .ss-empty. A failure with stale data keeps showing the last reading.
 const weatherUnavailable = computed(() => !weather.value && !!weatherError.value)
-const weatherIcon = computed(() =>
-  weather.value?.icon || (weatherUnavailable.value ? ['fas', 'cloud'] : ['fas', 'cloud-sun'])
-)
 const tempStr = computed(() => weather.value ? `${weather.value.temperature}°C` : '--°C')
 const location = computed(() =>
   weather.value?.location || weatherError.value || (weatherLoading.value ? 'Locating…' : '—')
@@ -496,17 +514,27 @@ const showMarketWidget = computed(() => !isMobileViewport.value && settingsStore
 const showWorldClockWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('worldclock'))
 const showSportsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('sports'))
 // DL-116/117/118 widgets stay desktop-only like markets — the mobile
-// screensaver keeps its curated small set.
+// screensaver keeps its curated small set. (The spectrum widget is the
+// exception: DL-135 lets it ride the phone layouts when enabled.)
 // DL-123/133: 'spectrum'/'stats' swap the entire surface; 'shuffle' rotates
-// the effective style on an interval. layoutEdit always forces widgets.
+// the effective style on an interval.
+// DL-135: the spectrum stage no longer unmounts for layout editing —
+// it stays as the live backdrop so positions are edited WYSIWYG.
 const shufflePick = ref<ScreensaverType>('widgets')
 const effectiveStyle = computed(() =>
   settingsStore.screensaverStyle === 'shuffle'
     ? shufflePick.value
     : settingsStore.screensaverStyle
 )
-const spectrumMode = computed(() =>
-  effectiveStyle.value === 'spectrum' && !props.layoutEdit
+const spectrumBackdrop = computed(() => effectiveStyle.value === 'spectrum')
+// Info widgets ride over the spectrum only when the user opted in — but
+// always while editing the layout, since that's the canvas being edited.
+const spectrumOverlay = computed(() =>
+  spectrumBackdrop.value && settingsStore.screensaverSpectrumWidgets
+)
+const widgetLayerOn = computed(() =>
+  !statsMode.value
+  && (!spectrumBackdrop.value || spectrumOverlay.value || props.layoutEdit)
 )
 // DL-125: same swap for the fullscreen system monitor.
 const statsMode = computed(() =>
@@ -532,20 +560,24 @@ watch(
   armTypeShuffle,
   { immediate: true },
 )
-// Mid-session rotations: widget feeds sleep while a fullscreen style is
-// on stage and wake when shuffle lands back on the dashboard.
-watch(spectrumMode, (isSpectrum) => {
-  if (isSpectrum) {
-    stopWeather(); stopNews(); stopSports(); stopMarket()
-  } else {
+// Widget feeds sleep while no widget layer is visible (stats stage, or
+// spectrum with the overlay off) and wake when one appears — dashboard,
+// spectrum overlay, or layout editing.
+watch(widgetLayerOn, (on) => {
+  if (on) {
     if (showWeatherWidget.value) startWeather()
     if (showNewsWidget.value) startNews()
     if (showSportsWidget.value) startSports()
     if (showMarketWidget.value) startMarket()
+  } else {
+    stopWeather(); stopNews(); stopSports(); stopMarket()
   }
 })
 const showNowPlayingWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('nowplaying'))
-const showSpectrumWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('spectrum'))
+// DL-135: the spectrum widget is allowed on mobile when explicitly
+// enabled (unlike the other component widgets) — it becomes the saver's
+// headline. Enabled-by-default mobile widgets keep the curated layout.
+const showSpectrumWidget = computed(() => settingsStore.screensaverWidgets.includes('spectrum'))
 const showSystemStatsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('systemstats'))
 
 // User-tunable text scale for the info widgets (Settings → Screensaver →
@@ -1102,8 +1134,9 @@ onMounted(() => {
   // Shuffle starts on a random style — landing on widgets every time
   // would make the type picker pointless. '' excludes nothing → full pool.
   shufflePick.value = pickNextSaverType('')
-  // Spectrum mode doesn't render the widgets — don't poll their feeds.
-  if (!spectrumMode.value) {
+  // DL-135: feeds run whenever the widget layer is visible — widget mode,
+  // spectrum overlay, or the layout editor.
+  if (widgetLayerOn.value) {
     if (showWeatherWidget.value) startWeather()
     if (showNewsWidget.value) startNews()
     if (showSportsWidget.value) startSports()
@@ -1881,6 +1914,22 @@ onUnmounted(() => {
   font-size: clamp(1.05rem, 5.5vh, 1.7rem);
 }
 
+/* Spectrum widget on mobile (opt-in via its settings toggle): never the
+   240px desktop chip — portrait it spans the column width, landscape it
+   becomes a full-width bottom strip. The strip's grid auto-placement
+   lands past the clock's row span, so no explicit row is needed. */
+.screensaver.ss-mobile .ss-wrap-spectrum {
+  width: 100%;
+}
+
+.screensaver.ss-mobile .ss-wrap-spectrum :deep(.ss-spectrum) {
+  width: 100%;
+}
+
+.screensaver.ss-mobile .ss-wrap-spectrum :deep(.ss-spectrum-panel) {
+  height: clamp(96px, 18vh, 200px);
+}
+
 /* Landscape: clock + date hero on the left, everything else in a right
    "glance rail" — weather pill, headlines, world-clock chips stacked in
    `order`-modified sequence. Height stays the constraint, width does the
@@ -1906,6 +1955,18 @@ onUnmounted(() => {
   .screensaver.ss-mobile .ss-wrap-worldclock {
     grid-column: 2;
     justify-self: stretch;
+  }
+
+  /* The visualizer owns the bottom edge — wide and tall enough to read
+     from a glance; if the column above runs tall it may crop, which is
+     intentional (overflow stays hidden). */
+  .screensaver.ss-mobile .ss-wrap-spectrum {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .screensaver.ss-mobile .ss-wrap-spectrum :deep(.ss-spectrum-panel) {
+    height: clamp(110px, 30vh, 240px);
   }
 
   .screensaver.ss-mobile .ss-worldclock {

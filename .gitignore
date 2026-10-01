@@ -78,6 +78,7 @@ logs/
 backend/data/vdock.log
 
 # Data directories (keep structure, ignore content)
+/data/
 backend/data/config.json
 backend/data/user_settings.json
 backend/data/triggers.json
@@ -174,6 +175,13 @@ frontend/electron/build/
 # Kiro
 .kiro/
 
+# Devin (skills are tracked, local config is not)
+.devin/*
+!.devin/skills/
+
+# Kilo
+.kilo/
+
 # Temporary documentation
 ACTION_TEST_REPORT.md
 MEDIA_CONTROLS_FIX_SUMMARY.md
@@ -207,3 +215,8 @@ SKILL.md
 # Build/cache artifacts and stray debug dumps
 *.tsbuildinfo
 _diff*.txt
+
+# Screenshots belong in design-log/refs/ or docs/assets/screens/, never the repo root
+/*.png
+/*.jpg
+/*.jpeg

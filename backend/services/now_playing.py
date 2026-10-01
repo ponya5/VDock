@@ -6,7 +6,7 @@ position, source app — is exposed system-wide through SMTC
 it every ~1.5 s and emits ``now_playing`` so every connected client can
 mirror it::
 
-    now_playing  { playing, title, artist, album, source_app,
+    now_playing  { playing, title, artist, album, source_app, site,
                    position_s?, duration_s?, has_art, ts }
 
 Only identity changes emit — a new track, a play/pause flip, or a mid-track
@@ -33,7 +33,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from config import Config
 
@@ -146,10 +146,10 @@ def art_mime() -> str:
 
 def _poll_state(interval: float = POLL_INTERVAL_SECONDS) -> Dict[str, Any]:
     """Mutable cursor for the poll loop: last emitted key, last track
-    identity (drives once-per-track art extraction), last position (seek
-    detection) and the last logged error (log throttling)."""
+    identity (drives once-per-track art extraction + site detection), last
+    position (seek detection) and the last logged error (log throttling)."""
     return {'emit_key': None, 'track_key': _EMPTY_TRACK_KEY, 'position': None,
-            'interval': interval, 'error': None}
+            'interval': interval, 'error': None, 'site': ''}
 
 
 def _loop(interval: float) -> None:
@@ -197,7 +197,13 @@ def _poll_once(state: Dict[str, Any]) -> None:
     if emit_key == state['emit_key'] and not seeked:
         return
     state['emit_key'] = emit_key
-    state['track_key'] = _track_key(payload)
+    new_track_key = _track_key(payload)
+    if new_track_key != state['track_key']:
+        # The site can't change mid-track — detect once per track change.
+        state['site'] = detect_site(payload.get('source_app', ''),
+                                    payload.get('title', ''))
+    state['track_key'] = new_track_key
+    payload['site'] = state['site']
 
     if art is not ART_UNCHANGED:
         _replace_art(art)
@@ -405,9 +411,104 @@ def _empty_payload() -> Dict[str, Any]:
         'artist': '',
         'album': '',
         'source_app': '',
+        'site': '',
         'has_art': False,
         'ts': time.time(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Source-site detection — "YouTube logo for YouTube", not "chrome.exe"
+# ---------------------------------------------------------------------------
+# SMTC only reports the *app* (source_app_user_model_id = chrome.exe) — it
+# never says which site inside the browser owns the media session. But the
+# browser puts the site in the tab's window title
+# ("<video> - YouTube - Google Chrome"), so for browser sources we scan
+# visible top-level windows and match on those titles.
+
+_BROWSER_APP_HINTS = (
+    'chrome', 'msedge', 'edge', 'firefox', 'brave', 'opera', 'operagx',
+    'vivaldi', 'arc', 'chromium', 'waterfox', 'zen',
+)
+
+# Site id → window-title fragments (matched case-insensitively). Browsers
+# render tab titles as "<page> - <Site> - <Browser>", so suffixes work
+# across engines.
+_SITE_TITLE_HINTS: Dict[str, Tuple[str, ...]] = {
+    'youtube': (' - youtube', 'youtube music'),
+    'netflix': (' - netflix', 'netflix - '),
+    'twitch': (' - twitch',),
+    'spotify': (' - spotify', 'open.spotify'),
+}
+
+# Apps that identify themselves outright — Spotify.exe, YouTube Music
+# PWAs/desktop (their AUMIDs contain "youtube").
+_APP_SITE_HINTS: Tuple[Tuple[str, str], ...] = (
+    ('youtube', 'youtube'),
+    ('spotify', 'spotify'),
+)
+
+
+def _classify_window_title(title: str) -> Optional[str]:
+    low = title.lower()
+    for site, hints in _SITE_TITLE_HINTS.items():
+        if any(h in low for h in hints):
+            return site
+    return None
+
+
+def _visible_window_titles() -> List[str]:
+    """Every visible top-level window title — the only place a browser
+    exposes which site owns a media session. Empty off Windows."""
+    if sys.platform != 'win32':
+        return []
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        titles: List[str] = []
+        buf = ctypes.create_unicode_buffer(512)
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def _collect(hwnd: int, _: int) -> bool:
+            if user32.IsWindowVisible(hwnd) and \
+                    user32.GetWindowTextW(hwnd, buf, 512):
+                titles.append(buf.value)
+            return True
+
+        user32.EnumWindows(_collect, 0)
+        return titles
+    except Exception:
+        return []
+
+
+def detect_site(source_app: str, media_title: str) -> str:
+    """The site the media belongs to — 'youtube', 'netflix', … — or ''
+    when it can't be attributed. Called once per track change only."""
+    app = (source_app or '').lower()
+    if not app:
+        return ''
+    for hint, site in _APP_SITE_HINTS:
+        if hint in app:
+            return site
+    if not any(b in app for b in _BROWSER_APP_HINTS):
+        return ''
+    titles = _visible_window_titles()
+    # Strong match: a window titled "<media title> - <Site> - <Browser>".
+    if media_title:
+        needle = media_title.lower()[:64]
+        for wt in titles:
+            if needle in wt.lower():
+                site = _classify_window_title(wt)
+                if site:
+                    return site
+    # Weaker: the SMTC source IS this browser, so a known-site window is
+    # almost surely the playing tab — covers title formats SMTC mangles.
+    for wt in titles:
+        site = _classify_window_title(wt)
+        if site:
+            return site
+    return ''
 
 
 def _timeline(session: Any) -> Tuple[Optional[float], float]:

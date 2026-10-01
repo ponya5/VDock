@@ -123,7 +123,7 @@ any other endpoint. The fix is **follow-the-audio** capture.
   ephemeral and the timer dies with the saver.
 - **Bigger card verified:** `.has-track` now measures 560 × 207 px at
   1280 × 800 — ~30 % of screen height, visualizer dominant (screenshot
-  `dl133-spectrum-card-final-*.png`).
+  `refs/dl133-spectrum-card-final-*.png`).
 - **Settings verified live:** `ss-type` ("Screensaver type") is the first
   panel — label "Screensaver Type", options Widget dashboard / Spectrum
   visualizer / System stats / **Shuffle**; "Rotate every" row appears only

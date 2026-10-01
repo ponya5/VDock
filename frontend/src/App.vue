@@ -8,7 +8,9 @@
       'settings-standalone-mode': isStandaloneSettings,
     }"
   >
-    <BackgroundRenderer v-if="!isStandaloneSettings" />
+    <!-- Suspended while the screensaver covers the deck — an animated
+         background under the opaque saver only burns frame budget. -->
+    <BackgroundRenderer v-if="!isStandaloneSettings && !screensaverCovered" />
     <router-view />
     <!-- Toasts render in standalone settings too — the test buttons and
          layout editor live there and must surface results. -->
@@ -45,6 +47,7 @@ import { useToggleSync } from '@/services/toggleSync'
 import { initTriggerEvents } from '@/services/triggerEvents'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
+import { screensaverCovered } from '@/services/screensaverState'
 import type { AppIntegration } from '@/types'
 
 const route = useRoute()
