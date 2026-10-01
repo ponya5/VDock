@@ -1,10 +1,5 @@
 <template>
   <div class="dashboard-view" :class="[dashboardBackgroundClass, { mobile: isMobileViewport }]" :style="dashboardBackgroundStyle">
-    <!-- DL-136: Winamp player mode — the whole deck chrome (header, grid,
-         footer, reveal FAB) swaps for the player UI. Overlays below the
-         fold (screensaver, modals, rotate gate) stay shared. -->
-    <WinampPlayer v-if="winampMode" @exit="exitWinampMode" />
-    <template v-else>
     <!-- Dedicated slim chrome on phones: scene rail + page steppers only.
          While the header is revealed on mobile (DL-134: the reveal FAB is
          no longer desktop-only — the 7" touch panel is a mobile viewport),
@@ -182,14 +177,13 @@
         <span class="fab-sheen" aria-hidden="true"></span>
       </button>
     </Transition>
-    </template>
 
     <!-- Screen Saver overlay — wrapped in a dissolve Transition (DL-003
          follow-up): it blooms in from center on idle, and evaporates
          edges-in back to the deck on dismiss. -->
     <Transition name="saver-dissolve">
       <ScreenSaver
-        v-if="screensaverVisible && !winampMode"
+        v-if="screensaverVisible"
         :visible="screensaverVisible"
         :layout-edit="screensaverLayoutEdit"
         @dismiss="dismissScreensaver"
@@ -240,9 +234,8 @@
       {{ actionResult.message }}
     </div>
 
-    <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt.
-         Winamp mode has its own portrait layout (DL-136) so it's exempt. -->
-    <RotateToLandscape :portrait-allowed="screensaverVisible || showsMobileAgentConsole || winampMode" />
+    <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt. -->
+    <RotateToLandscape :portrait-allowed="screensaverVisible || showsMobileAgentConsole" />
   </div>
 </template>
 
@@ -270,7 +263,6 @@ import RotateToLandscape from '@/components/RotateToLandscape.vue'
 import AgentActionBar from '@/components/AgentActionBar.vue'
 import AgentWaitingGlow from '@/components/AgentWaitingGlow.vue'
 import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
-import WinampPlayer from '@/components/WinampPlayer.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useTutorial } from '@/services/tutorial'
@@ -339,11 +331,6 @@ const quickAddTarget = ref<'page' | 'docked'>('page')
 // Screensaver / idle-timer state
 const screensaverVisible = ref(false)
 const tour = useTutorial()
-// DL-136: 'winamp' swaps the whole deck chrome for the player UI.
-const winampMode = computed(() => settingsStore.playerMode === 'winamp')
-function exitWinampMode() {
-  settingsStore.playerMode = 'deck'
-}
 // True while the screensaver is showing its drag/resize layout editor —
 // reached via the 'screensaver_layout_edit' ui_command from Settings.
 const screensaverLayoutEdit = ref(false)
@@ -353,9 +340,6 @@ const IDLE_EVENTS = ['pointermove', 'pointerdown', 'keydown'] as const
 
 function resetIdleTimer() {
   if (idleTimer) clearTimeout(idleTimer)
-  // DL-136 follow-up: in Winamp mode the player *is* the idle display —
-  // the screensaver never covers it.
-  if (winampMode.value) return
   const timeoutMs = settingsStore.screensaverTimeout * 1000
   if (timeoutMs <= 0) return
   idleTimer = setTimeout(() => {
@@ -379,10 +363,6 @@ watch(() => tour.state.active, (active) => {
 })
 watch(screensaverVisible, (visible) => {
   if (visible && tour.state.active) tour.finish()
-})
-// Switching into Winamp mode drops any visible saver for good measure.
-watch(winampMode, (on) => {
-  if (on && screensaverVisible.value) dismissScreensaver()
 })
 
 function saveScreensaverLayout(layout: ScreensaverLayout) {
@@ -1194,10 +1174,10 @@ onMounted(async () => {
   // Setting the flag directly means the preview also works when
   // screensaverTimeout is 0 (screensaver disabled).
   stopUiCommandListener = listenForUiCommands((command) => {
-    if (command === 'show_screensaver' && !winampMode.value) {
+    if (command === 'show_screensaver') {
       screensaverVisible.value = true
     }
-    if (command === 'screensaver_layout_edit' && !winampMode.value) {
+    if (command === 'screensaver_layout_edit') {
       screensaverLayoutEdit.value = true
       screensaverVisible.value = true
     }

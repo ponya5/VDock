@@ -174,3 +174,124 @@ Tests: `winamp-mode.test.ts` repinned (EQ toggle contract, marquee
 numbers instead of playlist rows) — 18/18 with the guide suite green;
 `npm run build` clean → dist rebuilt; headless CDP shot confirms the
 two-window classic look with a live analyzer.
+
+## Follow-up 3 — full-screen player, EQ removed, real seek, no keypad
+
+**Request.** (1) The player renders as a small centered window — fill the
+screen responsively, and make sure it fits a mobile viewport; (2) remove
+the equalizer entirely — "I don't need equalizer"; (3) recapture the
+settings thumbnail so the Winamp card shows the new look; (4) match the
+classic 2.x screenshot's functionality — separate play / pause / stop
+buttons and the position (seek) bar the previous build lacked; (5) the
+on-screen keypad must never appear in Winamp mode.
+
+**Design.**
+
+- **Full-screen responsive** — `.winamp-frame` now fills the viewport
+  (`100% × 100%`, no `max-width` column). All element sizes key off a
+  `--s` unit — `min(100vw / 275, 100vh / 150)`, i.e. px-per-design-pixel
+  against a 275 × 150 reference window — so the LCD, analyzer, sliders
+  and buttons scale up on the 1024×600 panel and shrink on a phone
+  without a JS resize path. The display block `flex:1` grows to absorb
+  leftover vertical space (mostly analyzer), so a tall portrait window
+  gets a bigger visualizer rather than dead margins.
+- **EQ removed** — the EQ titlebar button, the `winamp-eq` window,
+  `eqOpen`/`eqOn`/`preampDb`/`eqDb`, the `eqGain` analyzer mask and all
+  EQ styles are gone. The analyzer renders raw bands again.
+- **Classic transport row** — six buttons like the reference: prev /
+  play / pause / stop / next / eject. Play dispatches `media_play_pause`
+  only while paused, pause only while playing (real Winamp no-ops the
+  matching press); stop sends `media_stop`; eject exits to the deck.
+- **Position bar — real seek.** New `media_seek` cross-platform action:
+  Windows drives SMTC `try_change_playback_position_async` via a new
+  `now_playing.seek_to(position_s)` (fresh session + private asyncio
+  loop on the caller thread — the poll worker's objects never cross
+  threads); Linux `playerctl position`; macOS `osascript player
+  position`. The frontend bar is draggable when the track reports a
+  `duration_s`; on release it dispatches `media_seek { position_s }`
+  and re-anchors the LCD clock optimistically — the next SMTC seek-emit
+  corrects it. No duration → the bar shows progress but stays inert,
+  same honest-fallback rule as balance.
+- **On-screen keypad off in Winamp mode** — `handleGlobalFocus` early-
+  returns while `winampMode`, the keypad's `:visible` is ANDed with
+  `!winampMode`, and entering the mode force-closes it. There are no
+  inputs in the player; a keypad left open from deck mode simply hid.
+- **Settings thumbnail** — `guide-player-winamp.png` recaptured on the
+  rebuilt bundle (route-intercepted `playerMode: 'winamp'` so the live
+  settings file is never touched); alt text drops "equalizer".
+
+**Implementation Results — follow-up 3**
+
+**Status: Complete.**
+
+- `WinampPlayer.vue` now fills the viewport — `--s: min(100vw/275,
+  100vh/150)` scales every element like a rescaled bitmap; the display
+  block is `flex:1` so the analyzer grows into leftover space. Portrait
+  stacks the analyzer column over the readouts.
+- EQ fully removed: titlebar button, docked window, `eqOpen`/`eqOn`/
+  `preampDb`/`eqDb`, the analyzer `eqGain` mask, all EQ styles and the
+  EQ tests. Decorative `_`/`▫` titlebar glyphs keep the classic look.
+- Transport matches the reference: prev / play / pause / stop / next /
+  eject — play dispatches `media_play_pause` only while paused, pause
+  only while playing. SHUFFLE/REPEAT moved onto the same bottom row.
+- New `media_seek` action (`VALID_ACTIONS` + `_media_seek`):
+  `now_playing.seek_to()` drives SMTC `try_change_playback_position_async`
+  on a fresh session + private asyncio loop on the caller thread;
+  macOS `osascript` / Linux `playerctl position`. The `.win-posbar`
+  drags and dispatches `position_s`; tracks without a duration render
+  the bar inert.
+- On-screen keypad suppressed in Winamp mode: `handleGlobalFocus` early-
+  returns, `:visible` is ANDed with `!winampMode`, entering the mode
+  force-closes it.
+- Settings: `guide-player-winamp.png` recaptured on the rebuilt bundle
+  via route-intercepted `playerMode:'winamp'` (no real settings writes —
+  `test-scripts/capture_winamp_shot.py`), alt/copy text updated.
+- Analyzer segments now scale with height (~fixed row count) instead of
+  staying 5 px slivers on a full-screen canvas.
+
+**Verified:** headless shots on the live-built bundle — desktop
+1024×600 (full-bleed player, live Spotify spectrum + seek fill) and
+portrait 390×844 (stacked, no rotate gate, no keypad).
+
+**Tests:** `winamp-mode.test.ts` 12/12; backend `test_media_seek.py`
+7/7 + `test_media_play_stop.py` still green; `npm run build` clean →
+`frontend/dist` rebuilt and served. Full suite: 553/554 — the two
+pre-existing failures (`now-playing-button` label case, `property6_
+settings` file-URL suite error on Windows) reproduce at HEAD and are
+unrelated.
+
+## Follow-up 4 — feature removed (revert)
+
+**Request.** "Remove all winamp feature — I regret adding it. Revert
+all winamp player. Keep the Spectrum visualizer." The spectrum analyzer
+infrastructure (`useAudioSpectrum`, `spectrumSkins`, the spectrum
+screensaver and its `winamp` skin, the spectrum widget overlay) stays —
+only the player mode goes.
+
+**Removed.**
+
+- `components/WinampPlayer.vue` and `tests/winamp-mode.test.ts` deleted.
+- `playerMode` unpiped end-to-end: `SETTINGS_DEFAULTS`, the
+  `PersistedUserSettings` field, the store ref, the `playerModeLocalAt`
+  stale-peer guard (`settingsSettled` went with it), payload builder,
+  localStorage apply, watch list, exports — and the server allowlist in
+  `user_settings.py`. The lingering `"playerMode": "winamp"` was stripped
+  from `backend/data/user_settings.json`.
+- `DashboardView` restored to unconditional deck chrome: `WinampPlayer`
+  mount, `winampMode`/`exitWinampMode`, the `v-else` template fork, the
+  saver/keypad/ui_command/idle-timer/rotate-gate gatings all reverted.
+- `SettingsView` Interface panel, mode-card picker + lightbox + styles,
+  the `interface` deepTab anchor and the 'Player Mode' search entry gone.
+- `nowPlaying.recent` session list removed (existed only for the
+  playlist/marquee counter).
+- `media_seek` action and `now_playing.seek_to()` removed;
+  `test_media_seek.py` deleted; `test_user_settings_payload_keys.py`
+  payload mirror updated; `test-scripts/capture_winamp_shot.py` and
+  `guide-player-winamp.png` (public + dist) deleted.
+
+**Verified:** `vue-tsc` clean; full frontend suite 543 tests, only the
+pre-existing `now-playing-button` label-case failure remains (two
+further timeouts were load flake — both files pass in isolation);
+backend targeted tests 26/26; `npm run build` clean → dist rebuilt.
+Headless shot of the live server confirms the deck renders with no
+`.winamp-root`.

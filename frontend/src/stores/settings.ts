@@ -71,7 +71,6 @@ export const SETTINGS_DEFAULTS = {
   spectrumShuffleMinutes: 10,
   spectrumMediaBar: true,
   screensaverSpectrumWidgets: false,
-  playerMode: 'deck' as const,
   dashboardFont: 'default' as const,
   appScanningEnabled: false,
   agentAlertsEnabled: true,
@@ -182,12 +181,6 @@ export interface PersistedUserSettings {
    * every existing spectrum user.
    */
   screensaverSpectrumWidgets: boolean
-  /**
-   * DL-136: what the main screen renders. 'deck' is the button-grid
-   * dashboard; 'winamp' swaps it for the Winamp-classic player UI
-   * (screensaver and overlays stay on top either way).
-   */
-  playerMode: 'deck' | 'winamp'
   /** DL-133: shuffle type rotation cadence, in minutes. */
   screensaverShuffleMinutes: number
   /** Spectrum skin id — see services/spectrumSkins.ts registry. */
@@ -330,8 +323,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const spectrumMediaBar = ref(true)
   // DL-135: info widgets overlay the spectrum stage (see interface note).
   const screensaverSpectrumWidgets = ref(false)
-  // DL-136: 'deck' (button grid) | 'winamp' (player UI) — the main screen.
-  const playerMode = ref<'deck' | 'winamp'>('deck')
   const dashboardFont = ref<'default' | 'editorial' | 'mono'>('default')
   const appScanningEnabled = ref(false)
   const agentAlertsEnabled = ref(true)
@@ -364,15 +355,6 @@ export const useSettingsStore = defineStore('settings', () => {
   let isApplyingRemoteSettings = false
   let liveSyncInitialized = false
   let settingsBroadcastChannel: BroadcastChannel | null = null
-  // DL-136: a peer that never applied a just-picked mode (older value in
-  // its payload) reverts the pick whenever its own unrelated save
-  // rebroadcasts — we watched the server value get flipped back mid-test.
-  // A local pick wins for a short window: the local PUT is already on the
-  // wire, so last-writer is the user's click, not a stale peer echo.
-  let playerModeLocalAt = 0
-  // Stamping only counts after local+server state has settled — otherwise
-  // the boot-time apply would shield stale defaults from real remote picks.
-  let settingsSettled = false
 
   /**
    * Does applying `remote` actually change anything? Compares field by field
@@ -427,11 +409,6 @@ export const useSettingsStore = defineStore('settings', () => {
         screensaverWidgets: [...SETTINGS_DEFAULTS.screensaverWidgets],
         screensaverClockEnabled: true,
       }
-    }
-
-    if (Date.now() - playerModeLocalAt < 15_000) {
-      remoteSettings = { ...remoteSettings }
-      delete remoteSettings.playerMode
     }
 
     const currentSettings = buildSettingsPayload()
@@ -521,7 +498,6 @@ export const useSettingsStore = defineStore('settings', () => {
       spectrumShuffleMinutes: spectrumShuffleMinutes.value,
       spectrumMediaBar: spectrumMediaBar.value,
       screensaverSpectrumWidgets: screensaverSpectrumWidgets.value,
-      playerMode: playerMode.value,
       dashboardFont: dashboardFont.value,
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
@@ -607,7 +583,6 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.spectrumShuffleMinutes !== undefined) spectrumShuffleMinutes.value = settings.spectrumShuffleMinutes
     if (settings.spectrumMediaBar !== undefined) spectrumMediaBar.value = settings.spectrumMediaBar
     if (settings.screensaverSpectrumWidgets !== undefined) screensaverSpectrumWidgets.value = settings.screensaverSpectrumWidgets
-    if (settings.playerMode === 'deck' || settings.playerMode === 'winamp') playerMode.value = settings.playerMode
     if (settings.dashboardFont !== undefined) dashboardFont.value = settings.dashboardFont
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
@@ -686,7 +661,6 @@ export const useSettingsStore = defineStore('settings', () => {
         spectrumShuffleMinutes: settings.spectrumShuffleMinutes ?? 10,
         spectrumMediaBar: settings.spectrumMediaBar ?? true,
         screensaverSpectrumWidgets: settings.screensaverSpectrumWidgets === true,
-        playerMode: settings.playerMode ?? SETTINGS_DEFAULTS.playerMode,
         dashboardFont: settings.dashboardFont ?? 'default',
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
@@ -808,19 +782,9 @@ export const useSettingsStore = defineStore('settings', () => {
   function ensureSettingsLoaded(): Promise<void> {
     if (!settingsLoadPromise) {
       settingsLoadPromise = loadSettingsFromServer()
-      settingsLoadPromise.finally(() => { settingsSettled = true })
     }
     return settingsLoadPromise
   }
-
-  // Stamp user-initiated mode picks only — remote applies run inside the
-  // isApplyingRemoteSettings guard (still true at watcher flush), and the
-  // boot-time applies happen before settingsSettled flips.
-  watch(playerMode, () => {
-    if (settingsSettled && !isApplyingRemoteSettings) {
-      playerModeLocalAt = Date.now()
-    }
-  })
 
   watch(
     [
@@ -863,7 +827,6 @@ export const useSettingsStore = defineStore('settings', () => {
       spectrumShuffleMinutes,
       spectrumMediaBar,
       screensaverSpectrumWidgets,
-      playerMode,
       newsApiKey,
       newsFeeds,
       sportsFeeds,
@@ -1096,7 +1059,6 @@ export const useSettingsStore = defineStore('settings', () => {
     spectrumShuffleMinutes,
     spectrumMediaBar,
     screensaverSpectrumWidgets,
-    playerMode,
     dashboardFont,
     appScanningEnabled,
     agentAlertsEnabled,

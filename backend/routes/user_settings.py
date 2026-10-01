@@ -69,8 +69,6 @@ ALLOWED_USER_SETTING_KEYS = {
     'spectrumShuffle',
     'spectrumShuffleMinutes',
     'spectrumMediaBar',
-    # DL-136: deck ⇄ Winamp player mode for the main screen.
-    'playerMode',
     'dashboardFont',
     'tutorialCompleted',
     # Id of the profile most recently loaded on any window/device — lets a
