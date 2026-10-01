@@ -237,3 +237,41 @@ browser-specific code required.
 - Backend restarted; `py-spy` shows `Thread-5 (_loop)` alive at
   `now_playing.py:166`; `GET /api/now-playing` returns the live Spotify
   track and `GET /api/now-playing/art` serves `image/png` (~220 KB).
+
+## Follow-up — source-site branding for the no-art fallback (2026-02-20)
+
+**Motivation.** YouTube videos in Chrome publish SMTC metadata without
+album art, so every now-playing surface fell back to the generic music
+glyph even though the source was clearly identifiable.
+
+**Backend (`services/now_playing.py`)**
+
+- Payload gains a normalized `site` field (e.g. `youtube`, `spotify`,
+  `twitch`; `''` when unknown). `empty_payload()` emits `site: ''`.
+- `detect_site(source_app, title)` — app-id substring hints for native
+  apps (spotify, yt music, netflix, twitch, prime, jellyfin, plex,
+  tidal, deezer, vlc, apple music, disney+…); for **browser** source
+  apps (chrome/edge/firefox/opera/brave/vivaldi/arc…) it scans visible
+  window titles, requiring the track title to appear in a window title
+  that names a known site; a weak fallback matches a known-site window
+  when the track title isn't found (SMTC often reformats titles).
+- Site is resolved **once per track** and cached on the poll state —
+  the window-title scan never runs per-tick.
+
+**Frontend**
+
+- `services/nowPlaying.ts`: `NowPlayingTrack.site`; shared helpers
+  `nowPlayingIcon(track)` → `['fab', <brand>]` or `['fas','music']`
+  fallback, and `nowPlayingSourceLabel(track)` → friendly site name
+  (YouTube, Spotify…) ahead of the raw exe name.
+- All three surfaces — `SpectrumStage` media card, `NowPlayingWidget`,
+  `NowPlayingButtonFace` — use the helpers for their no-art fallback
+  icon and source kicker. Album art still wins whenever it exists.
+
+**Verified**
+
+- `pytest tests/test_now_playing.py` → 20 passed (6 new: app-hint skip,
+  browser title match, weak match, no-known-site, non-browser, and
+  site-stamped-once-per-track).
+- Frontend: spectrum-stage + now-playing-button suites 28/28 green;
+  `npm run build` clean → `dist` rebuilt.

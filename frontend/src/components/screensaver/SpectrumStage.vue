@@ -3,8 +3,9 @@
  * DL-123 — fullscreen spectrum screensaver stage.
  *
  * Mounted by ScreenSaver.vue when `screensaverStyle === 'spectrum'`: the
- * visualizer IS the screensaver — one DPR-aware canvas, one ~30 fps rAF
- * loop, and a swappable skin renderer from services/spectrumSkins.ts.
+ * visualizer IS the screensaver — one DPR-aware canvas, one ~60 fps rAF
+ * loop (with a ~30 fps governor fallback + reduced-motion cadence), and
+ * a swappable skin renderer from services/spectrumSkins.ts.
  *
  * - Skin: `settingsStore.spectrumSkin`, or a shuffled pick when
  *   `spectrumShuffle` rotates it every `spectrumShuffleMinutes`. Shuffle is
@@ -22,7 +23,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import socketClient from '@/api/socket'
 import { useAudioSpectrum } from '@/services/audioSpectrum'
-import { useNowPlaying } from '@/services/nowPlaying'
+import {
+  nowPlayingIcon,
+  nowPlayingSourceLabel,
+  useNowPlaying,
+} from '@/services/nowPlaying'
 import {
   getSpectrumSkin,
   pickNextSkin,
@@ -30,13 +35,22 @@ import {
   type SpectrumRenderer,
 } from '@/services/spectrumSkins'
 import { useSettingsStore } from '@/stores/settings'
+import { useMobileViewport } from '@/utils/mobileViewport'
+
+/** DL-135: `backdrop` renders the canvas only — ScreenSaver mounts the
+ *  stage behind its widget-layout editor, where an interactive media bar
+ *  would eat drags and read as clutter. */
+const props = withDefaults(defineProps<{ backdrop?: boolean }>(), { backdrop: false })
 
 const settingsStore = useSettingsStore()
 const spectrum = useAudioSpectrum()
 const nowPlaying = useNowPlaying()
+const { isMobileViewport } = useMobileViewport()
 
 const BANDS = 20
-const FRAME_MS = 33            // ~30 fps — fullscreen fluid, cheap enough
+const FRAME_MS = 16            // ~60 fps target — motion layers animate per frame
+const REDUCED_FRAME_MS = 45    // ~22 fps under prefers-reduced-motion
+const SLOW_FRAME_MS = 33       // governor fallback when draws miss budget
 const GRACE_MS = 4000          // connect + first heartbeat before "unavailable"
 const SWAP_FADE_MS = 260
 const REDUCED = typeof window !== 'undefined'
@@ -121,9 +135,17 @@ function sizeCanvas(): void {
   ctx?.setTransform(dpr, 0, 0, dpr, 0, 0)
 }
 
+let frameCostMs = 0 // EMA of renderer.draw cost — drives the governor
+let levelSm = 0     // smoothed overall level for the skins' glow/pulse
+
 function tick(now: number): void {
   rafId = requestAnimationFrame(tick)
-  if (now - lastFrame < FRAME_MS) return
+  // Governor: if draws consistently cost more than a 60 fps frame can
+  // spend, settle to ~30 fps rather than jank — a low-power panel still
+  // gets fluid motion instead of uneven frames.
+  const budget = REDUCED ? REDUCED_FRAME_MS
+    : frameCostMs > 14 ? SLOW_FRAME_MS : FRAME_MS
+  if (now - lastFrame < budget) return
   const dt = lastT ? Math.min((now - lastT) / 1000, 0.5) : 0.016
   lastFrame = now
   lastT = now
@@ -133,28 +155,57 @@ function tick(now: number): void {
   const ctx = canvasRef.value?.getContext('2d')
   if (!ctx || !renderer) return
 
-  // Shared envelope: bands snap up instantly, fall with a per-second decay
-  // (~0.42s time constant). Skins never re-smooth.
-  const decay = Math.exp(-dt * 2.4)
+  // Shared envelope — asymmetric lerp: fast attack (~50 ms constant,
+  // bridging the backend's ~22 Hz emit cadence so band steps never
+  // stair-step on screen), slower release keeps decays graceful. A jump
+  // bigger than SPIKE_SNAP skips the lerp entirely — real transients
+  // hit full height on the frame they land instead of being shaved.
+  const SPIKE_SNAP = 16
+  const attack = Math.exp(-dt * 18)
+  const release = Math.exp(-dt * 5)
   const fresh = spectrum.lastSeenAt !== null
     && Date.now() - spectrum.lastSeenAt < 4000
   const live = spectrum.live && fresh
   for (let i = 0; i < BANDS; i++) {
     const target = live ? (spectrum.bands[i] ?? 0) : 0
-    display[i] = Math.max(target, display[i] * decay)
+    if (target > display[i] + SPIKE_SNAP) {
+      display[i] = target
+    } else {
+      display[i] = target + (display[i] - target) * (target > display[i] ? attack : release)
+    }
     if (display[i] < 0.3) display[i] = 0
   }
+  // Same smoothing for the overall level the skins pulse their glow with.
+  levelSm += ((live ? spectrum.level : 0) - levelSm) * Math.min(1, dt * 12)
 
   const frame: SpectrumFrame = {
     bands: display,
-    level: live ? spectrum.level : 0,
+    level: levelSm,
     live,
     w: ctx.canvas.clientWidth || window.innerWidth,
     h: ctx.canvas.clientHeight || window.innerHeight,
     t: (now - startT) / 1000,
     dt,
   }
+  // Mobile landscape overscan: radial skins size by min(w,h), so on a
+  // wide-short panel they shrink to a small disc. Zoom the canvas about
+  // the center so the visuals keep stage presence — edges crop, which is
+  // intentional per the mobile ask ("if part of the animation is cut due
+  // to the landscape view, so be it"). sqrt() keeps it gentle: 1.7:1 →
+  // ~1.3x, 2:1 → ~1.4x. Bars-based skins just get chunkier bars.
+  const zoom = isMobileViewport.value && frame.w > frame.h
+    ? Math.min(1.45, Math.sqrt(frame.w / frame.h))
+    : 1
+  if (zoom > 1) {
+    ctx.save()
+    ctx.translate(frame.w / 2, frame.h / 2)
+    ctx.scale(zoom, zoom)
+    ctx.translate(-frame.w / 2, -frame.h / 2)
+  }
+  const drawStart = performance.now()
   renderer.draw(ctx, frame)
+  if (zoom > 1) ctx.restore()
+  frameCostMs = frameCostMs * 0.92 + (performance.now() - drawStart) * 0.08
 }
 
 onMounted(() => {
@@ -165,11 +216,8 @@ onMounted(() => {
     resizeObserver.observe(stageRef.value)
   }
   sizeCanvas()
-  if (REDUCED) {
-    // Renderers still draw (bands are data), but phases barely move — the
-    // frame cap does the rest of the calming.
-    lastFrame = -Infinity
-  }
+  // Reduced motion: the loop still runs (bands are data), but the slower
+  // REDUCED_FRAME_MS budget calms every animated layer at once.
   rafId = requestAnimationFrame(tick)
 })
 
@@ -182,11 +230,16 @@ onUnmounted(() => {
 
 // --- media bar ---------------------------------------------------------------
 
-const mediaBarOn = computed(() => settingsStore.spectrumMediaBar !== false)
+const mediaBarOn = computed(() => settingsStore.spectrumMediaBar !== false && !props.backdrop)
 const track = computed(() => nowPlaying.track.value)
 const playing = computed(() => nowPlaying.playing.value)
 // "Spotify.exe" → "Spotify" — AUMID tails trimmed for the kicker line
-const sourceLabel = computed(() => track.value?.source_app?.replace(/\.exe$/i, '') || '')
+// Site-aware label: "YouTube" beats "chrome.exe" when the backend has
+// attributed the session to a site (DL-135 session follow-up).
+const sourceLabel = computed(() => nowPlayingSourceLabel(track.value))
+const brandIcon = computed(() => nowPlayingIcon(track.value))
+const brandClass = computed(() =>
+  track.value?.site ? `is-${track.value.site.toLowerCase()}` : '')
 
 // position_s arrives per track change; while playing we extrapolate locally
 // from the moment the payload landed (server ts is not comparable to ours).
@@ -256,6 +309,12 @@ function media(action: string): void {
           alt=""
           class="spectrum-media-art"
         >
+        <FontAwesomeIcon
+          v-else-if="brandIcon"
+          :icon="brandIcon"
+          class="spectrum-media-art spectrum-media-art-icon spectrum-media-brand"
+          :class="brandClass"
+        />
         <FontAwesomeIcon v-else :icon="['fas', 'music']" class="spectrum-media-art spectrum-media-art-icon" />
 
         <div class="spectrum-media-text">
@@ -274,16 +333,16 @@ function media(action: string): void {
         <button type="button" class="spectrum-media-btn" aria-label="Previous track" @click="media('media_previous')">
           <FontAwesomeIcon :icon="['fas', 'backward-step']" />
         </button>
+        <!-- One state-split transport (DL-128/DL-134): media_play_stop
+             resolves backend-side — stop while playing, play otherwise —
+             so the face mirrors what the press will do. -->
         <button
           type="button"
           class="spectrum-media-btn spectrum-media-play"
-          :aria-label="playing ? 'Pause' : 'Play'"
-          @click="media('media_play_pause')"
+          :aria-label="playing ? 'Stop' : 'Play'"
+          @click="media('media_play_stop')"
         >
-          <FontAwesomeIcon :icon="['fas', playing ? 'pause' : 'play']" />
-        </button>
-        <button type="button" class="spectrum-media-btn" aria-label="Stop" @click="media('media_stop')">
-          <FontAwesomeIcon :icon="['fas', 'stop']" />
+          <FontAwesomeIcon :icon="['fas', playing ? 'stop' : 'play']" />
         </button>
         <button type="button" class="spectrum-media-btn" aria-label="Next track" @click="media('media_next')">
           <FontAwesomeIcon :icon="['fas', 'forward-step']" />
@@ -411,8 +470,8 @@ function media(action: string): void {
 }
 
 .spectrum-media-art {
-  width: clamp(34px, 6vh, 46px);
-  height: clamp(34px, 6vh, 46px);
+  width: clamp(44px, 7vh, 56px);
+  height: clamp(44px, 7vh, 56px);
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
@@ -430,12 +489,24 @@ function media(action: string): void {
   place-items: center;
   color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.06);
-  font-size: clamp(14px, 2vh, 18px);
+  font-size: clamp(18px, 2.6vh, 24px);
+}
+
+/* Brand glyph fallback when the app supplies no art — the site color
+   makes it recognizable at a glance. */
+.spectrum-media-brand {
+  font-size: clamp(22px, 3.4vh, 32px);
+}
+.spectrum-media-brand.is-youtube { color: #ff4a45; }
+.spectrum-media-brand.is-spotify { color: #1db954; }
+.spectrum-media-brand.is-twitch  { color: #9146ff; }
+.spectrum-media.has-track .spectrum-media-brand {
+  font-size: clamp(34px, 6vh, 48px);
 }
 
 .spectrum-media-kicker {
   color: rgba(255, 255, 255, 0.38);
-  font-size: clamp(10px, 1.2vw, 13px);
+  font-size: clamp(11px, 1.4vw, 14px);
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -458,7 +529,7 @@ function media(action: string): void {
 
 .spectrum-media-title {
   color: rgba(255, 255, 255, 0.92);
-  font-size: clamp(12px, 1.5vw, 15px);
+  font-size: clamp(15px, 2vw, 20px);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -468,7 +539,7 @@ function media(action: string): void {
 
 .spectrum-media-artist {
   color: rgba(255, 255, 255, 0.5);
-  font-size: clamp(10px, 1.2vw, 12px);
+  font-size: clamp(12px, 1.5vw, 15px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -476,12 +547,12 @@ function media(action: string): void {
 }
 
 .spectrum-media.has-track .spectrum-media-title {
-  font-size: clamp(16px, 2.3vw, 24px);
+  font-size: clamp(20px, 2.8vw, 32px);
   max-width: none;
 }
 
 .spectrum-media.has-track .spectrum-media-artist {
-  font-size: clamp(13px, 1.7vw, 16px);
+  font-size: clamp(15px, 2vw, 20px);
   max-width: none;
 }
 

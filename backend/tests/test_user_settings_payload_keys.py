@@ -60,6 +60,7 @@ FULL_SETTINGS_PAYLOAD = {
     'spectrumShuffle': True,
     'spectrumShuffleMinutes': 5,
     'spectrumMediaBar': True,
+    'playerMode': 'winamp',
     'dashboardFont': 'mono',
     'appScanningEnabled': True,
     'agentAlertsEnabled': True,

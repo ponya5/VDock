@@ -1,6 +1,7 @@
 // DL-130 follow-up: the header auto-hide indicator is a real countdown
 // chip — gradient-border pill with live seconds — not just the 4px line,
-// and tapping it pins the header open. The reveal FAB grew to 92×58.
+// and tapping it pins the header open. The reveal FAB grew again to
+// 120×68 with the DL-134 slick redesign (orbit rim + sheen).
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -136,9 +137,9 @@ describe('wiring (source)', () => {
     expect(headerSrc).toContain('autohidePaused.value = false')
   })
 
-  it('the reveal FAB is enlarged to 92×58', () => {
-    expect(viewSrc).toContain('max(92px, calc(92px')
-    expect(viewSrc).toContain('max(58px, calc(58px')
+  it('the reveal FAB is enlarged to 120×68', () => {
+    expect(viewSrc).toContain('max(120px, calc(120px')
+    expect(viewSrc).toContain('max(68px, calc(68px')
   })
 
   it('reduced-motion kills the pill animations', () => {

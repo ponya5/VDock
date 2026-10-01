@@ -46,3 +46,24 @@ app's existing `.row`/`.kv` hairline-separator language:
   700px; computed `border-bottom` = 0px on the last row in both layouts.
 - `vue-tsc --noEmit` clean; `npm run build` green — `dist/` rebuilt so
   the physical panel picks up the new layout.
+
+## Follow-up — support CTA pinned to the scrollport bottom (2026-02-20)
+
+**Problem.** On short viewports the About column overflows `.content`,
+and the trailing "Buy me a coffee" button sat cut in half at the
+scrollport edge until the user scrolled the last few px — reading as
+broken. In the ≤880px body-scroll layout (`#app` is `overflow:hidden`,
+so nothing scrolls) it was clipped *permanently* behind the sticky dock.
+
+**Fix (`SettingsView.vue`)**
+
+- `.about-support` gains `position: sticky; bottom: 8px; z-index: 5` —
+  the CTA pins 8px above the `.content` scrollport bottom whenever its
+  natural position is below the fold, floating over the column as a
+  pill; at max scroll it settles into its flow position. Works in both
+  scroll modes (vs `.content` desktop, vs `#app` in the ≤880px path).
+- `.kofi-btn` gains a drop shadow so the floating pill reads layered.
+
+**Verified** — headless Edge screenshots of `/settings?tab=about` at
+1024×675 (button fully visible at scroll 0, floating above the dock)
+and 1024×1100 (settles at natural position); `npm run build` clean.

@@ -201,6 +201,52 @@
         <!-- ── Appearance → Buttons ── -->
         <div v-if="activeTab === 'appearance' && appearanceSubTab === 'buttons'" class="content has-rail">
           <div class="col">
+            <!-- DL-136: what the main screen renders — deck or the Winamp
+                 player. Server-synced, so the panel follows whichever mode
+                 is picked on any device. -->
+            <section class="panel" id="interface">
+              <div class="panel-head">
+                <h2>Interface</h2>
+                <span class="hint">What the main screen renders.</span>
+              </div>
+              <div class="panel-body">
+                <div class="row stack">
+                  <div class="row-head">
+                    <div class="row-text">
+                      <span class="label">Player mode</span>
+                      <p>What the main screen renders — the button grid, or the Winamp-style player with spectrum analyzer, LCD, playlist and transport. Its ✕ returns here.</p>
+                    </div>
+                    <SettingResetButton label="Player mode" :at-default="settingsStore.playerMode === SETTINGS_DEFAULTS.playerMode" @reset="settingsStore.playerMode = SETTINGS_DEFAULTS.playerMode" />
+                  </div>
+                  <div class="row-control">
+                    <div class="mode-pick" role="radiogroup" aria-label="Player mode">
+                      <label class="mode-card" :class="{ on: settingsStore.playerMode === 'deck' }">
+                        <input type="radio" value="deck" v-model="settingsStore.playerMode" />
+                        <img src="/guide/guide-deck.png" alt="Deck mode — the grid of live buttons" loading="lazy" />
+                        <button type="button" class="mode-zoom" title="View full size" aria-label="View Deck preview full size"
+                                @click.prevent.stop="lightboxSrc = '/guide/guide-deck.png'">
+                          <FontAwesomeIcon :icon="['fas', 'expand']" />
+                        </button>
+                        <span class="mode-name">Deck<span class="sub">buttons</span></span>
+                      </label>
+                      <label class="mode-card" :class="{ on: settingsStore.playerMode === 'winamp' }">
+                        <input type="radio" value="winamp" v-model="settingsStore.playerMode" />
+                        <img src="/guide/guide-player-winamp.png" alt="Winamp mode — classic player with LCD, analyzer and equalizer" loading="lazy" />
+                        <button type="button" class="mode-zoom" title="View full size" aria-label="View Winamp preview full size"
+                                @click.prevent.stop="lightboxSrc = '/guide/guide-player-winamp.png'">
+                          <FontAwesomeIcon :icon="['fas', 'expand']" />
+                        </button>
+                        <span class="mode-name">Winamp<span class="sub">player</span></span>
+                      </label>
+                    </div>
+                    <p v-if="settingsStore.playerMode === 'winamp'" class="note mode-live-note">
+                      The main screen is now the player — <a href="/">open it</a> to see it (its ✕/eject brings you back to the deck).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section class="panel" id="sizing">
               <div class="panel-head">
                 <h2>Sizing &amp; touch</h2>
@@ -717,9 +763,12 @@
         <div v-else-if="activeTab === 'appearance' && appearanceSubTab === 'screensaver'" class="content has-rail">
           <div class="col">
             <!-- DL-133: the type pick is the first thing on the tab —
-                 'shuffle' rotates the saver view on an interval. -->
-            <section class="panel" id="ss-type">
-              <div class="panel-head"><h2>Screensaver type</h2></div>
+                 'shuffle' rotates the saver view on an interval.
+                 DL-134 follow-up: type, activation and the try-it controls
+                 merged into one generic "General" panel — three panels for
+                 six rows read as clutter on the panel. -->
+            <section class="panel" id="ss-general">
+              <div class="panel-head"><h2>General</h2></div>
               <div class="panel-body">
                 <div class="row">
                   <div class="row-text">
@@ -733,6 +782,18 @@
                       <option value="stats">System stats</option>
                       <option value="shuffle">Shuffle</option>
                     </select>
+                  </div>
+                </div>
+                <!-- DL-135: the enabled info widgets can overlay the
+                     spectrum — same toggles and positions as the Widget
+                     dashboard; only offered when the style can show it. -->
+                <div class="row" v-if="settingsStore.screensaverStyle === 'spectrum' || settingsStore.screensaverStyle === 'shuffle'">
+                  <div class="row-text">
+                    <span class="label">Widgets on the visualizer</span>
+                    <p>Show the widgets enabled below over the spectrum — same positions as Customise layout.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="switch"><span class="sr-only">Widgets on the visualizer</span><input type="checkbox" :checked="settingsStore.screensaverSpectrumWidgets" @change="settingsStore.screensaverSpectrumWidgets = !settingsStore.screensaverSpectrumWidgets" /><span class="track"></span></label>
                   </div>
                 </div>
                 <div class="row" v-if="settingsStore.screensaverStyle === 'shuffle'">
@@ -749,12 +810,6 @@
                     </select>
                   </div>
                 </div>
-              </div>
-            </section>
-
-            <section class="panel" id="ss-activation">
-              <div class="panel-head"><h2>Activation</h2></div>
-              <div class="panel-body">
                 <div class="row stack">
                   <div class="row-head">
                     <div class="row-text">
@@ -923,7 +978,11 @@
                 <SettingResetButton label="Screensaver widgets" :at-default="screensaverWidgetsAtDefault" @reset="resetScreensaverWidgets" />
               </div>
               <div class="panel-body">
-                <div class="note" v-if="settingsStore.screensaverStyle === 'spectrum' || settingsStore.screensaverStyle === 'stats'">
+                <div class="note" v-if="settingsStore.screensaverStyle === 'spectrum'">
+                  <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+                  <div>The enabled widgets also overlay the <strong>Spectrum visualizer</strong> when <strong>Widgets on the visualizer</strong> is on above.</div>
+                </div>
+                <div class="note" v-else-if="settingsStore.screensaverStyle === 'stats'">
                   <FontAwesomeIcon :icon="['fas', 'circle-info']" />
                   <div>Not in use while <strong>{{ screensaverStyleLabel }}</strong> is picked above — these widgets show on the <strong>Widget dashboard</strong> type.</div>
                 </div>
@@ -1846,6 +1905,11 @@
       @dismiss="screensaverLayoutEditOpen = false"
       @save-layout="onSaveScreensaverLayout"
     />
+
+    <!-- Full-size preview lightbox for the Player mode thumbnails -->
+    <div v-if="lightboxSrc" class="mode-lightbox" role="dialog" aria-modal="true" @click="lightboxSrc = ''">
+      <img :src="lightboxSrc" alt="Player mode preview" />
+    </div>
   </div>
 </template>
 
@@ -2275,6 +2339,8 @@ const toastLevelOptions = [
 ] as const
 
 const activeTab = ref('appearance')
+/** Full-size player-mode thumbnail being previewed ('' = closed). */
+const lightboxSrc = ref('')
 // Re-probe whenever the Connect page is opened — the deck address may
 // have come up (or gone down) since the last visit.
 watch(activeTab, tab => { if (tab === 'connect') probeLanReachability() })
@@ -3291,6 +3357,7 @@ interface SettingsSearchEntry {
 }
 
 const settingsSearchIndex: SettingsSearchEntry[] = [
+  { label: 'Player Mode', keywords: 'player mode winamp deck interface main screen', tabId: 'appearance', subTab: 'buttons', deepTab: 'interface', icon: ['fas', 'play'] },
   { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', tabId: 'appearance', subTab: 'buttons', deepTab: 'touch', icon: ['fas', 'hand-pointer'] },
   { label: 'Button Display', keywords: 'button size labels tooltips', tabId: 'appearance', subTab: 'buttons', deepTab: 'display', icon: ['fas', 'th-large'] },
   { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all', tabId: 'appearance', subTab: 'buttons', deepTab: 'preview', icon: ['fas', 'sliders'] },
@@ -3329,11 +3396,12 @@ const searchMatches = computed(() => {
 // DL-054: deepTab no longer selects a nested tab row — it names the panel the
 // setting lives in, so a search hit scrolls straight to it.
 const deepTabAnchor: Record<string, string> = {
+  interface: 'interface',
   display: 'display',
   preview: 'design',
   touch: 'touch',
   widgets: 'ss-widgets',
-  settings: 'ss-activation',
+  settings: 'ss-general',
   backgrounds: 'ss-background',
   spectrum: 'ss-spectrum',
 }
@@ -4955,6 +5023,99 @@ onMounted(async () => {
   transition: background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
 }
 .seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+/* --- thumbnail mode cards (Player mode) ------------------------------------ */
+
+.mode-pick {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  width: min(190px, 46%);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--field);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+.mode-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+.mode-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: center;
+  border-bottom: 1px solid var(--line-soft);
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+.mode-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  color: var(--text-2);
+}
+.mode-name .sub { font-weight: 450; opacity: 0.75; }
+.mode-card:hover img { opacity: 0.95; }
+.mode-card:active { transform: scale(0.98); }
+.mode-card { position: relative; }
+.mode-zoom {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 13, 24, 0.72);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  cursor: zoom-in;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.mode-card:hover .mode-zoom,
+.mode-card:focus-within .mode-zoom { opacity: 1; }
+@media (hover: none) { .mode-zoom { opacity: 0.9; } }
+.mode-zoom:hover { color: var(--text); border-color: var(--accent); }
+.mode-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 4vmin, 48px);
+  background: rgba(4, 8, 16, 0.88);
+  backdrop-filter: blur(4px);
+  cursor: zoom-out;
+}
+.mode-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+.mode-card.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ghost), 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+.mode-card.on img { opacity: 1; }
+.mode-card.on .mode-name { color: var(--text); }
+.mode-card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .seg label:hover { color: var(--text); }
 }
@@ -5295,7 +5456,17 @@ onMounted(async () => {
 .about-links { display: flex; flex-wrap: wrap; gap: 10px; }
 .about-links .btn { text-decoration: none; }
 
-.about-support { display: flex; justify-content: center; padding: 4px 0 8px; }
+/* Sticky to the .content scrollport bottom: the support CTA never gets
+   clipped by the dock on short viewports — it floats in view until the
+   natural end of the column scrolls it home. */
+.about-support {
+  position: sticky;
+  bottom: 8px;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
 
 .kofi-btn {
   display: inline-flex;
@@ -5310,6 +5481,7 @@ onMounted(async () => {
   font-weight: 600;
   min-height: 30px;
   flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
   transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 .kofi-btn:hover { opacity: 0.9; transform: translateY(-1px); }

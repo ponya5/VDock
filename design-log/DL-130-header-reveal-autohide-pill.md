@@ -63,3 +63,35 @@ The 4px progress line stays — proportional fill (ambient) and pill
   jsdom throttles `setInterval`, so 100 ticks land past 5 s wall time.
 - Verified live via Playwright: FAB at the larger size, pill counting
   `5s→…` with gradient border visible on the open header.
+
+## Follow-up (DL-134 session): slicker, larger FAB redesign
+
+Feedback: the 92×58 mini-window read plain — "a bit bigger… more slick
+professional look (animated)". New recipe keeps the glyph language
+(band on top = the header being summoned) but restyles it:
+
+- **Bigger**: 120×68 px (was 92×58), radius 18.
+- **Orbiting rim**: `::before` spins a conic teal→cyan gradient under
+  `overflow: hidden`; a `::after` inner glass plate masks it to a
+  ~1.5 px living edge — the same trick family as the pill's border
+  sweep, at FAB scale.
+- **Band sheen**: the accent head band is a 260%-wide gradient whose
+  background-position ping-pongs — the teal band glints on a loop.
+- **Caret dip**: the chevron sinks 3 px and back every 1.9 s — the
+  pull-down affordance, legible on touchscreens with no hover.
+- **Face sheen**: a skewed white highlight (`fab-sheen`) sweeps the
+  glass every ~5.4 s — the "premium card" glint.
+- Breathe ring removed — the orbit rim is the discoverability cue now.
+- Reduced-motion: orbit, band sheen, caret dip and face sheen all off;
+  static layered rim + band remain.
+
+### Implementation Results
+
+- `DashboardView.vue`: one new `fab-sheen` span; base rule + four new
+  animation blocks (`fab-orbit`, `fab-head-sheen`, `fab-caret-dip`,
+  `fab-sheen-sweep`); content layers get `z-index` above the plate.
+- `header-timer-pill.test.ts` size pin updated 92×58 → 120×68;
+  `header-reveal-dock`/`edit-mode-touch-drag` contracts still hold
+  (fixed position, `overflow: hidden`, `top: 0` band, label present,
+  no ≥150 px fixed width, edit-mode suppression intact).
+- 39/39 frontend tests green; `npm run build` clean, `dist` rebuilt.

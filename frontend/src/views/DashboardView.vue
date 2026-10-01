@@ -1,9 +1,17 @@
 <template>
   <div class="dashboard-view" :class="[dashboardBackgroundClass, { mobile: isMobileViewport }]" :style="dashboardBackgroundStyle">
+    <!-- DL-136: Winamp player mode — the whole deck chrome (header, grid,
+         footer, reveal FAB) swaps for the player UI. Overlays below the
+         fold (screensaver, modals, rotate gate) stay shared. -->
+    <WinampPlayer v-if="winampMode" @exit="exitWinampMode" />
+    <template v-else>
     <!-- Dedicated slim chrome on phones: scene rail + page steppers only.
-         The desktop header/footer don't mount on mobile at all (DL-063). -->
+         While the header is revealed on mobile (DL-134: the reveal FAB is
+         no longer desktop-only — the 7" touch panel is a mobile viewport),
+         the real DeckHeader takes this slot; its auto-hide/collapse hands
+         the slot back to the mobile chrome. -->
     <MobileDeckChrome
-      v-if="isMobileViewport"
+      v-if="isMobileViewport && !settingsStore.showHeader"
       :scenes="currentProfile?.scenes || []"
       :current-scene-index="currentSceneIndex"
       :total-pages="showsMobileAgentConsole ? 1 : currentScene?.pages.length || 1"
@@ -152,7 +160,7 @@
          the same gesture the header dismisses with (swipe up), reversed. -->
     <Transition name="reveal-fab">
       <button
-        v-if="!isMobileViewport && !settingsStore.showHeader && !isEditMode"
+        v-if="!settingsStore.showHeader && !isEditMode"
         ref="revealFabRef"
         type="button"
         class="header-reveal-fab"
@@ -161,24 +169,27 @@
         aria-label="Show header"
         @click="revealHeader"
       >
-        <!-- Mini window-with-header glyph (DL-104): a tiny panel whose
-             accent header band is what's summoned — reads as "drop the
-             header down", not a generic arrow. The word sits on the
-             button body so it can't be missed. -->
+        <!-- Mini window-with-header glyph (DL-104/DL-134): a tiny panel
+             whose accent header band is what's summoned — reads as "drop
+             the header down", not a generic arrow. Layers, back to front:
+             orbiting accent rim (::before), glass plate (::after), the
+             band + label, then a periodic sheen sweep over everything. -->
         <span class="fab-head" aria-hidden="true"></span>
         <span class="fab-body">
           <span class="fab-label">Header</span>
           <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="fab-caret" />
         </span>
+        <span class="fab-sheen" aria-hidden="true"></span>
       </button>
     </Transition>
+    </template>
 
     <!-- Screen Saver overlay — wrapped in a dissolve Transition (DL-003
          follow-up): it blooms in from center on idle, and evaporates
          edges-in back to the deck on dismiss. -->
     <Transition name="saver-dissolve">
       <ScreenSaver
-        v-if="screensaverVisible"
+        v-if="screensaverVisible && !winampMode"
         :visible="screensaverVisible"
         :layout-edit="screensaverLayoutEdit"
         @dismiss="dismissScreensaver"
@@ -229,8 +240,9 @@
       {{ actionResult.message }}
     </div>
 
-    <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt -->
-    <RotateToLandscape :portrait-allowed="screensaverVisible || showsMobileAgentConsole" />
+    <!-- Phones: the deck is landscape-only — portrait shows a rotate prompt.
+         Winamp mode has its own portrait layout (DL-136) so it's exempt. -->
+    <RotateToLandscape :portrait-allowed="screensaverVisible || showsMobileAgentConsole || winampMode" />
   </div>
 </template>
 
@@ -258,6 +270,7 @@ import RotateToLandscape from '@/components/RotateToLandscape.vue'
 import AgentActionBar from '@/components/AgentActionBar.vue'
 import AgentWaitingGlow from '@/components/AgentWaitingGlow.vue'
 import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
+import WinampPlayer from '@/components/WinampPlayer.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useTutorial } from '@/services/tutorial'
@@ -326,6 +339,11 @@ const quickAddTarget = ref<'page' | 'docked'>('page')
 // Screensaver / idle-timer state
 const screensaverVisible = ref(false)
 const tour = useTutorial()
+// DL-136: 'winamp' swaps the whole deck chrome for the player UI.
+const winampMode = computed(() => settingsStore.playerMode === 'winamp')
+function exitWinampMode() {
+  settingsStore.playerMode = 'deck'
+}
 // True while the screensaver is showing its drag/resize layout editor —
 // reached via the 'screensaver_layout_edit' ui_command from Settings.
 const screensaverLayoutEdit = ref(false)
@@ -335,6 +353,9 @@ const IDLE_EVENTS = ['pointermove', 'pointerdown', 'keydown'] as const
 
 function resetIdleTimer() {
   if (idleTimer) clearTimeout(idleTimer)
+  // DL-136 follow-up: in Winamp mode the player *is* the idle display —
+  // the screensaver never covers it.
+  if (winampMode.value) return
   const timeoutMs = settingsStore.screensaverTimeout * 1000
   if (timeoutMs <= 0) return
   idleTimer = setTimeout(() => {
@@ -358,6 +379,10 @@ watch(() => tour.state.active, (active) => {
 })
 watch(screensaverVisible, (visible) => {
   if (visible && tour.state.active) tour.finish()
+})
+// Switching into Winamp mode drops any visible saver for good measure.
+watch(winampMode, (on) => {
+  if (on && screensaverVisible.value) dismissScreensaver()
 })
 
 function saveScreensaverLayout(layout: ScreensaverLayout) {
@@ -1169,10 +1194,10 @@ onMounted(async () => {
   // Setting the flag directly means the preview also works when
   // screensaverTimeout is 0 (screensaver disabled).
   stopUiCommandListener = listenForUiCommands((command) => {
-    if (command === 'show_screensaver') {
+    if (command === 'show_screensaver' && !winampMode.value) {
       screensaverVisible.value = true
     }
-    if (command === 'screensaver_layout_edit') {
+    if (command === 'screensaver_layout_edit' && !winampMode.value) {
       screensaverLayoutEdit.value = true
       screensaverVisible.value = true
     }
@@ -1445,69 +1470,129 @@ onUnmounted(() => {
   position: fixed;
   right: var(--spacing-touch-md, var(--spacing-md));
   bottom: var(--spacing-touch-md, var(--spacing-md));
-  width: max(92px, calc(92px * min(var(--touch-multiplier, 1), 1.4)));
-  height: max(58px, calc(58px * min(var(--touch-multiplier, 1), 1.4)));
-  border-radius: 14px;
+  width: max(120px, calc(120px * min(var(--touch-multiplier, 1), 1.4)));
+  height: max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)));
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(10, 8, 32, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 8, 32, 0.55);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  opacity: 0.8;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42);
+  opacity: 0.9;
   transition: opacity 0.2s ease, transform 0.2s ease, bottom 0.3s var(--ease-io, ease);
   z-index: 95;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
-  animation: fab-breathe 3s ease-in-out infinite;
+}
+
+/* Orbiting accent light — a conic sweep clipped to the rim by the inner
+   plate, so the edge itself reads alive instead of a static border. */
+.header-reveal-fab::before {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  background: conic-gradient(from 0deg,
+      transparent 0deg,
+      rgba(64, 179, 162, 0) 25deg,
+      rgba(64, 179, 162, 0.9) 80deg,
+      rgba(120, 226, 255, 0.95) 115deg,
+      rgba(64, 179, 162, 0) 160deg,
+      transparent 360deg);
+  animation: fab-orbit 4.6s linear infinite;
+}
+
+/* Inner plate — masks the sweep down to a ~1.5px rim and keeps the face
+   glassy-dark so the band and label stay legible. */
+.header-reveal-fab::after {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 16.5px;
+  background: linear-gradient(165deg, rgba(26, 24, 56, 0.86), rgba(9, 8, 26, 0.9));
+}
+
+@keyframes fab-orbit {
+  to { transform: rotate(360deg); }
 }
 
 /* The accent "header" band across the top of the mini window — the part
-   the button summons. It bobs down a couple px on a loop: a tactile
-   "the header drops" hint legible where hover never fires. */
+   the button summons. A sheen slides through it on a loop so the band
+   itself glints rather than sitting flat. */
 .fab-head {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 40%;
-  background: linear-gradient(180deg, #40B3A2 0%, #2e8b7d 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
-  animation: fab-head-drop 2.6s ease-in-out infinite;
+  height: 34%;
+  z-index: 1;
+  background: linear-gradient(100deg,
+      #2e8b7d 0%, #40b3a2 36%, #6fe6d2 50%, #40b3a2 64%, #2e8b7d 100%);
+  background-size: 260% 100%;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 6px 14px rgba(64, 179, 162, 0.25);
+  animation: fab-head-sheen 3.4s ease-in-out infinite;
 }
 
-@keyframes fab-head-drop {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(2px); }
+@keyframes fab-head-sheen {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
 }
 
-/* Body row under the band: the label names the control, the caret is
-   the pull-down cue. */
+/* Body row under the band: the label names the control, the caret dips
+   on a loop — the pull-down cue, legible where hover never fires. */
 .fab-body {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  top: 40%;
+  top: 34%;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .fab-label {
   color: rgba(255, 255, 255, 0.95);
-  font-size: calc(0.86rem * min(var(--touch-multiplier, 1), 1.4));
+  font-size: calc(0.92rem * min(var(--touch-multiplier, 1), 1.4));
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   line-height: 1;
 }
 
 .fab-caret {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.4));
+  color: #6fe6d2;
+  font-size: calc(1rem * min(var(--touch-multiplier, 1), 1.4));
+  animation: fab-caret-dip 1.9s ease-in-out infinite;
+}
+
+@keyframes fab-caret-dip {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+
+/* Glass sheen — a skewed highlight sweeping the face every few seconds. */
+.fab-sheen {
+  position: absolute;
+  top: -35%;
+  bottom: -35%;
+  left: -45%;
+  width: 38%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transform: skewX(-16deg) translateX(0);
+  animation: fab-sheen-sweep 5.4s ease-in-out infinite;
+}
+
+@keyframes fab-sheen-sweep {
+  0%, 55% { transform: skewX(-16deg) translateX(0); opacity: 0; }
+  62% { opacity: 1; }
+  90%, 100% { transform: skewX(-16deg) translateX(430%); opacity: 0; }
 }
 
 .header-reveal-fab.above-footer {
@@ -1518,14 +1603,7 @@ onUnmounted(() => {
 .header-reveal-fab:focus-visible,
 .header-reveal-fab:active {
   opacity: 1;
-  transform: scale(1.08);
-}
-
-/* A soft periodic ring keeps the control discoverable on touchscreens,
-   where hover never fires — a bare icon button would read as decoration. */
-@keyframes fab-breathe {
-  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 255, 255, 0.18); }
-  50% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 6px rgba(255, 255, 255, 0); }
+  transform: scale(1.06);
 }
 
 .reveal-fab-enter-active,
@@ -1541,7 +1619,10 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .header-reveal-fab,
-  .fab-head { animation: none; transition: none; }
+  .header-reveal-fab::before,
+  .fab-head,
+  .fab-caret { animation: none; transition: none; }
+  .fab-sheen { display: none; }
   .reveal-fab-enter-active,
   .reveal-fab-leave-active { transition: none; }
 }

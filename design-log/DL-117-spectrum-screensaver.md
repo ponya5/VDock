@@ -173,3 +173,24 @@ Now `numpy>=1.26,<3` (Windows-only, as before), so pip resolves the newest
 release the installed Python supports — 2.0.x on 3.9, 2.2.x on 3.10, 2.4.x on
 3.11, 2.5.x on 3.12+. The capture path only uses `asarray`, `hanning`,
 `fft.rfft`, `abs`, `max`, which are stable across that range.
+
+## Follow-up — spectrum widget allowed on mobile (2026-02-20)
+
+DL-063's curated mobile screensaver hard-gated every component widget
+(`!isMobileViewport`): clock/weather/world-clock are force-shown, the
+rest don't exist. Requested: the visualizer should be available in the
+mobile screensaver too.
+
+- `ScreenSaver.vue`: `showSpectrumWidget` drops the mobile gate — the
+  settings toggle now controls it on mobile as well (still opt-in, so
+  the curated set stays the default). Now-playing and system-stats stay
+  desktop-only.
+- Wrapper gains `ss-wrap-spectrum` for mobile placement. Portrait:
+  full-width block in the centered column. Landscape: `grid-column:
+  1 / -1` — auto-placement lands past the clock's `row span 10`, so it
+  becomes a full-width bottom strip; panel height `clamp(110px, 30vh,
+  240px)` (portrait `clamp(96px, 18vh, 200px)`), vs the 240×96 desktop
+  chip. `:deep()` reaches the widget's scoped internals.
+- Verified headless-CDP on emulated touch viewports: 1024×600 landscape
+  (strip spans full width under clock+rail) and 390×844 portrait
+  (full-width block in column).

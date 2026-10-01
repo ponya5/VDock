@@ -146,3 +146,6 @@ the eventual merge into the main line.
 | [DL-131](DL-131-manual-tour-steps.md) | Manual-only tour steps + live spotlight re-anchor | Implemented |
 | [DL-132](DL-132-guide-landing-page.md) | Standalone /guide landing page with search + screenshots | Implemented |
 | [DL-133](DL-133-spectrum-follow-and-shuffle-saver.md) | Endpoint-following spectrum capture, bigger media card, Shuffle saver type | Implemented |
+| [DL-134](DL-134-panel-header-reveal-media-bar.md) | Header reveal FAB + DeckHeader on mobile viewports; spectrum media bar merges Play/Stop into one `media_play_stop` button; larger now-playing text | In progress |
+| [DL-135](DL-135-spectrum-widget-overlay.md) | Info widgets (clock/weather/etc.) can overlay the spectrum screensaver | In progress |
+| [DL-136](DL-136-winamp-player-mode.md) | Winamp player mode — dashboard swaps to a Winamp-classic player UI | Complete — `playerMode` setting, WinampPlayer window with LCD/analyzer/transport/EQ/playlist, portrait + landscape verified |

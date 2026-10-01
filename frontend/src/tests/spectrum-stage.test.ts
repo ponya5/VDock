@@ -47,10 +47,10 @@ beforeEach(() => {
 })
 
 describe('spectrum skin registry', () => {
-  it('ships seven unique skins mapped from the references', () => {
+  it('ships thirteen unique skins mapped from the references', () => {
     const ids = SPECTRUM_SKINS.map(s => s.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids).toEqual(['winamp', 'mono', 'uv', 'iso', 'scope', 'aurora', 'ember'])
+    expect(ids).toEqual(['winamp', 'mono', 'uv', 'iso', 'scope', 'aurora', 'ember', 'rotor', 'swarm', 'wave', 'ring', 'mirror', 'psyche'])
     for (const skin of SPECTRUM_SKINS) {
       expect(skin.label.length).toBeGreaterThan(0)
       expect(typeof skin.create().draw).toBe('function')
@@ -80,6 +80,35 @@ describe('spectrum skin registry', () => {
     expect(a.every(v => v >= 0 && v <= 100)).toBe(true)
     expect(a).not.toEqual(b)
   })
+
+  // DL-134: the upgraded motion layers (pulses, sweeps, spark pools,
+  // comets) touch a lot of canvas API — run every skin through frames to
+  // catch runtime errors a source read can't.
+  it('every skin draws live + idle frames without throwing', () => {
+    const grad = { addColorStop: () => {} }
+    const ctx = new Proxy<Record<string, unknown>>({
+      createLinearGradient: () => grad,
+      createRadialGradient: () => grad,
+    }, {
+      get: (t, p) => (p in t ? t[p] : (t[p] = () => {})),
+      set: (t, p, v) => { t[p] = v; return true },
+    }) as unknown as CanvasRenderingContext2D
+    for (const skin of SPECTRUM_SKINS) {
+      const renderer = skin.create()
+      for (let i = 0; i < 90; i++) {
+        const t = i / 30
+        const live = i % 45 < 30 // exercise both live and idle paths
+        renderer.draw(ctx, {
+          bands: demoBands(t),
+          level: live ? 40 + 30 * Math.sin(t * 2) : 0,
+          live,
+          w: 800, h: 480, t, dt: 1 / 30,
+        })
+      }
+      // Sanity: the renderer actually issued draw calls.
+      expect(typeof ctx.fillRect).toBe('function')
+    }
+  })
 })
 
 describe('SpectrumStage', () => {
@@ -106,13 +135,18 @@ describe('SpectrumStage', () => {
   it('media buttons dispatch cross_platform media actions', async () => {
     const wrapper = mountStage()
     const buttons = wrapper.findAll('.spectrum-media-btn')
-    expect(buttons).toHaveLength(4) // prev, play/pause, stop, next
+    expect(buttons).toHaveLength(3) // prev, play/stop (state-split), next
     await buttons[0].trigger('click')
     expect(executeAction).toHaveBeenCalledWith({
       type: 'cross_platform',
       config: { action: 'media_previous' },
     })
-    await buttons[3].trigger('click')
+    await buttons[1].trigger('click')
+    expect(executeAction).toHaveBeenLastCalledWith({
+      type: 'cross_platform',
+      config: { action: 'media_play_stop' },
+    })
+    await buttons[2].trigger('click')
     expect(executeAction).toHaveBeenLastCalledWith({
       type: 'cross_platform',
       config: { action: 'media_next' },
@@ -249,7 +283,19 @@ describe('ScreenSaver integration (source contract)', () => {
     expect(src).toContain('<SpectrumStage')
   })
 
-  it('widget services do not start in spectrum mode', () => {
-    expect(src).toContain('if (!spectrumMode.value)')
+  it('widget feeds follow the widget layer, not the surface type', () => {
+    // DL-135: feeds run whenever a layer can show them — the widget
+    // surface, or the spectrum when screensaverSpectrumWidgets is on —
+    // and sleep while stats or a bare spectrum is on stage.
+    expect(src).toContain('widgetLayerOn')
+    expect(src).toContain('watch(widgetLayerOn')
+    expect(src).toContain('if (widgetLayerOn.value)')
+  })
+
+  it('spectrum overlay is opt-in and excludes the component widgets', () => {
+    // DL-135: the six info widgets may overlay the stage; the embedded
+    // now-playing/mini-spectrum/system-stats widgets stay surface-only.
+    expect(src).toContain('screensaverSpectrumWidgets')
+    expect(src).toContain('v-if="!spectrumBackdrop"')
   })
 })

@@ -137,3 +137,13 @@ Suites: **541 frontend (86 files) + 1111 backend** — 7 new backend +
 13 new frontend tests; vue-tsc clean; `dist` rebuilt; backend restarted
 (10 integration packs loaded, zero errors).
 
+## Follow-up (DL-134 session): type + activation merged into "General"
+
+User feedback on the new layout: the standalone "Screensaver type" and
+"Activation" panels read as clutter — three panels for six rows. The
+`#ss-type` and `#ss-activation` panels are now one `#ss-general` panel
+titled **General**: Screensaver Type select, Rotate-every (shuffle only),
+Idle delay slider, and the Try it row (Test + Customise layout). The
+`settings` deep-link anchor now targets `ss-general`; tests updated
+(`screensaver-shuffle`, `dashboard-font` panel-anchor assertions).
+
