@@ -164,3 +164,12 @@ enabling the feature would intermittently kill the whole backend.
 - Mount `SpectrumWidget` under widget id `spectrum`, title "Spectrum".
 - Non-Windows: loopback enumeration likely finds nothing → module idles
   with one log line (retries quietly); widget shows unavailable. Sound.
+
+## Follow-up: numpy requirement relaxed to a range
+
+`numpy==2.5.3` (the version found in the dev venv) broke `setup.bat` option 1
+on Python 3.11: numpy 2.5 requires Python 3.12+, while setup promises 3.9+.
+Now `numpy>=1.26,<3` (Windows-only, as before), so pip resolves the newest
+release the installed Python supports — 2.0.x on 3.9, 2.2.x on 3.10, 2.4.x on
+3.11, 2.5.x on 3.12+. The capture path only uses `asarray`, `hanning`,
+`fft.rfft`, `abs`, `max`, which are stable across that range.

@@ -207,3 +207,8 @@ SKILL.md
 # Build/cache artifacts and stray debug dumps
 *.tsbuildinfo
 _diff*.txt
+
+# Screenshots belong in design-log/refs/ or docs/assets/screens/, never the repo root
+/*.png
+/*.jpg
+/*.jpeg

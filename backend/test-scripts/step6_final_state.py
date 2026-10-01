@@ -39,8 +39,8 @@ with sync_playwright() as pw:
         print("  state:", bar.locator(".agent-state-text").inner_text().replace("\n", " / "))
         print("  actions:", bar.locator(".agent-action .agent-action-label").all_inner_texts())
 
-    page.screenshot(path=str(REPO / "dl131-cursor-scene.png"))
-    print("final screenshot -> dl131-cursor-scene.png")
+    page.screenshot(path=str(REPO / "design-log" / "refs" / "dl131-cursor-scene.png"))
+    print("final screenshot -> design-log/refs/dl131-cursor-scene.png")
     browser.close()
 
 p = get_profile()
