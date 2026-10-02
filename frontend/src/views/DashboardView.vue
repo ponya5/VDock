@@ -367,10 +367,10 @@ watch(screensaverVisible, (visible) => {
   setScreensaverVisible(visible)
 }, { immediate: true })
 
-function saveScreensaverLayout(layout: ScreensaverLayout) {
+function saveScreensaverLayout(layout: ScreensaverLayout, target: 'widgets' | 'spectrum' = 'widgets') {
   // Assigning the store ref persists through the settings watch → local +
-  // server sync.
-  settingsStore.screensaverLayout = layout
+  // server sync. DL-142: each saver type has its own layout.
+  settingsStore.setScreensaverLayout(target, layout)
 }
 
 function onPlaceholderClick(position: { row: number; col: number }) {
