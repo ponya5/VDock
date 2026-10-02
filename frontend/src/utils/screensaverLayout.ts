@@ -1,6 +1,9 @@
+// DL-141: 'spectrum'/'systemstats' were removed — they're screensaver
+// *types* (SpectrumStage/StatsStage own the whole surface), not widgets.
+// Persisted layouts carrying them are dropped by normalize below.
 export type ScreensaverWidgetId =
   | 'clock' | 'weather' | 'news' | 'market' | 'worldclock' | 'sports'
-  | 'nowplaying' | 'spectrum' | 'systemstats'
+  | 'nowplaying'
 
 export interface ScreensaverWidgetLayout {
   /** Widget center as a percentage of viewport width. */
@@ -21,8 +24,6 @@ export const SCREENSAVER_WIDGET_IDS: ScreensaverWidgetId[] = [
   'worldclock',
   'sports',
   'nowplaying',
-  'spectrum',
-  'systemstats',
 ]
 
 export const SCREENSAVER_WIDGET_LABELS: Record<ScreensaverWidgetId, string> = {
@@ -33,8 +34,6 @@ export const SCREENSAVER_WIDGET_LABELS: Record<ScreensaverWidgetId, string> = {
   worldclock: 'World Clock',
   sports: 'Sports',
   nowplaying: 'Now Playing',
-  spectrum: 'Spectrum',
-  systemstats: 'System',
 }
 
 /**
@@ -50,11 +49,9 @@ export const DEFAULT_SCREENSAVER_LAYOUT: ScreensaverLayout = {
   news: { x: 26, y: 78, scale: 1 },
   sports: { x: 60, y: 78, scale: 1 },
   worldclock: { x: 86, y: 76, scale: 1 },
-  // New columns slot beside the corner pills; spectrum sits center-stage
-  // under the clock where its bars have room to breathe.
+  // Now Playing slots beside the weather pill — its own column under the
+  // market ticker.
   nowplaying: { x: 14, y: 30, scale: 1 },
-  spectrum: { x: 50, y: 62, scale: 1 },
-  systemstats: { x: 87, y: 30, scale: 1 },
 }
 
 function clampNum(v: unknown, min: number, max: number, fallback: number): number {

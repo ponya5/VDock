@@ -6,6 +6,7 @@
     :class="{
       'bg-animated': !isStandaloneSettings && settingsStore.background !== 'default',
       'settings-standalone-mode': isStandaloneSettings,
+      'settings-route': route.path === '/settings',
     }"
   >
     <!-- Suspended while the screensaver covers the deck — an animated
@@ -185,6 +186,23 @@ body {
 
 #app.settings-standalone-mode {
   background: var(--color-background, #0f1419);
+}
+
+/* DL-140: at ≤880px SettingsView switches to a body-scroll page (nav becomes
+   a top strip, the dock pins bottom:0) — that only works if #app stops
+   clipping at 100dvh, otherwise the whole page is unreachable below the fold
+   and hidden-overflow scrolls leave stale paint. Scoped to the settings
+   route so the fixed-viewport deck keeps its clip at the same widths. */
+@media (max-width: 880px) {
+  /* Two nested #app divs exist: the index.html mount point and this
+     component's root — both carry the clip, so both must release it. */
+  #app.settings-route,
+  #app:has(> .settings-route) {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
 }
 </style>
 

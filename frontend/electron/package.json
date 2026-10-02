@@ -3,7 +3,7 @@
   "version": "2.2.0",
   "description": "VDock - Virtual Stream Deck Desktop App",
   "license": "MIT",
-  "author": "VDock Contributors",
+  "author": "ponya5",
   "repository": {
     "type": "git",
     "url": "https://github.com/ponya5/VDock2.git",
@@ -103,7 +103,7 @@
       ],
       "icon": "../public/vdock-icon.png",
       "description": "Virtual Stream Deck — customizable on-screen buttons, scenes and agent controls",
-      "maintainer": "VDock Contributors"
+      "maintainer": "ponya5"
     }
   },
   "devDependencies": {

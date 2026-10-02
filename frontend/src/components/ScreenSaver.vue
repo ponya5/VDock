@@ -6,6 +6,11 @@
     @click="onRootTap"
     @touchstart.passive="onRootTap"
   >
+    <!-- DL-133 F/U: the whole scene is keyed on the effective style — a
+         shuffle (or a style change) dissolves the old scene out while the
+         new one is already mounted beneath it. -->
+    <Transition name="ss-xfade">
+    <div :key="effectiveStyle" class="ss-scene">
     <!-- DL-123/125/135: 'spectrum' renders the stage as the backdrop —
          info widgets can overlay it (screensaverSpectrumWidgets) and the
          layout editor edits them right on the canvas; 'stats' stays
@@ -265,12 +270,12 @@
       ></span>
     </div>
 
-    <!-- Standalone component widgets (DL-116/117/118): now-playing, audio
-         spectrum and system stats own their data plumbing entirely — the
-         .ss-pos wrapper only positions, drags and resizes them.
-         DL-135: widget-surface only — over the spectrum they'd duplicate
-         the stage's own media bar / be the stage itself / belong to the
-         stats stage. -->
+    <!-- Standalone component widget (DL-116): now-playing owns its data
+         plumbing entirely — the .ss-pos wrapper only positions, drags and
+         resizes it. Widget-surface only: over the spectrum it would
+         duplicate the stage's own media bar.
+         DL-141: the spectrum/system-stats widgets were demoted — they're
+         screensaver *types*, not widgets. -->
     <template v-if="!spectrumBackdrop">
     <div
       v-if="showNowPlayingWidget"
@@ -285,38 +290,6 @@
         v-if="layoutEdit"
         class="ss-resize"
         @pointerdown.stop="startResize('nowplaying', $event)"
-      ></span>
-    </div>
-
-    <div
-      v-if="showSpectrumWidget"
-      :ref="el => setWidgetEl('spectrum', el)"
-      class="ss-pos ss-wrap-spectrum"
-      :class="{ 'ss-editing': layoutEdit }"
-      :style="posStyle('spectrum', widgetScaleNum)"
-      @pointerdown="startDrag('spectrum', $event)"
-    >
-      <SpectrumWidget :layout-edit="layoutEdit" />
-      <span
-        v-if="layoutEdit"
-        class="ss-resize"
-        @pointerdown.stop="startResize('spectrum', $event)"
-      ></span>
-    </div>
-
-    <div
-      v-if="showSystemStatsWidget"
-      :ref="el => setWidgetEl('systemstats', el)"
-      class="ss-pos"
-      :class="{ 'ss-editing': layoutEdit }"
-      :style="posStyle('systemstats', widgetScaleNum)"
-      @pointerdown="startDrag('systemstats', $event)"
-    >
-      <SystemStatsWidget :layout-edit="layoutEdit" />
-      <span
-        v-if="layoutEdit"
-        class="ss-resize"
-        @pointerdown.stop="startResize('systemstats', $event)"
       ></span>
     </div>
     </template>
@@ -354,6 +327,8 @@
       <button type="button" class="ss-edit-btn" @click="emit('dismiss')">Done</button>
     </div>
     </template>
+    </div>
+    </Transition>
   </div>
 </template>
 
@@ -374,8 +349,6 @@ import { resolveBackground, DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUN
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
 import NowPlayingWidget from '@/components/screensaver/NowPlayingWidget.vue'
-import SpectrumWidget from '@/components/screensaver/SpectrumWidget.vue'
-import SystemStatsWidget from '@/components/screensaver/SystemStatsWidget.vue'
 import SpectrumStage from '@/components/screensaver/SpectrumStage.vue'
 import StatsStage from '@/components/screensaver/StatsStage.vue'
 import { pickNextSaverType, type ScreensaverType } from '@/services/screensaverTypes'
@@ -514,8 +487,7 @@ const showMarketWidget = computed(() => !isMobileViewport.value && settingsStore
 const showWorldClockWidget = computed(() => isMobileViewport.value || settingsStore.screensaverWidgets.includes('worldclock'))
 const showSportsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('sports'))
 // DL-116/117/118 widgets stay desktop-only like markets — the mobile
-// screensaver keeps its curated small set. (The spectrum widget is the
-// exception: DL-135 lets it ride the phone layouts when enabled.)
+// screensaver keeps its curated small set.
 // DL-123/133: 'spectrum'/'stats' swap the entire surface; 'shuffle' rotates
 // the effective style on an interval.
 // DL-135: the spectrum stage no longer unmounts for layout editing —
@@ -574,11 +546,6 @@ watch(widgetLayerOn, (on) => {
   }
 })
 const showNowPlayingWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('nowplaying'))
-// DL-135: the spectrum widget is allowed on mobile when explicitly
-// enabled (unlike the other component widgets) — it becomes the saver's
-// headline. Enabled-by-default mobile widgets keep the curated layout.
-const showSpectrumWidget = computed(() => settingsStore.screensaverWidgets.includes('spectrum'))
-const showSystemStatsWidget = computed(() => !isMobileViewport.value && settingsStore.screensaverWidgets.includes('systemstats'))
 
 // User-tunable text scale for the info widgets (Settings → Screensaver →
 // Widget size), amplified in touch modes. Capped at 1.35 so the three-across
@@ -691,7 +658,7 @@ function clampCenter(id: ScreensaverWidgetId, x: number, y: number, scale: numbe
 // Info widgets take the widget-size slider on top of the layout scale.
 const usesWidgetScale = (id: ScreensaverWidgetId) =>
   id === 'market' || id === 'news' || id === 'sports' || id === 'worldclock'
-  || id === 'nowplaying' || id === 'spectrum' || id === 'systemstats'
+  || id === 'nowplaying'
 
 // Effective scale for a widget, capped by the measured viewport: a widget
 // that renders taller than ~46% of the screen (or wider than ~62%) can never
@@ -719,8 +686,6 @@ const mountedWidgets = computed<ScreensaverWidgetId[]>(() => {
   if (showSportsWidget.value) ids.push('sports')
   if (showWorldClockWidget.value) ids.push('worldclock')
   if (showNowPlayingWidget.value) ids.push('nowplaying')
-  if (showSpectrumWidget.value) ids.push('spectrum')
-  if (showSystemStatsWidget.value) ids.push('systemstats')
   return ids
 })
 
@@ -1098,7 +1063,9 @@ const rootEl = ref<HTMLElement | null>(null)
 let ssObserver: ResizeObserver | null = null
 
 function evalNewsFit() {
-  const el = rootEl.value
+  // The scroll container moved into the scene layer (DL-133 F/U shuffle
+  // crossfade) — measure whichever scene is mounted, falling back to root.
+  const el = (rootEl.value?.querySelector('.ss-scene') ?? rootEl.value) as HTMLElement | null
   if (!el || !isMobileViewport.value) return
   if (el.scrollHeight > el.clientHeight + 4 || el.scrollWidth > el.clientWidth + 4) {
     newsFits.value = false
@@ -1177,6 +1144,31 @@ onUnmounted(() => {
   -webkit-user-select: none;
   user-select: none;
   overflow: hidden;
+}
+
+/* DL-133 F/U: shuffle scenes are keyed siblings — each is a fullscreen
+   layer, so a type swap mounts the incoming scene under the leaving one
+   and the leaving layer dissolves away (pure crossfade, no dip to
+   black). The scene carries the root's centering so flattened
+   mobile/narrow widget flow still works inside it. */
+.ss-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ss-xfade-leave-active {
+  z-index: 5;
+  pointer-events: none; /* the outgoing scene must not eat taps */
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+.ss-xfade-leave-to {
+  opacity: 0;
+  transform: scale(1.02);
 }
 
 /* Custom screensaver background layer. Kept as a child div (rather than on
@@ -1506,6 +1498,13 @@ onUnmounted(() => {
   .ss-feed-leave-to {
     transform: none;
   }
+  /* Scene swaps keep a plain quick fade — no scale drift. */
+  .ss-xfade-leave-active {
+    transition: opacity 0.25s ease;
+  }
+  .ss-xfade-leave-to {
+    transform: none;
+  }
 }
 
 .ss-article-meta {
@@ -1783,7 +1782,7 @@ onUnmounted(() => {
     margin: 0.4rem 0;
   }
 
-  .screensaver {
+  .screensaver .ss-scene {
     overflow-y: auto;
     justify-content: flex-start;
     padding: 2rem 0;
@@ -1797,7 +1796,7 @@ onUnmounted(() => {
    flattened into flow (inline styles need !important).
    Landscape = two-column grid: clock hero left, glance rail right.
    Portrait = single centered column, clock first. */
-.screensaver.ss-mobile {
+.screensaver.ss-mobile .ss-scene {
   gap: clamp(8px, 3vh, 18px);
   padding: 0 5vw;
   /* The narrow-viewport media rule above switches to top-aligned scroll —
@@ -1914,22 +1913,6 @@ onUnmounted(() => {
   font-size: clamp(1.05rem, 5.5vh, 1.7rem);
 }
 
-/* Spectrum widget on mobile (opt-in via its settings toggle): never the
-   240px desktop chip — portrait it spans the column width, landscape it
-   becomes a full-width bottom strip. The strip's grid auto-placement
-   lands past the clock's row span, so no explicit row is needed. */
-.screensaver.ss-mobile .ss-wrap-spectrum {
-  width: 100%;
-}
-
-.screensaver.ss-mobile .ss-wrap-spectrum :deep(.ss-spectrum) {
-  width: 100%;
-}
-
-.screensaver.ss-mobile .ss-wrap-spectrum :deep(.ss-spectrum-panel) {
-  height: clamp(96px, 18vh, 200px);
-}
-
 /* Landscape: clock + date hero on the left, everything else in a right
    "glance rail" — weather pill, headlines, world-clock chips stacked in
    `order`-modified sequence. Height stays the constraint, width does the
@@ -1955,18 +1938,6 @@ onUnmounted(() => {
   .screensaver.ss-mobile .ss-wrap-worldclock {
     grid-column: 2;
     justify-self: stretch;
-  }
-
-  /* The visualizer owns the bottom edge — wide and tall enough to read
-     from a glance; if the column above runs tall it may crop, which is
-     intentional (overflow stays hidden). */
-  .screensaver.ss-mobile .ss-wrap-spectrum {
-    grid-column: 1 / -1;
-    justify-self: stretch;
-  }
-
-  .screensaver.ss-mobile .ss-wrap-spectrum :deep(.ss-spectrum-panel) {
-    height: clamp(110px, 30vh, 240px);
   }
 
   .screensaver.ss-mobile .ss-worldclock {

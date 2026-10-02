@@ -29,10 +29,11 @@ export interface LegacyBackgroundFields {
  * can hold a real selection and the migration is lossless.
  */
 export function migrateBackground(settings: LegacyBackgroundFields): string {
-  if (settings.background) return settings.background
+  if (typeof settings.background === 'string' && settings.background) return settings.background
   const pref = settings.backgroundPreference
-  if (pref && pref !== 'none') return pref
-  return settings.dashboardBackground || DEFAULT_BACKGROUND_ID
+  if (typeof pref === 'string' && pref && pref !== 'none') return pref
+  const legacy = settings.dashboardBackground
+  return typeof legacy === 'string' && legacy ? legacy : DEFAULT_BACKGROUND_ID
 }
 
 /**
@@ -566,14 +567,19 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.defaultGridCols !== undefined) defaultGridCols.value = settings.defaultGridCols
     if (settings.openSettingsInNewTab !== undefined) openSettingsInNewTab.value = settings.openSettingsInNewTab
     if (settings.autoCloseLauncher !== undefined) autoCloseLauncher.value = settings.autoCloseLauncher
-    if (settings.recentActions !== undefined) recentActions.value = settings.recentActions
+    if (Array.isArray(settings.recentActions)) recentActions.value = settings.recentActions
     if (settings.weatherLocationMode !== undefined) weatherLocationMode.value = settings.weatherLocationMode
     if (settings.weatherManualCity !== undefined) weatherManualCity.value = settings.weatherManualCity
     if (settings.screensaverTimeout !== undefined) screensaverTimeout.value = settings.screensaverTimeout
     if (settings.buttonDefaultAnimation !== undefined) buttonDefaultAnimation.value = settings.buttonDefaultAnimation
     if (settings.buttonDefaultIconLoop !== undefined) buttonDefaultIconLoop.value = settings.buttonDefaultIconLoop
     if (settings.buttonDefaultEffect !== undefined) buttonDefaultEffect.value = settings.buttonDefaultEffect
-    if (settings.screensaverWidgets !== undefined) screensaverWidgets.value = settings.screensaverWidgets
+    // DL-141: 'spectrum'/'systemstats' are screensaver types, not widgets —
+    // drop them from any persisted list so old payloads stop rendering them.
+    if (Array.isArray(settings.screensaverWidgets)) {
+      screensaverWidgets.value = settings.screensaverWidgets
+        .filter((id) => id !== 'spectrum' && id !== 'systemstats')
+    }
     if (settings.screensaverClockEnabled !== undefined) screensaverClockEnabled.value = settings.screensaverClockEnabled
     if (settings.screensaverWeatherSize !== undefined) screensaverWeatherSize.value = settings.screensaverWeatherSize
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
@@ -584,7 +590,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.marketTickers !== undefined) marketTickers.value = settings.marketTickers
     if (settings.worldClockTimezones !== undefined) worldClockTimezones.value = settings.worldClockTimezones
     if (settings.screensaverWidgetSize !== undefined) screensaverWidgetSize.value = settings.screensaverWidgetSize
-    if (settings.screensaverBackground !== undefined) screensaverBackground.value = settings.screensaverBackground
+    if (typeof settings.screensaverBackground === 'string') screensaverBackground.value = settings.screensaverBackground
     if (
       settings.screensaverStyle === 'widgets' ||
       settings.screensaverStyle === 'spectrum' ||

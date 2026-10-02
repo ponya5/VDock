@@ -1,13 +1,13 @@
-// DL-118 — System stats screensaver widget (W3)
+// DL-118 — System stats composable (StatsStage screensaver type).
+// DL-141: the SystemStatsWidget component was removed — system stats are a
+// screensaver *type*, not a widget; the composable coverage stays.
 //
 // The composable polls GET /api/metrics/all (~2.5 s) and normalizes the
-// psutil-shaped payload into the numbers the strip renders. These tests
+// psutil-shaped payload into the numbers the stage renders. These tests
 // cover cadence, payload mapping against the real backend key names
 // (utils/system_metrics.py), net-rate deltas from cumulative counters, the
 // optional GPU row, no request overlap, and stale-keep-last on failure.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 
 const get = vi.fn()
 vi.mock('@/api/client', () => ({ default: { get: (...a: any[]) => get(...a) } }))
@@ -226,29 +226,5 @@ describe('useSystemStats honest states', () => {
     await s.refresh()
     expect(s.stats.value).toBeNull()
     expect(s.error.value).toBeTruthy()
-  })
-})
-
-describe('SystemStatsWidget contract', () => {
-  const source = readFileSync(
-    resolve(__dirname, '../components/screensaver/SystemStatsWidget.vue'),
-    'utf-8'
-  )
-
-  it('renders a "System" section head like the other .ss sections', () => {
-    expect(source).toContain('<h2>System</h2>')
-    expect(source).toContain('ssw-hairline')
-  })
-
-  it('gates the GPU row on actual data and stops polling on unmount', () => {
-    expect(source).toMatch(/v-if="stats\.gpuPercent != null"/)
-    expect(source).toContain('onUnmounted(stop)')
-  })
-
-  it('has the three honest states: live rows, loading, unavailable', () => {
-    expect(source).toContain('v-if="stats"')
-    expect(source).toContain('Loading…')
-    expect(source).toContain('v-else-if="error"')
-    expect(source).toContain('is-stale')
   })
 })

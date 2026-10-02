@@ -157,6 +157,7 @@ const IMAGE_PREFIXES = ['/api/uploads/', '/uploads/', 'http://', 'https://']
 
 /** True when `id` is an uploaded or remote image URL rather than a catalog id. */
 export function isImageBackground(id: string): boolean {
+  if (typeof id !== 'string') return false
   return IMAGE_PREFIXES.some(prefix => id.startsWith(prefix))
 }
 

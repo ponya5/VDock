@@ -47,15 +47,18 @@ beforeEach(() => {
 })
 
 describe('spectrum skin registry', () => {
-  it('ships the full fourteen-skin catalogue', () => {
+  it('ships the full sixteen-skin catalogue', () => {
     const ids = SPECTRUM_SKINS.map(s => s.id)
     expect(new Set(ids).size).toBe(ids.length)
     // DL-134: the research-branch set restored (rotor/swarm/wave/ring/
-    // mirror/psyche) plus the hue-drifting 'rgb' bars.
+    // mirror) plus the hue-drifting 'rgb' bars.
+    // DL-139: GPU set — radial pulse + three.js wavegrid/flight.
+    // DL-139 follow-up: psyche/smoke/chrome cut on taste grounds.
     expect(ids).toEqual([
       'winamp', 'mono', 'uv', 'rgb',
       'iso', 'scope', 'aurora', 'ember',
-      'rotor', 'swarm', 'wave', 'ring', 'mirror', 'psyche',
+      'rotor', 'swarm', 'wave', 'ring', 'mirror',
+      'radial', 'wavegrid', 'flight',
     ])
     for (const skin of SPECTRUM_SKINS) {
       expect(skin.label.length).toBeGreaterThan(0)
