@@ -205,6 +205,9 @@ export interface PersistedUserSettings {
   pressSoundEnabled: boolean
   pressSoundStyle: 'click' | 'blip' | 'pop' | 'none'
   screensaverLayout: ScreensaverLayout
+  /** DL-142: independent layout for the Spectrum saver's widget overlay.
+   *  null = never customised → falls back to `screensaverLayout`. */
+  screensaverSpectrumLayout: ScreensaverLayout | null
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -344,6 +347,15 @@ export const useSettingsStore = defineStore('settings', () => {
   // Widget positions/scales in viewport percent (center-anchored). Edited via
   // the live layout editor reached from Settings -> Screensaver.
   const screensaverLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
+  // DL-142: the Spectrum saver keeps its own arrangement; null until the
+  // editor saves one, so existing users see no change on upgrade.
+  const screensaverSpectrumLayout = ref<ScreensaverLayout | null>(null)
+
+  /** Writes the layout belonging to one saver type (DL-142). */
+  function setScreensaverLayout(target: 'widgets' | 'spectrum', layout: ScreensaverLayout) {
+    if (target === 'spectrum') screensaverSpectrumLayout.value = layout
+    else screensaverLayout.value = layout
+  }
 
   let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
   let serverSyncInFlight: Promise<void> | null = null
@@ -528,6 +540,9 @@ export const useSettingsStore = defineStore('settings', () => {
       pressSoundStyle: pressSoundStyle.value,
       // Deep copy for the same structured-clone reason as recentActions above.
       screensaverLayout: JSON.parse(JSON.stringify(screensaverLayout.value)),
+      screensaverSpectrumLayout: screensaverSpectrumLayout.value
+        ? JSON.parse(JSON.stringify(screensaverSpectrumLayout.value))
+        : null,
     }
   }
 
@@ -618,6 +633,11 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.pressSoundStyle !== undefined) pressSoundStyle.value = settings.pressSoundStyle
     if (settings.screensaverLayout !== undefined) {
       screensaverLayout.value = normalizeScreensaverLayout(settings.screensaverLayout)
+    }
+    if (settings.screensaverSpectrumLayout !== undefined) {
+      const raw = settings.screensaverSpectrumLayout
+      screensaverSpectrumLayout.value =
+        raw && typeof raw === 'object' ? normalizeScreensaverLayout(raw) : null
     }
   }
 
@@ -731,6 +751,7 @@ export const useSettingsStore = defineStore('settings', () => {
         pressSoundEnabled: settings.pressSoundEnabled ?? true,
         pressSoundStyle: settings.pressSoundStyle ?? 'click',
         screensaverLayout: settings.screensaverLayout ?? defaultScreensaverLayout(),
+        screensaverSpectrumLayout: settings.screensaverSpectrumLayout ?? null,
       })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -953,6 +974,7 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverBackground,
       dashboardFont,
       screensaverLayout,
+      screensaverSpectrumLayout,
       appScanningEnabled,
       agentAlertsEnabled,
       agentWaitingGlowEnabled,
@@ -1206,6 +1228,8 @@ export const useSettingsStore = defineStore('settings', () => {
     pressSoundEnabled,
     pressSoundStyle,
     screensaverLayout,
+    screensaverSpectrumLayout,
+    setScreensaverLayout,
     applyTouchModeStyles,
     applyUIBrightnessFilter,
     applyButtonTransparency,

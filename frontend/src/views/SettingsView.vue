@@ -1965,10 +1965,11 @@ function handleCustomizeScreensaverLayout() {
   screensaverLayoutEditOpen.value = true
 }
 
-function onSaveScreensaverLayout(layout: ScreensaverLayout) {
+function onSaveScreensaverLayout(layout: ScreensaverLayout, target: 'widgets' | 'spectrum' = 'widgets') {
   // Assigning the store ref persists through the settings watch → local +
   // server sync, so the deck window picks the arrangement up live.
-  settingsStore.screensaverLayout = layout
+  // DL-142: each saver type has its own layout.
+  settingsStore.setScreensaverLayout(target, layout)
   screensaverLayoutEditOpen.value = false
   notificationsStore.success('Layout saved', 'The new widget arrangement is applied on the deck.')
 }

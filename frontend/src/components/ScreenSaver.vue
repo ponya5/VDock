@@ -321,7 +321,16 @@
       @touchstart.stop
       @pointerdown.stop
     >
-      <span class="ss-edit-hint">Drag widgets to move · corner dot resizes</span>
+      <span class="ss-edit-hint">
+        Editing the {{ layoutTarget === 'spectrum' ? 'Spectrum' : 'Widget dashboard' }} layout ·
+        drag to move · corner dot resizes
+      </span>
+      <button
+        v-if="settingsStore.screensaverStyle === 'shuffle'"
+        type="button"
+        class="ss-edit-btn"
+        @click="toggleShuffleEditTarget"
+      >Edit {{ layoutTarget === 'spectrum' ? 'Widgets' : 'Spectrum' }}</button>
       <button type="button" class="ss-edit-btn" @click="resetLayout">Reset</button>
       <button type="button" class="ss-edit-btn ss-edit-btn-primary" @click="saveLayout">Save</button>
       <button type="button" class="ss-edit-btn" @click="emit('dismiss')">Done</button>
@@ -360,7 +369,11 @@ import {
 import { useMobileViewport } from '@/utils/mobileViewport'
 
 const props = defineProps<{ visible: boolean; layoutEdit?: boolean }>()
-const emit = defineEmits<{ dismiss: []; 'save-layout': [layout: ScreensaverLayout] }>()
+// DL-142: save-layout carries which saver type's layout was edited.
+const emit = defineEmits<{
+  dismiss: []
+  'save-layout': [layout: ScreensaverLayout, target: 'widgets' | 'spectrum']
+}>()
 
 const settingsStore = useSettingsStore()
 const { isMobileViewport } = useMobileViewport()
@@ -588,13 +601,35 @@ let driftTick = 0
 // Normal mode reads the persisted layout; edit mode works on a local copy
 // that is only written back when the user hits Save.
 const editLayout = ref<ScreensaverLayout>(defaultScreensaverLayout())
-const activeLayout = computed(() =>
-  props.layoutEdit ? editLayout.value : settingsStore.screensaverLayout
+// DL-142: each saver type owns its arrangement. The spectrum overlay reads
+// its own layout (falling back to the widget layout until one is saved);
+// the widget dashboard — and the stats type's editor canvas — use the
+// original. With Shuffle, effectiveStyle resolves per displayed view.
+const layoutTarget = computed<'widgets' | 'spectrum'>(() =>
+  spectrumBackdrop.value ? 'spectrum' : 'widgets'
 )
+const persistedLayout = computed<ScreensaverLayout>(() =>
+  layoutTarget.value === 'spectrum'
+    ? (settingsStore.screensaverSpectrumLayout ?? settingsStore.screensaverLayout)
+    : settingsStore.screensaverLayout
+)
+const activeLayout = computed(() =>
+  props.layoutEdit ? editLayout.value : persistedLayout.value
+)
+
+// Shuffle has no single "current" type while editing (its timer is off), so
+// the toolbar lets the user pick which one's layout to arrange. Switching
+// discards unsaved edits to the other layout by reloading the copy below.
+function toggleShuffleEditTarget() {
+  shufflePick.value = layoutTarget.value === 'spectrum' ? 'widgets' : 'spectrum'
+}
+watch(layoutTarget, () => {
+  if (props.layoutEdit) editLayout.value = JSON.parse(JSON.stringify(persistedLayout.value))
+})
 
 watch(() => props.layoutEdit, (editing) => {
   if (editing) {
-    editLayout.value = JSON.parse(JSON.stringify(settingsStore.screensaverLayout))
+    editLayout.value = JSON.parse(JSON.stringify(persistedLayout.value))
     driftX.value = 0
     driftY.value = 0
   }
@@ -970,7 +1005,7 @@ function resetLayout() {
 }
 
 function saveLayout() {
-  emit('save-layout', JSON.parse(JSON.stringify(editLayout.value)))
+  emit('save-layout', JSON.parse(JSON.stringify(editLayout.value)), layoutTarget.value)
 }
 
 const WORLD_CLOCK_DEFAULTS = [
