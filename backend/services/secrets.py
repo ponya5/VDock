@@ -56,6 +56,18 @@ GITHUB_TOKEN = SecretSpec(
 ALL_SECRETS = (ANTHROPIC_API_KEY, GITHUB_TOKEN)
 
 
+#: Credentials discovered at runtime (e.g. the token behind ``gh auth login``).
+#: They are not in the environment, but they must still be scrubbed from any
+#: message or log line that could echo them.
+_runtime_secrets: set = set()
+
+
+def register_runtime_secret(value: Optional[str]) -> None:
+    """Make ``redact`` scrub ``value`` too (ignored when blank)."""
+    if value and value.strip():
+        _runtime_secrets.add(value.strip())
+
+
 def get(spec: SecretSpec) -> Optional[str]:
     """Return the secret's value, or None when unset or blank."""
     value = os.environ.get(spec.env_var, '').strip()
@@ -88,4 +100,7 @@ def redact(text: str) -> str:
         value = get(spec)
         if value and value in text:
             text = text.replace(value, f'[{spec.env_var} redacted]')
+    for value in _runtime_secrets:
+        if value in text:
+            text = text.replace(value, '[token redacted]')
     return text

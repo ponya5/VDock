@@ -263,6 +263,17 @@ _SYSTEM: Tuple[ActionSpec, ...] = (
         description="Show or hide VDock's header bar.",
         keywords=('ui', 'chrome', 'hide'),
     ),
+    ActionSpec(
+        id='agent_mission_control', label='Mission Control',
+        category='dev', icon=('fas', 'satellite-dish'),
+        action_type='ui_control',
+        default_config={'action': 'open_mission_control'},
+        runs_on=RUNS_FRONTEND,
+        description='Every live agent session in one list, with an approval '
+                    'inbox for blocked permission prompts.',
+        keywords=('agents', 'claude', 'cursor', 'approve', 'inbox',
+                  'sessions', 'mission'),
+    ),
 )
 
 # --- Navigation --------------------------------------------------------------

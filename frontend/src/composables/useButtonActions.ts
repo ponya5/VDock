@@ -8,6 +8,7 @@ import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
+import { openMissionControl } from '@/services/missionControl'
 
 export function useButtonActions() {
   const dashboardStore = useDashboardStore()
@@ -102,6 +103,9 @@ export function useButtonActions() {
           message: `UI brightness set to ${value}%`
         })
         return
+      } else if (action === 'open_mission_control') {
+        openMissionControl()
+        return
       } else if (action === 'toggle_header') {
         settingsStore.showHeader = !settingsStore.showHeader
         showActionResult({
@@ -128,6 +132,12 @@ export function useButtonActions() {
     dashboardStore.executeButtonAction(button).then((result) => {
       buttonStateStore.markFinished(button.id, result)
       showActionResult(result)
+      // A GitHub widget that knows where its data lives (the latest CI run,
+      // the PR list) takes you there: a red build is one tap from its log.
+      const url = result?.success ? result.data?.url : undefined
+      if (url && button.action?.type?.startsWith('gh_widget_')) {
+        void dashboardStore.executeAction({ type: 'url', config: { url } }, button.id)
+      }
     }).catch((error) => {
       const result = {
         success: false,

@@ -7,6 +7,16 @@
         role="status"
         :aria-label="dockAriaLabel"
       >
+        <button
+          type="button"
+          class="dock-inbox"
+          title="Open Mission Control - every agent session and pending approval"
+          data-testid="dock-inbox"
+          @click="openMissionControl"
+        >
+          <FontAwesomeIcon :icon="['fas', 'satellite-dish']" />
+          Mission Control
+        </button>
         <div
           v-for="alert in alerts.alerts.value"
           :key="alert.source"
@@ -38,6 +48,7 @@ import { computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { useSettingsStore } from '@/stores/settings'
+import { openMissionControl } from '@/services/missionControl'
 
 /**
  * DL-119: persistent "who needs you" dock. One chip per pending per-source
@@ -103,6 +114,23 @@ function navigate(source: string) {
   white-space: nowrap;
   max-width: min(70vw, 420px);
 }
+
+.dock-inbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: clamp(6px, 1.4vh, 10px) clamp(12px, 1.8vw, 16px);
+  border-radius: 999px;
+  border: 1px solid #3b5a8c;
+  background: rgba(15, 24, 41, 0.95);
+  color: #9cc2ff;
+  font: inherit;
+  font-size: clamp(0.8rem, 2.2vh, 1rem);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.dock-inbox:active { transform: scale(0.97); }
 
 .dock-chip:hover { filter: brightness(1.1); }
 .dock-chip:active { transform: scale(0.97); }

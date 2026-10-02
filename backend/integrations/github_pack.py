@@ -14,6 +14,7 @@ the project from the focused editor window, so one button works across repos.
 """
 import json
 import logging
+import time
 from typing import Any, Dict, List, Optional, Sequence
 
 from actions.catalog import ActionSpec, ConfigField, RUNS_BACKEND
@@ -27,6 +28,7 @@ logger = logging.getLogger('vdock')
 
 GH_BINARY = 'gh'
 GITHUB_API = 'https://api.github.com'
+GH_TOKEN_CACHE_SECONDS = 600
 
 _CWD_FIELD = ConfigField(
     'cwd', 'Repository path', 'path',
@@ -42,6 +44,7 @@ class Plugin(BasePlugin):
         super().__init__()
         self.gh_path: Optional[str] = None
         self.gh_authenticated = False
+        self._gh_token_cache: tuple = (None, 0.0)
 
     # --- lifecycle -----------------------------------------------------------
 
@@ -83,6 +86,33 @@ class Plugin(BasePlugin):
     def cleanup(self) -> None:
         pass
 
+    def _token(self) -> Optional[str]:
+        """The token the REST widgets use.
+
+        ``GITHUB_TOKEN`` wins; otherwise the token behind the user's existing
+        ``gh auth login`` -- so the live widgets work with zero extra setup.
+        Cached briefly because the catalog asks on every build.
+        """
+        env_token = secrets.get(secrets.GITHUB_TOKEN)
+        if env_token:
+            return env_token
+        if not (self.gh_path and self.gh_authenticated):
+            return None
+        now = time.time()
+        cached_value, cached_at = self._gh_token_cache
+        if now - cached_at < GH_TOKEN_CACHE_SECONDS:
+            return cached_value
+        value: Optional[str] = None
+        try:
+            result = sr.run([GH_BINARY, 'auth', 'token'], timeout=10)
+            if result.ok:
+                value = result.stdout.strip() or None
+        except Exception as e:  # pragma: no cover - environment dependent
+            logger.debug('Could not read gh auth token: %s', e)
+        secrets.register_runtime_secret(value)
+        self._gh_token_cache = (value, now)
+        return value
+
     def is_available(self) -> tuple:
         if self.gh_path or secrets.is_configured(secrets.GITHUB_TOKEN):
             return True, ''
@@ -102,9 +132,10 @@ class Plugin(BasePlugin):
         return None
 
     def _api_reason(self) -> Optional[str]:
-        if secrets.is_configured(secrets.GITHUB_TOKEN):
+        if self._token():
             return None
-        return secrets.GITHUB_TOKEN.reason()
+        return ('No GitHub token: run `gh auth login`, or set GITHUB_TOKEN '
+                'in backend/.env.')
 
     def get_action_specs(self) -> Sequence[ActionSpec]:
         cli = self._cli_reason()
@@ -391,9 +422,9 @@ class Plugin(BasePlugin):
         """GET a GitHub REST endpoint with the configured token."""
         import requests
 
-        token = secrets.get(secrets.GITHUB_TOKEN)
+        token = self._token()
         if not token:
-            raise PermissionError(secrets.GITHUB_TOKEN.reason())
+            raise PermissionError(self._api_reason() or 'No GitHub token')
 
         response = requests.get(
             f'{GITHUB_API}{path}',
@@ -442,10 +473,16 @@ class Plugin(BasePlugin):
 
         try:
             if config.get('only_mine'):
-                data = self._api('/search/issues', {
-                    'q': f'repo:{slug} is:pr is:open review-requested:@me',
-                })
-                count = data.get('total_count', 0)
+                # Filter the repo's own PR list instead of the search API:
+                # search refuses private repos for some token types (422).
+                login = (self._api('/user') or {}).get('login', '')
+                pulls = self._api(f'/repos/{slug}/pulls', {'state': 'open',
+                                                           'per_page': 100})
+                count = sum(
+                    1 for pr in pulls
+                    if any(r.get('login') == login
+                           for r in pr.get('requested_reviewers') or [])
+                )
                 label = 'awaiting your review'
             else:
                 data = self._api(f'/repos/{slug}/pulls', {'state': 'open',
@@ -453,7 +490,7 @@ class Plugin(BasePlugin):
                 count = len(data)
                 label = 'open pull requests'
         except PermissionError as e:
-            return self._widget_error('GITHUB_TOKEN is not set', str(e))
+            return self._widget_error('GitHub token missing', str(e))
         except Exception as e:
             return self._widget_error('GitHub request failed',
                                       secrets.redact(str(e)))
@@ -467,6 +504,9 @@ class Plugin(BasePlugin):
                 'status': 'normal' if count == 0 else 'warning',
                 'sublabel': label,
                 'repo': slug,
+                'url': (f'https://github.com/{slug}/pulls/review-requested'
+                        if config.get('only_mine')
+                        else f'https://github.com/{slug}/pulls'),
             },
         }
 
@@ -484,7 +524,7 @@ class Plugin(BasePlugin):
                 'branch': branch, 'per_page': 1,
             })
         except PermissionError as e:
-            return self._widget_error('GITHUB_TOKEN is not set', str(e))
+            return self._widget_error('GitHub token missing', str(e))
         except Exception as e:
             return self._widget_error('GitHub request failed',
                                       secrets.redact(str(e)))
@@ -493,7 +533,9 @@ class Plugin(BasePlugin):
         if not runs:
             return {
                 'success': True, 'message': f'No runs on {branch}',
-                'data': {'badge': '–', 'status': 'normal', 'sublabel': branch},
+                'data': {'badge': '–', 'status': 'normal', 'sublabel': branch,
+                         'url': f'https://github.com/{slug}/actions',
+                         'repo': slug},
             }
 
         run = runs[0]
@@ -523,7 +565,7 @@ class Plugin(BasePlugin):
         try:
             data = self._api('/notifications', {'per_page': 100})
         except PermissionError as e:
-            return self._widget_error('GITHUB_TOKEN is not set', str(e))
+            return self._widget_error('GitHub token missing', str(e))
         except Exception as e:
             return self._widget_error('GitHub request failed',
                                       secrets.redact(str(e)))

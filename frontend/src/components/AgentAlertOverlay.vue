@@ -10,7 +10,14 @@
         role="alert"
       >
         <div class="alert-icon">
-          <FontAwesomeIcon :icon="['fas', 'robot']" />
+          <img
+            v-if="card.kind === 'alert' && logoFor(card.alert.source)"
+            class="alert-logo"
+            :src="logoFor(card.alert.source)"
+            alt=""
+            data-testid="alert-logo"
+          />
+          <FontAwesomeIcon v-else :icon="['fas', 'robot']" />
           <span class="alert-pulse"></span>
         </div>
         <div class="alert-body">
@@ -71,6 +78,14 @@ const cards = computed<AlertCard[]>(() => {
   return list.map((alert) => ({ kind: 'alert' as const, alert }))
 })
 
+// Brand logos shipped in /public/logos; other sources keep the robot glyph.
+const SOURCE_LOGOS: Record<string, string> = {
+  claude: '/logos/claudecode-color.png',
+}
+function logoFor(source: string): string | undefined {
+  return SOURCE_LOGOS[source]
+}
+
 function rollupLabel(list: AgentAlert[]): string {
   return list.map((a) => alerts.sourceLabelFor(a.source)).join(' · ')
 }
@@ -122,6 +137,12 @@ function rollupLabel(list: AgentAlert[]): string {
   justify-content: center;
   font-size: clamp(1.5rem, 5.5vh, 2.4rem);
   color: #f5a524;
+}
+
+.alert-logo {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
 }
 
 .alert-pulse {
