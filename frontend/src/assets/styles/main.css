@@ -134,6 +134,9 @@ body {
 
 #app {
   overflow-x: hidden;
+  /* must stay `clip` to match App.vue's overflow:clip — mixing hidden on one
+     axis forces clip back to hidden on the other (scrollable again, DL-140 F/U2) */
+  overflow-x: clip;
 }
 
 /* Button Styles — flat dark-glass (DL-017) */

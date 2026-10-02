@@ -196,3 +196,57 @@ resized window — keeps the fixed-height clipped shell.
 
 Suites: 570/570 vitest, `vue-tsc` clean, `npm run build` clean — `dist`
 rebuilt for the panel.
+
+## Follow-up 2 — footer jumps to the top after toggling a screensaver switch
+
+### Problem
+
+User report (desktop Chrome, `/settings?standalone=1`): Appearance →
+Screen saver, toggle a setting, and the whole page goes dark with only the
+footer ("Created by Daniel S") at the very top and the notification bell
+below it. The viewport was neither narrow (>880px) nor short (>480px), so
+the earlier body-scroll fallbacks never applied.
+
+### Investigation
+
+Reproduced against the built bundle. Right after a toggle the mount-point
+`#app` had `scrollTop: 933`, and its `scrollHeight` was 2353 vs a 720
+`clientHeight`, even though the inner shell was exactly 720.
+
+Cause: the visually-hidden inputs/labels are `position:absolute` (`.switch
+input`, `.sr-only`). `.switch` — unlike `.seg label` and `.pick` — was not
+`position:relative`, so those boxes were positioned against the page, not
+`.content`. `.content`'s `overflow:auto` therefore did not clip them; they
+inflated `#app`'s scrollable overflow. `#app` is `overflow:hidden`, which is
+still a scroll container: focusing the toggled switch made the browser
+scroll `#app` ~900px to reveal its hidden input, pushing the entire shell
+off-screen and leaving only the dock + the bell (which is rendered after
+the shell, below it) visible at the top.
+
+### Fix
+
+1. `.switch { position: relative }` — contains its hidden input and
+   `.sr-only` label, like `.seg label` / `.pick` already did.
+2. `.content { position: relative }` — backstop so any other `.sr-only`
+   descendant (e.g. `TriggersPanel`) can't escape the scroller.
+3. `#app { overflow: clip }` (fallback `hidden`) in `App.vue`, and
+   `main.css`'s `#app { overflow-x }` switched to `clip` — `clip` crops
+   identically but is not a scroll container, so nothing can scroll the app
+   out of view again. `main.css` previously set `overflow-x:hidden`, which
+   forces `clip` back to `hidden` on the other axis (mixed axes), so both
+   rules had to change together.
+
+## Implementation Results (follow-up 2)
+
+- `SettingsView.vue`: `.switch` and `.content` gain `position: relative`.
+- `App.vue`: `#app` gets `overflow: clip`; `main.css`: `#app` `overflow-x`
+  → `clip`. Verified computed style is `clip/clip` on both `#app` nodes.
+
+**Verified live** (built bundle on :5000, standalone settings, 1280×720):
+before the fix a toggle left `#app.scrollTop = 933` and `.settings-app` at
+`top: -933`. After: Screen saver (10 switches) and Buttons (6 switches),
+each driven with `scrollIntoView` + `focus` + click — 0/16 displaced the
+shell, `#app.scrollTop` stayed 0, `.settings-app` stayed at `top: 0`.
+
+Suites: 570/570 vitest, `vue-tsc` clean, `npm run build` clean — `dist`
+rebuilt for the panel.

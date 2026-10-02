@@ -175,6 +175,10 @@ body {
   height: 100vh;
   height: 100dvh; /* iOS Safari dynamic toolbar — see DashboardView */
   overflow: hidden;
+  /* clip = same visual crop but NOT a scroll container, so focusing an
+     off-screen element (e.g. a toggled switch's hidden input) can't scroll the
+     whole app out from under the viewport (DL-140 F/U2). */
+  overflow: clip;
   background: var(--color-background);
   background-image: var(--app-backdrop);
   color: var(--color-text);

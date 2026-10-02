@@ -4771,6 +4771,9 @@ onMounted(async () => {
 .subtab[aria-selected="true"] { background: var(--accent-2); color: #fff; }
 
 .content {
+  /* backstop: contain any absolutely-positioned .sr-only descendant so it can
+     never extend #app's scrollable overflow (DL-140 F/U2) */
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -4911,7 +4914,10 @@ onMounted(async () => {
 
 /* --- switch --------------------------------------------------------------- */
 
-.switch { display: inline-flex; align-items: center; min-height: calc(var(--target) - 6px); cursor: pointer; }
+/* position:relative contains the visually-hidden input + .sr-only label. Without
+   it they're absolutely positioned against the page, escape .content's clip,
+   and focusing one scrolls the overflow:hidden #app (DL-140 F/U2). */
+.switch { position: relative; display: inline-flex; align-items: center; min-height: calc(var(--target) - 6px); cursor: pointer; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch .track {
   position: relative;
