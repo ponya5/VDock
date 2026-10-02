@@ -30,6 +30,13 @@ describe('connect-a-device LAN reachability probe', () => {
 
   it('re-probes when the URL changes and whenever the Connect tab opens', () => {
     expect(view).toContain('watch(lanUrl, probeLanReachability)')
-    expect(view).toContain("if (tab === 'connect') probeLanReachability()")
+    expect(view).toContain("if (tab !== 'connect') return")
+    expect(view).toContain('probeLanReachability()')
+  })
+
+  it('keeps re-probing while the Connect tab is open and stops when it closes', () => {
+    expect(view).toContain('setInterval(probeLanReachability, LAN_PROBE_INTERVAL_MS)')
+    expect(view).toContain('stopLanProbePolling()')
+    expect(view).toContain('onBeforeUnmount(stopLanProbePolling)')
   })
 })

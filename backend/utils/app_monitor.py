@@ -224,6 +224,13 @@ def get_app_monitor(poll_interval: float = 5.0) -> AppMonitor:
     global _monitor_instance
     if _monitor_instance is None:
         _monitor_instance = AppMonitor(poll_interval)
+        # Remember the last editor project so "the focused repo" still means
+        # something while VDock itself has focus (DL-145).
+        def _note(app: Dict[str, Any]) -> None:
+            from integrations import context
+            context.note_foreground(app.get('exe') or '',
+                                    app.get('window_title') or '')
+        _monitor_instance.register_callback(_note)
     return _monitor_instance
 
 

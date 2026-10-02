@@ -4,6 +4,7 @@
       v-if="isWaiting"
       class="agent-waiting-glow"
       :class="[`style-${glowStyle}`, { 'no-anim': !settingsStore.animationsEnabled }]"
+      :style="brandVars"
       role="status"
       :aria-label="`${waitingLabel} is waiting for input`"
     />
@@ -13,14 +14,16 @@
     <div
       v-if="isWaiting && glowStyle === 'orbit' && settingsStore.animationsEnabled"
       class="agent-waiting-orbit"
+      :style="brandVars"
       aria-hidden="true"
     />
     <!-- Snooze lives on the frame itself: one tap silences every waiting
          surface (frame, pill ring, session chips) until the agent records a
          fresh `ready` event — it keys off the entry ts, not a timer. -->
     <Transition name="snooze-pop">
-      <div v-if="isWaiting" class="agent-waiting-snooze">
-        <FontAwesomeIcon :icon="['fas', 'robot']" class="snooze-icon" />
+      <div v-if="isWaiting" class="agent-waiting-snooze" :style="brandVars">
+        <img v-if="brand.logo" :src="brand.logo" alt="" class="snooze-logo" data-testid="snooze-logo" />
+        <FontAwesomeIcon v-else :icon="['fas', 'robot']" class="snooze-icon" />
         <span class="snooze-label">{{ waitingLabel }} is waiting for input</span>
         <button type="button" class="snooze-btn" @click="snooze">Snooze 3m</button>
       </div>
@@ -35,6 +38,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { sceneWaitingAgent, dismissAgentWaiting } from '@/services/agentWaiting'
+import { agentBrandFor, agentBrandVars } from '@/services/agentBrand'
 import { initAgentState } from '@/services/agentState'
 import { loadProfileMaps } from '@/services/appDetection'
 
@@ -74,6 +78,8 @@ const isWaiting = computed(() =>
 )
 
 const waitingLabel = computed(() => waitingInfo.value?.profile?.label ?? 'Agent')
+const brand = computed(() => agentBrandFor(waitingInfo.value?.entry.source))
+const brandVars = computed(() => agentBrandVars(waitingInfo.value?.entry.source))
 const glowStyle = computed(() => settingsStore.agentWaitingGlowStyle ?? 'flash')
 
 function snooze() {
@@ -98,10 +104,10 @@ function snooze() {
   inset: 0;
   z-index: 1400;
   pointer-events: none;
-  border: 3px solid rgba(34, 197, 94, 0.5);
+  border: 3px solid rgba(var(--agent-rgb), 0.5);
   box-shadow:
-    inset 0 0 clamp(24px, 6vh, 64px) rgba(34, 197, 94, 0.35),
-    0 0 clamp(16px, 3vh, 36px) rgba(34, 197, 94, 0.25);
+    inset 0 0 clamp(24px, 6vh, 64px) rgba(var(--agent-rgb), 0.35),
+    0 0 clamp(16px, 3vh, 36px) rgba(var(--agent-rgb), 0.25);
 }
 
 /* Flash (default): heartbeat double-blink — two quick bright pulses, then a
@@ -118,36 +124,36 @@ function snooze() {
 
 .agent-waiting-glow.no-anim {
   animation: none;
-  border-color: rgba(34, 197, 94, 0.85);
+  border-color: rgba(var(--agent-rgb), 0.85);
 }
 
 @keyframes agent-waiting-flash {
   0%, 12%, 26%, 100% {
-    border-color: rgba(34, 197, 94, 0.4);
+    border-color: rgba(var(--agent-rgb), 0.4);
     box-shadow:
-      inset 0 0 clamp(24px, 6vh, 64px) rgba(34, 197, 94, 0.3),
-      0 0 clamp(16px, 3vh, 36px) rgba(34, 197, 94, 0.2);
+      inset 0 0 clamp(24px, 6vh, 64px) rgba(var(--agent-rgb), 0.3),
+      0 0 clamp(16px, 3vh, 36px) rgba(var(--agent-rgb), 0.2);
   }
   4%, 17% {
-    border-color: rgba(134, 239, 172, 1);
+    border-color: rgba(var(--agent-light-rgb), 1);
     box-shadow:
-      inset 0 0 clamp(56px, 12vh, 130px) rgba(34, 197, 94, 0.75),
-      0 0 clamp(36px, 7vh, 72px) rgba(34, 197, 94, 0.65);
+      inset 0 0 clamp(56px, 12vh, 130px) rgba(var(--agent-rgb), 0.75),
+      0 0 clamp(36px, 7vh, 72px) rgba(var(--agent-rgb), 0.65);
   }
 }
 
 @keyframes agent-waiting-breathe {
   0%, 100% {
-    border-color: rgba(34, 197, 94, 0.5);
+    border-color: rgba(var(--agent-rgb), 0.5);
     box-shadow:
-      inset 0 0 clamp(24px, 6vh, 64px) rgba(34, 197, 94, 0.35),
-      0 0 clamp(16px, 3vh, 36px) rgba(34, 197, 94, 0.25);
+      inset 0 0 clamp(24px, 6vh, 64px) rgba(var(--agent-rgb), 0.35),
+      0 0 clamp(16px, 3vh, 36px) rgba(var(--agent-rgb), 0.25);
   }
   50% {
-    border-color: rgba(34, 197, 94, 0.95);
+    border-color: rgba(var(--agent-rgb), 0.95);
     box-shadow:
-      inset 0 0 clamp(48px, 10vh, 110px) rgba(34, 197, 94, 0.6),
-      0 0 clamp(28px, 5vh, 56px) rgba(34, 197, 94, 0.5);
+      inset 0 0 clamp(48px, 10vh, 110px) rgba(var(--agent-rgb), 0.6),
+      0 0 clamp(28px, 5vh, 56px) rgba(var(--agent-rgb), 0.5);
   }
 }
 
@@ -165,11 +171,11 @@ function snooze() {
     from var(--agent-orbit) at 50% 50%,
     transparent 0turn,
     transparent 0.62turn,
-    rgba(34, 197, 94, 0.55) 0.78turn,
-    rgba(134, 239, 172, 0.95) 0.88turn,
-    #e7fce9 0.905turn,
-    rgba(134, 239, 172, 0.95) 0.93turn,
-    rgba(34, 197, 94, 0.55) 0.99turn,
+    rgba(var(--agent-rgb), 0.55) 0.78turn,
+    rgba(var(--agent-light-rgb), 0.95) 0.88turn,
+    var(--agent-pale) 0.905turn,
+    rgba(var(--agent-light-rgb), 0.95) 0.93turn,
+    rgba(var(--agent-rgb), 0.55) 0.99turn,
     transparent 1turn
   ) border-box;
   -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
@@ -201,18 +207,24 @@ function snooze() {
     calc(10px * min(var(--touch-multiplier, 1), 1.6))
     calc(18px * min(var(--touch-multiplier, 1), 1.6));
   border-radius: 999px;
-  background: rgba(8, 26, 14, 0.92);
-  border: 1.5px solid rgba(34, 197, 94, 0.7);
-  box-shadow: 0 0 24px rgba(34, 197, 94, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5);
+  background: rgba(var(--agent-bg-rgb), 0.92);
+  border: 1.5px solid rgba(var(--agent-rgb), 0.7);
+  box-shadow: 0 0 24px rgba(var(--agent-rgb), 0.35), 0 8px 24px rgba(0, 0, 0, 0.5);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  color: #bbf7d0;
+  color: var(--agent-text);
   font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.6));
   white-space: nowrap;
 }
 
 .snooze-icon {
-  color: #4ade80;
+  color: rgb(var(--agent-light-rgb));
+}
+
+.snooze-logo {
+  width: 1.4em;
+  height: 1.4em;
+  object-fit: contain;
 }
 
 .snooze-label {
@@ -226,8 +238,8 @@ function snooze() {
   min-height: max(36px, calc(var(--min-touch-target, 44px) * 0.8));
   border-radius: 999px;
   border: none;
-  background: #22c55e;
-  color: #052e14;
+  background: var(--agent-solid);
+  color: var(--agent-on-solid);
   font-size: calc(0.9rem * min(var(--touch-multiplier, 1), 1.6));
   font-weight: 700;
   cursor: pointer;
@@ -257,7 +269,7 @@ function snooze() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .agent-waiting-glow { animation: none; border-color: rgba(34, 197, 94, 0.85); }
+  .agent-waiting-glow { animation: none; border-color: rgba(var(--agent-rgb), 0.85); }
   .agent-waiting-orbit { display: none; }
 }
 </style>

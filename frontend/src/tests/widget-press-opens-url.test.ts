@@ -18,7 +18,7 @@ vi.mock('@/stores/dashboard', () => ({
 vi.mock('@/stores/settings', () => ({ useSettingsStore: () => ({}) }))
 vi.mock('@/stores/profiles', () => ({ useProfilesStore: () => ({}) }))
 vi.mock('@/stores/notifications', () => ({ useNotificationsStore: () => notify }))
-vi.mock('@/stores/actionCatalog', () => ({ useActionCatalogStore: () => ({ displayOnlyTypes: new Set<string>() }) }))
+vi.mock('@/stores/actionCatalog', () => ({ useActionCatalogStore: () => ({ displayOnlyTypes: new Set<string>(), byActionType: {} }) }))
 vi.mock('@/stores/buttonState', () => ({
   useButtonStateStore: () => ({ markRunning, markFinished, states: {} }),
 }))

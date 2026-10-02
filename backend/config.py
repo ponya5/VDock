@@ -1,11 +1,15 @@
 """Configuration management for VDock backend."""
 import os
 import json
+import logging
 import re
+import secrets
 import socket
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+
+logger = logging.getLogger('vdock.config')
 
 
 def _default_data_dir(base_dir: Path) -> Path:
@@ -144,6 +148,32 @@ def backend_dir() -> Path:
     return project_root() / 'backend'
 
 
+def env_file() -> Path:
+    """The one .env file VDock reads and writes.
+
+    ``backend/.env`` for source runs; ``DATA_DIR/.env`` when frozen (the
+    install directory may be read-only).
+    """
+    if getattr(sys, 'frozen', False):
+        data_dir = os.environ.get('DATA_DIR') or str(_default_data_dir(Path(__file__).resolve().parent))
+        return Path(data_dir) / '.env'
+    return backend_dir() / '.env'
+
+
+# Public strings that shipped in older .env.example files. A key equal to one
+# of these is readable on GitHub, so it is as good as no key at all.
+KNOWN_PLACEHOLDER_SECRETS = frozenset({
+    'your-secret-key-here-change-this-to-random-string',
+    'your-secret-key-here-change-this-in-production',
+    'your-secret-key-here',
+})
+
+
+def is_weak_secret_key(key: Optional[str]) -> bool:
+    """True for an empty, published-placeholder or too-short signing key."""
+    return not key or key in KNOWN_PLACEHOLDER_SECRETS or len(key) < 32
+
+
 def read_env_key(env_file: Path, key: str) -> str:
     """Return the value of ``KEY`` in a .env file ('' when absent)."""
     if not env_file.exists():
@@ -257,6 +287,29 @@ class Config:
     # want the backend weather action to use weatherapi.com.
     WEATHERAPI_KEY = os.environ.get('WEATHERAPI_KEY', '')
     
+    @classmethod
+    def ensure_strong_secret_key(cls) -> bool:
+        """Replace a missing/placeholder SECRET_KEY with a generated one.
+
+        The new key is saved to ``env_file()`` so issued tokens survive
+        restarts. Returns True when a key was generated. Never logs the key.
+        """
+        if not is_weak_secret_key(os.environ.get('SECRET_KEY')):
+            return False
+        new_key = secrets.token_hex(32)
+        cls.SECRET_KEY = new_key
+        os.environ['SECRET_KEY'] = new_key
+        target = env_file()
+        try:
+            write_env_keys(target, {'SECRET_KEY': new_key})
+            logger.info('Generated a new SECRET_KEY and saved it to %s', target.name)
+        except OSError as exc:
+            logger.warning(
+                'Generated a SECRET_KEY but could not save it (%s); '
+                'deck tokens will not survive a restart.', exc.__class__.__name__
+            )
+        return True
+
     @classmethod
     def validate(cls) -> None:
         """Refuse to start in a configuration that is quietly insecure.

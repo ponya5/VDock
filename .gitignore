@@ -219,3 +219,9 @@ _diff*.txt
 /*.png
 /*.jpg
 /*.jpeg
+
+# Agent / benchmark scratch output - never committed
+.devin-shots/
+.benchmarks/
+backend/test-scripts/
+/NUL

@@ -216,7 +216,7 @@ def test_config_deck_host_clear_restores_auto(client):
 
 @pytest.fixture
 def auth_env(tmp_path, monkeypatch):
-    monkeypatch.setattr('routes.config.backend_dir', lambda: tmp_path)
+    monkeypatch.setattr('routes.config.env_file', lambda: tmp_path / '.env')
     # PUT /api/config persists to the real data/config.json — restore it
     # after the test so require_auth doesn't leak onto disk.
     saved_config = Config.load_config()
@@ -245,6 +245,16 @@ def test_set_password_persists_env_and_applies(client, auth_env):
     body = client.get('/api/config').get_json()
     assert body['config']['auth_password_set'] is True
     assert 'auth_password' not in body['config']
+
+
+def test_set_password_replaces_placeholder_secret_key(client, auth_env):
+    (auth_env / '.env').write_text(
+        'SECRET_KEY=your-secret-key-here-change-this-to-random-string\n')
+    resp = client.put('/api/config', json={'auth_password': 'deck1234'})
+    assert resp.status_code == 200
+    from config import read_env_key
+    key = read_env_key(auth_env / '.env', 'SECRET_KEY')
+    assert len(key) >= 32 and 'your-secret-key' not in key
 
 
 def test_enable_auth_without_password_rejected(client, auth_env):

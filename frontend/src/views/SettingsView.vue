@@ -1873,7 +1873,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref, reactive, watch, nextTick } from 'vue'
+import { onMounted, onBeforeUnmount, computed, ref, reactive, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
@@ -2300,9 +2300,22 @@ const toastLevelOptions = [
 
 const activeTab = ref('appearance')
 // Re-probe whenever the Connect page is opened — the deck address may
-// have come up (or gone down) since the last visit.
-watch(activeTab, tab => { if (tab === 'connect') probeLanReachability() })
+// have come up (or gone down) since the last visit — and keep re-checking
+// while it stays open, so the "isn't answering" warning clears by itself
+// once the server is back (and appears if it drops).
+const LAN_PROBE_INTERVAL_MS = 5000
+let lanProbeTimer: ReturnType<typeof setInterval> | null = null
+function stopLanProbePolling() {
+  if (lanProbeTimer !== null) { clearInterval(lanProbeTimer); lanProbeTimer = null }
+}
+watch(activeTab, tab => {
+  stopLanProbePolling()
+  if (tab !== 'connect') return
+  probeLanReachability()
+  lanProbeTimer = setInterval(probeLanReachability, LAN_PROBE_INTERVAL_MS)
+})
 onMounted(probeLanReachability)
+onBeforeUnmount(stopLanProbePolling)
 const appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')
 
 // DL-054: Appearance children are full pages in the sidebar now — the old

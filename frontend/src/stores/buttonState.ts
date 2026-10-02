@@ -15,6 +15,16 @@ import { ref, computed } from 'vue'
 
 export type ButtonStatus = 'idle' | 'running' | 'success' | 'error'
 
+/** One row of a live button's press menu (DL-145). */
+export interface LiveMenuItem {
+  id: string
+  label: string
+  icon?: string
+  /** Ask this question before running the item. */
+  confirm?: string
+  danger?: boolean
+}
+
 export interface ButtonState {
   status: ButtonStatus
   /** Short text on the button face, e.g. a PR count. */
@@ -22,7 +32,11 @@ export interface ButtonState {
   /** Replaces the secondary label while set. */
   sublabel?: string
   /** Semantic colour for the status ring: normal | warning | critical. */
-  tone?: 'normal' | 'warning' | 'critical'
+  tone?: 'normal' | 'warning' | 'critical' | 'success'
+  /** Items offered when a `press: 'menu'` button is tapped. */
+  menu?: LiveMenuItem[]
+  /** Log tail / failure excerpt shown in the press-menu sheet. */
+  panelText?: string
   /** Toggle buttons: 0 = "off" side, 1 = "on" side (from ToggleAction data.side). */
   toggleSide?: 0 | 1
   /** Set on failure so the user can see why without hunting for the toast. */
@@ -80,9 +94,11 @@ export const useButtonStateStore = defineStore('buttonState', () => {
       status: result?.success ? 'success' : 'error',
       badge: hasBadge ? String(data.badge) : undefined,
       sublabel: data.sublabel,
-      tone: data.status === 'warning' || data.status === 'critical'
+      tone: data.status === 'warning' || data.status === 'critical' || data.status === 'success'
         ? data.status
         : 'normal',
+      menu: Array.isArray(data.menu) ? data.menu : undefined,
+      panelText: typeof data.panel_text === 'string' ? data.panel_text : undefined,
       // Toggle side persists — unlike the flash, it IS the button's state.
       ...(data.side === 0 || data.side === 1 ? { toggleSide: data.side as 0 | 1 } : {}),
       message: result?.success ? undefined : result?.message

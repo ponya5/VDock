@@ -61,9 +61,54 @@
                   <p v-if="s.message && s.state === 'permission'" class="mc-line mc-ask">{{ s.message }}</p>
                   <p v-if="s.prompt" class="mc-line"><span class="mc-tag">You</span>{{ s.prompt }}</p>
                   <p v-if="s.reply" class="mc-line"><span class="mc-tag mc-tag-ai">Agent</span>{{ s.reply }}</p>
+
+                  <button
+                    v-if="changesOf(s)"
+                    type="button"
+                    class="mc-changes"
+                    :aria-expanded="changesOpen === rowKey(s)"
+                    data-testid="mc-changes"
+                    @click="toggleChanges(s)"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'file-pen']" />
+                    {{ changesLabel(changesOf(s)!) }}
+                  </button>
+                  <ul v-if="changesOpen === rowKey(s) && changesOf(s)" class="mc-files" data-testid="mc-files">
+                    <li v-for="f in changesOf(s)!.files" :key="f.path">
+                      <button type="button" class="mc-file" data-testid="mc-file" @click="openDiff(s, f.path)">
+                        <span class="mc-file-path">{{ f.path }}</span>
+                        <span class="mc-file-stat">+{{ f.added }} −{{ f.removed }}</span>
+                      </button>
+                    </li>
+                  </ul>
+
+                  <div v-if="promptOpen === rowKey(s)" class="mc-presets" data-testid="mc-presets">
+                    <button
+                      v-for="p in snapshot.presets"
+                      :key="p.id"
+                      type="button"
+                      class="mc-btn mc-preset"
+                      :disabled="isBusy(s)"
+                      data-testid="mc-preset"
+                      @click="sendPrompt(s, p)"
+                    >
+                      {{ p.label }}
+                    </button>
+                  </div>
                 </div>
 
                 <div class="mc-row-actions">
+                  <button
+                    v-if="s.can_prompt"
+                    type="button"
+                    class="mc-btn"
+                    :disabled="isBusy(s)"
+                    :aria-expanded="promptOpen === rowKey(s)"
+                    data-testid="mc-prompt"
+                    @click="promptOpen = promptOpen === rowKey(s) ? null : rowKey(s)"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'paper-plane']" /> Prompt
+                  </button>
                   <template v-if="s.can_decide">
                     <button
                       type="button"
@@ -119,12 +164,17 @@ import {
   decideMissionSession,
   fetchMission,
   focusMissionSession,
+  fetchSessionChanges,
   formatIdle,
   groupMission,
   missionControlOpen,
+  openSessionDiff,
+  promptMissionSession,
   type MissionDecision,
+  type MissionPreset,
   type MissionSession,
   type MissionSnapshot,
+  type SessionChanges,
 } from '@/services/missionControl'
 import { useNotificationsStore } from '@/stores/notifications'
 
@@ -137,7 +187,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 
 const notifications = useNotificationsStore()
 
-const snapshot = ref<MissionSnapshot>({ sessions: [], needs_you: 0, pending_approvals: 0 })
+const snapshot = ref<MissionSnapshot>({ sessions: [], presets: [], needs_you: 0, pending_approvals: 0 })
 const loaded = ref(false)
 const loadError = ref('')
 const busy = reactive(new Set<string>())
@@ -185,6 +235,70 @@ async function refresh() {
     loadError.value = 'Could not load agent sessions.'
   } finally {
     loaded.value = true
+  }
+}
+
+// DL-145: Prompt menu + "what changed this turn" for sessions that can be prompted.
+const promptOpen = ref<string | null>(null)
+const changesOpen = ref<string | null>(null)
+const changes = reactive<Record<string, SessionChanges>>({})
+const changesFetchedFor = new Map<string, number>()
+
+function changesOf(s: MissionSession): SessionChanges | undefined {
+  const entry = s.can_prompt ? changes[rowKey(s)] : undefined
+  return entry && entry.totals.files > 0 ? entry : undefined
+}
+
+function changesLabel(c: SessionChanges): string {
+  const n = c.totals.files
+  return `${n} file${n === 1 ? '' : 's'} +${c.totals.added} −${c.totals.removed}`
+}
+
+async function loadChanges(s: MissionSession) {
+  if (!s.can_prompt) return
+  const key = rowKey(s)
+  if (changesFetchedFor.get(key) === s.ts) return
+  changesFetchedFor.set(key, s.ts)
+  try {
+    const result = await fetchSessionChanges(s.source, s.session_id)
+    if (result.success) changes[key] = result
+    else delete changes[key]
+  } catch {
+    delete changes[key]
+  }
+}
+
+watch(() => snapshot.value.sessions, (sessions) => { sessions.forEach((s) => { void loadChanges(s) }) })
+
+function toggleChanges(s: MissionSession) {
+  changesOpen.value = changesOpen.value === rowKey(s) ? null : rowKey(s)
+}
+
+async function openDiff(s: MissionSession, path: string) {
+  try {
+    await openSessionDiff(s.source, s.session_id, path)
+  } catch (error: any) {
+    notifications.error('Could not open the diff', error?.response?.data?.error || 'The editor did not respond.')
+  }
+}
+
+async function sendPrompt(s: MissionSession, preset: MissionPreset) {
+  const key = rowKey(s)
+  if (busy.has(key)) return
+  busy.add(key)
+  try {
+    await promptMissionSession(s.source, s.session_id, preset.id)
+    notifications.success(preset.label, `${sourceLabelFor(s.source)}${s.project ? ` - ${s.project}` : ''}`)
+    promptOpen.value = null
+  } catch (error: any) {
+    notifications.error(
+      'Could not send the prompt',
+      error?.response?.data?.error || 'The session did not accept the prompt.',
+      error?.response?.data?.details,
+    )
+  } finally {
+    busy.delete(key)
+    void refresh()
   }
 }
 
@@ -401,6 +515,24 @@ onUnmounted(() => {
 .mc-btn:disabled { opacity: 0.5; cursor: progress; }
 .mc-approve { background: #1c7a4d; border-color: #2fb374; }
 .mc-deny { background: #6b2630; border-color: #b4414f; }
+
+.mc-changes {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 8px;
+  min-height: 36px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid #2a3e60; background: #16233a; color: #b9c7dc;
+  font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; touch-action: manipulation;
+}
+.mc-files { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.mc-file {
+  width: 100%; display: flex; justify-content: space-between; gap: 12px; align-items: center;
+  min-height: 40px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid #1f2f4a; background: #0f1829; color: #cfdcee;
+  font: inherit; font-size: 0.84rem; text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.mc-file-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-file-stat { flex: none; color: #7fe6b6; font-variant-numeric: tabular-nums; }
+.mc-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mc-preset { min-height: 40px; }
 
 .mc-foot { padding: 10px clamp(14px, 2.4vw, 22px); border-top: 1px solid #1f2f4a; color: #7286a4; font-size: 0.78rem; }
 

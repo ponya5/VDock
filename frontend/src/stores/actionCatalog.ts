@@ -26,7 +26,14 @@ export interface ConfigFieldSpec {
   options?: Array<{ value: string; label: string }>
   placeholder?: string
   help?: string
+  /** Shown under a collapsed "Advanced" toggle. */
+  advanced?: boolean
+  /** Shown only while another field has this value, e.g. `{ preset: 'custom' }`. */
+  show_when?: Record<string, unknown>
 }
+
+/** What pressing a live button does. */
+export type ActionPress = 'run' | 'menu' | 'hold'
 
 export interface ActionSpec {
   id: string
@@ -43,6 +50,10 @@ export interface ActionSpec {
   keywords: string[]
   /** Present when the action is listed but not currently usable. */
   unavailable_reason?: string
+  /** >0: a live widget, re-run every N seconds with `poll_config` merged in. */
+  poll_seconds?: number
+  poll_config?: Record<string, unknown>
+  press?: ActionPress
 }
 
 export interface CategorySpec {

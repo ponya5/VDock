@@ -74,7 +74,11 @@ def execute_action():
     # A multi_action with enough configured delay also goes to the job runner —
     # axios gives up at 30s while a "launch app, wait 45s, press play" chain is
     # still sleeping.
-    if not data.get('wait') and (
+    # Status reads (live button polls) are always cheap, even for a type whose
+    # other ops are long.
+    config = action_data.get('config')
+    is_status = isinstance(config, dict) and config.get('op') == 'status'
+    if not data.get('wait') and not is_status and (
         action_executor.is_long_running(action_type) or _looks_long(action_data)
     ):
         from services.job_runner import get_job_runner

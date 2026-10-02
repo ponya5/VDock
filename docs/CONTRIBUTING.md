@@ -261,6 +261,14 @@ npm run test:coverage
 - **Test Names**: Use descriptive test names
 - **Test Data**: Use appropriate test data and fixtures
 
+### Repository hygiene
+
+Line endings are set by `.gitattributes` (LF everywhere; `.bat`/`.ps1`/`.nsi`
+stay CRLF). Never commit `.env` files, logs or scratch screenshots; images
+belong in `docs/assets/screens` or `design-log/refs` and should stay under
+400 KB. `backend/tests/test_repo_hygiene.py` enforces this. A one-command local
+check (`scripts/check.ps1`) arrives in a later phase.
+
 ## 🎨 Code Style
 
 ### Python (Backend)

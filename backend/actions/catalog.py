@@ -34,6 +34,11 @@ RUNS_BACKEND = 'backend'    # POST /api/actions/execute
 RUNS_FRONTEND = 'frontend'  # handled in the client, never dispatched
 RUNS_WIDGET = 'widget'      # renders live data; pressing it does nothing
 
+# What pressing a live button does.
+PRESS_RUN = 'run'
+PRESS_MENU = 'menu'
+PRESS_HOLD = 'hold'
+
 
 @dataclass(frozen=True)
 class ConfigField:
@@ -46,6 +51,10 @@ class ConfigField:
     options: Tuple[Dict[str, str], ...] = ()
     placeholder: str = ''
     help: str = ''
+    # Rendered inside a collapsed "Advanced" section of the config form.
+    advanced: bool = False
+    # Render only while another field has this value, e.g. {'preset': 'custom'}.
+    show_when: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
@@ -54,6 +63,10 @@ class ConfigField:
             'type': self.type,
             'required': self.required,
         }
+        if self.advanced:
+            data['advanced'] = True
+        if self.show_when:
+            data['show_when'] = dict(self.show_when)
         if self.default is not None:
             data['default'] = self.default
         if self.options:
@@ -82,6 +95,13 @@ class ActionSpec:
     # Set when an entry is listed but not usable yet, e.g. its integration is
     # not configured. The picker shows it greyed out with this reason.
     unavailable_reason: Optional[str] = None
+    # >0 makes the button a live widget the frontend re-runs every N seconds,
+    # with ``poll_config`` merged over its config (e.g. {'op': 'status'} so a
+    # poll reads state instead of doing the work).
+    poll_seconds: int = 0
+    poll_config: Mapping[str, Any] = field(default_factory=dict)
+    # What a tap does: run the action, or open a menu of the result's items.
+    press: str = PRESS_RUN
 
     @property
     def display_only(self) -> bool:
@@ -105,6 +125,12 @@ class ActionSpec:
         }
         if self.unavailable_reason:
             data['unavailable_reason'] = self.unavailable_reason
+        if self.poll_seconds:
+            data['poll_seconds'] = self.poll_seconds
+        if self.poll_config:
+            data['poll_config'] = dict(self.poll_config)
+        if self.press != PRESS_RUN:
+            data['press'] = self.press
         return data
 
 

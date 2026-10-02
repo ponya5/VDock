@@ -34,30 +34,36 @@ export default defineConfig(({ mode }) => {
       vue(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+        includeAssets: ['apple-touch-icon.png', 'favicon-16x16.png', 'favicon-32x32.png'],
         manifest: {
           name: 'VDock',
           short_name: 'VDock',
           description: 'Virtual Stream Deck - Control your computer with customizable buttons',
-          theme_color: '#1a1a1a',
-          background_color: '#1a1a1a',
+          theme_color: '#182235',
+          background_color: '#182235',
           display: 'standalone',
+          start_url: '/',
+          scope: '/',
+          // Android (Samsung Internet / Chrome) needs a 192 + 512 "any" icon
+          // and a separate full-bleed "maskable" one for adaptive launchers.
           icons: [
             {
-              src: 'pwa-192x192.png',
+              src: '/pwa-192x192.png',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
             },
             {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png'
-            },
-            {
-              src: 'pwa-512x512.png',
+              src: '/pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
-              purpose: 'any maskable'
+              purpose: 'any'
+            },
+            {
+              src: '/pwa-maskable-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
         },

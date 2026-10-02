@@ -48,6 +48,25 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
+### Configuration: `.env` vs process environment
+
+Secrets and backend settings live in `backend/.env` (template:
+`backend/.env.example`; every variable the backend reads must be listed there,
+enforced by `tests/test_env_documented.py`). Frontend ports live in
+`frontend/.env` (template: `frontend/.env.example`).
+
+The Electron shell and launcher read these **process** variables instead; set
+them in the shell, not in `.env`:
+
+| Variable | Read by | Purpose |
+|---|---|---|
+| `VDOCK_PRODUCTION` | Electron | Load the built bundle instead of the dev server |
+| `VDOCK_DISPLAY_INDEX`, `VDOCK_USE_SMALLEST_DISPLAY` | Electron | Which monitor hosts the deck |
+| `VDOCK_FULLSCREEN`, `VDOCK_KIOSK` | Electron | Window mode |
+| `VDOCK_FRONTEND_PORT`, `VDOCK_BACKEND_PORT` | Electron | Port overrides |
+| `VDOCK_SKIP_BACKEND_SPAWN` | Electron | Attach to an already running backend |
+| `VDOCK_DEV_SERVER`, `VDOCK_AUTO_CLOSE_LAUNCHER` | `scripts/VDock-Launcher.py` | Launcher behaviour |
+
 ### Adding a New Action Type
 
 1. Create a new file in `backend/actions/`:

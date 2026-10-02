@@ -22,9 +22,11 @@ into an unrelated folder.
 import logging
 import os
 import re
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from utils import subprocess_runner as sr
 
@@ -143,6 +145,8 @@ def current_editor() -> EditorContext:
     exe = (active.get('exe') or '').lower()
     title = active.get('window_title') or ''
     project = project_name_from_title(title) if exe in EDITOR_EXECUTABLES else None
+    if project:
+        note_foreground(exe, title)
 
     return EditorContext(
         app_exe=exe or None,
@@ -176,6 +180,73 @@ def resolve_cwd(configured: Optional[str] = None) -> str:
             return str(path)
 
     return os.getcwd()
+
+
+#: How long the last editor project stays "the repo" while VDock itself (or
+#: the panel's browser) is in front.
+LAST_EDITOR_TTL_SECONDS = 30 * 60
+
+_focus_lock = threading.Lock()
+_last_editor: Optional[Tuple[str, float]] = None
+
+
+def note_foreground(exe: str, window_title: str) -> None:
+    """Remember the project of the editor that was just in front.
+
+    Pressing a button on the deck takes focus, so "the focused editor" is
+    nothing at the moment an action runs; this is what ``focused_repo`` falls
+    back to.
+    """
+    global _last_editor
+    if (exe or '').lower() not in EDITOR_EXECUTABLES:
+        return
+    project = project_name_from_title(window_title or '')
+    cwd = _resolve_project_dir(project) if project else None
+    if cwd:
+        with _focus_lock:
+            _last_editor = (cwd, time.time())
+
+
+def reset_focus_memory() -> None:
+    global _last_editor
+    with _focus_lock:
+        _last_editor = None
+
+
+def _newest_agent_cwd() -> Optional[str]:
+    from . import agent_state
+    entries = []
+    for source in agent_state.snapshot():
+        entries.extend(agent_state.session_entries(source))
+    for entry in sorted(entries, key=lambda e: e.get('ts', 0), reverse=True):
+        cwd = entry.get('cwd') or ''
+        if cwd and Path(cwd).is_dir():
+            return cwd
+    return None
+
+
+def focused_repo(configured: Optional[str] = None) -> str:
+    """The project the user is working on, even while the deck has focus.
+
+    configured dir -> focused editor -> last editor seen recently -> newest
+    agent session's directory -> ``resolve_cwd`` fallbacks.
+    """
+    if configured:
+        path = Path(configured).expanduser()
+        if path.is_dir():
+            return str(path)
+
+    editor = current_editor()
+    if editor.cwd:
+        return editor.cwd
+
+    with _focus_lock:
+        remembered = _last_editor
+    if remembered and time.time() - remembered[1] <= LAST_EDITOR_TTL_SECONDS \
+            and Path(remembered[0]).is_dir():
+        return remembered[0]
+
+    return _newest_agent_cwd() or resolve_cwd(None)
 
 
 def git_repo_root(cwd: Optional[str] = None) -> Optional[str]:

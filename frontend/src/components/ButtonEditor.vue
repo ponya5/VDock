@@ -1503,6 +1503,13 @@
           <input v-model.number="actionConfig.brightness" type="number" class="input" min="0" max="100" placeholder="50" />
         </div>
 
+        <!-- Catalog-driven config for integration-pack actions (DL-145) -->
+        <CatalogConfigFields
+          v-if="catalogFormSpec"
+          v-model="actionConfig"
+          :spec="catalogFormSpec"
+        />
+
         <!-- Page Navigation Actions -->
         <div v-if="actionType === 'next_page' || actionType === 'previous_page'" class="form-group">
           <div class="info-message">
@@ -1685,7 +1692,8 @@ import AssetPicker from './AssetPicker.vue'
 import ButtonActionsSidebar from './ButtonActionsSidebar.vue'
 import SubActionEditor from './SubActionEditor.vue'
 import ButtonDesignPicker from './ButtonDesignPicker.vue'
-import type { ActionSpec } from '@/stores/actionCatalog'
+import { useActionCatalogStore, type ActionSpec } from '@/stores/actionCatalog'
+import CatalogConfigFields from './CatalogConfigFields.vue'
 import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
 import type { ButtonTemplate } from '@/data/buttonTemplates'
@@ -1734,6 +1742,20 @@ const uploading = ref(false)
 const actionType = ref<ActionType | ''>(props.button.action?.type || '')
 const actionConfig = ref<Record<string, any>>(props.button.action?.config || {})
 const hotkeyString = ref(props.button.action?.config?.keys?.join(', ') || '')
+
+// Integration-pack actions have no hand-written config block above; their
+// form is generated from the catalog entry (DL-145).
+const HAND_WRITTEN_TYPES = new Set([
+  'macro', 'multi_action', 'toggle', 'slider', 'url', 'program', 'command', 'hotkey',
+  'system_metric', 'time_world_clock', 'time_timer', 'time_stopwatch', 'time_countdown',
+  'weather', 'system_control', 'cross_platform', 'next_page', 'previous_page',
+])
+const actionCatalogStore = useActionCatalogStore()
+const catalogFormSpec = computed<ActionSpec | undefined>(() => {
+  const type = actionType.value
+  if (!type || HAND_WRITTEN_TYPES.has(type) || type.startsWith('metric_')) return undefined
+  return actionCatalogStore.byActionType[type]
+})
 
 // --- Composite action editors -------------------------------------------------
 

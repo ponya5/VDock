@@ -22,6 +22,7 @@ from flask import Blueprint, jsonify, request
 from auth import require_auth
 from integrations import agent_state, editor_base
 from integrations.keymaps import COMMANDS_BY_ID
+from services import agent_prompt, turn_baseline
 from utils import window_focus
 
 logger = logging.getLogger('vdock')
@@ -79,6 +80,8 @@ def _row(entry: Dict[str, Any], now: float) -> Dict[str, Any]:
         'can_decide': (state == agent_state.STATE_PERMISSION
                        and source in DECISION_COMMANDS),
         'can_focus': source in _MARKER_BY_SOURCE,
+        'can_prompt': (source in agent_prompt.PROMPT_SOURCES
+                       and state == agent_state.STATE_READY),
     }
 
 
@@ -120,6 +123,8 @@ def get_mission():
     return jsonify({
         'success': True,
         'sessions': rows,
+        'presets': [{'id': pid, 'label': preset['label']}
+                    for pid, preset in agent_prompt.PROMPT_PRESETS.items()],
         'needs_you': sum(1 for r in rows if r['needs_you']),
         'pending_approvals': sum(1 for r in rows if r['can_decide']),
     })
@@ -191,3 +196,74 @@ def decide():
                         'details': result.get('details')}), 502
     logger.info('Mission control: %s %s session %s', decision, source, session_id)
     return jsonify({'success': True, 'decision': decision})
+
+
+@agent_mission_bp.route('/api/agent-mission/prompt', methods=['POST'])
+@require_auth
+def prompt_session():
+    """Type a preset (or custom text) into ONE ready session."""
+    data, source, session_id = _body_target()
+    preset = str(data.get('preset') or '')
+    text = str(data.get('text') or '')
+    if not preset and not text.strip():
+        return jsonify({'success': False,
+                        'error': 'preset or text is required'}), 400
+    if preset and preset != 'custom' \
+            and preset not in agent_prompt.PROMPT_PRESETS:
+        return jsonify({'success': False,
+                        'error': f'Unknown preset: {preset}'}), 400
+
+    target = agent_prompt.resolve_target(source=source, session_id=session_id)
+    if target is None:
+        return jsonify({'success': False,
+                        'error': 'Session is no longer running'}), 404
+
+    rendered, error = agent_prompt.render_text(
+        preset or 'custom', text, target.cwd)
+    if rendered is None:
+        return jsonify({'success': False, 'error': error}), 400
+
+    result = agent_prompt.send_prompt(target, rendered)
+    if not result.get('success'):
+        return jsonify({'success': False, 'error': result.get('message'),
+                        'details': result.get('details')}), \
+            result.get('status_code', 502)
+    logger.info('Mission control: prompt %s -> %s session %s',
+                preset or 'custom', source, session_id)
+    return jsonify({'success': True})
+
+
+@agent_mission_bp.route('/api/agent-mission/changes', methods=['GET'])
+@require_auth
+def session_changes():
+    """Files the session changed this turn (git, per-turn baseline)."""
+    source = agent_state.normalise_source(request.args.get('source'))
+    session_id = agent_state.normalise_session_id(request.args.get('session_id'))
+    entry = _find_entry(source, session_id)
+    if entry is None:
+        return jsonify({'success': False,
+                        'error': 'Session is no longer running'}), 404
+    return jsonify(turn_baseline.changes(source, session_id,
+                                         entry.get('cwd') or ''))
+
+
+@agent_mission_bp.route('/api/agent-mission/open-diff', methods=['POST'])
+@require_auth
+def open_session_diff():
+    """Open one changed file's diff in the editor on the host PC."""
+    data, source, session_id = _body_target()
+    path = str(data.get('path') or '').strip()
+    if not path:
+        return jsonify({'success': False, 'error': 'path is required'}), 400
+    entry = _find_entry(source, session_id)
+    if entry is None:
+        return jsonify({'success': False,
+                        'error': 'Session is no longer running'}), 404
+    result = turn_baseline.open_diff(source, session_id,
+                                     entry.get('cwd') or '', path)
+    if not result.get('success'):
+        return jsonify({'success': False, 'error': result.get('message'),
+                        'details': result.get('details')}), \
+            result.get('status_code', 502)
+    return jsonify({'success': True, 'message': result.get('message')})
+

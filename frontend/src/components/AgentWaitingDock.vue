@@ -21,13 +21,17 @@
           v-for="alert in alerts.alerts.value"
           :key="alert.source"
           class="dock-chip"
+          :style="agentBrandVars(alert.source)"
           role="button"
           tabindex="0"
           :title="`${alerts.sourceLabelFor(alert.source)} needs you${alert.project ? ` — ${alert.project}` : ''}`"
           @click="navigate(alert.source)"
           @keydown.enter="navigate(alert.source)"
         >
-          <span class="dock-dot" aria-hidden="true"><span class="dock-pulse"></span></span>
+          <span class="dock-dot" :class="{ 'has-logo': agentBrandFor(alert.source).logo }" aria-hidden="true">
+            <img v-if="agentBrandFor(alert.source).logo" :src="agentBrandFor(alert.source).logo" alt="" class="dock-logo" />
+            <span class="dock-pulse"></span>
+          </span>
           <span class="dock-label">{{ alerts.sourceLabelFor(alert.source) }}</span>
           <span v-if="alert.project" class="dock-project">{{ alert.project }}</span>
           <button
@@ -46,6 +50,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { agentBrandFor, agentBrandVars } from '@/services/agentBrand'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { useSettingsStore } from '@/stores/settings'
 import { openMissionControl } from '@/services/missionControl'
@@ -101,12 +106,12 @@ function navigate(source: string) {
   gap: clamp(8px, 1.4vw, 14px);
   padding: clamp(8px, 1.8vh, 14px) clamp(12px, 2vw, 18px);
   border-radius: 999px;
-  background: rgba(46, 32, 8, 0.95);
-  border: 2px solid #f5a524;
-  box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.18), 0 10px 30px rgba(0, 0, 0, 0.55);
+  background: rgba(var(--agent-bg-rgb, 46, 32, 8), 0.95);
+  border: 2px solid var(--agent-solid, #f5a524);
+  box-shadow: 0 0 0 3px rgba(var(--agent-rgb, 245, 165, 36), 0.18), 0 10px 30px rgba(0, 0, 0, 0.55);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  color: #ffd89e;
+  color: var(--agent-text, #ffd89e);
   font-size: clamp(0.9rem, 2.6vh, 1.2rem);
   font-weight: 600;
   cursor: pointer;
@@ -141,14 +146,26 @@ function navigate(source: string) {
   width: clamp(10px, 2.4vh, 16px);
   height: clamp(10px, 2.4vh, 16px);
   border-radius: 50%;
-  background: #f5a524;
+  background: var(--agent-solid, #f5a524);
+}
+
+.dock-dot.has-logo {
+  width: clamp(18px, 4vh, 26px);
+  height: clamp(18px, 4vh, 26px);
+  background: transparent;
+}
+
+.dock-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .dock-pulse {
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  border: 2px solid rgba(245, 165, 36, 0.6);
+  border: 2px solid rgba(var(--agent-rgb, 245, 165, 36), 0.6);
   animation: dock-pulse 1.6s ease-out infinite;
 }
 
@@ -163,7 +180,7 @@ function navigate(source: string) {
 }
 
 .dock-project {
-  color: #c9a061;
+  color: rgba(var(--agent-light-rgb, 201, 160, 97), 0.8);
   font-weight: 500;
   font-size: 0.85em;
   overflow: hidden;
@@ -180,14 +197,14 @@ function navigate(source: string) {
   height: clamp(24px, 5vh, 34px);
   border-radius: 50%;
   border: none;
-  background: rgba(245, 165, 36, 0.18);
-  color: #ffd89e;
+  background: rgba(var(--agent-rgb, 245, 165, 36), 0.18);
+  color: var(--agent-text, #ffd89e);
   font-size: clamp(0.7rem, 2vh, 0.95rem);
   cursor: pointer;
   touch-action: manipulation;
 }
 
-.dock-dismiss:hover { background: rgba(245, 165, 36, 0.4); }
+.dock-dismiss:hover { background: rgba(var(--agent-rgb, 245, 165, 36), 0.4); }
 
 .dock-pop-enter-active,
 .dock-pop-leave-active {

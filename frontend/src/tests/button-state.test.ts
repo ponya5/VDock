@@ -79,6 +79,23 @@ describe('button state', () => {
     expect(store.get('btn_ci')!.tone).toBe('critical')
   })
 
+  it('keeps a live button menu and panel text, and clears them on the next result', () => {
+    const store = useButtonStateStore()
+    const menu = [{ id: 'open:a.py', label: 'a.py' }]
+    store.markFinished('btn_r', {
+      success: true,
+      data: { badge: '1', status: 'success', menu, panel_text: 'FAILED test_x' }
+    })
+
+    expect(store.get('btn_r')!.menu).toEqual(menu)
+    expect(store.get('btn_r')!.panelText).toBe('FAILED test_x')
+    expect(store.get('btn_r')!.tone).toBe('success')
+
+    store.markFinished('btn_r', { success: true, data: { badge: '0' } })
+    expect(store.get('btn_r')!.menu).toBeUndefined()
+    expect(store.get('btn_r')!.panelText).toBeUndefined()
+  })
+
   it('coerces a numeric badge to a string for rendering', () => {
     const store = useButtonStateStore()
     store.markFinished('btn_n', { success: true, data: { badge: 0 } })
