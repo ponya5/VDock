@@ -16,7 +16,8 @@ class UIControlAction(BaseAction):
             'ui_brightness_up',
             'ui_brightness_down',
             'ui_brightness_set',
-            'toggle_header'
+            'toggle_header',
+            'open_mission_control',
         ]
         return action in valid_actions
 
@@ -32,6 +33,11 @@ class UIControlAction(BaseAction):
             return self._brightness_set()
         elif action == 'toggle_header':
             return self._toggle_header()
+        elif action == 'open_mission_control':
+            # Pure UI verb: the frontend opens the modal; this only exists so
+            # the action validates and a backend dispatch can't 400.
+            return ActionResult(True, 'Mission Control opened',
+                                {'action': 'open_mission_control'})
         else:
             return ActionResult(False, f'Unknown UI control action: {action}')
 

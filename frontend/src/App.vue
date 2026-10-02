@@ -21,6 +21,7 @@
     <TutorialTour />
     <QuickDeckOverlay v-if="!isStandaloneSettings" />
     <AgentAlertOverlay />
+    <AgentMissionControl v-if="!isStandaloneSettings" />
     <!-- The lock screen sits above everything, including standalone settings -->
     <AuthGate />
   </div>
@@ -41,6 +42,7 @@ import BackgroundRenderer from '@/components/backgrounds/BackgroundRenderer.vue'
 import TutorialTour from '@/components/TutorialTour.vue'
 import QuickDeckOverlay from '@/components/QuickDeckOverlay.vue'
 import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
+import AgentMissionControl from '@/components/AgentMissionControl.vue'
 import AuthGate from '@/components/AuthGate.vue'
 import { probeAuth } from '@/services/auth'
 import { useAgentAlerts } from '@/services/agentAlerts'

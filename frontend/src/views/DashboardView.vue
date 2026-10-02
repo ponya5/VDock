@@ -274,6 +274,7 @@ import { loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
 import { agentStateEntry } from '@/services/agentState'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import { useButtonActions } from '@/composables/useButtonActions'
+import { useWidgetPolling } from '@/composables/useWidgetPolling'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
 import { confirmDialog } from '@/composables/useConfirm'
@@ -318,6 +319,9 @@ const {
   handleButtonSave,
   selectAction
 } = useButtonActions()
+
+// DL-144: GitHub CI/PR widgets refresh themselves while on screen.
+useWidgetPolling()
 
 // Quick Add states
 const quickAddVisible = ref(false)
