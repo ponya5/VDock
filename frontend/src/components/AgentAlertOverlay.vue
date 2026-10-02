@@ -7,6 +7,7 @@
         v-for="card in cards"
         :key="card.kind === 'rollup' ? 'rollup' : card.alert.source"
         class="agent-alert"
+        :style="card.kind === 'alert' ? agentBrandVars(card.alert.source) : undefined"
         role="alert"
       >
         <div class="alert-icon">
@@ -49,6 +50,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { agentBrandFor, agentBrandVars } from '@/services/agentBrand'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import type { AgentAlert } from '@/services/agentAlerts'
 import { useSettingsStore } from '@/stores/settings'
@@ -78,12 +80,8 @@ const cards = computed<AlertCard[]>(() => {
   return list.map((alert) => ({ kind: 'alert' as const, alert }))
 })
 
-// Brand logos shipped in /public/logos; other sources keep the robot glyph.
-const SOURCE_LOGOS: Record<string, string> = {
-  claude: '/logos/claudecode-color.png',
-}
 function logoFor(source: string): string | undefined {
-  return SOURCE_LOGOS[source]
+  return agentBrandFor(source).logo
 }
 
 function rollupLabel(list: AgentAlert[]): string {
@@ -117,12 +115,12 @@ function rollupLabel(list: AgentAlert[]): string {
   box-sizing: border-box;
   padding: clamp(14px, 3vh, 26px) clamp(16px, 2.6vw, 30px);
   border-radius: clamp(16px, 2.6vh, 24px);
-  background: rgba(46, 32, 8, 0.97);
-  border: 2px solid #f5a524;
-  box-shadow: 0 0 0 5px rgba(245, 165, 36, 0.2), 0 18px 56px rgba(0, 0, 0, 0.65);
+  background: rgba(var(--agent-bg-rgb, 46, 32, 8), 0.97);
+  border: 2px solid var(--agent-solid, #f5a524);
+  box-shadow: 0 0 0 5px rgba(var(--agent-rgb, 245, 165, 36), 0.2), 0 18px 56px rgba(0, 0, 0, 0.65);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  color: #ffd89e;
+  color: var(--agent-text, #ffd89e);
 }
 
 .alert-icon {
@@ -131,12 +129,12 @@ function rollupLabel(list: AgentAlert[]): string {
   width: clamp(52px, 12vh, 84px);
   height: clamp(52px, 12vh, 84px);
   border-radius: clamp(12px, 2.2vh, 18px);
-  background: rgba(245, 165, 36, 0.16);
+  background: rgba(var(--agent-rgb, 245, 165, 36), 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: clamp(1.5rem, 5.5vh, 2.4rem);
-  color: #f5a524;
+  color: var(--agent-solid, #f5a524);
 }
 
 .alert-logo {
@@ -149,7 +147,7 @@ function rollupLabel(list: AgentAlert[]): string {
   position: absolute;
   inset: -4px;
   border-radius: clamp(14px, 2.6vh, 20px);
-  border: 2px solid rgba(245, 165, 36, 0.6);
+  border: 2px solid rgba(var(--agent-rgb, 245, 165, 36), 0.6);
   animation: alert-pulse 1.6s ease-out infinite;
 }
 
@@ -199,7 +197,7 @@ function rollupLabel(list: AgentAlert[]): string {
   min-height: clamp(52px, 12vh, 84px);
   border-radius: clamp(12px, 2.2vh, 18px);
   border: none;
-  background: #f5a524;
+  background: var(--agent-solid, #f5a524);
   color: #2a1c04;
   font-size: clamp(1rem, 3.4vh, 1.5rem);
   font-weight: 700;

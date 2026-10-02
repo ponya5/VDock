@@ -21,6 +21,22 @@ describe('WeatherGlyph (DL-136)', () => {
     expect(w.find('.wg-sun-rays').exists()).toBe(false)
   })
 
+  it('draws a real crescent: the inner arc is flatter than the chord allows to collapse', () => {
+    // Regression: with an inner radius <= half the chord the two arcs
+    // coincide, the moon has zero area and only the stars are visible.
+    for (const props of [{ code: 0, isDay: false }, { code: 2, isDay: false }]) {
+      const body = mount(WeatherGlyph, { props }).find('.wg-moon-body')
+      expect(body.exists()).toBe(true)
+      const d = body.attributes('d')!
+      const arcs = [...d.matchAll(/a\s*([\d.]+)\s+[\d.]+\s+0\s+(\d)\s+(\d)\s+(-?[\d.]+)\s+(-?[\d.]+)/g)]
+      expect(arcs).toHaveLength(2)
+      const [outer, inner] = arcs
+      const chord = Math.abs(Number(outer[5]))
+      expect(Number(inner[1])).toBeGreaterThan(chord / 2 + 0.5) // genuine bulge
+      expect(Number(inner[1])).toBeGreaterThan(Number(outer[1])) // flatter than the outer arc
+    }
+  })
+
   it('shows sun+cloud when partly cloudy by day, moon+cloud at night', () => {
     const day = mount(WeatherGlyph, { props: { code: 2, isDay: true } })
     expect(day.find('.wg-sun-rays.small').exists()).toBe(true)

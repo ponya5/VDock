@@ -20,7 +20,12 @@ import logging
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+from config import env_file
+# One documented .env: backend/.env from source, DATA_DIR/.env when frozen.
+load_dotenv(env_file())
+if getattr(sys, 'frozen', False):
+    # Older installs kept .env next to the exe (cwd); still honour it.
+    load_dotenv()
 
 from config import Config
 from auth import require_auth
@@ -224,6 +229,9 @@ limiter.exempt(agent_events_bp)
 # cap that alone exhausts the quota, after which the picker silently shows
 # "No session" while real sessions run. Localhost enumeration, not abuse.
 limiter.exempt(agent_sessions_bp)
+# Mission Control polls every 15 s (240 req/h) -- exceeds any modest opt-in
+# cap, after which the whole deck 429s. Localhost-grade read traffic.
+limiter.exempt(agent_mission_bp)
 # Now-playing track + art are read on widget mount/refresh — same
 # self-refreshing-data class as the other widgets.
 limiter.exempt(now_playing_bp)
@@ -486,6 +494,10 @@ if __name__ == '__main__':
     if Config.ALLOW_LAN and host in ('127.0.0.1', 'localhost'):
         host = '0.0.0.0'
     port = Config.PORT
+
+    # Never sign deck tokens with a missing/published-placeholder key. Lives
+    # here (not at import) so test imports never write the user's .env.
+    Config.ensure_strong_secret_key()
 
     logger.info(f"Starting VDock server on {host}:{port}")
     logger.info(f"Plugins loaded: {len(plugin_manager.plugins)}")

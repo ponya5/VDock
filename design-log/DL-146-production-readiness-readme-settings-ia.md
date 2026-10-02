@@ -1,0 +1,440 @@
+# DL-146 - Production readiness, repo hygiene, secrets pattern, Settings IA, README refresh
+
+Four phases, one user review stop after each (more inside Phase 3). Plan:
+`docs/superpowers/plans/2026-10-03-dl146-production-readiness-readme-settings.md`.
+Runs **after DL-145 Phase 1 lands** (that work touches `backend/integrations/*`,
+`backend/actions/catalog.py`, `routes/actions.py`, `routes/agent_*`,
+`ButtonEditor.vue`); Phase 4 (README + screenshots) runs after every DL-145
+phase the user keeps.
+
+## Problem
+
+The user asked to "keep coding best practice, also regarding repo
+structure; `.env` and `.env.example` in case the user needs to paste keys;
+make sure what needs to be in gitignore; make this repo and app production
+ready; update README (not overloaded) + screenshots of the new features;
+optimize/evaluate the settings screen so it is easy to navigate". Standing
+guidance: intuitive, not overloaded, value for developers.
+
+Audit (2026-10-03, `main` @ `560bbcd`, 304 commits, 1,134 tracked files,
+~184 MB working tree / 106 MB pack) found the repo is in better shape than
+the request implies (extensive `.gitignore`, green CI on every push, rotating
+logs, `services/secrets.py` redaction, `Config.validate()`), but with a
+handful of real defects - one of them a security bug on this very machine -
+and a Settings screen that has outgrown its 7-tab shell.
+
+## Findings
+
+### A. Repo hygiene & structure
+
+**A0. "Core backend files are untracked" - not true; it is a snapshot artefact.**
+`git ls-files backend/app.py backend/actions/catalog.py
+backend/integrations/github_pack.py backend/routes/agent_mission.py` lists all
+four. The status snapshot showed `M backend/actions/catalog.py` - the leading
+space of ` M` (modified in worktree) was trimmed, so it reads like a bare
+flag. The `??` lines with **backslash** paths
+(`backend\.pytest_cache\v\cache\lastfailed`, `backend\data\vdock.log`,
+`backend\tests\test_turn_baseline.py`) come from the IDE's own file-change
+list, not `git status`: `git check-ignore -v` confirms `.pytest_cache/`
+(`.gitignore:121`) and `backend/data/vdock.log` (`.gitignore:78`) are
+ignored. The genuinely untracked files today are DL-145 Phase 1's new files
+(`backend/services/agent_prompt.py`, `test_runner.py`, `turn_baseline.py`,
+`integrations/live_pack_base.py`, five new tests, the DL-145 doc) - the
+concurrent agent's work in progress. **No fix needed**; the hygiene test in
+Phase 1 makes "is X tracked" a one-command answer.
+
+**A1. Tracked files that should not be in the repo**
+
+| Path | What | Evidence | Action |
+|---|---|---|---|
+| `.devin-shots/` (17 PNG) | Agent verification screenshots | Added in `0b77a4e` ("Add .devin-shots screenshots…"); not in `.gitignore`; no references (`rg "\.devin-shots"` = 0); two files byte-identical | `git rm -r --cached`, ignore. Copy any shot a DL cites into `design-log/refs/` first |
+| `backend/test-scripts/` (13 files) | One-off DL-131 scripts + **`backend-env.txt`, a full environment dump** | `backend-env.txt` (added `34acf1e`, on `origin/main`) holds Windows username, computer name, OneDrive path, VS Code/Windsurf IPC vars, plus `SECRET_KEY`/`WEATHERAPI_KEY` - **both verified to be the `.env.example` placeholders, not real secrets**. 7 files contain `C:\Users\Daniel…` absolute paths (`capture_guide_shots.py`, `dl131_common.py`, `dumpenv.bat`, `step2_readd_ui.py`, `step3_verify_ui.py`, `step6_final_state.py`) | `git rm` the dir (user confirm). If `capture_guide_shots.py` is still useful, move to `scripts/dev/` with paths parameterised |
+| `scripts/vdock_agent_hook.py` | Stale copy of `backend/scripts/vdock_agent_hook.py` | Hashes differ; `integrations/agent_hooks.py:71` installs the **backend** one; nothing references the root copy | `git rm` after a diff review |
+| `docs/LICENSE.md` | Duplicate of `LICENSE` | `Compare-Object` = 0 differences | `git rm` |
+| `.env.example` (root), `docs/env.example` | Two more env templates | Document dead vars (`JWT_SECRET_KEY`, `DEFAULT_ADMIN_PASSWORD=admin`, `DATABASE_URL`, `SENTRY_DSN`, `LOG_FILE`, `VITE_API_URL`, `WEATHER_API_KEY` misspelt); nothing reads them | Delete; `backend/.env.example` + new `frontend/.env.example` are the only templates |
+| `backend/Assets/VdIcon.ico`, `VdockIcon.ico` | Identical to `scripts/vdock-icon.ico` | Same blob hash | Keep one after `rg` for references in `vdock-backend.spec`, NSIS, electron-builder config |
+| `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile` | Container deploy | Mounts non-existent `./backend/Avatars`; container binds 127.0.0.1 because `ALLOW_LAN=False` so port 5000 is unreachable; a container cannot drive the host's keyboard/windows/audio, which is the product | **User decision D4** - recommend delete (or move to `deploy/docker/` labelled unsupported) |
+| `frontend/public/assets/animations/gifs/buttons/* (1).gif` etc. | 6 byte-identical duplicate GIFs | blob-hash scan | **Defer**: saved profiles may reference either filename; only remove with an alias or a reference scan of user data |
+
+**A2. Local-only clutter (not tracked, but worth cleaning / ignoring)**
+root `NUL` (Windows reserved-name artefact from a `> nul` typo in a POSIX
+shell; breaks `rg` with "Incorrect function" and some tools; needs
+`Remove-Item -LiteralPath '\\?\C:\…\NUL'`), `backend-restart.log` (2.4 MB),
+`backend-run.log`, `vdock-restart.log` (already ignored by `*.log`), root
+`/data/` and `/dist/` (ignored), `.benchmarks/` (empty, **not** ignored).
+
+**A3. Missing hygiene files.** No `.gitattributes`, no `.editorconfig`.
+Index is clean (750 `i/lf`, 380 `i/-text`, 0 mixed) only because this
+machine has `core.autocrlf=true`; 17 files are mixed CRLF/LF in the working
+tree, and a macOS/Linux contributor without autocrlf would check `.bat`
+files out LF (cmd `goto`/label parsing breaks). LICENSE, SECURITY.md exist at
+root; CONTRIBUTING, CHANGELOG, CODE_OF_CONDUCT exist in `docs/` (GitHub finds
+`docs/`), so nothing is missing - only the duplicate license.
+
+**A4. Secrets / personal data scan.** `git grep` over tracked files and
+`git log --all -G` over history for `ghp_`, `github_pat_`, `sk-…`, `AKIA…`,
+`xox[bp]-`, `AIza…`, private-key headers: **no hits**. Historic
+`backend/data/config.json` / `data/config.json` versions contain no
+key/token/password values. Personal data in tracked files: the author email
+(intentional: README/SECURITY/CONTRIBUTING contact, and the server-side
+default in `routes/feedback.py:29`), `backend/test-scripts/*` (above),
+`design-log/DL-004-ide-agent-control.md` and `design-log/collab/ORCHESTRATION.md`
+(absolute user paths, harmless prose). **Conclusion: no history rewrite** -
+nothing secret was ever committed; removing the env dump going forward is
+enough.
+
+**A5. Repo weight.** `design-log/refs/` 107 files / 34 MB (single PNGs up to
+2.7 MB), `frontend/public/assets/animations/` 65 MB, README GIFs 6-7 MB each
+plus MP4 twins. Not a defect; set a size budget for new images (≤400 KB,
+PNG-quantised or JPEG) and enforce it in the hygiene test for new files.
+LFS/history rewrite: out of scope.
+
+### B. Secrets & configuration
+
+**B1. Every env var the backend reads** (`rg "os\.environ|getenv" backend`):
+
+| Var | Read in | In `backend/.env.example`? | Notes |
+|---|---|---|---|
+| `SECRET_KEY` | `config.py:190` | yes, **placeholder value** | see B2 - security bug |
+| `DEBUG` | `config.py:191` | yes | DEBUG+LAN = Werkzeug debugger on the network (B3) |
+| `HOST`, `PORT` | `config.py:194-195` | yes | |
+| `REQUIRE_AUTH`, `AUTH_PASSWORD`, `TOKEN_EXPIRATION` | `config.py:198-204` | yes | comment "The frontend has no login screen" is **stale** since DL-126 (`AuthGate.vue`); example password `ChangeThisToAStrongPassword123!` is not rejected |
+| `RATELIMIT_ENABLED`, `RATELIMIT_DEFAULT` | `config.py:207-209` | yes, **`True` / `200 per day, 50 per hour`** | code default is off / 100k per hour. Copying the example turns on a cap that `agent_mission_bp` (not exempt, `app.py:192-235`) blows through: Mission Control polls every 15 s (`AgentMissionControl.vue:247`) = 240 req/h > 50/h. This machine's `backend/.env` has exactly that |
+| `RATELIMIT_STORAGE_URL` | `config.py:208` | **no** | |
+| `CORS_ORIGINS`, `ALLOW_LAN` | `config.py:212-213` | yes | |
+| `DECK_HOST` | `config.py:217` | **no** | |
+| `USE_SSL`, `SSL_CERT_PATH`, `SSL_KEY_PATH` | `config.py:226-228` | yes | missing cert files are not checked at boot |
+| `DATA_DIR` | `config.py:233` | yes | Electron sets it in packaged mode (`main.js:91-97`) |
+| `ENABLE_PLUGINS`, `REQUIRE_COMMAND_CONFIRMATION`, `ALLOW_COMMAND_EXECUTION` | `config.py`, `actions/command_action.py` | yes | |
+| `WEATHERAPI_KEY` | `actions/weather_action.py:23`, `config.py:258` | yes, **`demo-key-replace-with-your-own`** | non-empty junk counts as "configured"; example claims "Default demo key provided" - false since the key was removed |
+| `ANTHROPIC_API_KEY`, `GITHUB_TOKEN` | `services/secrets.py:73` | yes | good: `SecretSpec` with help URL + reason |
+| `VDOCK_DEFAULT_REPO_PATH` | `integrations/context.py:71,176` | yes | |
+| `VDOCK_FEEDBACK_EMAIL` | `routes/feedback.py:29` | **no** | |
+| `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/SCOPE` | **nothing** | yes | dead config - remove |
+| `APPDATA`, `LOCALAPPDATA`, `ProgramFiles*`, `XDG_DATA_HOME` | OS | n/a | allowlisted |
+| Frontend `VITE_PORT`, `VITE_BACKEND_PORT`, `VITE_WS_URL` | `frontend/src` | **no `frontend/.env.example`** | setup writes `frontend/.env` |
+| Electron `VDOCK_PRODUCTION`, `VDOCK_DISPLAY_INDEX`, `VDOCK_USE_SMALLEST_DISPLAY`, `VDOCK_FULLSCREEN`, `VDOCK_KIOSK`, `VDOCK_FRONTEND_PORT`, `VDOCK_BACKEND_PORT`, `VDOCK_SKIP_BACKEND_SPAWN`; launcher `VDOCK_DEV_SERVER`, `VDOCK_AUTO_CLOSE_LAUNCHER` | `frontend/electron/main.js`, `scripts/VDock-Launcher.py` | no | process env, not `.env`; document in `docs/development/DEVELOPER_GUIDE.md`, not the user template |
+
+**B2. Security bug - the "secret" key is public.** `setup.sh:101-103` (and
+`setup.bat`, re-verify) copy `backend/.env.example` verbatim, so `SECRET_KEY`
+becomes the published string `your-secret-key-here-change-this-to-random-string`
+(**verified on this machine**: local `backend/.env` holds exactly that).
+`routes/config.py:154` only persists a random key "if not already set" - the
+placeholder counts as set. JWTs (`auth/auth_manager.py:65,78`, HS256) are
+therefore signed with a key anyone can read on GitHub: with `REQUIRE_AUTH`
+on, any LAN client can mint a valid token. If `SECRET_KEY` is unset instead,
+`os.urandom` each boot means every device re-unlocks after a restart (DL-126
+works around that only when a password is set via Settings).
+
+**B3. Insecure combinations at boot.** Today only `REQUIRE_AUTH` without
+`AUTH_PASSWORD` is refused (`Config.validate`). Not handled:
+- `DEBUG=True` + LAN bind -> `socketio.run(debug=True, allow_unsafe_werkzeug=True)`
+  exposes the Werkzeug debugger (remote code execution) to the network.
+- `ALLOW_LAN` + `REQUIRE_AUTH` off -> anyone on the Wi-Fi can press keys,
+  type into agent sessions, approve agent permission prompts (Mission
+  Control), read logs. This is VDock's *main* phone use case, so refusing
+  would break it; it must instead be loud: startup warning, a Settings
+  "needs attention" item and a password nudge **in the Connect panel**
+  (today the password lives under Server, the LAN switch under Connect -
+  `SettingsView.vue:1330-1390` vs `1439`). This machine runs exactly this
+  combo (`backend/data/config.json`: `allow_lan: true, require_auth: false`).
+- `USE_SSL` with missing cert/key files -> crash deep in Werkzeug.
+- `REQUIRE_AUTH` with the example password.
+
+**B4. Packaged-app `.env` location is undefined (re-verify).** Electron runs
+the PyInstaller onedir backend with `cwd: resources/backend` and
+`DATA_DIR=userData/vdock-data` (`main.js:91-97`). `load_dotenv()` (no path,
+`app.py:23`) in a frozen exe searches the cwd - the install dir, possibly
+read-only Program Files - while `config.backend_dir()` (`config.py:139-144`,
+`Path(__file__).parent.parent / 'backend'`) resolves somewhere inside the
+bundle. So in the installed app there is no documented, writable place to
+paste a `GITHUB_TOKEN`, and the Settings password write (`routes/config.py:157`)
+likely lands in the bundle. Fix: one `Config.env_file()` - source runs
+`backend/.env`, frozen runs `DATA_DIR/.env` - used by both `load_dotenv` and
+`write_env_keys`.
+
+**B5. Where secrets surface today.** Good: `services/secrets.py` (booleans
+only to the frontend, `redact()` on CLI output), `PUT /api/config` writes
+`AUTH_PASSWORD` to `.env` and never returns it. Gap: there is **no in-app
+way to see which keys are configured or to add one** - the only hint is a
+greyed action's `unavailable_reason` in the picker (`SecretSpec.reason()`:
+"GITHUB_TOKEN is not set in backend/.env…").
+
+### C. Production readiness (local desktop + LAN panel, proportionate)
+
+Already good: rotating logs (`utils/logger.py` `RotatingFileHandler`; this
+machine shows `vdock.log` + `.1..3` at ~512 KB), `MAX_CONTENT_LENGTH` 16 MB,
+security headers + CSP (`app.py:73-95`), path-traversal guard on dist
+serving, localhost-only gates on hook/MCP/webhook routes
+(`agent_events.py:89`, `mcp.py:665`, `triggers.py:31`), login throttle
+(DL-126), CI on push/PR (`.github/workflows/ci.yml`: pytest on Python 3.9 +
+3.12 under xvfb, `vue-tsc`, vitest, build; last 6 runs green), release
+workflow building Win/mac/Linux installers, pinned `requirements.txt`.
+
+| # | Item | Evidence | Value | Effort | Verdict |
+|---|---|---|---|---|---|
+| C1 | Fix public `SECRET_KEY` (B2): treat known placeholders / <32 chars as unset, generate + persist once to `Config.env_file()` | B2 | **High** | S | **P2** |
+| C2 | Boot validator: refuse DEBUG+LAN, SSL w/o files, example password; warn LAN w/o auth; log configured integrations by **name only** | B3 | High | S | **P2** |
+| C3 | One `.env` location incl. packaged app | B4 | High | S-M | **P2** (re-verify first) |
+| C4 | Rate-limit: exempt `agent_mission_bp`; example stops enabling a 200/day cap | B1 | High (Mission Control 429s) | XS | **P2** |
+| C5 | Atomic JSON writes (`tmp` + `os.replace`) for `FileManager.save_json`, `Config.save_config`, user settings; daily rolling profile backup (keep 7) in `DATA_DIR/backups/` | only `services/triggers.py` writes atomically; Electron `kill()` on Windows is TerminateProcess - a mid-write kill truncates `profiles/*.json` | High | S | **P2** |
+| C6 | Single version source `backend/version.py`; health/MCP import it; test asserts it equals `frontend/package.json` and `frontend/electron/package.json` | `'2.2.0'` hard-coded in `app.py:434`, `routes/mcp.py:41`, two tests, README badge | Med | XS | **P2** |
+| C7 | `GET /api/config/integrations` (auth-protected): `secrets.status()` + CLI detection + reason + help URL; health gains `uptime_s` only | feeds Settings Overview (P3) | Med | S | **P2** |
+| C8 | Dependency audit: frontend `npm audit` 1 low (transitive `serialize-javascript`); **electron 6 high incl. `electron` itself (direct, `^41.0.2`, fix available)**; pip-audit not run yet | `npm audit --json` 2026-10-03 | Med-High | S + packaged smoke test | **P2** (electron bump = user confirm D6) |
+| C9 | CI: `permissions: contents: read`; audit job (npm high+, pip-audit; non-blocking first); a **Windows backend job** (the app is Windows-first; pywin32/comtypes/winrt paths are skipped on Linux) | `ci.yml` | Med | S | **P2** |
+| C10 | Node pin: README says Node 18+, but vitest 4 / jsdom 28 / Vite 6 need >=20 (CI uses 20, this machine 22.15); add `engines` + `.nvmrc` = 20 | `package.json`, README:183 | Med | XS | **P2** |
+| C11 | `scripts/check.ps1` / `scripts/check.sh`: the CI steps locally in one command | 19 ad-hoc scripts in `scripts/`, none runs the checks | Med | XS | **P2** |
+| C12 | `.env.example` rewrite + `frontend/.env.example` + env-documentation test | B1 | High | S | **P1** |
+| C13 | SECURITY.md: LAN guidance ("turn on a deck password before Allow LAN") | | Low | XS | **P2** |
+| Defer | HTTPS by default / cert generation; dropping CSP `'unsafe-eval'` (needs a bundle audit of three/ogl/vgpu); graceful SIGTERM handler (atomic writes cover the real risk); code signing + auto-update; Sentry/telemetry; gitleaks/LFS/history rewrite; restart-free LAN rebind; Docker | | | | **Deferred** |
+
+Test baselines to re-record at start: backend ~1163 pytest, frontend ~631
+vitest (DL-145 Phase 1 will raise both).
+
+### D. README
+
+`README.md` is 308 lines, good tone, image convention
+`docs/assets/screens/<kebab>.png|jpg` at `width="820"` (root `/*.png` is
+ignored by design). Gaps: nothing about Mission Control / approval inbox /
+live CI-PR buttons (DL-144) or DL-145 features; Node 18+ is wrong (C10);
+Configuration section is one paragraph with no key table; "Why VDock"
+table and six use cases are long; `settings-7inch.png`, `settings-buttons.png`,
+`settings-connect-device.png` will be stale after Phase 3. Target: **≤ 300
+lines**, "What's new" block near the top, `.env` table pointing at
+`backend/.env.example`, refreshed troubleshooting, shots captured last.
+
+### E. Settings screen evaluation
+
+`frontend/src/views/SettingsView.vue` = **5,521 lines** (template 1-1873,
+script 1875-3736, style 3738-5521) - the largest file in the frontend
+(next: `ButtonEditor.vue` 4,223). Only two panels are extracted
+(`components/settings/TriggersPanel.vue` 866, `McpInfoModal.vue` 376).
+
+**E1. Current information architecture** (control counts from the template)
+
+| Top-level (sidebar) | Sub-tabs | Panels (h2) | Rows | Notes |
+|---|---|---|---|---|
+| Appearance | Buttons · Layout & sidebar · Background · Screen saver | Sizing & touch, Key design, Motion, Labels & feedback / Typography, Docked sidebar, **Notifications** / Dashboard background, Per-scene overrides / General, Spectrum, Screensaver background, Widgets | 46 + 15 + 8 + 42 = **111** | Screen saver alone 405 template lines; "Notifications" (toasts) sits under Layout |
+| Templates | - | per-category template cards + app path editor | - | app executable paths edited here *and* probed from Server-ish config |
+| Server | - | Startup & navigation, Connection (host, **authentication + deck password**, ports) | 29 | "Open settings in a new browser tab" is a UI preference, not server |
+| Integrations | Apps & scenes · Agent alerts · Triggers · MCP server | Auto scene switching, **Running applications**, **Recent actions**, Agent attention alerts + Agent hooks, TriggersPanel, MCP | 33 + Triggers | "Integrations" holds no integrations (no GitHub/Claude/keys); Recent actions is picker history |
+| Connect a device | - | Connect a device | 12 | LAN switch here, password two tabs away |
+| Logs | - | Session logs, Log files | - | |
+| Guide | (opens new window) | - | - | |
+| About | - | VDock, What's in it, Build | - | |
+
+7 sidebar entries + Guide link, 8 sub-tabs, max depth 3 (section -> sub-tab ->
+panel; plus Advanced collapses inside rows). ~170 interactive rows.
+
+**E2. Where users get lost**
+1. *Integrations vs keys.* A developer looking for "GitHub token" opens
+   Integrations and finds scene switching and MCP; tokens exist nowhere in
+   the UI (B5).
+2. *Phone + password split.* Connect (LAN) and Server (password) are
+   separate, so the dangerous half of the setup is the one that is skipped.
+3. *Automation spread.* Auto scene switching (Integrations/Apps), Triggers
+   (Integrations/Triggers), agent alerts (Integrations/Alerts), toasts
+   (Appearance/Layout) - four places for "what happens automatically".
+4. *Templates* is a top-level peer of Server although it is "add scenes".
+5. *No overview.* Nothing says what is configured or broken (hooks
+   installed 2 of 4, LAN open without password, GitHub token missing) -
+   the only status chip is inside Agent alerts.
+6. *Search is a hand-written 25-entry list* (`settingsSearchIndex`,
+   `SettingsView.vue:3315-3340`): misses password/auth, LAN, ports,
+   deck address, typography, motion, sound, transparency, agent hooks,
+   templates paths, recent actions. One entry is **broken**: "Button Display"
+   uses `deepTab: 'display'` -> anchor `display` (`deepTabAnchor`, line 3354),
+   but no element has `id="display"` (panel ids are `sizing`, `touch`,
+   `design`, `motion`, `feedback`), so the jump scrolls nowhere.
+7. *Deep links* exist (`?tab=&sub=`, lines 3665-3680) but not to a panel.
+
+**E3. Layout consistency.** The DL-054 row pattern
+(`.row > .row-text + .row-control`, `SettingResetButton`, `Collapse` for
+Advanced) is applied consistently - keep it. Inconsistent: some panels use
+`panel-head` + hint, others bare `h2`; empty states vary (Running apps,
+Recent actions, Logs); the topbar "Apply" button shows on tabs where
+everything autosaves. 7" behaviour was fixed in DL-140 (short-viewport
+collapse, opaque sticky nav); touch targets meet 44 px in rows, but the
+sub-tab bar and nav items need a re-measure at 1024x600.
+
+**E4. Maintainability.** 15 test files read `SettingsView.vue` **as text**
+(`readFileSync(.../SettingsView.vue)` in `settings-subtabs.test.ts`,
+`connect-device.test.ts`, `button-behaviour-subtabs.test.ts`,
+`logs-and-weather-move.test.ts`, …). Any extraction breaks them unless a
+helper reads the view **plus** its extracted panels - this is the first
+step of Phase 3.
+
+**Verdict:** the row-level design is good and should be kept; the shell
+(IA + search + file) is the problem. Evolve, do not rewrite.
+
+## Decisions
+
+1. **No history rewrite.** No secret was ever committed (A4). Forward-only
+   removal of `backend/test-scripts/` and `.devin-shots/`, both behind user
+   confirmation (`git rm` is the only "destructive" git op in this DL; no
+   force-push, no filter-repo).
+2. **One secrets home:** `Config.env_file()` (`backend/.env` from source,
+   `DATA_DIR/.env` when frozen). Secrets never go to `config.json`,
+   `user_settings.json`, API responses or logs. `backend/.env.example` is
+   the single documented template, grouped *Core / Network & security /
+   Integrations (keys) / Advanced*, every key with default, effect and
+   where-to-get-it URL; `SECRET_KEY=` ships **empty** and is generated on
+   first boot. `frontend/.env.example` documents the three `VITE_*` vars.
+3. **A test owns the env contract:** every `os.environ.get('X')` /
+   `getenv('X')` in `backend/` (minus an OS allowlist) must appear in
+   `backend/.env.example`, and every key in the example must be read
+   somewhere. Dead vars cannot creep back.
+4. **A test owns repo hygiene:** forbidden tracked paths (`.devin-shots/`,
+   `backend/test-scripts/`, `*.log`, `.env`, `NUL`), no absolute user paths in
+   tracked code (design-log prose allowlisted), new binaries ≤ 1 MB unless
+   allowlisted.
+5. **Boot validator, not a framework:** extend `Config.validate()` +
+   `Config.report()`; refuse only unambiguous footguns (DEBUG+LAN, SSL
+   without files, example password with auth on); warn on LAN without auth.
+6. **Settings: six top-level sections max, Overview first.**
+
+   | Before (7 + Guide) | After (6 + Guide) | Contents |
+   |---|---|---|
+   | - | **Overview** (new, default landing) | "Needs attention" list, quick switches (Auto scene switching, Agent alerts, Allow LAN, Screensaver), "Edit keys on the dashboard" link |
+   | Appearance (4 subs) | **Appearance** (Buttons · Layout · Background · Screen saver) | unchanged content; toasts move out |
+   | Integrations > Apps / Alerts / Triggers / MCP | **Agents & automation** (Agent alerts · Scene switching · Triggers · MCP) | alerts + hooks status first; Running apps lives inside Scene switching; toast notifications join Agent alerts as "Notifications" |
+   | Templates; (keys: nowhere) | **Integrations** (Accounts & keys · App templates) | per-`SecretSpec` status rows, help link, add-key flow (D3); Templates + app paths |
+   | Server; Connect a device | **Devices & network** (Connect a device · Security · Ports & host) | LAN switch, QR and the password nudge on one page; ports/host/SSL under Advanced |
+   | Logs; About; (Recent actions; Startup) | **System** (Logs · Startup · About) | Recent actions -> "Clear recent actions" row under Startup/Data; About + version |
+
+   Legacy deep links (`?tab=server|connect|integration|templates|logs|about`,
+   `?sub=apps|alerts|triggers|mcp|buttons|…`) keep working via a map; new
+   `?section=&sub=&anchor=`.
+7. **A settings registry** (`frontend/src/settings/registry.ts`) is the one
+   source for sections, sub-pages, panel anchors, search entries and legacy
+   ids. Search covers every panel and named row; a test asserts every
+   registry anchor exists in the rendered panel sources and every `h2`
+   has an entry.
+8. **Split by panel, mechanically, before moving anything.** One component
+   per sub-page under `components/settings/panels/`, state via the existing
+   stores plus a small `useServerConfig()` composable; target
+   `SettingsView.vue` ≤ 1,200 lines (shell, nav, topbar, search, routing).
+9. **README and screenshots last**, from seeded simulated agent sessions
+   (fake ids, `POST /api/agent-events`, cleaned with `state: 'ended'`), never
+   keystrokes into real windows.
+
+### Mockup-level description (Phase 3)
+
+*Overview, 1024x600:* topbar "Overview - What's set up and what needs you".
+Left column "Needs attention" (only when non-empty): amber rows like
+"Anyone on your Wi-Fi can press your keys - Set a deck password ->"
+(Devices & network › Security), "GitHub token not set - live PR/CI buttons
+are off - Add ->" (Integrations › Accounts & keys), "2 of 4 agents hooked -
+Install ->" (Agents › Alerts). Right column "Quick switches": four switch
+rows. Below: "Edit what a key does -> opens the dashboard in edit mode".
+All set: a single green row "Everything is set up". No raw errors.
+
+*Accounts & keys:* one row per `SecretSpec` (GitHub token, Anthropic API key,
+WeatherAPI key) + CLI rows (gh login, Claude Code CLI): status chip
+(Configured / Not set / CLI found), one-line "what it unlocks", "Get a key"
+link, and the add-key control from decision D3. A footnote: "Keys live in
+`<env file path>` and are never shown again or sent to other devices."
+
+*Devices & network › Connect:* existing steps + QR; when LAN is on and auth
+is off, an inline amber row with the DL-126 set-password flow (component
+extracted from Server, reused, not duplicated).
+
+### Click-count acceptance (from the dashboard, settings closed)
+
+| Task | Before | After (target) |
+|---|---|---|
+| Connect a phone | Settings -> Connect a device -> Allow LAN (3) + relaunch + no password prompt | Settings -> Overview "Connect a phone" -> Allow LAN (3) + relaunch, **password offered on the same page** |
+| Add GitHub token | not possible in-app: hover a greyed action, find and edit `backend/.env` by hand, restart | Settings -> "GitHub token not set" -> paste + Save (3, D3=B) or copy line + "Open .env" (3, D3=A) |
+| Turn on auto scene switching | Settings -> Integrations -> switch (3) | Settings -> quick switch on Overview (2) |
+| Set agent alert behaviour | Settings -> Integrations -> Agent alerts -> control (4) | Settings -> Agents & automation (default sub = Agent alerts) -> control (3) |
+| Change a button's action | not in Settings: Back -> Edit mode -> key edit -> pick -> Save (5) | Settings -> "Edit keys" link (lands in edit mode) -> key edit -> pick -> Save (4); from the dashboard unchanged (4) |
+
+No task may get more clicks than before; search must find each task's
+control by an obvious word ("phone", "token", "github", "scene", "alert",
+"password", "port").
+
+## Risks
+
+- **Concurrent DL-145 work** touches `catalog.py`, `routes/actions.py`,
+  `routes/agent_*`, `integrations/*`, `ButtonEditor.vue`. Phase 2's
+  `agent_mission_bp` exemption is a one-line `app.py` change; everything in
+  `routes/agent_*` waits until DL-145 Phase 1 is merged.
+- **Settings split regressions:** 15 source-reading tests, ~170 bindings,
+  scroll anchors, `data-tour` attributes (`nav-appearance`, `nav-server`,
+  `nav-connect`, `nav-integration`, `nav-templates`, `nav-logs`, `nav-guide`,
+  `nav-about`, `subtab-screensaver`; re-grep the tour config before
+  renaming) and `GuideView.vue` copy that names settings paths.
+- **Default landing change** (Overview) adds one click for appearance
+  tweakers; mitigated by remembering the last section in the session.
+- **`.env` move for packaged builds** must not lose an existing
+  `resources/backend/.env`: migrate it on first boot if found.
+- **Electron major-line bump** can break packaging; needs a packaged smoke
+  test by the user.
+- **Line-ending normalisation** produces a large diff if any index file is
+  CRLF (audit says none) - run `git add --renormalize .` and review the
+  stat before committing.
+
+## Out of scope
+
+History rewrite / LFS; HTTPS by default; restart-free LAN rebind; code
+signing and auto-update; telemetry; Docker support; removing duplicate GIF
+assets; a full Settings visual redesign or new design system; moving
+ButtonEditor's action editing into Settings; DL-145 feature work itself.
+
+## User decisions
+
+- **D1** `git rm` `.devin-shots/` (cached) and `backend/test-scripts/` (incl.
+  the env dump) - confirm; keep anything?
+- **D2** No history rewrite (recommended; nothing secret was committed).
+- **D3** Adding keys in-app: **A** status + "copy `GITHUB_TOKEN=` line" +
+  "Open env file" (no secret ever crosses HTTP) or **B** write-only paste
+  field (localhost requests only, written to the env file, applied to
+  `os.environ` live, never returned) - **recommend B** (DL-126 precedent).
+- **D4** Docker files: delete (recommended) or keep as unsupported.
+- **D5** Settings opens on Overview.
+- **D6** Bump Electron for the 6 high advisories (needs a packaged smoke test).
+- **D7** Release as 2.3.0 with a CHANGELOG entry after Phase 4.
+
+## Implementation Results
+
+### Phase 1 - Repo hygiene, gitignore, env contract
+_Implemented 2026-10-03. Not committed (per instruction)._
+
+**User decisions recorded**
+- Approved: `git rm -r --cached .devin-shots backend/test-scripts` (files stay on disk, now ignored); no history rewrite, no commit, no push.
+- Approved: delete the Docker files (`docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`) via `git rm`.
+- API keys UX (later phases): status + "copy line / open .env" only; no pasting keys in the app. This supersedes D3 = B / Task 2.8.
+- Settings will open on Overview (D5); Electron bump + 2.3.0 approved for later phases (not done here).
+
+**Baselines:** backend 1262 -> **1294** passing (+32); frontend 666 passing (664 at brief; 2 added by concurrent DL-145 work; no frontend source touched).
+
+**Assumptions re-verified:** (1) 17 + 13 tracked files in `.devin-shots/` + `backend/test-scripts/` (test-scripts has 14 on disk: one untracked); nothing outside design-log references them; only DL-146 cites `.devin-shots`. (2) `backend-env.txt` `SECRET_KEY`/`WEATHERAPI_KEY` equal the example placeholders (True/True) - no rotation needed. (3) `setup.bat:205-206` / `setup.sh:101-103` copy the example. (4) `python-dotenv` uses `os.getcwd()` when `sys.frozen`. Index has 0 CRLF files (`git ls-files --eol`), so no `--renormalize` was run.
+
+**Pulled forward from Phase 2 (user's security finding)**
+- `config.py`: `env_file()` (backend/.env from source, DATA_DIR/.env frozen), `KNOWN_PLACEHOLDER_SECRETS`, `is_weak_secret_key()`, `Config.ensure_strong_secret_key()` - weak/placeholder/missing key -> `secrets.token_hex(32)`, saved with `write_env_keys`; on `OSError` keeps the in-memory key and warns. Logs the file *name* only, never a value.
+- `app.py`: `load_dotenv(env_file())` (+ cwd fallback when frozen); guard runs in the `__main__` block (not at import, so tests never write the real `.env`); `limiter.exempt(agent_mission_bp)`.
+- `routes/config.py`: password write persists a strong key when the file's is weak, via `env_file()`.
+- Not done (Phase 2): frozen `.env` migration, boot validator (DEBUG+LAN etc.), `system.py` ports still read `backend/.env`.
+
+**Files**
+- Created: `backend/tests/test_repo_hygiene.py`, `test_env_documented.py`, `test_secret_key.py`, `test_rate_limit_exemptions.py`; `frontend/.env.example`; `.gitattributes`; `.editorconfig`.
+- Modified: `backend/.env.example` (rewritten: empty `SECRET_KEY`, `RATELIMIT_ENABLED` commented/off, dead `SPOTIFY_*` removed, `DECK_HOST`/`RATELIMIT_STORAGE_URL`/`VDOCK_FEEDBACK_EMAIL` added), `.gitignore`, `backend/config.py`, `backend/app.py`, `backend/routes/config.py`, `backend/tests/test_security_hardening.py` (fixture patches `env_file`; +1 test), `backend/tests/test_app_main_module_alias.py` (probe redirects `.env` to tmp), `scripts/build-installer.ps1` (dropped `docker-compose.yml` copy entry), `docs/development/DEVELOPER_GUIDE.md`, `docs/CONTRIBUTING.md`.
+- Removed from the index only: 30 tracked files (`.devin-shots` 17, `backend/test-scripts` 13). Deleted: the 3 Docker files.
+
+**Deviations / findings**
+- `frontend/env.example` (tracked, dead `VITE_*` vars) is a fifth template not named in the plan. With `docs/env.example` and root `.env.example` it sits in `PENDING_REMOVAL` in the hygiene test (needs the user's `git rm`; the test fails if an entry is already gone, so it cannot go stale).
+- `scripts/deploy.sh` / `deploy.bat` (and their rows in `scripts/README.md`, plus Docker mentions in `docs/ARCHITECTURE.md`) are Docker-only and now dangling. Not deleted - outside the approved list.
+- While verifying, `test_app_main_module_alias.py` (runs `app.py` as `__main__` via `runpy`) hit the new guard and rewrote this machine's real `backend/.env` `SECRET_KEY` (placeholder -> generated 64-char key). Test fixed so it can no longer do that. The outcome equals what the first backend start would have done.
+- `RATELIMIT_ENABLED=True` remains in this machine's `backend/.env` (user file untouched); Mission Control is now exempt so it no longer 429s.
+- Task 1.4 items needing a separate "yes" were not run: `scripts/vdock_agent_hook.py`, `docs/LICENSE.md`, the three legacy env templates, `backend/Assets` icons, local `NUL` and root log cleanup.
+
+**Not verified:** fresh-clone simulation (nothing committed); `npm run build` (no frontend source changed); packaged/frozen `.env` location (code path covered by unit test only).
+
+### Phase 2 - Production hardening + CI
+_Not started._
+
+### Phase 3 - Settings IA (3a split, 3b registry + nav, 3c overview + keys + connect)
+_Not started._
+
+### Phase 4 - README refresh + screenshots
+_Not started._

@@ -27,9 +27,13 @@ vi.mock('@/stores/dashboard', () => ({ useDashboardStore: () => dashboard }))
 vi.mock('@/stores/buttonState', () => ({ useButtonStateStore: () => buttonState }))
 vi.mock('@/stores/notifications', () => ({ useNotificationsStore: () => notify }))
 
+const catalog = reactive<{ byActionType: Record<string, any> }>({ byActionType: {} })
+vi.mock('@/stores/actionCatalog', () => ({ useActionCatalogStore: () => catalog }))
+
 import {
   ciJustFailed,
   isPolledWidget,
+  MIN_LOCAL_POLL_SECONDS,
   MIN_POLL_SECONDS,
   pollSecondsFor,
   useWidgetPolling,
@@ -56,6 +60,7 @@ beforeEach(() => {
   dashboard.isEditMode = false
   dashboard.currentPage = { buttons: [] }
   buttonState.states = {}
+  catalog.byActionType = {}
 })
 
 afterEach(() => {
@@ -90,6 +95,48 @@ describe('helpers', () => {
     expect(ciJustFailed('critical', true, 'critical')).toBe(false) // still red
     expect(ciJustFailed('normal', true, 'normal')).toBe(false)
     expect(ciJustFailed(undefined, true, 'critical')).toBe(true) // known reading, tone unset
+  })
+})
+
+describe('catalog live buttons (DL-145)', () => {
+  const liveSpec = { poll_seconds: 15, poll_config: { op: 'status' } }
+
+  it('treats an action with poll_seconds as a polled widget', () => {
+    const button = widget('t', 'dev_run_tests') as any
+    expect(isPolledWidget(button)).toBe(false)
+    expect(isPolledWidget(button, liveSpec as any)).toBe(true)
+  })
+
+  it('uses the spec interval, with a 3 s floor for non-GitHub and 30 s for GitHub', () => {
+    const local = { id: 't', action: { type: 'dev_run_tests', config: {} } } as any
+    expect(pollSecondsFor(local, liveSpec as any)).toBe(15)
+    expect(pollSecondsFor({ ...local, action: { type: 'dev_run_tests', config: { refresh_interval: 1 } } }, liveSpec as any))
+      .toBe(MIN_LOCAL_POLL_SECONDS)
+    expect(pollSecondsFor(widget('g', 'gh_widget_ci', { refresh_interval: 1 }) as any)).toBe(MIN_POLL_SECONDS)
+  })
+
+  it('polls on the spec interval, merging poll_config without mutating the button', async () => {
+    catalog.byActionType = { dev_run_tests: liveSpec }
+    const button = { id: 't', action: { type: 'dev_run_tests', config: { watch: false } } }
+    await mountHost([button])
+
+    expect(executeButtonAction).toHaveBeenCalledTimes(1)
+    expect(executeButtonAction.mock.calls[0][0].action.config).toEqual({ watch: false, op: 'status' })
+    expect(button.action.config).toEqual({ watch: false })
+
+    await vi.advanceTimersByTimeAsync(15_500)
+    expect(executeButtonAction).toHaveBeenCalledTimes(2)
+  })
+
+  it('starts polling once the catalog loads', async () => {
+    const button = { id: 't', action: { type: 'dev_run_tests', config: {} } }
+    await mountHost([button])
+    expect(executeButtonAction).not.toHaveBeenCalled()
+
+    catalog.byActionType = { dev_run_tests: liveSpec }
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(executeButtonAction).toHaveBeenCalledTimes(1)
   })
 })
 

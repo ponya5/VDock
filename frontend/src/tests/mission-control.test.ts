@@ -39,7 +39,7 @@ function session(over: Partial<MissionSession>): MissionSession {
   return {
     source: 'claude', session_id: 's1', project: 'api', cwd: 'C:/repos/api',
     state: 'working', message: '', prompt: '', reply: '', prompted: true,
-    ts: 1, idle_seconds: 10, needs_you: false, can_decide: false, can_focus: true,
+    ts: 1, idle_seconds: 10, needs_you: false, can_decide: false, can_focus: true, can_prompt: false,
     ...over,
   }
 }
@@ -58,6 +58,7 @@ function snapshotResponse(sessions = SNAPSHOT_SESSIONS) {
     data: {
       success: true,
       sessions,
+      presets: [{ id: 'continue', label: 'Continue' }, { id: 'write_tests', label: 'Write tests' }],
       needs_you: sessions.filter((s) => s.needs_you).length,
       pending_approvals: sessions.filter((s) => s.can_decide).length,
     },
@@ -271,6 +272,89 @@ describe('AgentMissionControl', () => {
 })
 
 // ---------------------------------------------------------------------------
+
+describe('DL-145 prompt menu and turn changes', () => {
+  const READY = session({ session_id: 'r1', project: 'api', state: 'ready', needs_you: true, can_prompt: true, ts: 5 })
+  const CHANGES = {
+    success: true,
+    files: [
+      { path: 'src/a.ts', added: 100, removed: 8, status: 'M' },
+      { path: 'src/b.ts', added: 20, removed: 0, status: 'A' },
+    ],
+    totals: { files: 2, added: 120, removed: 8 },
+  }
+
+  function respond(changes: unknown = CHANGES) {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve(url === '/agent-mission/changes' ? { data: changes } : snapshotResponse([READY, ...SNAPSHOT_SESSIONS])))
+  }
+
+  it('offers Prompt only on rows the server marks can_prompt', async () => {
+    respond()
+    const wrapper = await mountOpen()
+
+    expect(wrapper.findAll('[data-testid="mc-prompt"]')).toHaveLength(1)
+  })
+
+  it('Prompt opens the preset list and a preset posts for exactly that session', async () => {
+    respond()
+    const wrapper = await mountOpen()
+
+    expect(wrapper.find('[data-testid="mc-presets"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="mc-prompt"]').trigger('click')
+    const labels = wrapper.findAll('[data-testid="mc-preset"]').map((b) => b.text())
+    expect(labels).toEqual(['Continue', 'Write tests'])
+
+    await wrapper.findAll('[data-testid="mc-preset"]')[1].trigger('click')
+    await flushPromises()
+
+    expect(apiPost).toHaveBeenCalledWith('/agent-mission/prompt', {
+      source: 'claude', session_id: 'r1', preset: 'write_tests',
+    })
+    expect(toast.success).toHaveBeenCalledWith('Write tests', 'Claude Code - api')
+    expect(wrapper.find('[data-testid="mc-presets"]').exists()).toBe(false)
+  })
+
+  it('shows the server refusal verbatim, including a 409', async () => {
+    respond()
+    apiPost.mockRejectedValueOnce({
+      response: { status: 409, data: { error: 'That session is busy', details: 'Wait for it to finish' } },
+    })
+    const wrapper = await mountOpen()
+
+    await wrapper.find('[data-testid="mc-prompt"]').trigger('click')
+    await wrapper.find('[data-testid="mc-preset"]').trigger('click')
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('Could not send the prompt', 'That session is busy', 'Wait for it to finish')
+  })
+
+  it('summarises what the turn changed and opens a file diff on tap', async () => {
+    respond()
+    const wrapper = await mountOpen()
+
+    // apiClient.get takes the query object directly (it wraps it in `params`).
+    expect(apiGet).toHaveBeenCalledWith('/agent-mission/changes', { source: 'claude', session_id: 'r1' })
+    const chip = wrapper.find('[data-testid="mc-changes"]')
+    expect(chip.text()).toBe('2 files +120 −8')
+    expect(wrapper.find('[data-testid="mc-files"]').exists()).toBe(false)
+
+    await chip.trigger('click')
+    expect(wrapper.findAll('[data-testid="mc-file"]')).toHaveLength(2)
+
+    await wrapper.findAll('[data-testid="mc-file"]')[0].trigger('click')
+    expect(apiPost).toHaveBeenCalledWith('/agent-mission/open-diff', {
+      source: 'claude', session_id: 'r1', path: 'src/a.ts',
+    })
+  })
+
+  it('hides the changes chip when nothing changed', async () => {
+    respond({ success: true, files: [], totals: { files: 0, added: 0, removed: 0 } })
+    const wrapper = await mountOpen()
+
+    expect(wrapper.find('[data-testid="mc-changes"]').exists()).toBe(false)
+  })
+})
 
 describe('entry points', () => {
   it('the waiting dock offers a Mission Control button that opens it', async () => {

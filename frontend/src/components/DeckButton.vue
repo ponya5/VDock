@@ -1365,6 +1365,11 @@ function triggerRipple(event: PointerEvent) {
   border-color: rgba(255, 255, 255, 0.25);
 }
 
+.button-badge.tone-success {
+  background: rgba(22, 163, 74, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
 .button-badge.tone-critical {
   background: rgba(220, 38, 38, 0.9);
   border-color: rgba(255, 255, 255, 0.25);

@@ -9,6 +9,7 @@ import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
 import { openMissionControl } from '@/services/missionControl'
+import { openLiveMenu } from '@/services/liveActionMenu'
 
 export function useButtonActions() {
   const dashboardStore = useDashboardStore()
@@ -114,6 +115,13 @@ export function useButtonActions() {
         })
         return
       }
+    }
+
+    // A live button with a press menu (DL-145) opens its sheet instead of
+    // running anything; the menu rows run the actual operations.
+    if (actionCatalogStore.byActionType[button.action.type]?.press === 'menu') {
+      void openLiveMenu(button)
+      return
     }
 
     // Widgets render live data; pressing them must not dispatch. The catalog

@@ -1,7 +1,10 @@
 """Configuration routes."""
+import secrets
+
 from flask import Blueprint, request, jsonify
 from config import (
-    Config, DECK_HOST_RE, lan_ip, backend_dir, write_env_keys, read_env_key,
+    Config, DECK_HOST_RE, lan_ip, env_file, is_weak_secret_key,
+    write_env_keys, read_env_key,
 )
 from auth import require_auth
 from services.app_paths import validate_path
@@ -151,10 +154,12 @@ def update_config():
     # key and every device has to re-unlock.
     if auth_password_set is not None:
         env_updates = {'AUTH_PASSWORD': auth_password_set}
-        if not read_env_key(backend_dir() / '.env', 'SECRET_KEY'):
+        if is_weak_secret_key(read_env_key(env_file(), 'SECRET_KEY')):
+            if is_weak_secret_key(Config.SECRET_KEY):
+                Config.SECRET_KEY = secrets.token_hex(32)
             env_updates['SECRET_KEY'] = Config.SECRET_KEY
         try:
-            write_env_keys(backend_dir() / '.env', env_updates)
+            write_env_keys(env_file(), env_updates)
         except OSError as e:
             return jsonify(
                 {'error': f'Could not write backend/.env: {e}', 'success': False}

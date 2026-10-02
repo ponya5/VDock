@@ -157,3 +157,5 @@ the eventual merge into the main line.
 | [DL-142](DL-142-per-type-screensaver-layouts.md) | Per-type screensaver widget layouts — Spectrum overlay gets its own saved arrangement, independent of the Widget dashboard | Implemented |
 | [DL-143](DL-143-agent-autofocus-codex-hook-saver-remove-templates.md) | Agent auto-focus, Codex hook, saver widget remove (x), 8+ button templates, dev-feature research | Implemented |
 | [DL-144](DL-144-ci-status-mission-control-approval-inbox.md) | Live CI/PR buttons, Agent Mission Control, Approval Inbox | Implemented |
+| [DL-145](DL-145-agent-loop-dev-context-features.md) | Agent loop (prompt presets, error→agent, review changes, test runner), usage/context meter, git/dev-server/Docker live buttons, mic mute; layouts/audio devices/Google Calendar/local Whisper recommended for deferral | In progress — Phase 1 implemented |
+| [DL-146](DL-146-production-readiness-readme-settings-ia.md) | Production readiness: repo hygiene + env contract, public SECRET_KEY fix, boot validator, atomic writes, CI; Settings IA (6 sections, Overview, Accounts & keys); README + screenshots last | In progress — Phase 1 implemented |

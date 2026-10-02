@@ -21,6 +21,7 @@ from flask import Blueprint, jsonify, request
 
 from auth import require_auth
 from integrations import agent_hooks, agent_state
+from services import turn_baseline
 
 logger = logging.getLogger('vdock')
 
@@ -154,6 +155,7 @@ def post_agent_event():
 
     if state == STATE_ENDED:
         agent_state.end_session(source, session_id)
+        turn_baseline.forget(source, session_id)
         _broadcast_states()
         _update_alert(source, False, '', project, cwd)
         return jsonify({'success': True})
@@ -166,6 +168,10 @@ def post_agent_event():
                                prompt=str(data.get('prompt') or ''),
                                reply=str(data.get('reply') or ''),
                                prompted=bool(data.get('prompted')))
+    if str(data.get('prompt') or '').strip() and cwd:
+        # A new prompt starts a turn: snapshot the tree so "what changed"
+        # excludes the user's own earlier edits (DL-145).
+        turn_baseline.capture_async(source, session_id, cwd)
     _broadcast_states()
     raise_alert = _wants_attention(data, state)
     if raise_alert and state != agent_state.STATE_PERMISSION \

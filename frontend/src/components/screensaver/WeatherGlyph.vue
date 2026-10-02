@@ -80,11 +80,13 @@ const scene = computed<Scene>(() => {
       <circle class="wg-star s2" cx="50" cy="10" r="0.9" />
       <circle class="wg-star s3" cx="55" cy="24" r="1.2" />
       <g class="wg-moon-spin">
-        <path fill="url(#wg-moon)" d="M 41.5 19
+        <!-- Crescent = outer arc (r 13) back along a flatter inner arc. The
+             inner radius must exceed half the 26-unit chord or the SVG
+             spec scales it up to 13 and the two arcs coincide (zero area:
+             the moon vanishes and only the stars remain). -->
+        <path class="wg-moon-body" fill="url(#wg-moon)" d="M 41.5 19
           a 13 13 0 1 0 0 26
-          a 10.4 10.4 0 1 1 0 -26 Z" />
-        <circle cx="38" cy="24" r="1.6" fill="#b8c2e4" opacity="0.7" />
-        <circle cx="41" cy="38" r="1.1" fill="#b8c2e4" opacity="0.6" />
+          a 17 17 0 0 1 0 -26 Z" />
       </g>
     </g>
 
@@ -98,9 +100,9 @@ const scene = computed<Scene>(() => {
         <circle cx="22" cy="18" r="7" fill="url(#wg-sun)" />
       </g>
       <g v-else class="wg-moon-spin small">
-        <path fill="url(#wg-moon)" d="M 30.5 8.5
+        <path class="wg-moon-body" fill="url(#wg-moon)" d="M 30.5 8.5
           a 9.5 9.5 0 1 0 0 19
-          a 7.6 7.6 0 1 1 0 -19 Z" />
+          a 12.5 12.5 0 0 1 0 -19 Z" />
       </g>
       <!-- Positioning transform lives on the wrapper: a CSS transform
            animation on the <use> itself would override its attribute. -->

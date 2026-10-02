@@ -36,8 +36,7 @@ $copyItems = @(
     "setup.bat",
     "setup.sh",
     "README.md",
-    "LICENSE",
-    "docker-compose.yml"
+    "LICENSE"
 )
 
 foreach ($item in $copyItems) {

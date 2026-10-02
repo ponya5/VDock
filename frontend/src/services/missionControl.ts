@@ -25,10 +25,33 @@ export interface MissionSession {
   needs_you: boolean
   can_decide: boolean
   can_focus: boolean
+  /** DL-145: ready, and the agent can take a typed prompt. */
+  can_prompt: boolean
+}
+
+/** A built-in prompt the Prompt menu offers (the list lives on the server). */
+export interface MissionPreset {
+  id: string
+  label: string
+}
+
+export interface ChangedFile {
+  path: string
+  added: number
+  removed: number
+  status: 'M' | 'A' | 'D' | '?'
+}
+
+/** What a session changed this turn (GET /agent-mission/changes). */
+export interface SessionChanges {
+  success: boolean
+  files: ChangedFile[]
+  totals: { files: number; added: number; removed: number }
 }
 
 export interface MissionSnapshot {
   sessions: MissionSession[]
+  presets: MissionPreset[]
   needs_you: number
   pending_approvals: number
 }
@@ -54,6 +77,7 @@ export async function fetchMission(): Promise<MissionSnapshot> {
   const { data } = await apiClient.get('/agent-mission')
   return {
     sessions: data.sessions ?? [],
+    presets: data.presets ?? [],
     needs_you: data.needs_you ?? 0,
     pending_approvals: data.pending_approvals ?? 0,
   }
@@ -73,6 +97,23 @@ export async function decideMissionSession(
     session_id: sessionId,
     decision,
   })
+}
+
+export async function promptMissionSession(
+  source: string,
+  sessionId: string,
+  preset: string,
+): Promise<void> {
+  await apiClient.post('/agent-mission/prompt', { source, session_id: sessionId, preset })
+}
+
+export async function fetchSessionChanges(source: string, sessionId: string): Promise<SessionChanges> {
+  const { data } = await apiClient.get('/agent-mission/changes', { source, session_id: sessionId })
+  return data
+}
+
+export async function openSessionDiff(source: string, sessionId: string, path: string): Promise<void> {
+  await apiClient.post('/agent-mission/open-diff', { source, session_id: sessionId, path })
 }
 
 /** "now", "42s", "4m", "2h 5m" - compact idle time for a row. */
