@@ -46,8 +46,17 @@ import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useTutorial, TUTORIAL_STEPS } from '@/services/tutorial'
+import { useSettingsStore } from '@/stores/settings'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useMobileViewport } from '@/utils/mobileViewport'
+import { loadProfileMaps, sceneAppProfile } from '@/services/appDetection'
+import { useAppIntegrations } from '@/composables/useAppIntegrations'
 
 const tour = useTutorial()
+const settingsStore = useSettingsStore()
+const dashboardStore = useDashboardStore()
+const appIntegrations = useAppIntegrations()
+const { isMobileViewport } = useMobileViewport()
 const router = useRouter()
 const route = useRoute()
 const steps = TUTORIAL_STEPS
@@ -97,6 +106,42 @@ function waitForEl(sel: string, timeout = 2500): Promise<Element | null> {
 }
 
 let prepareToken = 0
+/* DL-131 F/U2: steps whose targets live in DeckHeader need the header
+   revealed first — it's unmounted by default and would re-hide after the
+   5 s autohide otherwise. We reveal via the store (the reveal FAB hides
+   in edit mode) and pin the countdown pill so the target can't vanish
+   mid-step. Only a reveal *we* did gets restored — when the tour leaves
+   '/' or ends, a user-hidden header goes back to hidden. */
+let headerRevealedByTour = false
+let headerPinnedByTour = false
+/* The agent bar mounts only on agent-backed scenes — step 6 switches to
+   one so it has something real to spotlight. Restored like the header,
+   but only while the user hasn't moved off that scene themselves
+   (clicks pass through the tour overlay). */
+let sceneSwitchFrom: number | null = null
+let sceneSwitchTo: number | null = null
+
+function restoreDashboardState() {
+  if (headerRevealedByTour) {
+    settingsStore.showHeader = false
+    headerRevealedByTour = false
+  } else if (headerPinnedByTour) {
+    // The header was already visible — resume the countdown we paused.
+    // Unmounted already (route left '/')? The query no-ops and the next
+    // mount starts with a fresh unpinned countdown.
+    document.querySelector('.autohide-pill.pinned')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+  headerPinnedByTour = false
+  if (sceneSwitchTo !== null) {
+    if (sceneSwitchFrom !== null && dashboardStore.currentSceneIndex === sceneSwitchTo) {
+      dashboardStore.setScene(sceneSwitchFrom)
+    }
+    sceneSwitchFrom = null
+    sceneSwitchTo = null
+  }
+}
+
 /** Get the view into the state the step needs, then measure the target. */
 async function prepareStep() {
   const token = ++prepareToken
@@ -105,6 +150,42 @@ async function prepareStep() {
   if (s.route && route.path !== s.route) {
     await router.push(s.route)
     await nextTick()
+  }
+  if (token !== prepareToken) return
+  if (s.route !== '/') restoreDashboardState()
+  // On mobile the header would *replace* the mobile chrome we're meant
+  // to spotlight (.mc-scene-rail) — skip the reveal, the rail is already
+  // mounted and the edit button genuinely doesn't exist there.
+  if (s.needsHeader && !isMobileViewport.value) {
+    if (!settingsStore.showHeader) {
+      settingsStore.showHeader = true
+      headerRevealedByTour = true
+    }
+    // Pause the autohide countdown — :not(.pinned) makes the click a no-op
+    // when the user already keeps the header pinned open.
+    const pin = await waitForEl('.autohide-pill:not(.pinned)', 1500)
+    if (pin) {
+      pin.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      headerPinnedByTour = true
+    }
+  }
+  if (token !== prepareToken) return
+  if (s.needsAgentScene) {
+    // The bar renders only while the active scene maps to an agent
+    // profile — same state_actions gate DashboardView uses. Already on
+    // one? Leave it; otherwise hop to the first agent scene and mark it
+    // for restore (only if the user hasn't moved scenes themselves).
+    await loadProfileMaps()
+    const scenes = dashboardStore.currentProfile?.scenes ?? []
+    const agentIdx = scenes.findIndex(
+      (sc) => sceneAppProfile(sc, appIntegrations.value)?.state_actions
+    )
+    if (agentIdx >= 0 && agentIdx !== dashboardStore.currentSceneIndex) {
+      sceneSwitchFrom = dashboardStore.currentSceneIndex
+      sceneSwitchTo = agentIdx
+      dashboardStore.setScene(agentIdx)
+      await nextTick()
+    }
   }
   if (token !== prepareToken) return
   if (s.activate) {
@@ -140,6 +221,7 @@ watch(() => tour.state.active, (active) => {
     startReanchor()
   } else {
     stopReanchor()
+    restoreDashboardState()
   }
 })
 // The user (or a Back step) may change routes mid-tour — re-anchor onto

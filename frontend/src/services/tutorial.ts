@@ -36,6 +36,12 @@ export interface TutorialStep {
   route?: string
   /** Selector clicked before measuring — e.g. to open a settings sub-tab. */
   activate?: string
+  /** Target lives inside DeckHeader — reveal it (and pin the autohide
+      countdown) before measuring; restored when the tour leaves '/'. */
+  needsHeader?: boolean
+  /** Target is the agent action bar — it only mounts on an agent-backed
+      scene, so switch to one first; restored when the tour leaves '/'. */
+  needsAgentScene?: boolean
   /** Target may legitimately be absent (conditional UI like the agent
       bar, a hidden header, or the docked sidebar). When it is, the step
       shows as a centered card — it never skips itself. */
@@ -57,7 +63,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     route: '/',
-    // Desktop scene pills; the mobile/touch chrome swaps in a rail.
+    // Desktop scene pills; the mobile/touch chrome swaps in a rail. Both
+    // live in the header chrome — reveal it first (autohide default-off).
+    needsHeader: true,
     target: '.enhanced-scene-nav, .mc-scene-rail',
     title: 'Scenes & Pages',
     text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch — or swipe right/left anywhere on the dashboard to move between scenes.',
@@ -75,6 +83,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     route: '/',
     // Phones render the deck read-only — no edit affordance there.
+    needsHeader: true,
     target: '[aria-label="Toggle Edit Mode"]',
     title: 'Edit Mode',
     text: 'Tap the pencil to customize: add buttons to empty slots, drag to rearrange, resize, and pick actions from the sidebar.',
@@ -83,7 +92,11 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     route: '/',
-    target: '.agent-action-bar',
+    // Only mounts while the current scene is agent-backed — switch to
+    // such a scene first; the mobile agent console is the same surface
+    // on touch panels.
+    needsAgentScene: true,
+    target: '.agent-action-bar, .mobile-agent-console',
     title: 'Agent Sessions',
     text: 'Running Claude Code or other agents? This bar shows their state — and with multiple sessions open, the chip lets you pick exactly which terminal your button taps control.',
     placement: 'top',

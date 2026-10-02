@@ -114,3 +114,46 @@ describe('wiring (source)', () => {
     expect(tourSrc).toContain('getBoundingClientRect')
   })
 })
+
+// DL-131 F/U2: steps whose targets live inside DeckHeader must reveal it
+// first — showHeader defaults false and autohides, so the spotlight had
+// nothing to measure. Mobile skips the reveal (it would replace the
+// mobile chrome being spotlighted).
+describe('header-targeted steps', () => {
+  it('steps pointing into DeckHeader declare needsHeader', () => {
+    const scenes = TUTORIAL_STEPS.find((s) => s.title === 'Scenes & Pages')
+    const edit = TUTORIAL_STEPS.find((s) => s.title === 'Edit Mode')
+    expect(scenes?.needsHeader).toBe(true)
+    expect(edit?.needsHeader).toBe(true)
+    // Steps not pointing into the header must not force a reveal.
+    for (const s of TUTORIAL_STEPS) {
+      if (s === scenes || s === edit) continue
+      expect(s.needsHeader ?? false, `"${s.title}" must not reveal the header`).toBe(false)
+    }
+  })
+
+  it('prepareStep reveals via the store, pins the countdown, restores', () => {
+    expect(tourSrc).toContain('settingsStore.showHeader = true')
+    expect(tourSrc).toContain('.autohide-pill:not(.pinned)')
+    expect(tourSrc).toContain('headerRevealedByTour')
+    expect(tourSrc).toContain('headerPinnedByTour')
+    expect(tourSrc).toContain('restoreDashboardState')
+    expect(tourSrc).toContain('isMobileViewport')
+  })
+
+  it('agent step spotlights the mobile console as a fallback', () => {
+    const agents = TUTORIAL_STEPS.find((s) => s.title === 'Agent Sessions')
+    expect(agents?.target).toContain('.agent-action-bar')
+    expect(agents?.target).toContain('.mobile-agent-console')
+  })
+
+  it('agent step switches to an agent-backed scene before measuring', () => {
+    const agents = TUTORIAL_STEPS.find((s) => s.title === 'Agent Sessions')
+    expect(agents?.needsAgentScene).toBe(true)
+    // The tour hops scenes via the store and restores it when leaving '/'.
+    expect(tourSrc).toContain('sceneAppProfile')
+    expect(tourSrc).toContain('dashboardStore.setScene')
+    expect(tourSrc).toContain('sceneSwitchFrom')
+    expect(tourSrc).toContain('restoreDashboardState')
+  })
+})
