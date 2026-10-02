@@ -18,6 +18,7 @@ Rules shared by all installers:
 """
 import json
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
@@ -234,6 +235,61 @@ def _add_antigravity_events(settings: Dict[str, Any]) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
+# Codex: ~/.codex/config.toml, top-level ``notify = ["cmd", "arg", ...]``.
+# Codex has one hook, fired when a turn completes, so it can report
+# "ready" but never "working". TOML, so this is a small text-level merge
+# instead of a JSON round-trip: comments and tables are left exactly as is.
+# ---------------------------------------------------------------------------
+
+CODEX_HOOK_EVENTS: Tuple[str, ...] = ('agent-turn-complete',)
+
+_TOML_NOTIFY_RE = re.compile(r'^[ \t]*notify[ \t]*=', re.MULTILINE)
+_TOML_FIRST_TABLE_RE = re.compile(r'^[ \t]*\[', re.MULTILINE)
+
+
+def codex_config_path() -> Path:
+    return Path.home() / '.codex' / 'config.toml'
+
+
+def _codex_notify_line() -> str:
+    script = hook_script_path().as_posix()
+    # JSON strings are valid TOML basic strings.
+    argv = ['python', script, '--port', str(Config.PORT), '--source', 'codex']
+    return f'notify = {json.dumps(argv)}'
+
+
+def _codex_top_level(text: str) -> str:
+    """The part of the file before the first [table] header."""
+    table = _TOML_FIRST_TABLE_RE.search(text)
+    return text[:table.start()] if table else text
+
+
+def _codex_installed_events(text: str) -> List[str]:
+    for line in _codex_top_level(text).splitlines():
+        if _TOML_NOTIFY_RE.match(line) and HOOK_MARKER in line:
+            return list(CODEX_HOOK_EVENTS)
+    return []
+
+
+def _install_codex(path: Path) -> HookInstallResult:
+    text = path.read_text(encoding='utf-8') if path.exists() else ''
+    if _codex_installed_events(text):
+        return HookInstallResult(True, True, path, ())
+    if _TOML_NOTIFY_RE.search(_codex_top_level(text)):
+        # Codex takes a single notify command; never replace the user's.
+        raise HookSettingsError(
+            f'{path} already defines a notify command - remove it or add '
+            f'the VDock hook by hand')
+    updated = _codex_notify_line() + '\n' + text
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.with_suffix('.vdock-backup.toml').write_text(text, encoding='utf-8')
+    path.write_text(updated, encoding='utf-8')
+    logger.info('Installed VDock codex hook into %s', path)
+    return HookInstallResult(True, False, path, CODEX_HOOK_EVENTS)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -260,7 +316,9 @@ _TARGETS: Dict[str, _AgentHookTarget] = {
     ),
 }
 
-SUPPORTED_AGENTS: Tuple[str, ...] = tuple(_TARGETS)
+
+
+SUPPORTED_AGENTS: Tuple[str, ...] = (*_TARGETS, 'codex')
 
 
 def _target(agent: str) -> _AgentHookTarget:
@@ -272,6 +330,14 @@ def _target(agent: str) -> _AgentHookTarget:
 
 def hook_status(agent: str) -> Dict[str, Any]:
     """Install state for ``agent``: fully installed, partial, or absent."""
+    if agent == 'codex':
+        path = codex_config_path()
+        try:
+            text = path.read_text(encoding='utf-8') if path.exists() else ''
+        except OSError:
+            text = ''
+        return {'installed': bool(_codex_installed_events(text)),
+                'partial': False, 'settings_path': str(path)}
     target = _target(agent)
     path = target.path()
     try:
@@ -293,6 +359,8 @@ def install_hook(agent: str) -> HookInstallResult:
     Raises HookSettingsError when the existing file can't be parsed, and
     OSError when it can't be written.
     """
+    if agent == 'codex':
+        return _install_codex(codex_config_path())
     target = _target(agent)
     path = target.path()
     settings = _load_json(path)

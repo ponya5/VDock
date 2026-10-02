@@ -159,7 +159,62 @@ def agent_home(tmp_path, monkeypatch):
         agent_hooks.antigravity_installed_events, agent_hooks._add_antigravity_events,
         agent_hooks.AGY_HOOK_EVENTS,
     ))
+    monkeypatch.setattr(agent_hooks, 'codex_config_path',
+                        lambda: tmp_path / '.codex' / 'config.toml')
     return tmp_path
+
+
+def test_codex_install_prepends_notify_and_keeps_existing_config(agent_home):
+    config = agent_home / '.codex' / 'config.toml'
+    config.parent.mkdir()
+    config.write_text('model = "o4"\n\n[projects."x"]\ntrust = "trusted"\n', encoding='utf-8')
+    result = agent_hooks.install_hook('codex')
+    text = config.read_text(encoding='utf-8')
+    assert result.installed and not result.already
+    assert text.startswith('notify = [')
+    assert '"--source", "codex"' in text
+    assert 'model = "o4"' in text and '[projects."x"]' in text
+    assert agent_hooks.hook_status('codex')['installed'] is True
+    # Idempotent: a second install changes nothing.
+    assert agent_hooks.install_hook('codex').already is True
+    assert config.read_text(encoding='utf-8') == text
+
+
+def test_codex_install_never_replaces_a_foreign_notify(agent_home):
+    config = agent_home / '.codex' / 'config.toml'
+    config.parent.mkdir()
+    config.write_text('notify = ["say", "done"]\n', encoding='utf-8')
+    with pytest.raises(agent_hooks.HookSettingsError):
+        agent_hooks.install_hook('codex')
+    assert config.read_text(encoding='utf-8') == 'notify = ["say", "done"]\n'
+    assert agent_hooks.hook_status('codex')['installed'] is False
+
+
+def test_codex_notify_in_a_table_is_not_a_top_level_notify(agent_home):
+    config = agent_home / '.codex' / 'config.toml'
+    config.parent.mkdir()
+    config.write_text('[tui]\nnotify = true\n', encoding='utf-8')
+    assert agent_hooks.install_hook('codex').installed is True
+    assert config.read_text(encoding='utf-8').endswith('[tui]\nnotify = true\n')
+
+
+def test_codex_turn_complete_means_ready_with_reply():
+    payload = hook._codex_payload([json.dumps({
+        'type': 'agent-turn-complete', 'thread-id': 'th1', 'cwd': 'C:/p/app',
+        'input-messages': ['fix the bug'], 'last-assistant-message': 'Fixed.',
+    })])
+    assert hook.map_event('codex', payload) == 'ready'
+    body = hook.build_body('codex', 'ready', payload)
+    assert body['session_id'] == 'th1'
+    assert body['project'] == 'app'
+    assert body['prompt'] == 'fix the bug'
+    assert body['reply'] == 'Fixed.'
+    assert body['attention'] is False
+
+
+def test_codex_ignores_unknown_events_and_garbage():
+    assert hook.map_event('codex', hook._codex_payload(['not json'])) is None
+    assert hook.map_event('codex', hook._codex_payload([json.dumps({'type': 'other'})])) is None
 
 
 def test_claude_install_upgrades_a_dl045_install_and_keeps_foreign_hooks(agent_home):
@@ -261,7 +316,7 @@ def test_hook_status_all_reports_every_agent(client, agent_home):
     response = client.get('/api/agent-events/hook-status?agent=all')
     assert response.status_code == 200
     agents = response.get_json()['agents']
-    assert set(agents) == {'claude', 'cursor', 'antigravity'}
+    assert set(agents) == {'claude', 'cursor', 'antigravity', 'codex'}
     agent_hooks.install_hook('antigravity')
     agents = client.get('/api/agent-events/hook-status?agent=all').get_json()['agents']
     assert agents['antigravity']['installed'] is True

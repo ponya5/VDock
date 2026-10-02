@@ -1589,6 +1589,15 @@
                     <label class="switch"><span class="sr-only">Agent waiting chips</span><input type="checkbox" :checked="settingsStore.agentWaitingDockEnabled" @change="toggleWaitingDock" /><span class="track"></span></label>
                   </div>
                 </div>
+                <div class="row" v-if="settingsStore.agentAlertsEnabled">
+                  <div class="row-text">
+                    <span class="label">Jump to the agent's scene</span>
+                    <p>When an agent starts waiting for you (idle after a prompt, or a permission dialog), the deck switches to that agent's scene on its own. Off while you're editing.</p>
+                  </div>
+                  <div class="row-control">
+                    <label class="switch"><span class="sr-only">Auto-focus agent scene</span><input type="checkbox" :checked="settingsStore.agentAutoFocusScene" @change="settingsStore.agentAutoFocusScene = !settingsStore.agentAutoFocusScene" /><span class="track"></span></label>
+                  </div>
+                </div>
                 <div class="row">
                   <div class="row-text">
                     <span class="label">Agent hooks</span>
@@ -1851,13 +1860,15 @@
     <!-- Live screensaver layout editor — mounted in THIS window so Customize
          Layout works whether or not a deck window is reachable. Save writes
          settings.screensaverLayout, which syncs to every connected window. -->
-    <ScreenSaver
-      v-if="screensaverLayoutEditOpen"
-      :visible="true"
-      :layout-edit="true"
-      @dismiss="screensaverLayoutEditOpen = false"
-      @save-layout="onSaveScreensaverLayout"
-    />
+    <Teleport to="body">
+      <ScreenSaver
+        v-if="screensaverLayoutEditOpen"
+        :visible="true"
+        :layout-edit="true"
+        @dismiss="screensaverLayoutEditOpen = false"
+        @save-layout="onSaveScreensaverLayout"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -1894,7 +1905,7 @@ import { testNewsConnection, parseFeedList, DEFAULT_SPORTS_FEEDS } from '@/servi
 import { testMarketConnection, parseTickers } from '@/services/marketService'
 import { BACKGROUNDS, isImageBackground, resolveBackground } from '@/data/backgrounds'
 import { appForScene, appIdForExe } from '@/data/appBackgrounds'
-import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
+import { useAppIntegrations, setAppIntegrations, reloadAppIntegrations, setAutoSceneSwitching } from '@/composables/useAppIntegrations'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
 import AppPathEditor from '@/components/AppPathEditor.vue'
@@ -2311,7 +2322,7 @@ const integrationSubTab = ref<'apps' | 'alerts' | 'triggers' | 'mcp'>('apps')
 const integrationSubs = [
   { id: 'apps', name: 'Apps & scenes' },
   { id: 'alerts', name: 'Agent alerts' },
-  { id: 'triggers', name: 'Triggers' },
+  { id: 'triggers', name: 'Triggers (automation)' },
   { id: 'mcp', name: 'MCP server' },
 ] as const
 type IntegrationSubId = (typeof integrationSubs)[number]['id']
@@ -2342,7 +2353,7 @@ const PAGE_META: Record<string, { crumb: string; title: string; blurb: string }>
   integration: { crumb: 'Integrations', title: 'Integrations', blurb: 'Scenes that follow the app in focus.' },
   'integration/apps': { crumb: 'Integrations · Apps & scenes', title: 'Apps & scenes', blurb: 'Scenes that follow the app in focus.' },
   'integration/alerts': { crumb: 'Integrations · Agent alerts', title: 'Agent alerts', blurb: 'Banner, glow and deck chips when an agent needs you.' },
-  'integration/triggers': { crumb: 'Integrations · Triggers', title: 'Triggers', blurb: 'Schedules, app focus, agent state and webhooks firing deck actions.' },
+  'integration/triggers': { crumb: 'Integrations · Triggers', title: 'Triggers', blurb: 'Automatic rules: when something happens (a time, an app opens, an AI agent needs you, a script calls in), VDock switches scene, shows a notification or runs an action.' },
   'integration/mcp': { crumb: 'Integrations · MCP server', title: 'MCP server', blurb: 'Let local agents act on the deck.' },
   connect: { crumb: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.' },
   logs: { crumb: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.' },
@@ -3413,7 +3424,7 @@ function toggleAppScanning() {
 }
 
 // --- Agent attention alerts -------------------------------------------------
-type HookAgentId = 'claude' | 'cursor' | 'antigravity'
+type HookAgentId = 'claude' | 'cursor' | 'antigravity' | 'codex'
 
 interface AgentHookState {
   /** Whether the backend has answered a status request yet. */
@@ -3428,6 +3439,7 @@ const AGENT_HOOK_TARGETS: ReadonlyArray<{ id: HookAgentId; label: string; settin
   { id: 'claude', label: 'Claude Code', settingsFile: '~/.claude/settings.json' },
   { id: 'cursor', label: 'Cursor', settingsFile: '~/.cursor/hooks.json' },
   { id: 'antigravity', label: 'Antigravity', settingsFile: '~/.gemini/config/hooks.json' },
+  { id: 'codex', label: 'Codex', settingsFile: '~/.codex/config.toml' },
 ]
 
 function createAgentHookState(): AgentHookState {
@@ -3639,11 +3651,11 @@ async function toggleAutoSwitching() {
     if (newValue) {
       autoSceneSwitcher.initialize(appIntegrations.value)
       const success = await autoSceneSwitcher.enable()
-      if (success) { autoSwitchingEnabled.value = true; localStorage.setItem('autoSceneSwitching', 'true') }
+      if (success) { autoSwitchingEnabled.value = true; setAutoSceneSwitching(true) }
       else notificationsStore.error('Auto-switching', 'Failed to enable auto scene switching')
     } else {
       const success = await autoSceneSwitcher.disable()
-      if (success) { autoSwitchingEnabled.value = false; localStorage.setItem('autoSceneSwitching', 'false') }
+      if (success) { autoSwitchingEnabled.value = false; setAutoSceneSwitching(false) }
       else notificationsStore.error('Auto-switching', 'Failed to disable auto scene switching')
     }
   } catch { notificationsStore.error('Auto-switching', 'Error toggling auto scene switching') }

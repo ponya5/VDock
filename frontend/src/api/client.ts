@@ -107,7 +107,11 @@ class ApiClient {
           config?.url?.includes('/config') ||
           config?.url?.includes('/profiles') ||
           config?.url?.includes('/user-settings') ||
-          config?.url?.includes('/agent-sessions')
+          config?.url?.includes('/agent-sessions') ||
+          // The auto-switch poller 404s whenever there's no foreground
+          // window (locked screen, desktop focused) — that's not an error.
+          config?.url?.includes('/app-monitor/active-app') ||
+          config?.url?.includes('/app-monitor/current-app')
         ) {
           console.warn('Resource not found (expected):', config?.url)
           return

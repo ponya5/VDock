@@ -44,3 +44,21 @@ export function setAppIntegrations(list: AppIntegration[]): void {
 export function reloadAppIntegrations(): void {
   appIntegrations.value = load()
 }
+
+
+// Auto scene switching on/off. Same story as the list: kept in localStorage for
+// fast boot, mirrored into the server-side user settings (see stores/settings.ts)
+// so every VDock window (Electron panel, browser, phone) shares one config.
+const AUTO_SWITCH_KEY = 'autoSceneSwitching'
+const autoSceneSwitching: Ref<boolean> = ref(
+  typeof localStorage !== 'undefined' && localStorage.getItem(AUTO_SWITCH_KEY) === 'true'
+)
+
+export function useAutoSceneSwitching(): Ref<boolean> {
+  return autoSceneSwitching
+}
+
+export function setAutoSceneSwitching(value: boolean): void {
+  autoSceneSwitching.value = value
+  localStorage.setItem(AUTO_SWITCH_KEY, String(value))
+}

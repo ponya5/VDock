@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 import type { ServerConfig } from '@/types'
 import apiClient from '@/api/client'
+import { useAppIntegrations, setAppIntegrations, useAutoSceneSwitching, setAutoSceneSwitching } from '@/composables/useAppIntegrations'
+import type { AppIntegration } from '@/types'
 import socketClient from '@/api/socket'
 import { DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID, FACTORY_BACKGROUND_ID } from '@/data/backgrounds'
 import {
@@ -79,6 +81,7 @@ export const SETTINGS_DEFAULTS = {
   agentWaitingGlowEnabled: true,
   agentWaitingGlowStyle: 'flash' as const,
   agentWaitingDockEnabled: true,
+  agentAutoFocusScene: true,
   mcpEnabled: true,
   tutorialCompleted: false,
   activeProfileId: null as string | null,
@@ -192,6 +195,10 @@ export interface PersistedUserSettings {
   agentWaitingGlowEnabled: boolean
   agentWaitingGlowStyle: 'flash' | 'pulse' | 'orbit'
   agentWaitingDockEnabled: boolean
+  agentAutoFocusScene: boolean
+  /** App->scene links + auto-switch toggle; shared across windows via the server. */
+  appIntegrations?: AppIntegration[]
+  autoSceneSwitching?: boolean
   mcpEnabled: boolean
   tutorialCompleted: boolean
   /**
@@ -332,6 +339,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // softly, orbit runs the travelling comet (DL-080 follow-up #2).
   const agentWaitingGlowStyle = ref<'flash' | 'pulse' | 'orbit'>('flash')
   const agentWaitingDockEnabled = ref(true)
+  const agentAutoFocusScene = ref(true)
   const mcpEnabled = ref(true)
   // Persisted onboarding flag — true once the tour is finished or skipped.
   // Server-backed (not localStorage) so it survives cache clears and is
@@ -533,6 +541,9 @@ export const useSettingsStore = defineStore('settings', () => {
       agentWaitingGlowEnabled: agentWaitingGlowEnabled.value,
       agentWaitingGlowStyle: agentWaitingGlowStyle.value,
       agentWaitingDockEnabled: agentWaitingDockEnabled.value,
+      agentAutoFocusScene: agentAutoFocusScene.value,
+      appIntegrations: JSON.parse(JSON.stringify(useAppIntegrations().value)),
+      autoSceneSwitching: useAutoSceneSwitching().value,
       mcpEnabled: mcpEnabled.value,
       tutorialCompleted: tutorialCompleted.value,
       activeProfileId: activeProfileId.value,
@@ -626,6 +637,13 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.agentWaitingGlowEnabled !== undefined) agentWaitingGlowEnabled.value = settings.agentWaitingGlowEnabled
     if (settings.agentWaitingGlowStyle !== undefined) agentWaitingGlowStyle.value = settings.agentWaitingGlowStyle
     if (settings.agentWaitingDockEnabled !== undefined) agentWaitingDockEnabled.value = settings.agentWaitingDockEnabled
+    if (settings.agentAutoFocusScene !== undefined) agentAutoFocusScene.value = settings.agentAutoFocusScene
+    // Only adopt a server list that has content, so a fresh window never wipes
+    // links this client still holds locally (they migrate up on the next save).
+    if (Array.isArray(settings.appIntegrations) && settings.appIntegrations.length > 0) {
+      setAppIntegrations(settings.appIntegrations)
+    }
+    if (typeof settings.autoSceneSwitching === 'boolean') setAutoSceneSwitching(settings.autoSceneSwitching)
     if (settings.mcpEnabled !== undefined) mcpEnabled.value = settings.mcpEnabled
     if (settings.tutorialCompleted !== undefined) tutorialCompleted.value = settings.tutorialCompleted
     if (settings.activeProfileId !== undefined) activeProfileId.value = settings.activeProfileId
@@ -745,6 +763,7 @@ export const useSettingsStore = defineStore('settings', () => {
         agentWaitingGlowEnabled: settings.agentWaitingGlowEnabled ?? true,
         agentWaitingGlowStyle: settings.agentWaitingGlowStyle ?? 'flash',
         agentWaitingDockEnabled: settings.agentWaitingDockEnabled ?? true,
+        agentAutoFocusScene: settings.agentAutoFocusScene ?? true,
         mcpEnabled: settings.mcpEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
         activeProfileId: settings.activeProfileId ?? null,
@@ -980,6 +999,7 @@ export const useSettingsStore = defineStore('settings', () => {
       agentWaitingGlowEnabled,
       agentWaitingGlowStyle,
       agentWaitingDockEnabled,
+      agentAutoFocusScene,
       mcpEnabled,
       tutorialCompleted,
       activeProfileId,
@@ -995,6 +1015,8 @@ export const useSettingsStore = defineStore('settings', () => {
     { deep: true }
   )
   
+  watch([useAppIntegrations(), useAutoSceneSwitching()], () => saveSettings(), { deep: true })
+
   function applyTouchModeStyles() {
     const root = document.documentElement
     const multiplier = touchModeMultiplier.value
@@ -1222,6 +1244,7 @@ export const useSettingsStore = defineStore('settings', () => {
     agentWaitingGlowEnabled,
     agentWaitingGlowStyle,
     agentWaitingDockEnabled,
+    agentAutoFocusScene,
     mcpEnabled,
     tutorialCompleted,
     activeProfileId,

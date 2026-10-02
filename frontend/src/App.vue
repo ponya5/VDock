@@ -47,9 +47,9 @@ import { useAgentAlerts } from '@/services/agentAlerts'
 import { useToggleSync } from '@/services/toggleSync'
 import { initTriggerEvents } from '@/services/triggerEvents'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
+import { useAppIntegrations, useAutoSceneSwitching } from '@/composables/useAppIntegrations'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { screensaverCovered } from '@/services/screensaverState'
-import type { AppIntegration } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -108,23 +108,24 @@ onMounted(async () => {
   // Single, app-lifetime owner of auto scene switching. Registering this
   // per-route (Dashboard/Settings) instead caused a leaked listener on every
   // Dashboard remount and a dead listener whenever Settings unmounted.
-  const storedIntegrations = localStorage.getItem('appIntegrations')
-  const storedAutoSwitch = localStorage.getItem('autoSceneSwitching')
-  if (storedAutoSwitch === 'true' && storedIntegrations) {
-    try {
-      const integrations: AppIntegration[] = JSON.parse(storedIntegrations)
-      autoSceneSwitcher.initialize(integrations)
-      autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
-        const profile = dashboardStore.currentProfile
-        if (!profile) return
-        const idx = profile.scenes.findIndex(s => s.id === sceneId)
-        if (idx >= 0) dashboardStore.setScene(idx)
-      })
-      autoSceneSwitcher.enable()
-    } catch {
-      // ignore malformed localStorage state
-    }
+  // Integrations + the on/off flag live in the shared user settings, so this
+  // reacts to edits made in Settings or on another device without a reload.
+  const integrationsRef = useAppIntegrations()
+  const autoSwitchRef = useAutoSceneSwitching()
+  autoSceneSwitcher.onSceneSwitch((sceneId: string) => {
+    const profile = dashboardStore.currentProfile
+    if (!profile) return
+    const idx = profile.scenes.findIndex(s => s.id === sceneId)
+    if (idx >= 0) dashboardStore.setScene(idx)
+  })
+  const syncAutoSwitch = () => {
+    autoSceneSwitcher.updateIntegrations(integrationsRef.value)
+    if (autoSwitchRef.value) void autoSceneSwitcher.enable()
+    else void autoSceneSwitcher.disable()
   }
+  autoSceneSwitcher.initialize(integrationsRef.value)
+  syncAutoSwitch()
+  watch([integrationsRef, autoSwitchRef], syncAutoSwitch, { deep: true })
 })
 
 function handleBeforeUnload() {

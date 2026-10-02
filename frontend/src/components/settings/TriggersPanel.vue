@@ -2,7 +2,7 @@
   <section class="panel triggers-panel" aria-label="Triggers">
     <div class="panel-head">
       <h2>Triggers</h2>
-      <span class="hint">When something happens, do something — schedules, app focus, agent state, webhooks.</span>
+      <span class="hint">Automatic rules: <strong>when</strong> something happens, VDock <strong>does</strong> something for you.</span>
       <span class="spacer" />
       <span v-if="!engineEnabled" class="tp-paused-chip">Paused</span>
       <label class="tp-switch" :title="engineEnabled ? 'Pause all triggers' : 'Resume all triggers'">
@@ -24,8 +24,17 @@
       <div v-if="loading" class="tp-empty">Loading…</div>
       <div v-else-if="error" class="tp-empty tp-bad">{{ error }}</div>
       <div v-else-if="!triggers.length && !formOpen" class="tp-empty">
-        No triggers yet. One can fire an action on a schedule, when an app is
-        focused, when an agent needs you, or from a local webhook.
+        <p class="tp-empty-lead">
+          A trigger is an automatic rule: <strong>When</strong> something happens →
+          <strong>Then</strong> VDock does something, with no button press.
+        </p>
+        <ul class="tp-examples">
+          <li>At 09:00 on weekdays → switch to the Work scene</li>
+          <li>Claude Code needs permission → show a notification</li>
+          <li>Spotify comes to the front → run an action</li>
+          <li>A script or CI job calls a URL → show a notification</li>
+        </ul>
+        <p>Use “Add trigger” to create your first rule.</p>
       </div>
 
       <!-- ── trigger list ─────────────────────────────────────────── -->
@@ -86,17 +95,17 @@
       <form v-if="formOpen" class="tp-form" @submit.prevent="save">
         <div class="tp-grid">
           <label class="tp-field tp-span2">
-            <span class="tp-field-label">Label</span>
-            <input v-model="form.label" type="text" class="tp-input" placeholder="e.g. Evening scene" maxlength="120">
+            <span class="tp-field-label">Name <span class="tp-note">(so you can recognise this rule later)</span></span>
+            <input v-model="form.label" type="text" class="tp-input" placeholder="e.g. Switch to Work scene at 9" maxlength="120">
           </label>
 
           <label class="tp-field">
-            <span class="tp-field-label">When (event)</span>
+            <span class="tp-field-label">When this happens…</span>
             <select v-model="form.eventType" class="tp-select">
-              <option value="time">At a time</option>
-              <option value="app_foreground">App becomes focused</option>
-              <option value="agent_state">Agent enters a state</option>
-              <option value="webhook">Webhook is called</option>
+              <option value="time">It is a certain time</option>
+              <option value="app_foreground">An app comes to the front</option>
+              <option value="agent_state">An AI agent changes state</option>
+              <option value="webhook">A script calls a web address</option>
             </select>
           </label>
 
@@ -125,9 +134,9 @@
 
           <!-- event: app_foreground -->
           <label v-else-if="form.eventType === 'app_foreground'" class="tp-field tp-span2">
-            <span class="tp-field-label">Executable</span>
+            <span class="tp-field-label">App program name</span>
             <input v-model="form.exe" type="text" class="tp-input" placeholder="spotify.exe" required>
-            <span class="tp-note">Fires once when this app enters the foreground — matching is case-insensitive.</span>
+            <span class="tp-note">Runs once each time this app becomes the active window. Upper/lower case doesn’t matter.</span>
           </label>
 
           <!-- event: agent_state -->
@@ -141,9 +150,9 @@
             <label class="tp-field">
               <span class="tp-field-label">State</span>
               <select v-model="form.state" class="tp-select">
-                <option value="ready">ready — waiting for a prompt</option>
-                <option value="working">working — busy</option>
-                <option value="permission">permission — blocked on you</option>
+                <option value="ready">Ready — finished, waiting for your next prompt</option>
+                <option value="working">Working — busy on a task</option>
+                <option value="permission">Needs permission — blocked until you approve</option>
               </select>
             </label>
           </template>
@@ -160,15 +169,15 @@
                 <FontAwesomeIcon :icon="['fas', 'rotate']" /> New key
               </button>
             </div>
-            <span class="tp-note">Localhost only — call it from scripts, agent hooks or Task Scheduler on this machine.</span>
+            <span class="tp-note">Send a POST request to this address to run the rule. It only works from this computer, so use it from scripts, build tools or Windows Task Scheduler.</span>
           </div>
 
           <label class="tp-field">
-            <span class="tp-field-label">Do (action)</span>
+            <span class="tp-field-label">…then do this</span>
             <select v-model="form.actionType" class="tp-select">
-              <option value="show_notification">Show a notification</option>
-              <option value="switch_scene">Switch scene</option>
-              <option value="execute_action">Run an action</option>
+              <option value="show_notification">Show a notification on the deck</option>
+              <option value="switch_scene">Switch to a scene</option>
+              <option value="execute_action">Run a button action (open URL, hotkey, command…)</option>
             </select>
           </label>
 
@@ -207,7 +216,7 @@
                 spellcheck="false"
                 placeholder='{"url": "https://example.com"}'
               />
-              <span class="tp-note">Same shape as a button action's config — e.g. url actions take {"url": "…"}.</span>
+              <span class="tp-note">The same settings a deck button uses for this action, e.g. an “url” action takes {"url": "https://…"}.</span>
             </label>
           </template>
         </div>
@@ -253,7 +262,7 @@ import {
 } from '@/services/triggersApi'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const AGENT_SOURCES = ['claude', 'cursor', 'devin', 'antigravity', 'generic']
+const AGENT_SOURCES = ['claude', 'cursor', 'devin', 'antigravity', 'codex', 'generic']
 // Common built-in types — the textarea accepts any config JSON regardless.
 const EXEC_ACTION_TYPES = [
   'url', 'program', 'command', 'hotkey', 'system', 'cross_platform',
@@ -318,20 +327,26 @@ function onTriggerFired(payload: { id?: string; ok?: boolean; detail?: string; t
 // summaries
 // --------------------------------------------------------------------------
 
+const STATE_PHRASE: Record<string, string> = {
+  ready: 'is ready for your prompt',
+  working: 'starts working',
+  permission: 'needs your permission',
+}
+
 function eventSummary(event: TriggerEvent): string {
   switch (event.type) {
     case 'time': {
       const days = event.days?.length
         ? event.days.map((d) => DAY_NAMES[d]).join(' ')
         : 'daily'
-      return `${event.at} ${days}`
+      return `At ${event.at} ${days === 'daily' ? 'every day' : days}`
     }
     case 'app_foreground':
-      return `${event.exe} focused`
+      return `${event.exe} comes to the front`
     case 'agent_state':
-      return `${event.source} is ${event.state}`
+      return `${event.source} ${STATE_PHRASE[event.state ?? ''] ?? `is ${event.state}`}`
     case 'webhook':
-      return `webhook …/${event.key}`
+      return `webhook called (…/${event.key})`
     default:
       return event.type
   }
@@ -340,11 +355,11 @@ function eventSummary(event: TriggerEvent): string {
 function actionSummary(action: TriggerAction): string {
   switch (action.type) {
     case 'show_notification':
-      return `notify “${action.title}”`
+      return `show notification “${action.title}”`
     case 'switch_scene':
-      return `switch to ${action.scene}`
+      return `switch to the “${action.scene}” scene`
     case 'execute_action':
-      return `run ${action.action?.type ?? 'action'}`
+      return `run a “${action.action?.type ?? 'button'}” action`
     default:
       return action.type
   }
@@ -652,6 +667,10 @@ async function save() {
 .panel-body { padding: 4px 18px 14px; }
 
 .tp-empty { padding: 16px 0; color: var(--text-3); font-size: var(--fs-sm); }
+.tp-empty p { margin: 0 0 8px; }
+.tp-empty strong { color: var(--text-2); }
+.tp-empty-lead { color: var(--text-2); }
+.tp-examples { margin: 0 0 10px; padding-left: 18px; line-height: 1.7; }
 .tp-bad { color: var(--danger); }
 
 /* --- rows -------------------------------------------------------------- */

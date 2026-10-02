@@ -23,7 +23,7 @@ STATE_PERMISSION = 'permission'
 
 ALLOWED_STATES = frozenset({STATE_READY, STATE_WORKING, STATE_PERMISSION})
 ALLOWED_SOURCES = frozenset(
-    {'claude', 'cursor', 'devin', 'antigravity', 'generic'}
+    {'claude', 'cursor', 'devin', 'antigravity', 'codex', 'generic'}
 )
 
 #: Hooks that don't report a session id share this one.

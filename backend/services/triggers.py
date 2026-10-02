@@ -68,7 +68,7 @@ ACTION_SCENE = 'switch_scene'
 ACTION_NOTIFY = 'show_notification'
 ACTION_TYPES = frozenset({ACTION_EXECUTE, ACTION_SCENE, ACTION_NOTIFY})
 
-AGENT_SOURCES = frozenset({'claude', 'cursor', 'devin', 'antigravity', 'generic'})
+AGENT_SOURCES = frozenset({'claude', 'cursor', 'devin', 'antigravity', 'codex', 'generic'})
 AGENT_STATES = frozenset({'ready', 'working', 'permission'})
 
 _TIME_RE = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
