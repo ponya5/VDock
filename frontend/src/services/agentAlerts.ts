@@ -48,6 +48,7 @@ const SOURCE_LABELS: Record<string, string> = {
   cursor: 'Cursor',
   devin: 'Devin',
   antigravity: 'Antigravity',
+  codex: 'Codex',
   generic: 'Agent',
   // panel_notification sources (W5 triggers / W6 MCP) — not agents, but the
   // label is shared for "Source: X" details on notification entries.

@@ -102,7 +102,7 @@ class AutoSceneSwitcher {
 
     // Find matching integration
     const integration = this.appIntegrations.find(
-      int => int.appExe === app.exe && int.enabled && int.sceneId
+      int => int.appExe?.toLowerCase() === app.exe?.toLowerCase() && int.enabled && int.sceneId
     )
 
     if (integration && integration.sceneId) {
@@ -134,7 +134,7 @@ class AutoSceneSwitcher {
    */
   findSceneForApp(appExe: string): string | null {
     const integration = this.appIntegrations.find(
-      int => int.appExe === appExe && int.enabled && int.sceneId
+      int => int.appExe?.toLowerCase() === appExe?.toLowerCase() && int.enabled && int.sceneId
     )
     
     return integration?.sceneId || null

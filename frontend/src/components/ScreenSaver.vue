@@ -68,6 +68,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('weather', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove weather widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('weather')">×</button>
     </div>
 
     <!-- Market — left-aligned serif quote rows. -->
@@ -97,6 +98,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('market', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove market widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('market')">×</button>
     </div>
 
     <div
@@ -120,6 +122,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('clock', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove clock widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('clock')">×</button>
     </div>
 
     <!-- Reading sections across the lower half: headlines, sports and world
@@ -184,6 +187,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('news', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove news widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('news')">×</button>
     </div>
 
     <div
@@ -241,6 +245,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('sports', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove sports widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('sports')">×</button>
     </div>
 
     <div
@@ -268,6 +273,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('worldclock', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove worldclock widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('worldclock')">×</button>
     </div>
 
     <!-- Standalone component widget (DL-116): now-playing owns its data
@@ -291,6 +297,7 @@
         class="ss-resize"
         @pointerdown.stop="startResize('nowplaying', $event)"
       ></span>
+      <button v-if="layoutEdit" type="button" class="ss-remove" aria-label="Remove nowplaying widget" title="Remove widget" @pointerdown.stop @click.stop="removeWidget('nowplaying')">×</button>
     </div>
     </template>
 
@@ -1000,6 +1007,17 @@ function endInteraction() {
   window.removeEventListener('pointermove', onResizeMove)
 }
 
+// Layout editor "×": turns the widget off through the same flags the
+// Settings toggles use, so the toggle follows. Takes effect immediately
+// (not on Save) because visibility is a setting, not part of the layout.
+function removeWidget(id: ScreensaverWidgetId) {
+  if (id === 'clock') {
+    settingsStore.screensaverClockEnabled = false
+    return
+  }
+  settingsStore.screensaverWidgets = settingsStore.screensaverWidgets.filter(w => w !== id)
+}
+
 function resetLayout() {
   editLayout.value = defaultScreensaverLayout()
 }
@@ -1669,6 +1687,27 @@ onUnmounted(() => {
 
 .ss-editing > *:not(.ss-resize) {
   pointer-events: none;
+}
+
+.ss-remove {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: clamp(26px, 4vw, 36px);
+  height: clamp(26px, 4vw, 36px);
+  border-radius: 50%;
+  border: 2px solid rgba(10, 10, 20, 0.6);
+  background: rgba(239, 68, 68, 0.95);
+  color: #fff;
+  font-size: clamp(18px, 2.6vw, 24px);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 4;
 }
 
 .ss-resize {

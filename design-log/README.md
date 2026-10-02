@@ -155,3 +155,4 @@ the eventual merge into the main line.
 | [DL-140](DL-140-settings-narrow-scroll-clip.md) | Settings unreachable/broken at ≤880px — #app clip released on settings route, opaque sticky nav, composite-setting type guards; F/U: short-viewport collapse, hidden switch inputs scrolling #app (footer-at-top) | Implemented |
 | [DL-141](DL-141-saver-widgets-demotion.md) | Spectrum & System Stats leave the widget roster (they're screensaver types); StatsStage → animated sensor-panel gauge board over ambient mesh/aurora backdrop | Implemented |
 | [DL-142](DL-142-per-type-screensaver-layouts.md) | Per-type screensaver widget layouts — Spectrum overlay gets its own saved arrangement, independent of the Widget dashboard | Implemented |
+| [DL-143](DL-143-agent-autofocus-codex-hook-saver-remove-templates.md) | Agent auto-focus, Codex hook, saver widget remove (x), 8+ button templates, dev-feature research | Implemented |

@@ -54,13 +54,21 @@ AGY_STATE_BY_EVENT = {
     'Stop': 'ready',
 }
 
+# Codex has a single hook, ``notify``, fired when a turn completes. It passes
+# the JSON payload as the last argv entry (not stdin) with ``type`` naming
+# the event; only the turn-complete event means "waiting for you".
+CODEX_STATE_BY_EVENT = {
+    'agent-turn-complete': 'ready',
+}
+
 #: Cursor events whose hooks must answer on stdout.
 CURSOR_REPLY_BY_EVENT = {
     'beforeSubmitPrompt': {'continue': True},
 }
 
 #: Payload fields carrying the conversation, per (source, event).
-PROMPT_EVENTS = {('claude', 'UserPromptSubmit'), ('cursor', 'beforeSubmitPrompt')}
+PROMPT_EVENTS = {('claude', 'UserPromptSubmit'), ('cursor', 'beforeSubmitPrompt'),
+                 ('codex', 'agent-turn-complete')}
 CURSOR_REPLY_EVENT = 'afterAgentResponse'
 CLAUDE_REPLY_EVENT = 'Stop'
 
@@ -93,6 +101,8 @@ def map_event(source: str, payload: Dict[str, Any]) -> Optional[str]:
         return CURSOR_STATE_BY_EVENT.get(event_name)
     if source == 'antigravity':
         return AGY_STATE_BY_EVENT.get(event_name)
+    if source == 'codex':
+        return CODEX_STATE_BY_EVENT.get(event_name)
     if event_name == 'Notification':
         return _claude_notification_state(payload)
     return CLAUDE_STATE_BY_EVENT.get(event_name)
@@ -155,7 +165,7 @@ def last_assistant_reply(transcript_path: str) -> str:
 def _reply_text(source: str, event_name: str, payload: Dict[str, Any]) -> str:
     if source == 'cursor':
         return str(payload.get('text') or '') if event_name == CURSOR_REPLY_EVENT else ''
-    if event_name != CLAUDE_REPLY_EVENT:
+    if event_name not in (CLAUDE_REPLY_EVENT, 'agent-turn-complete'):
         return ''
     reported_reply = str(payload.get('last_assistant_message') or '')
     if reported_reply:
@@ -212,6 +222,29 @@ def _read_payload() -> Dict[str, Any]:
     return loaded if isinstance(loaded, dict) else {}
 
 
+def _normalise_codex(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Map Codex's notify payload onto the fields the other agents use."""
+    messages = payload.get('input-messages') or []
+    return {
+        **payload,
+        'hook_event_name': str(payload.get('type') or ''),
+        'session_id': payload.get('thread-id') or payload.get('session_id') or '',
+        'prompt': str(messages[-1]) if messages else '',
+        'last_assistant_message': payload.get('last-assistant-message') or '',
+    }
+
+
+def _codex_payload(unknown_args: list) -> Dict[str, Any]:
+    for candidate in reversed(unknown_args):
+        try:
+            loaded = json.loads(candidate)
+        except (ValueError, TypeError):
+            continue
+        if isinstance(loaded, dict):
+            return _normalise_codex(loaded)
+    return {}
+
+
 def _post(port: int, body: Dict[str, Any]) -> None:
     request = urllib.request.Request(
         f'http://127.0.0.1:{port}/api/agent-events',
@@ -225,7 +258,7 @@ def _post(port: int, body: Dict[str, Any]) -> None:
         pass  # VDock not running or busy — the agent must not notice.
 
 
-def _parse_args() -> Tuple[int, str, str]:
+def _parse_args() -> Tuple[int, str, str, list]:
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=5000)
     parser.add_argument('--source', default='claude')
@@ -233,12 +266,13 @@ def _parse_args() -> Tuple[int, str, str]:
     # it in the installed command instead.
     parser.add_argument('--event', default='')
     args, _unknown = parser.parse_known_args()
-    return args.port, args.source, args.event
+    return args.port, args.source, args.event, _unknown
 
 
 def main() -> int:
-    port, source, pinned_event = _parse_args()
-    payload = _read_payload()
+    port, source, pinned_event, extra_args = _parse_args()
+    # Codex passes its payload as the last argv entry; the others use stdin.
+    payload = _codex_payload(extra_args) if source == 'codex' else _read_payload()
     if pinned_event:
         payload.setdefault('hook_event_name', pinned_event)
         payload['event'] = pinned_event

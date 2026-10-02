@@ -1,6 +1,7 @@
 import socketClient from '@/api/socket'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSettingsStore } from '@/stores/settings'
 
 /**
  * Server-pushed deck events: triggers (DL-120) and MCP tools (DL-121) act on
@@ -42,9 +43,39 @@ function navigateToAgentScene(source: string) {
   if (idx >= 0) useDashboardStore().setScene(idx)
 }
 
+// Sources that were waiting on the user as of the last `agent_state`
+// broadcast. "Waiting" mirrors the glow/pill: a prompted session that went
+// idle (`ready`) or is blocked on a permission dialog. Only a source that
+// newly starts waiting pulls focus, so later broadcasts (another agent's
+// events, TTL pruning) never yank the user back to a scene they just left.
+let waitingSources = new Set<string>()
+// The first broadcast after load only records who is already waiting.
+let statePrimed = false
+
+function isWaiting(entry: { state?: string; prompted?: boolean } | undefined): boolean {
+  return !!entry && (entry.state === 'permission' || (entry.state === 'ready' && entry.prompted === true))
+}
+
+function focusNewlyWaitingAgents(states: Record<string, { state?: string; prompted?: boolean }> | undefined): void {
+  const current = new Set(Object.keys(states ?? {}).filter(source => isWaiting(states?.[source])))
+  const fresh = [...current].filter(source => !waitingSources.has(source))
+  waitingSources = current
+  if (!statePrimed) { statePrimed = true; return }
+  if (!fresh.length) return
+  const settings = useSettingsStore()
+  if (settings.agentAlertsEnabled === false || settings.agentAutoFocusScene === false) return
+  // Don't pull the scene out from under an edit session.
+  if (useDashboardStore().isEditMode) return
+  navigateToAgentScene(fresh[0])
+}
+
 export function initTriggerEvents(): void {
   if (initialized) return
   initialized = true
+
+  socketClient.on('agent_state', (payload: { states?: Record<string, { state?: string; prompted?: boolean }> }) => {
+    focusNewlyWaitingAgents(payload?.states)
+  })
 
   socketClient.on('navigate_scene', (payload: { scene?: string }) => {
     if (typeof payload?.scene === 'string') navigateToScene(payload.scene)

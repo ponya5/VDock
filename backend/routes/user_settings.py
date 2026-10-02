@@ -85,6 +85,9 @@ ALLOWED_USER_SETTING_KEYS = {
     'agentWaitingGlowEnabled',
     'agentWaitingGlowStyle',
     'agentWaitingDockEnabled',
+    'agentAutoFocusScene',
+    'appIntegrations',
+    'autoSceneSwitching',
     # DL-121: MCP server on/off (routes/mcp.py reads it back per request).
     'mcpEnabled',
     'pressSoundEnabled',
