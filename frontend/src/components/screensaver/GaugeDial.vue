@@ -1,8 +1,8 @@
 <template>
   <!-- DL-141 F/U2: sensor-panel dial — a 270° arc of ticks (unlit ticks are
-       the track), a sweeping needle, and a tweened center readout. All
-       motion is CSS transitions / one rAF counter, so the panel GPU stays
-       idle between the 2.5 s polls. -->
+       the track), a sweeping needle, and a tweened readout parked in the
+       arc's dead bottom wedge. All motion is CSS transitions / one rAF
+       counter, so the panel GPU stays idle between the 2.5 s polls. -->
   <div class="gd" :class="{ 'gd-empty': value == null }">
     <svg class="gd-svg" viewBox="0 0 100 100" aria-hidden="true">
       <line
@@ -22,9 +22,11 @@
       />
       <circle v-if="value != null" class="gd-hub" cx="50" cy="50" r="3.2" />
     </svg>
-    <div class="gd-center">
-      <span :key="popKey" class="gd-num">{{ centerText }}</span>
-      <span v-if="unit" class="gd-unit">{{ unit }}</span>
+    <div class="gd-readout">
+      <span class="gd-row">
+        <span :key="popKey" class="gd-num">{{ centerText }}</span>
+        <span v-if="unit" class="gd-unit">{{ unit }}</span>
+      </span>
       <span v-if="label" class="gd-label">{{ label }}</span>
     </div>
   </div>
@@ -165,9 +167,16 @@ const popKey = computed(() => (props.display != null ? centerText.value : 'num')
   opacity: 0.15;
 }
 
-.gd-center {
+/* The 270° arc leaves a 90° dead wedge at the bottom of the square box —
+   the readout lives there, visually below the gauge instead of on top of
+   the needle/ticks (DL-141 F/U3). At bottom 4% and top 58% it sits inside
+   the wedge's cone, so it can never collide with a tick or the needle. */
+.gd-readout {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 58%;
+  bottom: 4%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -176,9 +185,15 @@ const popKey = computed(() => (props.display != null ? centerText.value : 'num')
   pointer-events: none;
 }
 
+.gd-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
 .gd-num {
   font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-  font-size: clamp(1.5rem, 4.6vh, 2.9rem);
+  font-size: clamp(1.15rem, 3.4vh, 2.1rem);
   line-height: 1;
   font-variant-numeric: tabular-nums;
   animation: gd-num-in 0.35s ease;
@@ -191,7 +206,7 @@ const popKey = computed(() => (props.display != null ? centerText.value : 'num')
 }
 
 .gd-label {
-  margin-top: 4px;
+  margin-top: 3px;
   font-size: clamp(0.5rem, 0.9vw, 0.62rem);
   letter-spacing: 0.28em;
   text-transform: uppercase;

@@ -87,3 +87,61 @@ creates a default alert by design (legacy hook compat).
 Regression cost of the campaign: one transient module shadow
 (`utils/subprocess_runner.py`) — restored and merged; full backend suite
 1104 passing.
+
+## Follow-up 2 — reveal the header for steps that point into it
+
+Steps 3 (Scenes & Pages) and 5 (Edit Mode) spotlight elements inside
+`DeckHeader`, which unmounts entirely when `showHeader` is false — its
+default plus the 5 s autohide mean it's absent almost always, so both
+steps rendered as dead centered cards. Step 6 (Agent Sessions) targeted
+`.agent-action-bar`, which only mounts while the current scene actually
+has agent actions — and its mobile counterpart was never in the
+selector.
+
+- `TutorialStep` gains `needsHeader?: boolean`; steps 3 and 5 set it.
+  `prepareStep` reveals the header via the settings store (the reveal
+  FAB hides in edit mode — the store path can't miss), marks
+  `headerRevealedByTour`, then clicks `.autohide-pill:not(.pinned)` so
+  the 5 s countdown can't unmount the target mid-step. The
+  `:not(.pinned)` guard makes the click conditional — an already-pinned
+  header is left alone.
+- Mobile viewports skip the reveal entirely: it would swap the mobile
+  chrome's `.mc-scene-rail` for the desktop pill nav (spotlighting the
+  wrong thing), and the edit button doesn't exist on mobile either way.
+  Step 3 highlights the real mobile rail; step 5 keeps its honest
+  centered card on phones.
+- The reveal is restored when the tour leaves the dashboard (a step
+  whose `route` isn't `/`) or when the tour deactivates — a user who
+  keeps the header hidden gets it back afterward. If the header was
+  *already* visible but counting down, the pin we added is un-clicked on
+  restore so the user's countdown resumes (`headerPinnedByTour` —
+  tracked separately because an unpinned-then-hidden restore would leave
+  the user's header stuck open). Both flags only track changes we made.
+- Step 6's target is now `.agent-action-bar, .mobile-agent-console` —
+  the mobile agent surface can be spotlighted on touch panels.
+- `TutorialStep` also gains `needsAgentScene?: boolean` (step 6): before
+  measuring, `prepareStep` switches the deck to the first scene whose
+  app profile carries `state_actions` (the same eligibility check
+  DashboardView uses), so the bar is real, not imagined. The switch is
+  restored when the tour leaves `/` or ends — unless the user already
+  tapped a different scene pill (clicks pass through the overlay), in
+  which case we don't fight them. No agent scene on the deck → the
+  honest centered card still stands — nothing real to point at.
+
+### Results — follow-up 2
+
+- `services/tutorial.ts`: `needsHeader` + `needsAgentScene` step fields;
+  steps 3/5/6 updated.
+- `components/TutorialTour.vue`: `restoreDashboardState()` owns both
+  restorations; `prepareStep` reveals+pins the header (desktop only) and
+  hops to an agent scene for step 6.
+- **Live-verified** (Playwright, 1440×800, built bundle): step 3
+  spotlight = `.enhanced-scene-nav` rect + 10 px pad, header revealed and
+  pill auto-pinned; step 5 spotlight wraps the edit button exactly;
+  step 6 switched to the "Claude Code" scene and the spotlight wrapped
+  the live `.agent-action-bar`; step 7 → header re-hidden + scene
+  restored; tour finished clean (`vdock_tutorial_done` written). Ref:
+  `refs/tour-step6-agent-bar-*.png`.
+- Tests: 4 new in `tutorial-manual-steps.test.ts` (needsHeader flags,
+  reveal/pin/restore wiring, agent target union + scene-switch wiring).
+  Full suite 570/570, `vue-tsc` clean, `dist` rebuilt.

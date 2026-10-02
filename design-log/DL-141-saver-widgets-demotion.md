@@ -128,3 +128,17 @@ tracks live stats.
   `61°C` chip, `Charging 88%`, 2 `.st-part`, 4 `.st-core`) — the first
   sample renders instantly as designed. Full suite 566/566,
   `vue-tsc` clean, `dist` rebuilt.
+
+## Follow-up 3 — readout parked below the dial
+
+The tweened value was absolutely centered over the gauge — it overlapped
+the needle and lit ticks at every reading. Moved the readout into the
+270° arc's dead bottom wedge (`.gd-readout` `top:58%; bottom:4%`, inside
+the 90° gap cone where no tick or needle can reach): number + unit
+baseline-aligned in a row, label beneath. The dial keeps its full card
+size; the value reads "below the gauge" per the ask. Number sized down
+to `clamp(1.15rem, 3.4vh, 2.1rem)` to fit the wedge.
+
+- Live-verified (built bundle): all six cards show the value under the
+  arc — `refs/saver-stats-value-below-*.png`.
+- `stats-stage` 9/9, `vue-tsc` clean, `dist` rebuilt.
