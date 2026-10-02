@@ -109,3 +109,90 @@ below the 880px collapse breakpoint):
 
 Suites: 569/569 vitest (9 new), `vue-tsc` clean, `npm run build` clean —
 `dist` rebuilt for the panel.
+
+## Follow-up — short-viewport collapse (footer mid-screen on the panel)
+
+### Problem
+
+User report (panel): "when toggle settings in screensaver screen settings
+the footer comes up and break the ui — like clicking toggle media buttons
+and toggling types of widgets." Screenshot: a 1024×547 frame where
+`.settings-app` is ~92px tall — an empty sunken nav sliver at the left, the
+bottom slice of the widgets card ("Now Playing" row, toggle on), the dock
+footer pinned at ~y68–92, and a solid `--bg` void filling the rest.
+
+### Investigation
+
+Pixel forensics: left strip = `--bg-sunken` (nav column), card = `--panel`,
+gutter/right zone = the settings-local `--bg #0a111f`, void below y=92 =
+body's literal `#0f1726` (main.css). So `.settings-app` genuinely ended at
+~92px while the window was 547px tall — `100dvh` resolved to ~92.
+
+`index.html` carries `interactive-widget=resizes-content` in its viewport
+meta: when a virtual keyboard opens (or the window is otherwise squeezed to
+a sliver), the **layout** viewport shrinks — `vh`/`dvh` collapse to the
+visible strip. The fixed-height grid (`min-height:100dvh; overflow:hidden`)
+then squeezes the whole shell into that strip: row 1 becomes a sliver,
+`.nav`'s children overflow invisibly, `.content`'s inner scroller keeps its
+scrollTop (showing whatever row was being toggled), and the sticky dock
+glues to the bottom of the 92px container — mid-screen. Every toggle
+"breaks" the UI because the break is the collapsed viewport, not the
+toggle.
+
+DL-140's fix only covers the width axis (`max-width: 880px`). A viewport
+that is wide but short — the panel with its touch keyboard up, a docked or
+resized window — keeps the fixed-height clipped shell.
+
+### Fix
+
+1. Extend the body-scroll fallback to short viewports. The rules that turn
+   `.settings-app` into a normal scrolling document (`height:auto;
+   overflow:visible`, `.main`/`.content` released, `.topbar` static) now
+   apply at `(max-width: 880px)` **or** `(max-height: 480px)`; the ≤880px
+   block keeps its single-column/mobile-only overrides on top.
+2. `App.vue` — the `#app` clip release media query gains the same
+   `max-height: 480px` branch so the document can actually scroll.
+3. `.settings-dock` goes `position: static` in both body-scroll modes — a
+   viewport-pinned footer is the literal "footer comes up"; in a scrolling
+   document it belongs at the end of the page.
+4. `NotificationCenter` — `.notification-center` was `position: relative`,
+   so its in-flow bell added ~37px of document height below the settings
+   shell. Now `absolute` (same static position, zero flow footprint).
+
+### Implementation Results
+
+**Done:**
+
+- `SettingsView.vue` — the body-scroll rules (`height:auto`,
+  `min-height:100dvh`, `overflow:visible` on `.settings-app`; released
+  `.main`/`.content`; static `.topbar`) moved into a shared
+  `@media (max-width: 880px), (max-height: 480px)` block; the ≤880px block
+  keeps only the mobile layout deltas (single column, top-strip nav,
+  stacked rows). `.settings-dock` is `position: static` in both scroll
+  modes.
+- `App.vue` — `#app` clip release now fires at
+  `(max-width: 880px), (max-height: 480px)`, still scoped to
+  `.settings-route` so the fixed-viewport dashboard is untouched.
+- `NotificationCenter.vue` — `.notification-center` → `position: absolute`;
+  the bell keeps its spot at document end but no longer inflates
+  `documentElement.scrollHeight` (+37px) below the footer.
+
+**Verified live** (built bundle on :5000):
+
+- `1024×92` (the screenshot's collapsed state): `.settings-app` is a
+  2251px scrolling document instead of a 92px clipped sliver; dock is at
+  document end, not mid-screen; the void below the shell is gone.
+- `1024×400` (wide-short boundary): 2-column rail kept, page scrolls,
+  dock `static` at end.
+- `1024×547` & `1024×600` (panel-like desktop): unchanged fixed grid —
+  `.content` remains the inner scroller, dock pinned as the bottom grid
+  row, `docH` === viewport (no stray notification height).
+- `800×600` (narrow): body-scroll + top-strip nav as before, but the dock
+  no longer floats over content while scrolling — at mid-page scroll it is
+  simply off-screen at document end.
+- Toggle battery: Media controls on/off, screensaver type select, Now
+  Playing and all widget switches — 20+ toggles across the three modes,
+  `appH`/`docH`/scroll position stable every time, zero console errors.
+
+Suites: 570/570 vitest, `vue-tsc` clean, `npm run build` clean — `dist`
+rebuilt for the panel.

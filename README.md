@@ -227,12 +227,6 @@ Setup installs dependencies and puts a **VDock icon on your desktop**.
 
 Almost everything you'd change lives in **Settings** — searchable, autosaving. The rest: server config in `backend/data/config.json` (created on first run, gitignored), secrets in `backend/.env` (copy from `backend/.env.example`), and ports via `setup.bat --ports` / `./setup.sh` option 4.
 
-**Optional API keys** — you probably need none of these:
-
-- `ANTHROPIC_API_KEY` — only for "Ask Claude (API)"; the Claude **Code** actions use your existing `claude` login
-- `GITHUB_TOKEN` — only for live PR/CI/notification badges; the `gh` actions use `gh auth login` (`repo` + `notifications` scopes)
-- `VDOCK_DEFAULT_REPO_PATH` — optional fallback repo when VDock can't infer one
-
 Secrets never reach the frontend — the action list exposes only *whether* an integration is configured, and secrets are stripped from command output before it reaches a notification or a log.
 
 ---

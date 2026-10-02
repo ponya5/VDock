@@ -5398,10 +5398,24 @@ onMounted(async () => {
   .row { padding-top: 10px; padding-bottom: 10px; }
 }
 
-@media (max-width: 880px) {
-  .settings-app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; height: auto; min-height: 100vh; overflow: visible; }
+/* DL-140 F/U: body-scroll fallback when the viewport is too small for the
+   fixed-height shell — narrow width (≤880px) OR collapsed height (≤480px).
+   The height branch covers the panel's on-screen keyboard: index.html sets
+   interactive-widget=resizes-content, so the OSK shrinks the layout viewport
+   and 100dvh collapses, squeezing the whole grid into a ~90px sliver with
+   the sticky dock pinned mid-screen. The matching #app clip release lives
+   in App.vue. */
+@media (max-width: 880px), (max-height: 480px) {
+  .settings-app { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
   .main, .content { overflow: visible; }
   .topbar { position: static; }
+  /* a viewport-pinned dock floating over content is the reported break —
+     in a scrolling document the footer belongs at the end of the page */
+  .settings-dock { position: static; }
+}
+
+@media (max-width: 880px) {
+  .settings-app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
   .nav {
     border-right: 0;
     border-bottom: 1px solid var(--line-soft);

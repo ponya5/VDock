@@ -262,7 +262,9 @@ onUnmounted(() => {
 
 <style scoped>
 .notification-center {
-  position: relative;
+  /* absolute keeps the bell at its usual spot (below the app shell) without
+     adding ~37px of in-flow height to the document — DL-140 F/U */
+  position: absolute;
 }
 
 .notification-bell {
