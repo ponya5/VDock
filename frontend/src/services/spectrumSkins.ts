@@ -1,5 +1,10 @@
+import {
+  createFlight,
+  createWaveGrid,
+} from './spectrumSkins3d'
+
 /**
- * Spectrum screensaver skins (DL-123, expanded DL-134).
+ * Spectrum screensaver skins (DL-123, expanded DL-134, DL-139).
  *
  * Two stacked fullscreen canvases and one rAF loop (owned by
  * SpectrumStage) let skin swaps cross-dissolve; a set of swappable
@@ -24,7 +29,11 @@
  *   wave               — synthesized oscilloscope trace, phosphor echoes
  *   ring               — waveform wrapped in a circle, beat shockwaves
  *   mirror             — symmetric double comb off a lit center rail
- *   psyche             — kaleidoscope petals smearing into light ribbons
+ *   radial             — 64 log-spaced bins around a pulsing bass counter
+ *                        + waveform line, 122 BPM fallback clock (DL-139)
+ *   wavegrid / flight  — Three.js scenes living in spectrumSkins3d.ts
+ *                        (DL-139 follow-up: Psychedelia, Smoke Plume and
+ *                        Liquid Chrome were cut on taste grounds)
  */
 
 export interface SpectrumFrame {
@@ -65,20 +74,20 @@ export function sampleBands(bands: number[], x: number): number {
 }
 
 /** Mirrored band sample for radial skins: x wraps around the circle. */
-function sampleBandsCircular(bands: number[], x: number): number {
+export function sampleBandsCircular(bands: number[], x: number): number {
   const wrapped = x - Math.floor(x)
   const mirrored = wrapped < 0.5 ? wrapped * 2 : (1 - wrapped) * 2
   return sampleBands(bands, mirrored)
 }
 
 /** '#rrggbb' → "r, g, b" for rgba() template strings. */
-function hexRgb(hex: string): string {
+export function hexRgb(hex: string): string {
   const n = parseInt(hex.slice(1), 16)
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
 }
 
 /** hsl → "r, g, b" for rgba() template strings (h 0-360, s/l 0-100). */
-function hslRgb(h: number, s: number, l: number): string {
+export function hslRgb(h: number, s: number, l: number): string {
   const sn = s / 100
   const ln = l / 100
   const a = sn * Math.min(ln, 1 - ln)
@@ -91,7 +100,7 @@ function hslRgb(h: number, s: number, l: number): string {
 
 /** Beat pulse: spikes when the level jumps, decays back over ~0.4 s — the
  *  "thump" that makes transients visible, not just bar height. */
-function createPulse(): (level: number, dt: number) => number {
+export function createPulse(): (level: number, dt: number) => number {
   let p = 0
   let prev = 0
   return (level, dt) => {
@@ -419,8 +428,8 @@ function createRgbBars(): SpectrumRenderer {
  *  blit up once — fullscreen gradient fills are the expensive part on a
  *  weak panel GPU, and the upscale's smoothing is free bloom. Falls back
  *  to direct paints where 2D offscreen contexts are unavailable. */
-interface AmbientSpec { h1: number; h2: number; orbit?: number }
-function createAmbient(spec: AmbientSpec) {
+export interface AmbientSpec { h1: number; h2: number; orbit?: number }
+export function createAmbient(spec: AmbientSpec) {
   const pulse = createPulse()
   const SCALE = 8
   let mini: HTMLCanvasElement | null = null
@@ -510,6 +519,7 @@ function createIso(): SpectrumRenderer {
   const hist: number[][] = []
   let acc = 0
   const ROW_MS = 0.06
+  const liveRow: number[] = new Array<number>(COLS).fill(0)
   const ambient = createAmbient({ h1: 205, h2: 285 })
   // Ripple distance per cell is static — precompute once instead of a
   // Math.hypot per cell per frame (176/frame saved).
@@ -528,11 +538,21 @@ function createIso(): SpectrumRenderer {
       ctx.clearRect(0, 0, w, h)
       ambient(ctx, f)
       acc += dt
-      if (acc >= ROW_MS) {
-        acc = 0
+      while (acc >= ROW_MS) {
+        acc -= ROW_MS
         hist.pop()
         hist.unshift(Array.from({ length: COLS }, (_, c) =>
           sampleBands(f.bands, c / (COLS - 1))))
+      }
+      // Rows commit on a fixed cadence, but cell heights lerp toward the
+      // incoming row — the field glides at the frame rate instead of
+      // stair-stepping at ~17 Hz.
+      const frac = acc / ROW_MS
+      for (let c = 0; c < COLS; c++)
+        liveRow[c] = sampleBands(f.bands, c / (COLS - 1))
+      const cellAt = (r: number, c: number) => {
+        const a = hist[r][c]
+        return a + ((r === 0 ? liveRow[c] : hist[r - 1][c]) - a) * frac
       }
 
       const yaw = Math.sin(t * 0.17) * 0.55
@@ -568,7 +588,7 @@ function createIso(): SpectrumRenderer {
       ctx.lineWidth = 1
       ctx.beginPath()
       for (let c = 0; c < COLS; c++) {
-        const z = (hist[ROWS - 1][c] / 100) * maxZ * 0.4 + Math.sin(t * 2 + c) * 3
+        const z = (cellAt(ROWS - 1, c) / 100) * maxZ * 0.4 + Math.sin(t * 2 + c) * 3
         const [sx, sy2] = proj(c + 0.5, ROWS - 0.4, z)
         c === 0 ? ctx.moveTo(sx, sy2) : ctx.lineTo(sx, sy2)
       }
@@ -582,7 +602,7 @@ function createIso(): SpectrumRenderer {
       // read collapsed into a wall of colour).
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          const v = hist[r][c]
+          const v = cellAt(r, c)
           // Ripple rings radiating out of the field's centre — a constant
           // wave motion under the audio-driven heights.
           const dist = rippleDist[r * COLS + c]
@@ -807,10 +827,15 @@ function createAurora(): SpectrumRenderer {
 // ---------------------------------------------------------------------------
 
 function createEmber(): SpectrumRenderer {
-  const LINES = 20
-  const PTS = 64
+  const LINES = 22
+  const PTS = 72
   const sparks: Spark[] = []
   const ambient = createAmbient({ h1: 18, h2: 335 })
+  const pulse = createPulse()
+  // Ridge points are replayed twice per row (molten fill, then the glowing
+  // stroke) — scratch arrays keep the second pass allocation-free.
+  const xs = new Float32Array(PTS + 1)
+  const ys = new Float32Array(PTS + 1)
   return {
     draw(ctx, f) {
       const { w, h, t, dt } = f
@@ -818,6 +843,7 @@ function createEmber(): SpectrumRenderer {
       ambient(ctx, f)
       const alpha = f.live ? 1 : 0.4
       const lvl = f.level / 100
+      const p = pulse(f.level, dt)
       const top = h * 0.12
       const bottom = h * 0.86
 
@@ -828,51 +854,97 @@ function createEmber(): SpectrumRenderer {
         const yBase = bottom - (1 - jF) * (bottom - top)
         const amp = h * 0.30 * Math.pow(1 - jF, 1.6) + h * 0.015
         const phase = t * 0.5 + j * 0.35
-        ctx.beginPath()
+        const hue = 46 - (1 - jF) * 30 // amber → ember red toward the back
+        const heat = (1 - jF * 0.6) * alpha
+
+        // The single-mountain silhouette: edges pinned flat. Track the
+        // crest while computing the ridge into the scratch arrays.
         let crestX = 0
         let crestY = Infinity
         for (let i = 0; i <= PTS; i++) {
           const x01 = i / PTS
-          const x = x01 * w
-          // The single-mountain silhouette: edges pinned flat.
+          xs[i] = x01 * w
           const env = Math.pow(Math.sin(Math.PI * x01), 1.15)
           const v = (sampleBands(f.bands, x01) / 100) * env
           // Heat shimmer + a slow swell that sweeps across the ridge.
           const shimmer = Math.sin(x01 * 9 + phase) * amp * 0.03
             + Math.sin(x01 * 4 - t * 2.1) * amp * 0.05 * (0.3 + lvl)
-          const y = yBase - v * amp + shimmer
-          if (y < crestY) { crestY = y; crestX = x }
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+          ys[i] = yBase - v * amp + shimmer
+          if (ys[i] < crestY) { crestY = ys[i]; crestX = xs[i] }
         }
-        const hue = 46 - (1 - jF) * 30 // amber → ember red toward the back
-        const lineAlpha = (0.14 + (1 - jF) * 0.5) * alpha
-        ctx.strokeStyle = `hsla(${hue}, 92%, ${52 + (1 - jF) * 10}%, ${lineAlpha})`
-        ctx.lineWidth = 1.4
+
+        // Molten underglow — white-hot just under the ridge line, cooling
+        // to nothing. Additive, so the stacked ridges pool light like a
+        // lava field and the whole field flares on the beat.
+        const fill = ctx.createLinearGradient(
+          0, Math.max(0, crestY - amp * 0.15), 0, yBase + 4)
+        fill.addColorStop(0,
+          `hsla(${hue + 14}, 100%, ${60 + p * 18}%, ${(0.20 + p * 0.15) * heat})`)
+        fill.addColorStop(0.5, `hsla(${hue}, 96%, 40%, ${0.07 * heat})`)
+        fill.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.fillStyle = fill
+        ctx.beginPath()
+        ctx.moveTo(0, yBase)
+        for (let i = 0; i <= PTS; i++) ctx.lineTo(xs[i], ys[i])
+        ctx.lineTo(w, yBase)
+        ctx.closePath()
+        ctx.fill()
+
+        // The glowing ridgeline itself — hotter and thicker toward the
+        // front, brightening with the kick.
+        const lineAlpha = (0.18 + (1 - jF) * 0.5) * alpha
+        ctx.strokeStyle = `hsla(${hue}, 94%, ${54 + (1 - jF) * 10 + p * 8}%, ${Math.min(1, lineAlpha + p * 0.12)})`
+        ctx.lineWidth = jF < 0.3 ? 1.9 : 1.3
+        ctx.beginPath()
+        for (let i = 0; i <= PTS; i++)
+          i === 0 ? ctx.moveTo(xs[i], ys[i]) : ctx.lineTo(xs[i], ys[i])
         ctx.stroke()
 
-        // Hot spot at each ridge's crest — a glowing coal that dances with
-        // the tallest peak.
+        // Crest coal — a soft molten glow riding the tallest peak, flaring
+        // on the beat; bursts of embers lift off the hottest front crests.
         if (crestY < yBase - h * 0.02) {
-          ctx.fillStyle = `hsla(${hue + 6}, 95%, 72%, ${lineAlpha * 0.9})`
+          const gr = 10 + p * 14 + lvl * 6
+          const cg = ctx.createRadialGradient(crestX, crestY, 0, crestX, crestY, gr)
+          cg.addColorStop(0, `hsla(${hue + 12}, 100%, 80%, ${(0.5 + p * 0.35) * alpha})`)
+          cg.addColorStop(1, 'rgba(0,0,0,0)')
+          ctx.fillStyle = cg
           ctx.beginPath()
-          ctx.arc(crestX, crestY, 2.2, 0, Math.PI * 2)
+          ctx.arc(crestX, crestY, gr, 0, Math.PI * 2)
           ctx.fill()
-          // Embers lift off the hottest front crests.
-          if (f.live && jF < 0.4 && sparks.length < 50
-              && Math.random() < dt * lvl * 1.6) {
-            sparks.push({
-              x: crestX + (Math.random() - 0.5) * 24,
-              y: crestY,
-              vx: (Math.random() - 0.5) * 18,
-              vy: -(26 + Math.random() * 46),
-              life: 0,
-              ttl: 0.6 + Math.random() * 0.8,
-              r: 0.9 + Math.random() * 1.6,
-            })
+
+          if (f.live && jF < 0.4 && sparks.length < 110
+              && Math.random() < dt * (lvl * 2.2 + p * 26)) {
+            const n = p > 0.35 ? 2 + ((Math.random() * 3) | 0) : 1
+            for (let k = 0; k < n && sparks.length < 130; k++) {
+              sparks.push({
+                x: crestX + (Math.random() - 0.5) * 28,
+                y: crestY,
+                vx: (Math.random() - 0.5) * 20,
+                vy: -(26 + Math.random() * 50),
+                life: 0,
+                ttl: 0.6 + Math.random() * 0.9,
+                r: 0.9 + Math.random() * 1.7,
+              })
+            }
           }
         }
       }
       ctx.globalCompositeOperation = 'source-over'
+
+      // Ambient drift — a slow drizzle of rising embers keeps the field
+      // alive in silence and thickens when the music is loud.
+      const drizzle = f.live ? 3 + lvl * 10 + p * 16 : 2.4
+      if (sparks.length < 120 && Math.random() < dt * drizzle) {
+        sparks.push({
+          x: Math.random() * w,
+          y: bottom - Math.random() * h * 0.25,
+          vx: (Math.random() - 0.5) * 14,
+          vy: -(10 + Math.random() * 22),
+          life: 0,
+          ttl: 1.1 + Math.random() * 1.4,
+          r: 0.7 + Math.random() * 1.3,
+        })
+      }
 
       drawSparks(ctx, sparks, dt, '255, 178, 96')
     },
@@ -894,6 +966,7 @@ function createRotor(): SpectrumRenderer {
   const hist: number[][] = []
   let acc = 0
   const ROW_MS = 0.055
+  const liveRow: number[] = new Array<number>(COLS).fill(0)
 
   for (let i = 0; i < ROWS; i++) hist.push(new Array<number>(COLS).fill(0))
 
@@ -907,11 +980,20 @@ function createRotor(): SpectrumRenderer {
       ctx.clearRect(0, 0, w, h)
       ambient(ctx, f)
       acc += dt
-      if (acc >= ROW_MS) {
-        acc = 0
+      while (acc >= ROW_MS) {
+        acc -= ROW_MS
         hist.pop()
         hist.unshift(Array.from({ length: COLS }, (_, c) =>
           sampleBands(f.bands, c / (COLS - 1))))
+      }
+      // Same glide fix as iso: needle heights lerp between row commits —
+      // the field flows at the frame rate, not the ~18 Hz commit cadence.
+      const frac = acc / ROW_MS
+      for (let c = 0; c < COLS; c++)
+        liveRow[c] = sampleBands(f.bands, c / (COLS - 1))
+      const cellAt = (r: number, c: number) => {
+        const a = hist[r][c]
+        return a + ((r === 0 ? liveRow[c] : hist[r - 1][c]) - a) * frac
       }
 
       const rot = t * 0.26                       // continuous slow spin
@@ -972,7 +1054,7 @@ function createRotor(): SpectrumRenderer {
       const cap = Math.max(2.2, u * 0.26)
       for (const idx of order) {
         const c = idx % COLS, r = (idx / COLS) | 0
-        const v = hist[r][c]
+        const v = cellAt(r, c)
         const z = (v / 100) * maxZ + 1
         const [bx, by] = proj(c + 0.5, r + 0.5, 0)
         const [tx, ty, p] = proj(c + 0.5, r + 0.5, z)
@@ -1458,100 +1540,129 @@ function createMirror(): SpectrumRenderer {
   }
 }
 
+
+
 // ---------------------------------------------------------------------------
-// Psyche — the psychedelic one. A rotating kaleidoscope of spectrum-driven
-// petals (10 wedges, each petal's reach is a mirrored band sample) drawn
-// additively over a translucent-black trail fade, so motion smears into
-// light ribbons. Hue races the full wheel continuously, the center bloom
-// inverts the palette, and the whole mandala swells on the beat.
+// Radial Pulse — 64 log-spaced FFT bins radiating from a pulsing bass
+// counter, with a synthesized waveform line underneath (DL-139). When the
+// stream is silent a 122 BPM clock keeps the ring beating.
 // ---------------------------------------------------------------------------
 
-function createPsyche(): SpectrumRenderer {
-  const K = 10
-  const PTS = 20
+function createRadial(): SpectrumRenderer {
+  const BINS = 64
   const pulse = createPulse()
+  const ambient = createAmbient({ h1: 205, h2: 280 })
+  // Log-spaced positions over the 20-band array — more bins land on bass.
+  const bandPos = Array.from({ length: BINS }, (_, k) =>
+    (Math.pow(20, k / (BINS - 1)) - 1) / 19)
+
+  const grp = (bands: number[], a: number, b: number) => {
+    let s = 0
+    for (let i = a; i <= b; i++) s += bands[i] ?? 0
+    return s / ((b - a + 1) * 100)
+  }
+  // Same harmonic-sum trick as Wave — FFT bands → scope-looking trace.
+  const trace = (bands: number[], x01: number, t: number, idle: boolean) => {
+    if (idle) return Math.sin(x01 * Math.PI * 2 * 2.2 + t * 1.2) * 0.10
+    const bass = grp(bands, 0, 3)
+    const mid = grp(bands, 4, 9)
+    const high = grp(bands, 10, 19)
+    return Math.sin(x01 * Math.PI * 2 * 2.4 + t * 2.2) * (0.10 + bass * 0.75)
+      + Math.sin(x01 * Math.PI * 2 * 6.8 - t * 3.4) * (0.05 + mid * 0.42)
+      + Math.sin(x01 * Math.PI * 2 * 15.5 + t * 5.1) * (0.03 + high * 0.28)
+  }
 
   return {
     draw(ctx, f) {
       const { w, h, t, dt } = f
-      const p = pulse(f.level, dt)
-      const lvl = f.level / 100
+      ctx.clearRect(0, 0, w, h)
+      ambient(ctx, f)
       const idle = !f.live
-      const alpha = idle ? 0.45 : 1
-      const cx = w / 2, cy = h / 2
-      const R = Math.min(w, h) * (0.40 + p * 0.05)
-      const rot = t * 0.22
-      const hueBase = (t * 42 + lvl * 90) % 360
-      // Trail fade instead of a clear — the smear IS the effect. Tinted by
-      // the drifting hue so the decay itself carries ambient color; a
-      // solid ambient layer would erase the accumulation.
-      ctx.fillStyle = `rgba(${hslRgb(hueBase + 180, 52, 5)}, ${0.16 - Math.min(0.06, p * 0.05)})`
-      ctx.fillRect(0, 0, w, h)
+      // Beat-synced fallback when silent — 122 BPM synthetic clock.
+      const synthBeat = Math.pow(
+        Math.max(0, Math.sin(t * Math.PI * 2 * (122 / 60))), 3)
+      const bands = idle
+        ? demoBands(t).map(v => v * 0.35)
+        : f.bands
+      const lvl = idle ? synthBeat * 0.5 : f.level / 100
+      const p = idle ? synthBeat : pulse(f.level, dt)
+      const bass = grp(bands, 0, 3)
+      const alpha = idle ? 0.55 : 1
+      const cx = w / 2
+      const cy = h * 0.44
+      const r0 = Math.min(w, h) * 0.185
+      const rMax = Math.min(w, h) * 0.36
 
-      ctx.save()
-      ctx.translate(cx, cy)
       ctx.globalCompositeOperation = 'lighter'
+      ctx.lineCap = 'round'
 
-      for (let i = 0; i < K; i++) {
-        const v = idle
-          ? 0.18 + Math.sin(t * 1.1 + i * 0.7) * 0.06
-          : sampleBandsCircular(f.bands, i / K) / 100
-        const len = R * (0.28 + v * 0.95) + p * R * 0.14
-        const wid = R * (0.18 + v * 0.12)
-        const hue = (hueBase + i * (360 / K) + v * 40) % 360
-
-        ctx.save()
-        ctx.rotate(rot + (i / K) * Math.PI * 2)
-        // Petal ribbon — a pointed ellipse kissing the center.
+      // 64 radial bins — hue drifts cyan → violet → pink with energy.
+      const tickW = Math.max(2, (Math.PI * 2 * r0) / BINS * 0.42)
+      for (let k = 0; k < BINS; k++) {
+        const v = Math.max(0.015, sampleBands(bands, bandPos[k]) / 100)
+        const ang = (k / BINS) * Math.PI * 2 - Math.PI / 2
+        const c = Math.cos(ang)
+        const s = Math.sin(ang)
+        const len = v * (rMax - r0) * (1 + p * 0.22)
+        const hue = (195 + v * 95 + p * 35) % 360
+        ctx.strokeStyle =
+          `hsla(${hue}, 95%, ${(52 + v * 28) * alpha}%, ${0.92 * alpha})`
+        ctx.lineWidth = tickW
         ctx.beginPath()
-        ctx.moveTo(0, 0)
-        for (let j = 1; j <= PTS; j++) {
-          const u = j / PTS
-          const px = Math.sin(u * Math.PI) * wid
-          const py = u * len
-          ctx.lineTo(px, py)
-        }
-        for (let j = PTS; j >= 1; j--) {
-          const u = j / PTS
-          ctx.lineTo(-Math.sin(u * Math.PI) * wid, u * len)
-        }
-        ctx.closePath()
-        ctx.fillStyle = `hsla(${hue}, 95%, 58%, ${0.14 * alpha})`
-        ctx.fill()
-        ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${0.50 * alpha})`
-        ctx.lineWidth = 1.4
+        ctx.moveTo(cx + c * r0, cy + s * r0)
+        ctx.lineTo(cx + c * (r0 + len), cy + s * (r0 + len))
         ctx.stroke()
-
-        // Petal tip spark.
-        ctx.fillStyle = `hsla(${hue}, 100%, 82%, ${(0.4 + v * 0.4) * alpha})`
-        ctx.beginPath()
-        ctx.arc(0, len, 2 + v * 2.5, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.restore()
       }
 
-      // Inverted center bloom — the palette's complement, swelling on beats.
-      const coreR = R * (0.16 + lvl * 0.12 + p * 0.10)
-      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR * 2)
-      core.addColorStop(0, `hsla(${(hueBase + 180) % 360}, 100%, 72%, ${(0.28 + p * 0.25) * alpha})`)
-      core.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = core
+      // Inner dotted orbit ring — furniture between bins and counter.
+      ctx.strokeStyle = `rgba(150, 190, 255, ${0.10 + p * 0.08})`
+      ctx.lineWidth = 1
+      ctx.setLineDash([2, 7])
       ctx.beginPath()
-      ctx.arc(0, 0, coreR * 2, 0, Math.PI * 2)
+      ctx.arc(cx, cy, r0 * 0.82, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.setLineDash([])
+
+      // Pulsing bass counter — disc + ring + numeric readout in the hub.
+      const cr = r0 * (0.40 + bass * 0.30 + p * 0.16)
+      const glowR = cr * 2.6
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR)
+      glow.addColorStop(0, `rgba(120, 140, 255, ${(0.22 + bass * 0.30 + p * 0.25) * alpha})`)
+      glow.addColorStop(1, 'rgba(120, 140, 255, 0)')
+      ctx.fillStyle = glow
+      ctx.beginPath()
+      ctx.arc(cx, cy, glowR, 0, Math.PI * 2)
       ctx.fill()
 
-      // Orbiting dust — two rings of hue-cycling grains, counter-rotating.
-      for (let i = 0; i < 44; i++) {
-        const dir = i % 2 ? -1 : 1
-        const rr = R * (0.5 + (i % 11) * 0.055)
-        const a = dir * t * (0.3 + (i % 5) * 0.06) + i * 2.4
-        const hue = (hueBase + i * 17 + 90) % 360
-        ctx.fillStyle = `hsla(${hue}, 100%, 78%, ${0.30 * alpha})`
+      ctx.strokeStyle = `hsla(${(215 + p * 60) % 360}, 90%, 66%, ${0.85 * alpha})`
+      ctx.lineWidth = Math.max(1.5, r0 * 0.025)
+      ctx.beginPath()
+      // Arc sweeps with the bass level — the counter is a gauge.
+      ctx.arc(cx, cy, cr, -Math.PI / 2, -Math.PI / 2 + bass * Math.PI * 2)
+      ctx.stroke()
+
+      ctx.fillStyle = `rgba(235, 242, 255, ${0.92 * alpha})`
+      ctx.font = `700 ${Math.round(cr * 0.62)}px Segoe UI, Arial, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(Math.round(bass * 100)), cx, cy + cr * 0.03)
+
+      // Waveform line across the lower third — two echoes + main beam.
+      const wy = h * 0.865
+      const amp = h * 0.085
+      const stroke = (lag: number, a: number, lw: number) => {
         ctx.beginPath()
-        ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr * 0.96, 1.5, 0, Math.PI * 2)
-        ctx.fill()
+        for (let i = 0; i <= 140; i++) {
+          const x01 = i / 140
+          const y = wy + trace(bands, x01, t - lag, idle) * amp
+          i === 0 ? ctx.moveTo(x01 * w, y) : ctx.lineTo(x01 * w, y)
+        }
+        ctx.strokeStyle = `rgba(120, 210, 255, ${a * alpha})`
+        ctx.lineWidth = lw
+        ctx.stroke()
       }
-      ctx.restore()
+      stroke(0.12, 0.12, 1.4)
+      stroke(0, 0.75 + p * 0.2, 2.2 + p * 2.5)
       ctx.globalCompositeOperation = 'source-over'
     },
   }
@@ -1575,7 +1686,9 @@ export const SPECTRUM_SKINS: SpectrumSkin[] = [
   { id: 'wave', label: 'Waveform', create: createWave },
   { id: 'ring', label: 'Wave Ring', create: createRing },
   { id: 'mirror', label: 'Mirror Bars', create: createMirror },
-  { id: 'psyche', label: 'Psychedelia', create: createPsyche },
+  { id: 'radial', label: 'Radial Pulse', create: createRadial },
+  { id: 'wavegrid', label: 'Wave Grid', create: createWaveGrid },
+  { id: 'flight', label: 'Neon Flight', create: createFlight },
 ]
 
 export const DEFAULT_SPECTRUM_SKIN = 'winamp'

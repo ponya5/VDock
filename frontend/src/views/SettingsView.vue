@@ -801,7 +801,6 @@
             <section class="panel" id="ss-spectrum">
               <div class="panel-head">
                 <h2>Spectrum visualizer</h2>
-                <span class="hint">Skin, rotation and media controls for the fullscreen spectrum style.</span>
                 <span class="spacer"></span>
                 <SettingResetButton label="Spectrum screensaver" :at-default="spectrumAtDefault" @reset="resetSpectrumSettings" />
               </div>
@@ -1817,7 +1816,7 @@
               <div class="panel-body">
                 <dl class="kv-list">
                   <div class="kv"><dt>Version</dt><dd>{{ appVersion }}</dd></div>
-                  <div class="kv"><dt>Licence</dt><dd>MIT — VDock Contributors</dd></div>
+                  <div class="kv"><dt>Licence</dt><dd>MIT — ponya5</dd></div>
                   <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener">github.com/ponya5/VDock2</a></dd></div>
                 </dl>
               </div>
@@ -2905,8 +2904,6 @@ const screensaverWidgetOptions = [
   { id: 'market', label: 'Stocks / Crypto', description: 'Free stock & crypto quotes — no key' },
   { id: 'worldclock', label: 'World Clock', description: 'Time in a few other cities' },
   { id: 'nowplaying', label: 'Now Playing', description: 'Current track, artist and album art (Windows)' },
-  { id: 'spectrum', label: 'Spectrum', description: 'Live audio spectrum analyzer (Windows)' },
-  { id: 'systemstats', label: 'System Stats', description: 'CPU, memory, disk and network meters' },
 ]
 
 // Only these widgets have an Options card — the rest are self-contained.
@@ -5413,7 +5410,9 @@ onMounted(async () => {
     position: sticky;
     top: 0;
     z-index: 30;
-    background: var(--bg-1);
+    /* --bg-1 doesn't exist in this palette — it silently resolved transparent,
+       so rows painted through the pinned rail once the page could scroll. */
+    background: var(--bg);
   }
   .row { flex-direction: column; align-items: flex-start; gap: 10px; }
   .row-control { width: 100%; justify-content: flex-start; }

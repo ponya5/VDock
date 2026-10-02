@@ -137,3 +137,31 @@ Suites: **541 frontend (86 files) + 1111 backend** — 7 new backend +
 13 new frontend tests; vue-tsc clean; `dist` rebuilt; backend restarted
 (10 integration packs loaded, zero errors).
 
+## Follow-up — soft dissolve between screensaver types
+
+The shuffle rotation (and any live style change) hard-cut between scenes
+— the stage/backdrop/widget tree swapped via `v-if` in one frame. Now
+the whole scene is a keyed sibling inside `<Transition name="ss-xfade">`:
+the incoming scene mounts underneath while the leaving layer dissolves
+over it — `opacity → 0` + `scale → 1.02`, 650 ms — a pure crossfade with
+no dip to black. The leaver gets `pointer-events: none` so a tap can't
+land on a dying scene, and `z-index` keeps it on top during the dissolve.
+
+Structural consequences (all verified):
+
+- `.ss-scene` carries the layout role the root used to own (flex
+  centering, `overflow:hidden`, the ≤620 px scroll override, the
+  `.ss-mobile` padding/gap) — absolute `inset:0` inside the fixed root,
+  so both scenes stack cleanly mid-fade.
+- `evalNewsFit` measures the mounted `.ss-scene` now (the root no longer
+  scrolls — the scene does on narrow screens).
+- `prefers-reduced-motion`: scale removed, fade shortened to 250 ms.
+- Edit mode unaffected: shuffle timer stays off, `editLayout` lives on
+  the component so a style flip mid-edit doesn't lose drag state.
+
+Verified live via a store flip (`widgets → stats → spectrum`) while the
+saver was mounted — DOM observer saw two `.ss-scene` siblings during the
+fade, `ss-xfade-leave-active` across multiple ticks, and exactly one
+scene after; mid-dissolve frame saved at
+`design-log/refs/saver-xfade-mid-2026-10-02T01-26-25-453Z.png`.
+

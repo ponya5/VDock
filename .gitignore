@@ -175,9 +175,8 @@ frontend/electron/build/
 # Kiro
 .kiro/
 
-# Devin (skills are tracked, local config is not)
-.devin/*
-!.devin/skills/
+# Devin — local agent tooling, not for the repo
+.devin/
 
 # Kilo
 .kilo/

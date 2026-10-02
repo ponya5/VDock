@@ -214,3 +214,37 @@ at 16.7 ms p50/p95/max, and a crossfade into Swarm mid-measurement shows
 0 frames over 20 ms. Swarm sprite look verified visually
 (`refs/saver-swarm-sprites-60fps-2026-10-01T22-27-17-271Z.png`).
 545/545 tests, `vue-tsc`, build all green.
+
+### Follow-up: history-skins glide + Ember lava-field rework
+
+User report: `iso` and `rotor` "don't look like 60 fps". They *were* at
+60 fps — the jank was in the data, not the frame budget: both skins
+commit a history row on a fixed cadence (`acc >= ROW_MS`, ~17/18 Hz) and
+every column height stepped discretely on each commit. The motion also
+reset `acc = 0`, discarding remainder time and jittering the cadence.
+
+Fix (both skins): `acc -= ROW_MS` in a `while` (even cadence, survives
+hitches), and cell heights lerp between the committed row and the
+incoming live row by `frac = acc / ROW_MS` — the field now flows
+continuously at the frame rate while keeping the wave-propagation read.
+Verified live: iso and rotor both measure p50/p95/max = 16.7 ms on the
+built bundle (`refs/saver-iso-smooth-*.png`, `refs/saver-rotor-smooth-*.png`).
+
+`ember` reworked on "it's boring" feedback:
+
+- **Molten underglow** — each ridge now fills with a vertical gradient
+  (white-hot at the line → transparent below) drawn additively, so the
+  22 stacked ridges pool light like a lava field instead of floating as
+  bare lines. Ridge points are computed once into `Float32Array` scratch
+  and replayed for fill + stroke.
+- **Crest coals upgraded** — the 2px dot became a soft radial glow orb
+  (10–30 px) that flares on the beat pulse.
+- **Beat flares** — `createPulse` now brightens ridge fills/lines and
+  bursts 2–4 embers off the front crests on kicks.
+- **Ambient ember drizzle** — a slow stream of rising sparks keeps the
+  field alive in silence (was: nothing spawned unless `live`), thickening
+  with the level.
+
+Verified live (`refs/saver-ember-wow2-*.png`): lava-pool underglow,
+crest flares, drifting embers over the ridges. 19/19 spectrum tests,
+`vue-tsc`, build green.
