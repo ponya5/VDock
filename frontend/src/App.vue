@@ -193,7 +193,10 @@ body {
    clipping at 100dvh, otherwise the whole page is unreachable below the fold
    and hidden-overflow scrolls leave stale paint. Scoped to the settings
    route so the fixed-viewport deck keeps its clip at the same widths. */
-@media (max-width: 880px) {
+/* F/U: same release when the viewport is wide but short — the touch
+   keyboard shrinks the layout viewport (interactive-widget=resizes-content)
+   so 100dvh collapses even at desktop widths. */
+@media (max-width: 880px), (max-height: 480px) {
   /* Two nested #app divs exist: the index.html mount point and this
      component's root — both carry the clip, so both must release it. */
   #app.settings-route,
