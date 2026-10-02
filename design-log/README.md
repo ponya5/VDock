@@ -152,5 +152,5 @@ the eventual merge into the main line.
 | [DL-137](DL-137-research-upgrade1-port.md) | Port remaining research_upgrade1 features: spectrum dynamics, site detection, mobile header reveal, media-bar merge, guide rail | Implemented |
 | [DL-138](DL-138-settings-sync-field-diff.md) | Field-level settings sync — changed-keys PUT/broadcast + server merge kills the compact-device boot stomp | Implemented |
 | [DL-139](DL-139-gpu-spectrum-skins.md) | GPU skins — Radial Pulse (2D), Wave Grid + Neon Flight (Three.js); Smoke Plume + Liquid Chrome + Psychedelia later cut | Implemented |
-| [DL-140](DL-140-settings-narrow-scroll-clip.md) | Settings unreachable/broken at ≤880px — #app clip released on settings route, opaque sticky nav, composite-setting type guards | Implemented |
+| [DL-140](DL-140-settings-narrow-scroll-clip.md) | Settings unreachable/broken at ≤880px — #app clip released on settings route, opaque sticky nav, composite-setting type guards; F/U: short-viewport collapse, hidden switch inputs scrolling #app (footer-at-top) | Implemented |
 | [DL-141](DL-141-saver-widgets-demotion.md) | Spectrum & System Stats leave the widget roster (they're screensaver types); StatsStage → animated sensor-panel gauge board over ambient mesh/aurora backdrop | Implemented |
