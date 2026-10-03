@@ -119,8 +119,8 @@ Settings opens on **Overview**: what's set up, what needs you, and the switches 
 ## Phone and tablet as the touch screen
 
 <div align="center">
-<img src="docs/assets/screens/mobile-devices.jpg" alt="Two phones side by side, one showing the Media scene with volume controls and a slider, the other showing the Claude Code scene with Submit, Continue and Interrupt" width="760" />
-<br /><em>Media on one phone, Claude Code on another — the same VDock, scanned from the same QR code.</em>
+<img src="docs/assets/screens/mobile-tablet-devices.png" alt="A tablet and two phones on a desk: the tablet and one phone show the Claude Code scene with Submit, Continue and Interrupt, the other phone shows the Media scene with volume controls and a slider" width="760" />
+<br /><em>Media on one phone, Claude Code on a phone and a tablet — the same VDock, scanned from the same QR code.</em>
 </div>
 
 **No touchscreen? You already own one.** Any phone or tablet on your Wi-Fi becomes a deck — or just keep VDock in a browser tab or its desktop window and click. No app store, no account — it's the same VDock, served from your PC.
