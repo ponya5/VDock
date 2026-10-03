@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="mc-fade">
       <div
-        v-if="missionControlOpen"
+        v-if="missionControlOpen && enabled"
         class="mc-backdrop"
         :class="[`mc-${layoutClass}`, { 'mc-portrait': orientation === 'portrait' }]"
         role="dialog"
@@ -200,6 +200,7 @@ import {
   type SessionChanges,
 } from '@/services/missionControl'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSettingsStore } from '@/stores/settings'
 import { useDeviceClass } from '@/composables/useDeviceClass'
 import { vibrate } from '@/utils/haptics'
 
@@ -211,6 +212,10 @@ import { vibrate } from '@/utils/haptics'
  */
 
 const notifications = useNotificationsStore()
+const settingsStore = useSettingsStore()
+const enabled = computed(() => settingsStore.missionControlEnabled !== false)
+// Switched off while open: close it so it does not reappear when re-enabled.
+watch(enabled, (on) => { if (!on) closeMissionControl() })
 // Layout follows the device: phone = full-screen sheet, panel/tablet = big
 // touch sizing, desktop = centred dialog (see the mc-phone / mc-touch CSS).
 const { layoutClass, orientation } = useDeviceClass()

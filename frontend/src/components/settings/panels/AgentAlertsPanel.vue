@@ -30,13 +30,16 @@
       <div class="row" v-if="settingsStore.agentWaitingGlowEnabled">
         <div class="row-text">
           <span class="label">Waiting alert style</span>
-          <p>Flash double-blinks the whole frame — hardest to miss. Pulse breathes softly. Comet runs a light around the edge.</p>
+          <p>Flash double-blinks the whole frame — hardest to miss. Pulse breathes softly. Comet runs a light around the edge. Aurora flows two bands of light around it, Sonar pings rings out from the centre, Laser sweeps a scan line down the screen.</p>
         </div>
         <div class="row-control">
           <select v-model="settingsStore.agentWaitingGlowStyle" class="select w-220" aria-label="Waiting alert style">
             <option value="flash">Flash</option>
             <option value="pulse">Pulse</option>
             <option value="orbit">Comet</option>
+            <option value="aurora">Aurora</option>
+            <option value="sonar">Sonar</option>
+            <option value="laser">Laser</option>
           </select>
         </div>
       </div>
@@ -49,11 +52,14 @@
         <div class="row-control">
           <div
             class="alert-preview"
-            :class="[`pv-${settingsStore.agentWaitingGlowStyle ?? 'flash'}`, { 'pv-still': !settingsStore.animationsEnabled }]"
+            :class="[`pv-${previewKey}`, { 'pv-still': !settingsStore.animationsEnabled }]"
             data-testid="alert-preview"
             aria-hidden="true"
           >
             <span class="pv-orbit"></span>
+            <span class="pv-fx"></span>
+            <span class="pv-fx"></span>
+            <span class="pv-fx"></span>
             <span class="pv-label">Agent waiting</span>
           </div>
         </div>
@@ -65,6 +71,15 @@
         </div>
         <div class="row-control">
           <label class="switch"><span class="sr-only">Agent waiting chips</span><input type="checkbox" :checked="settingsStore.agentWaitingDockEnabled" @change="toggleWaitingDock" /><span class="track"></span></label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-text">
+          <span class="label">Mission Control</span>
+          <p>The all-sessions dialog: every agent, what it is doing, and Approve / Deny / Prompt in one place. Turn it off to remove the dialog, the Mission Control button on the deck, the dock and the phone menu entry.</p>
+        </div>
+        <div class="row-control">
+          <label class="switch"><span class="sr-only">Mission Control</span><input type="checkbox" :checked="settingsStore.missionControlEnabled" data-testid="mission-control-toggle" @change="toggleMissionControl" /><span class="track"></span></label>
         </div>
       </div>
       <div class="row" v-if="settingsStore.agentAlertsEnabled">
@@ -187,6 +202,16 @@ function toggleWaitingGlow() {
   settingsStore.agentWaitingGlowEnabled = !settingsStore.agentWaitingGlowEnabled
 }
 
+// Comet's setting value is 'orbit'; the preview class avoids clashing with its inner light element.
+const previewKey = computed(() => {
+  const style = settingsStore.agentWaitingGlowStyle ?? 'flash'
+  return style === 'orbit' ? 'comet' : style
+})
+
+function toggleMissionControl() {
+  settingsStore.missionControlEnabled = !settingsStore.missionControlEnabled
+}
+
 function toggleWaitingDock() {
   settingsStore.agentWaitingDockEnabled = !settingsStore.agentWaitingDockEnabled
 }
@@ -306,10 +331,10 @@ onMounted(fetchAgentHookStatus)
   overflow: hidden;
 }
 .pv-label { font-size: 0.75rem; opacity: 0.7; }
-.pv-orbit { display: none; }
+.pv-orbit, .pv-fx { display: none; }
 .alert-preview.pv-flash { animation: pv-flash 2.4s linear infinite; }
 .alert-preview.pv-pulse { animation: pv-breathe 2.4s ease-in-out infinite; }
-.alert-preview.pv-orbit .pv-orbit {
+.alert-preview.pv-comet .pv-orbit {
   display: block;
   position: absolute;
   inset: 0;
@@ -324,8 +349,41 @@ onMounted(fetchAgentHookStatus)
   animation: pv-orbit 4.5s linear infinite;
 }
 .alert-preview.pv-still,
-.alert-preview.pv-still .pv-orbit { animation: none; }
+.alert-preview.pv-still .pv-orbit,
+.alert-preview.pv-still .pv-fx { animation: none; }
 .alert-preview.pv-still { border-color: rgba(var(--pv-rgb), 0.85); }
+
+/* Aurora: two light bands flowing round the frame. */
+.alert-preview.pv-aurora { border-color: rgba(var(--pv-rgb), 0.6); }
+.alert-preview.pv-aurora .pv-fx:nth-of-type(2) {
+  display: block; position: absolute; inset: 0; border: 4px solid transparent;
+  background: conic-gradient(from var(--pv-angle, 0deg), rgba(var(--pv-rgb), 0.25) 0turn,
+    rgba(var(--pv-light-rgb), 0.95) 0.15turn, rgba(var(--pv-rgb), 0.25) 0.5turn,
+    rgba(var(--pv-light-rgb), 0.95) 0.65turn, rgba(var(--pv-rgb), 0.25) 1turn) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: pv-orbit 7s linear infinite;
+}
+/* Sonar: rings ping out from the middle. */
+.alert-preview.pv-sonar { border-color: rgba(var(--pv-rgb), 0.6); }
+.alert-preview.pv-sonar .pv-fx {
+  display: block; position: absolute; inset: 0; border: 2px solid rgba(var(--pv-light-rgb), 0.9);
+  border-radius: 6px; opacity: 0; animation: pv-sonar 3.6s cubic-bezier(0.15, 0.6, 0.35, 1) infinite;
+}
+.alert-preview.pv-sonar .pv-fx:nth-of-type(3) { animation-delay: 1.2s; }
+.alert-preview.pv-sonar .pv-fx:nth-of-type(4) { animation-delay: 2.4s; }
+/* Laser: a scan line sweeps top to bottom. */
+.alert-preview.pv-laser { border-color: rgba(var(--pv-rgb), 0.6); }
+.alert-preview.pv-laser .pv-fx:nth-of-type(2) {
+  display: block; position: absolute; left: 0; right: 0; top: 0; height: 34px;
+  background: linear-gradient(to bottom, transparent, rgba(var(--pv-rgb), 0.18) 55%, rgba(var(--pv-light-rgb), 0.75) 94%, #fff 100%);
+  box-shadow: 0 3px 12px rgba(var(--pv-light-rgb), 0.8);
+  animation: pv-laser 3s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+@keyframes pv-sonar { 0% { transform: scale(0.15); opacity: 0.95; } 100% { transform: scale(1.02); opacity: 0; } }
+@keyframes pv-laser { from { transform: translateY(-100%); } to { transform: translateY(90px); } }
 
 @property --pv-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 @keyframes pv-orbit { to { --pv-angle: 1turn; } }

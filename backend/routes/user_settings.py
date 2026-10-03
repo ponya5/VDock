@@ -86,6 +86,8 @@ ALLOWED_USER_SETTING_KEYS = {
     'agentWaitingGlowEnabled',
     'agentWaitingGlowStyle',
     'agentWaitingDockEnabled',
+    # Mission Control (all-sessions dialog) on/off.
+    'missionControlEnabled',
     'agentAutoFocusScene',
     'appIntegrations',
     'autoSceneSwitching',

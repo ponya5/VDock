@@ -223,7 +223,7 @@ class ApiClient {
       }
 
       case 405:
-        if (config?.url?.includes('/user-settings')) {
+        if (config?.url?.includes('/user-settings') || config?.url?.includes('/integrations/')) {
           console.warn('User settings sync unavailable (backend may need restart):', config?.url)
           return
         }

@@ -17,6 +17,19 @@
       :style="brandVars"
       aria-hidden="true"
     />
+    <!-- Aurora / Sonar / Laser: an effect layer above the frame (DL-080
+         follow-up). Decorative only. -->
+    <div
+      v-if="isWaiting && fxStyle && settingsStore.animationsEnabled"
+      class="agent-waiting-fx"
+      :class="`fx-${glowStyle}`"
+      :style="brandVars"
+      aria-hidden="true"
+    >
+      <span v-if="glowStyle === 'sonar'"></span>
+      <span v-if="glowStyle === 'sonar'"></span>
+      <span v-if="glowStyle === 'sonar'"></span>
+    </div>
     <!-- Snooze lives on the frame itself: one tap silences every waiting
          surface (frame, pill ring, session chips) until the agent records a
          fresh `ready` event — it keys off the entry ts, not a timer. -->
@@ -82,6 +95,8 @@ const waitingLabel = computed(() => waitingInfo.value?.profile?.label ?? 'Agent'
 const brand = computed(() => agentBrandFor(waitingInfo.value?.entry.source))
 const brandVars = computed(() => agentBrandVars(waitingInfo.value?.entry.source))
 const glowStyle = computed(() => settingsStore.agentWaitingGlowStyle ?? 'flash')
+// Styles drawn by the extra effect layer (the frame itself just holds steady).
+const fxStyle = computed(() => ['aurora', 'sonar', 'laser'].includes(glowStyle.value))
 
 function snooze() {
   dismissAgentWaiting(waitingInfo.value?.entry.source)
@@ -125,6 +140,14 @@ function dismiss() {
 /* Pulse: the original soft breathe — for users who find the flash too loud. */
 .agent-waiting-glow.style-pulse {
   animation: agent-waiting-breathe 2.4s ease-in-out infinite;
+}
+
+/* Aurora / Sonar / Laser keep the frame steady and let the fx layer move. */
+.agent-waiting-glow.style-aurora,
+.agent-waiting-glow.style-sonar,
+.agent-waiting-glow.style-laser {
+  animation: none;
+  border-color: rgba(var(--agent-rgb), 0.6);
 }
 
 .agent-waiting-glow.no-anim {
@@ -192,6 +215,91 @@ function dismiss() {
 
 @keyframes agent-waiting-orbit {
   to { --agent-orbit: 1turn; }
+}
+
+/* ---- Effect layer (Aurora / Sonar / Laser) ---------------------------- */
+@property --agent-aurora {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.agent-waiting-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Aurora: two broad bands of light flow round a continuous ring while the
+   whole frame breathes. Slow (9s lap) so it reads as ambient, not alarming. */
+.agent-waiting-fx.fx-aurora {
+  border: 5px solid transparent;
+  background: conic-gradient(
+    from var(--agent-aurora) at 50% 50%,
+    rgba(var(--agent-rgb), 0.25) 0turn,
+    rgba(var(--agent-light-rgb), 0.95) 0.12turn,
+    var(--agent-pale) 0.2turn,
+    rgba(var(--agent-light-rgb), 0.95) 0.3turn,
+    rgba(var(--agent-rgb), 0.25) 0.5turn,
+    rgba(var(--agent-light-rgb), 0.95) 0.62turn,
+    var(--agent-pale) 0.7turn,
+    rgba(var(--agent-light-rgb), 0.95) 0.8turn,
+    rgba(var(--agent-rgb), 0.25) 1turn
+  ) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 14px rgba(var(--agent-rgb), 0.85));
+  animation: agent-fx-aurora 9s linear infinite, agent-fx-aurora-breathe 3.2s ease-in-out infinite;
+}
+
+/* Sonar: rings ping out from the middle of the screen and fade at the edge. */
+.agent-waiting-fx.fx-sonar span {
+  position: absolute;
+  inset: 0;
+  border: 3px solid rgba(var(--agent-light-rgb), 0.9);
+  border-radius: clamp(16px, 4vh, 36px);
+  box-shadow: 0 0 28px rgba(var(--agent-rgb), 0.7), inset 0 0 28px rgba(var(--agent-rgb), 0.5);
+  opacity: 0;
+  animation: agent-fx-sonar 3.6s cubic-bezier(0.15, 0.6, 0.35, 1) infinite;
+}
+.agent-waiting-fx.fx-sonar span:nth-child(2) { animation-delay: 1.2s; }
+.agent-waiting-fx.fx-sonar span:nth-child(3) { animation-delay: 2.4s; }
+
+/* Laser: a scan line sweeps the screen top to bottom, bright leading edge. */
+.agent-waiting-fx.fx-laser::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 24vh;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(var(--agent-rgb), 0.16) 55%,
+    rgba(var(--agent-light-rgb), 0.7) 93%,
+    var(--agent-pale) 100%
+  );
+  box-shadow: 0 8px 30px rgba(var(--agent-light-rgb), 0.85);
+  animation: agent-fx-laser 3s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+
+@keyframes agent-fx-aurora { to { --agent-aurora: 1turn; } }
+@keyframes agent-fx-aurora-breathe {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+@keyframes agent-fx-sonar {
+  0% { transform: scale(0.18); opacity: 0.95; }
+  100% { transform: scale(1.02); opacity: 0; }
+}
+@keyframes agent-fx-laser {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100vh); }
 }
 
 /* Snooze chip: the off switch attached to the frame, bottom-center where
@@ -282,5 +390,6 @@ function dismiss() {
 @media (prefers-reduced-motion: reduce) {
   .agent-waiting-glow { animation: none; border-color: rgba(var(--agent-rgb), 0.85); }
   .agent-waiting-orbit { display: none; }
+  .agent-waiting-fx { display: none; }
 }
 </style>

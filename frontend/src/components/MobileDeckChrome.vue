@@ -109,6 +109,7 @@
       </button>
       <div v-if="menuOpen" class="mc-menu" role="menu">
         <button
+          v-if="settingsStore.missionControlEnabled !== false"
           type="button"
           role="menuitem"
           class="mc-menu-item"

@@ -69,8 +69,9 @@ WEATHERAPI_KEY = SecretSpec(
         'action needs it; the screensaver weather uses Open-Meteo (no key).'
     ),
     unlocks=(
-        'The backend Weather action. Works out of the box with the free '
-        'Open-Meteo service; add your own key to use WeatherAPI.com instead.'
+        'Weather works out of the box through the free Open-Meteo service. '
+        'Optional backup: add your own WeatherAPI.com key, used instead if the '
+        'built-in service ever stops working.'
     ),
     builtin_label='Built-in (Open-Meteo)',
 )

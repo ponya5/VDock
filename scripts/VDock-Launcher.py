@@ -12,6 +12,7 @@ import webbrowser
 from pathlib import Path
 import threading
 import shutil
+import json
 import urllib.error
 import urllib.request
 from typing import Optional
@@ -273,6 +274,48 @@ def backend_supports_user_settings(port: int = DEFAULT_BACKEND_PORT) -> bool:
         return False
 
 
+#: Folders whose .py files never count as "backend code changed".
+_CODE_SCAN_SKIP = {"venv", ".venv", "__pycache__", "tests", "data", "node_modules", "build", "dist"}
+
+
+def newest_backend_code_mtime(backend_dir: Path = None) -> float:
+    """Latest modification time of any backend source file (0.0 when none)."""
+    root = backend_dir or BACKEND_PATH
+    newest = 0.0
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _CODE_SCAN_SKIP]
+        for name in filenames:
+            if name.endswith(".py"):
+                try:
+                    newest = max(newest, os.path.getmtime(os.path.join(dirpath, name)))
+                except OSError:
+                    pass
+    return newest
+
+
+def backend_started_at(port: int = DEFAULT_BACKEND_PORT) -> Optional[float]:
+    """Epoch seconds the running backend started, from /api/health uptime."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=2) as response:
+            uptime = float(json.load(response).get("uptime_s"))
+        return time.time() - uptime
+    except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError, TypeError, OSError):
+        return None
+
+
+def backend_code_is_newer(port: int = DEFAULT_BACKEND_PORT, slack_seconds: float = 5.0) -> bool:
+    """True when backend source files changed after the running backend started.
+
+    The running process only knows the code it loaded at start. Without this,
+    a launcher that sees a healthy (even password-protected) backend keeps it
+    forever and new routes/settings never appear until it is killed by hand.
+    """
+    started = backend_started_at(port)
+    if started is None:
+        return False  # cannot tell - do not restart on a guess
+    return newest_backend_code_mtime() > started + slack_seconds
+
+
 def backend_is_running(port: int = DEFAULT_BACKEND_PORT) -> bool:
     """Return True when something is listening on the backend port."""
     config_url = f"http://127.0.0.1:{port}/api/config"
@@ -389,6 +432,9 @@ def ensure_fresh_backend(venv_path: Path, port: int = DEFAULT_BACKEND_PORT) -> b
             needs_restart = True
         elif not backend_supports_user_settings(port):
             print("[WARN] Stale backend detected (missing user-settings API). Restarting...")
+            needs_restart = True
+        elif backend_code_is_newer(port):
+            print("[WARN] Backend code changed since it started. Restarting...")
             needs_restart = True
         else:
             print("[OK] Backend already running with current API")

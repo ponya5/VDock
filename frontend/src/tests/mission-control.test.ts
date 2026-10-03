@@ -2,7 +2,7 @@
 // (list / approve / deny / open / live refresh) and the dock + deck-action
 // entry points.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { nextTick, ref } from 'vue'
+import { nextTick, reactive, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { readFileSync } from 'node:fs'
@@ -25,8 +25,9 @@ vi.mock('@/api/client', () => ({
 const vibrateMock = vi.fn()
 vi.mock('@/utils/haptics', () => ({ vibrate: (...a: unknown[]) => vibrateMock(...a) }))
 vi.mock('@/stores/notifications', () => ({ useNotificationsStore: () => toast }))
+const settingsState = reactive({ agentAlertsEnabled: true, agentWaitingDockEnabled: true, missionControlEnabled: true as boolean | undefined })
 vi.mock('@/stores/settings', () => ({
-  useSettingsStore: () => ({ agentAlertsEnabled: true, agentWaitingDockEnabled: true }),
+  useSettingsStore: () => settingsState,
 }))
 
 // Layout follows the device class; tests flip it per case (default desktop).
@@ -522,5 +523,50 @@ describe('entry points', () => {
 
     expect(source).toContain("action === 'open_mission_control'")
     expect(source).toContain('openMissionControl()')
+  })
+})
+
+describe('Mission Control on/off setting', () => {
+  afterEach(() => { settingsState.missionControlEnabled = true })
+
+  it('openMissionControl / toggleMissionControl do nothing while disabled', async () => {
+    const { isMissionControlEnabled, toggleMissionControl } = await import('@/services/missionControl')
+    settingsState.missionControlEnabled = false
+    expect(isMissionControlEnabled()).toBe(false)
+    openMissionControl()
+    expect(missionControlOpen.value).toBe(false)
+    toggleMissionControl()
+    expect(missionControlOpen.value).toBe(false)
+  })
+
+  it('treats an unset value as enabled (older settings files)', async () => {
+    const { isMissionControlEnabled } = await import('@/services/missionControl')
+    settingsState.missionControlEnabled = undefined
+    expect(isMissionControlEnabled()).toBe(true)
+    openMissionControl()
+    expect(missionControlOpen.value).toBe(true)
+    closeMissionControl()
+  })
+
+  it('the dialog does not render while disabled, and closes if disabled while open', async () => {
+    const wrapper = mountPanel()
+    openMissionControl()
+    await flushPromises()
+    expect(wrapper.find('.mc-panel').exists()).toBe(true)
+
+    settingsState.missionControlEnabled = false
+    await wrapper.vm.$forceUpdate()
+    await flushPromises()
+    expect(wrapper.find('.mc-panel').exists()).toBe(false)
+    closeMissionControl()
+  })
+
+  it('wires the toggle, the deck-button message and the sync allowlist', () => {
+    const read = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf8')
+    expect(read('../components/settings/panels/AgentAlertsPanel.vue')).toContain('mission-control-toggle')
+    expect(read('../composables/useButtonActions.ts')).toContain('Mission Control is turned off')
+    expect(read('../components/AgentWaitingDock.vue')).toContain('v-if="missionControlOn"')
+    expect(read('../components/MobileDeckChrome.vue')).toContain('settingsStore.missionControlEnabled !== false')
+    expect(read('../../../backend/routes/user_settings.py')).toContain("'missionControlEnabled'")
   })
 })
