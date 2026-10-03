@@ -76,3 +76,9 @@ Until signing is in place, tell users in release notes:
 Each OS only builds its own installer — cross-building macOS artifacts
 from Windows/Linux isn't supported by electron-builder. That's what the
 release workflow is for.
+
+Bump the version in **three** places together: `backend/version.py`,
+`frontend/package.json` and `frontend/electron/package.json` (run
+`npm version <x.y.z> --no-git-tag-version` in each folder to keep the
+lockfiles in step). `backend/tests/test_version_consistency.py` fails when they
+drift; `/api/health` and the MCP server read `backend/version.py`.

@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request
 
 from config import Config
 from auth import require_auth
+from utils.atomic import atomic_write_text
 
 user_settings_bp = Blueprint('user_settings', __name__)
 
@@ -112,8 +113,7 @@ def _load_user_settings_file() -> Dict[str, Any]:
 
 def _save_user_settings_file(settings: Dict[str, Any]) -> None:
     Config.DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with open(USER_SETTINGS_FILE, 'w', encoding='utf-8') as settings_file:
-        json.dump(settings, settings_file, indent=2)
+    atomic_write_text(USER_SETTINGS_FILE, json.dumps(settings, indent=2))
 
 
 def _sanitize_user_settings(raw_settings: Dict[str, Any]) -> Dict[str, Any]:

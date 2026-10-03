@@ -27,6 +27,7 @@ from auth import AuthManager
 from config import Config
 from integrations import agent_state
 from utils import FileManager
+from version import __version__
 from actions.cross_platform_action import (
     CrossPlatformAction, read_output_volume)
 
@@ -36,9 +37,8 @@ mcp_bp = Blueprint('mcp', __name__)
 
 #: The transport speaks this MCP protocol revision.
 PROTOCOL_VERSION = '2025-06-18'
-#: Mirrors the version ``/api/health`` reports; app.py owns the canonical
-#: string but cannot be imported here (circular).
-SERVER_VERSION = '2.2.0'
+#: Same single source as ``/api/health`` (``backend/version.py``).
+SERVER_VERSION = __version__
 SERVER_NAME = 'vdock'
 
 ERR_PARSE = -32700

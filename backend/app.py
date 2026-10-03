@@ -16,18 +16,19 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from pathlib import Path
 import os
+import time
 import logging
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-from config import env_file
+from config import env_file, migrate_legacy_env
 # One documented .env: backend/.env from source, DATA_DIR/.env when frozen.
+# Older frozen installs kept .env next to the exe (cwd): copy it over once.
+migrate_legacy_env()
 load_dotenv(env_file())
-if getattr(sys, 'frozen', False):
-    # Older installs kept .env next to the exe (cwd); still honour it.
-    load_dotenv()
 
 from config import Config
+from version import __version__
 from auth import require_auth
 from models import BUILTIN_THEMES, Theme
 from actions import ActionExecutor
@@ -434,12 +435,16 @@ def handle_ui_command(data):
 # Health Check
 # ============================================================================
 
+_STARTED_AT = time.time()
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint."""
+    """Health check endpoint (unauthenticated: version + uptime only)."""
     return jsonify({
         'status': 'ok',
-        'version': '2.2.0',
+        'version': __version__,
+        'uptime_s': int(time.time() - _STARTED_AT),
         'plugins_loaded': len(plugin_manager.plugins),
         'features': {
             'user_settings': True
@@ -500,6 +505,7 @@ if __name__ == '__main__':
     Config.ensure_strong_secret_key()
 
     logger.info(f"Starting VDock server on {host}:{port}")
+    Config.report()  # names/booleans only; warns when LAN is on without a password
     logger.info(f"Plugins loaded: {len(plugin_manager.plugins)}")
     
     if Config.DEBUG:

@@ -12,6 +12,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: CI only reads the repo.
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (Python ${{ matrix.python-version }})
@@ -71,3 +75,68 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  # VDock is Windows-first: pywin32 / comtypes / winrt code paths are skipped
+  # on Linux, so run the suite where they actually execute.
+  backend-windows:
+    name: Backend (Windows, Python 3.13)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests
+        working-directory: backend
+        run: python -m pytest -q
+
+  # Advisory for now (continue-on-error): known majors we have not taken yet
+  # (flask-cors, pytest) would otherwise keep the whole workflow red.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: npm audit (frontend)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      - name: npm audit (electron shell)
+        working-directory: frontend/electron
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      - name: pip-audit (backend)
+        working-directory: backend
+        # Audit what actually got installed: requirements.txt has range
+        # specifiers (comtypes, numpy) that `pip-audit -r` refuses.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pip-audit
+          pip-audit --skip-editable

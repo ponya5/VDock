@@ -18,7 +18,7 @@ def test_file_manager_uses_logger(method, tmp_path, mocker):
     mock_logger = mocker.patch('utils.file_manager.logger')
     
     if method == 'save_json':
-        mocker.patch('utils.file_manager.json.dump', side_effect=OSError("Mock Error"))
+        mocker.patch('utils.file_manager.json.dumps', side_effect=OSError("Mock Error"))
         FileManager.save_json(tmp_path / "test.json", {"test": 1})
     elif method == 'load_json':
         test_file = tmp_path / "test.json"

@@ -26,6 +26,8 @@ class SecretSpec:
     help_url: str = ''
     #: Shown in the picker when the secret is missing.
     missing_reason: str = ''
+    #: One line for the Settings "Accounts & keys" page.
+    unlocks: str = ''
 
     def reason(self) -> str:
         if self.missing_reason:
@@ -41,6 +43,7 @@ ANTHROPIC_API_KEY = SecretSpec(
         'ANTHROPIC_API_KEY is not set in backend/.env. The Claude Code CLI '
         'actions work without it; only the direct API action needs a key.'
     ),
+    unlocks='The direct Claude API prompt action',
 )
 
 GITHUB_TOKEN = SecretSpec(
@@ -51,9 +54,21 @@ GITHUB_TOKEN = SecretSpec(
         'GITHUB_TOKEN is not set in backend/.env. The gh CLI actions use your '
         'existing gh login; only the live PR/CI widgets need a token.'
     ),
+    unlocks='Live PR / CI / notification buttons',
 )
 
-ALL_SECRETS = (ANTHROPIC_API_KEY, GITHUB_TOKEN)
+WEATHERAPI_KEY = SecretSpec(
+    env_var='WEATHERAPI_KEY',
+    label='WeatherAPI key',
+    help_url='https://www.weatherapi.com/signup.aspx',
+    missing_reason=(
+        'WEATHERAPI_KEY is not set in backend/.env. Only the backend Weather '
+        'action needs it; the screensaver weather uses Open-Meteo (no key).'
+    ),
+    unlocks='The backend Weather action (the screensaver needs no key)',
+)
+
+ALL_SECRETS = (ANTHROPIC_API_KEY, GITHUB_TOKEN, WEATHERAPI_KEY)
 
 
 #: Credentials discovered at runtime (e.g. the token behind ``gh auth login``).

@@ -244,8 +244,6 @@ sequenceDiagram
 
 ### Development Tools
 
-- **Docker**: Containerization
-- **Docker Compose**: Multi-container orchestration
 - **Nginx**: Reverse proxy and static file serving
 - **Git**: Version control
 - **ESLint**: Code linting
@@ -378,32 +376,6 @@ graph TB
     
     Logs --> Metrics
     Metrics --> Alerts
-```
-
-### Docker Architecture
-
-```mermaid
-graph TB
-    subgraph "Docker Compose"
-        subgraph "Backend Service"
-            BackendContainer[vdock-backend]
-            BackendVol[Data Volume]
-        end
-        
-        subgraph "Frontend Service"
-            FrontendContainer[vdock-frontend]
-            NginxConfig[Nginx Config]
-        end
-        
-        subgraph "Network"
-            VdockNetwork[vdock-network]
-        end
-    end
-    
-    BackendContainer --> BackendVol
-    FrontendContainer --> NginxConfig
-    BackendContainer --> VdockNetwork
-    FrontendContainer --> VdockNetwork
 ```
 
 ## Performance Architecture
