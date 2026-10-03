@@ -115,6 +115,15 @@ vi.mock('@/services/agentWaiting', () => ({
     dismissedSources.value.add(source)
   },
   isAgentWaitingDismissed: (source: string) => dismissedSources.value.has(source),
+  sceneSnoozedAgent: (scene: Scene) =>
+    waitingSceneIds.value.has(scene.id) && dismissedSources.value.has('claude')
+      ? {
+          profile: { id: 'claude-code', label: 'Claude Code', status_source: 'claude' },
+          entry: { source: 'claude', state: 'ready', ts: 1 },
+        }
+      : null,
+  resumeAgentWaiting: (source: string) => { dismissedSources.value.delete(source) },
+  agentSnoozeRemainingMs: () => 150_000,
 }))
 
 vi.mock('@/services/agentState', async importOriginal => {
@@ -220,6 +229,21 @@ describe('AgentWaitingGlow', () => {
   })
 
   // --- DL-080 follow-up #2: snooze ----------------------------------------
+
+  it('after snoozing, shows a Resume chip with time left; Resume re-arms the alert', async () => {
+    const wrapper = mountGlow()
+    await wrapper.find('.snooze-btn').trigger('click')
+
+    const chip = wrapper.find('[data-testid="snoozed-chip"]')
+    expect(chip.exists()).toBe(true)
+    expect(chip.text()).toContain('Claude Code snoozed')
+    expect(chip.text()).toContain('3m left') // 150 s rounds up to 3m
+    expect(wrapper.find('.agent-waiting-glow').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="resume-btn"]').trigger('click')
+    expect(wrapper.find('[data-testid="snoozed-chip"]').exists()).toBe(false)
+    expect(wrapper.find('.agent-waiting-glow').exists()).toBe(true)
+  })
 
   it('offers a snooze chip naming the waiting agent', () => {
     const chip = mountGlow().find('.agent-waiting-snooze')

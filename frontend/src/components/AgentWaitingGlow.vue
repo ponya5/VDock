@@ -28,16 +28,27 @@
         <button type="button" class="snooze-btn" @click="snooze">Snooze 3m</button>
       </div>
     </Transition>
+    <!-- Snoozed: the waiting chip is gone, so give the user a way to end the
+         snooze early instead of waiting out the clock. -->
+    <Transition name="snooze-pop">
+      <div v-if="isSnoozed" class="agent-snoozed" :style="snoozedVars" data-testid="snoozed-chip">
+        <FontAwesomeIcon :icon="['fas', 'bell-slash']" class="snooze-icon" />
+        <span class="snooze-label">{{ snoozedLabel }} snoozed · {{ snoozeLeftText }} left</span>
+        <button type="button" class="snooze-btn" data-testid="resume-btn" @click="resume">Resume alerts</button>
+      </div>
+    </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
-import { sceneWaitingAgent, dismissAgentWaiting } from '@/services/agentWaiting'
+import {
+  sceneWaitingAgent, sceneSnoozedAgent, dismissAgentWaiting, resumeAgentWaiting, agentSnoozeRemainingMs,
+} from '@/services/agentWaiting'
 import { agentBrandFor, agentBrandVars } from '@/services/agentBrand'
 import { initAgentState } from '@/services/agentState'
 import { loadProfileMaps } from '@/services/appDetection'
@@ -84,6 +95,42 @@ const glowStyle = computed(() => settingsStore.agentWaitingGlowStyle ?? 'flash')
 
 function snooze() {
   dismissAgentWaiting(waitingInfo.value?.entry.source)
+}
+
+// Snoozed state — mirrors waitingInfo. `nowTick` only exists to re-run the
+// countdown each second; Date.now() alone isn't reactive.
+const snoozedInfo = computed(() => {
+  for (const scene of dashboardStore.currentProfile?.scenes ?? []) {
+    const snoozed = sceneSnoozedAgent(scene, appIntegrations.value)
+    if (snoozed) return snoozed
+  }
+  return null
+})
+const isSnoozed = computed(() =>
+  settingsStore.agentWaitingGlowEnabled !== false &&
+  !dashboardStore.isEditMode &&
+  !isWaiting.value &&
+  snoozedInfo.value !== null
+)
+const snoozedLabel = computed(() => snoozedInfo.value?.profile?.label ?? 'Agent')
+const snoozedVars = computed(() => agentBrandVars(snoozedInfo.value?.entry.source))
+
+const nowTick = ref(0)
+let tickTimer: ReturnType<typeof setInterval> | null = null
+watch(isSnoozed, (on) => {
+  if (on && !tickTimer) tickTimer = setInterval(() => { nowTick.value++ }, 1000)
+  if (!on && tickTimer) { clearInterval(tickTimer); tickTimer = null }
+}, { immediate: true })
+onBeforeUnmount(() => { if (tickTimer) clearInterval(tickTimer) })
+
+const snoozeLeftText = computed(() => {
+  void nowTick.value
+  const s = Math.ceil(agentSnoozeRemainingMs(snoozedInfo.value?.entry.source) / 1000)
+  return s >= 60 ? `${Math.ceil(s / 60)}m` : `${Math.max(s, 0)}s`
+})
+
+function resume() {
+  resumeAgentWaiting(snoozedInfo.value?.entry.source)
 }
 </script>
 
@@ -192,7 +239,8 @@ function snooze() {
 /* Snooze chip: the off switch attached to the frame, bottom-center where
    the footer strip is empty in normal mode. Above dashboard chrome (2000),
    below dialogs (10000) and the permission banner (30000). */
-.agent-waiting-snooze {
+.agent-waiting-snooze,
+.agent-snoozed {
   position: fixed;
   bottom: 12px;
   left: 50%;
@@ -215,6 +263,12 @@ function snooze() {
   color: var(--agent-text);
   font-size: calc(0.95rem * min(var(--touch-multiplier, 1), 1.6));
   white-space: nowrap;
+}
+
+.agent-snoozed {
+  /* quieter than the alert chip — it's a status, not a call to action */
+  opacity: 0.92;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .snooze-icon {
@@ -260,7 +314,8 @@ function snooze() {
 }
 
 @media (max-width: 520px) {
-  .agent-waiting-snooze {
+  .agent-waiting-snooze,
+  .agent-snoozed {
     gap: 8px;
     padding: 8px 10px 8px 12px;
     font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.6));

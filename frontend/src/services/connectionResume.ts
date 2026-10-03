@@ -1,4 +1,5 @@
 import socketClient from '@/api/socket'
+import { markNetworkResume } from '@/api/client'
 import { refreshVdock } from '@/composables/useVdockRefresh'
 import { useDashboardStore } from '@/stores/dashboard'
 
@@ -22,14 +23,22 @@ export function initConnectionResume(): () => void {
 
   const onVisibilityChange = () => {
     if (document.visibilityState !== 'visible') return
+    markNetworkResume()
+    if (!socketClient.isConnected()) socketClient.ensureConnected()
+  }
+
+  const onOnline = () => {
+    markNetworkResume()
     if (!socketClient.isConnected()) socketClient.ensureConnected()
   }
 
   socketClient.on('connect', onConnect)
   document.addEventListener('visibilitychange', onVisibilityChange)
+  window.addEventListener('online', onOnline)
 
   return () => {
     socketClient.off('connect', onConnect)
     document.removeEventListener('visibilitychange', onVisibilityChange)
+    window.removeEventListener('online', onOnline)
   }
 }
