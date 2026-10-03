@@ -320,10 +320,22 @@ function revertButtonDefaults() {
   previewIconLoop.value = settingsStore.buttonDefaultIconLoop
   previewEffect.value = settingsStore.buttonDefaultEffect
 }
-function applyToDashboard() {
+async function applyToDashboard() {
   settingsStore.saveSettings()
+  try {
+    // Drain the debounced PUT so the toast means the server has the values.
+    await settingsStore.flushSettingsToServer()
+  } catch (err: any) {
+    notificationsStore.error('Apply failed', err?.message || 'Settings could not be saved to the server.')
+    return
+  }
   requestVdockRefresh()
-  notificationsStore.success('Applied', 'Settings saved and the dashboard was refreshed.')
+  // `important` so it still shows under the default "errors only" toast level
+  // — Apply is an explicit action and deserves explicit feedback.
+  notificationsStore.success('Applied', 'Settings saved and the dashboard was refreshed.', {
+    important: true,
+    duration: 2000,
+  })
 }
 
 // Topbar "Reset section" — restores the current Appearance page's settings to

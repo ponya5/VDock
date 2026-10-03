@@ -215,7 +215,7 @@
         v-if="screensaverVisible"
         :visible="screensaverVisible"
         :layout-edit="screensaverLayoutEdit"
-        @dismiss="dismissScreensaver"
+        @dismiss="dismissScreensaver()"
         @save-layout="saveScreensaverLayout"
       />
     </Transition>
@@ -306,6 +306,7 @@ import { useButtonActions } from '@/composables/useButtonActions'
 import { useWidgetPolling } from '@/composables/useWidgetPolling'
 import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
+import socketClient from '@/api/socket'
 import { confirmDialog } from '@/composables/useConfirm'
 import { useMobileViewport } from '@/utils/mobileViewport'
 import { useDeviceClass } from '@/composables/useDeviceClass'
@@ -386,8 +387,25 @@ function resetIdleTimer() {
   idleTimer = setTimeout(() => {
     // Never cover the walkthrough with the screensaver — an open tour is
     // active engagement even without pointer events.
-    if (!tour.state.active) screensaverVisible.value = true
+    if (!tour.state.active) {
+      screensaverVisible.value = true
+      // Shared idle: every other connected deck enters the saver with us.
+      socketClient.sendUiCommand('screensaver_start')
+    }
   }, timeoutMs)
+}
+
+// Shared idle: local activity also tells the other decks to reset their
+// timers, throttled so a drag doesn't flood the socket. The relay is
+// include_self=false, so these never echo back.
+const ACTIVITY_BROADCAST_MS = 5000
+let lastActivityBroadcast = 0
+function onUserActivity() {
+  resetIdleTimer()
+  const now = Date.now()
+  if (now - lastActivityBroadcast < ACTIVITY_BROADCAST_MS) return
+  lastActivityBroadcast = now
+  socketClient.sendUiCommand('screensaver_activity')
 }
 
 // Settings arrive after mount on a fresh phone load (and can change live):
@@ -396,10 +414,13 @@ watch(() => settingsStore.screensaverTimeout, () => {
   if (!screensaverVisible.value) resetIdleTimer()
 })
 
-function dismissScreensaver() {
+function dismissScreensaver(remote = false) {
+  const wasVisible = screensaverVisible.value
   screensaverVisible.value = false
   screensaverLayoutEdit.value = false
   resetIdleTimer()
+  // Wake every other deck too — but never echo a wake we just received.
+  if (wasVisible && !remote) socketClient.sendUiCommand('screensaver_wake')
 }
 
 // Tour ↔ screensaver mutex: starting the tour dismisses the screensaver;
@@ -817,7 +838,7 @@ watch(layoutClass, (cls) => {
   for (const name of HTML_DEVICE_CLASSES) root.toggle(`device-${name}`, cls === name)
 }, { immediate: true })
 
-useWakeOnPermission(dismissScreensaver)
+useWakeOnPermission(() => dismissScreensaver())
 
 // DL-147: a phone/tablet deck in fullscreen or installed keeps its screen on.
 const stopKeepAwake = startKeepAwake()
@@ -1216,7 +1237,7 @@ onMounted(async () => {
   // Idle timer for screensaver. Armed BEFORE the awaits below: if settings
   // or profile loading throws/hangs (flaky phone connection), the saver must
   // still start counting.
-  IDLE_EVENTS.forEach(ev => document.addEventListener(ev, resetIdleTimer, { passive: true }))
+  IDLE_EVENTS.forEach(ev => document.addEventListener(ev, onUserActivity, { passive: true }))
   resetIdleTimer()
 
   // Load the profile every device should land on. The server-persisted
@@ -1273,6 +1294,16 @@ onMounted(async () => {
       screensaverLayoutEdit.value = true
       screensaverVisible.value = true
     }
+    // Shared idle (socket relay from another deck). Never re-broadcast.
+    if (command === 'screensaver_start' && settingsStore.screensaverTimeout > 0 && !tour.state.active) {
+      screensaverVisible.value = true
+    }
+    if (command === 'screensaver_wake' && screensaverVisible.value) {
+      dismissScreensaver(true)
+    }
+    if (command === 'screensaver_activity' && !screensaverVisible.value) {
+      resetIdleTimer()
+    }
   })
 })
 
@@ -1281,7 +1312,7 @@ onUnmounted(() => {
   document.removeEventListener('focusin', handleGlobalFocus)
 
   // Idle timer cleanup
-  IDLE_EVENTS.forEach(ev => document.removeEventListener(ev, resetIdleTimer))
+  IDLE_EVENTS.forEach(ev => document.removeEventListener(ev, onUserActivity))
   if (idleTimer) clearTimeout(idleTimer)
 
   stopVdockRefreshListener?.()

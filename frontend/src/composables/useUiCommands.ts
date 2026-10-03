@@ -18,7 +18,14 @@
  */
 import socketClient from '@/api/socket'
 
-export type UiCommand = 'show_screensaver' | 'screensaver_layout_edit' | 'toggle_quick_deck'
+export type UiCommand =
+  | 'show_screensaver'
+  | 'screensaver_layout_edit'
+  | 'toggle_quick_deck'
+  // Shared idle across devices — socket relay only (see DashboardView).
+  | 'screensaver_start'
+  | 'screensaver_wake'
+  | 'screensaver_activity'
 
 const UI_COMMAND_CHANNEL = 'vdock-ui-command'
 const UI_COMMAND_STORAGE_KEY = 'vdock_ui_command'
