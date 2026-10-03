@@ -116,6 +116,7 @@
 import { computed, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { AgentSessionInfo, AgentSessionRow } from '@/composables/useAgentTargets'
+import { useDeviceClass } from '@/composables/useDeviceClass'
 
 const props = defineProps<{
   rows: AgentSessionRow[]
@@ -151,6 +152,7 @@ const targetOpen = ref(false)
 const chipRef = ref<HTMLElement | null>(null)
 const popStyle = ref<Record<string, string>>({})
 const popSheet = ref(false)
+const { isTouch } = useDeviceClass()
 
 function toggleTargetPicker() {
   targetOpen.value = !targetOpen.value
@@ -161,8 +163,8 @@ function toggleTargetPicker() {
   // can't disagree. Touchscreens that aren't the primary pointer still
   // report maxTouchPoints, so they get the finger-sized sheet too.
   popSheet.value =
-    window.matchMedia?.('(max-width: 720px), (max-height: 800px), (pointer: coarse)').matches === true ||
-    navigator.maxTouchPoints > 0
+    window.matchMedia?.('(max-width: 720px), (max-height: 800px)').matches === true ||
+    isTouch.value
   const rect = chipRef.value?.getBoundingClientRect()
   if (rect) {
     const style: Record<string, string> = { top: `${rect.bottom + 8}px` }

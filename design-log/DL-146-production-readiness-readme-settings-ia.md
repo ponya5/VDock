@@ -510,5 +510,51 @@ Work stopped at the user's request. Tree is green: `vue-tsc` clean, vitest 691/6
 - Not yet checked: `?anchor=` scroll timing after a page switch, that the Appearance Buttons v-model bindings via `panelBindings` still update the draft chip, and that `openStandaloneSettings` links (now `?section=&page=`) open correctly.
 - README row note "Phase 3b implemented" deliberately not added (3b is not complete).
 
+#### 3b - finish run (complete)
+Supersedes the "PAUSED" status and "Not done" list above. Verified: `vue-tsc` clean, vitest 696/696 (691 -> 696), `npm run build`, `scripts/check.ps1` PASS.
+
+**Live verification** (built bundle on :5000, cursor-ide-browser, CDP viewport emulation at 1024x600, 1400x900, 768x1024, 390x844):
+- Sidebar lists 5 sections + Guide at every size. Every page of every section rendered; no horizontal page scroll at any size after the fixes below.
+- Deep links: `?tab=server` -> Devices > Ports & host; `?tab=integration&sub=alerts` -> Agents > Agent alerts; `?tab=connect` -> Devices > Connect; `?tab=about` -> System > About; `?section=&page=` and `?anchor=` (scrolled to `#notifications` on phone) all land correctly.
+- Search: "phone" -> Connect, "scene" -> Scene switching, "alert" -> Agent alerts, "password" -> Security, "port" -> Ports & host. "token" and "github" return nothing (no Accounts & keys page until 3c).
+- Tour (1400x900): launched from About, all 9 steps ran `/profiles` -> `/` -> `/settings` -> `/`; Settings and Find-a-setting steps spotlight `.nav` and `.nav-search`. No tour step uses `data-tour`/`activate`, so nothing broke. Note: the tour (and its auto-start) is skipped when `min(width,height) <= 700` on a touch-capable device, so it cannot run on the 1024x600 panel or a phone (existing DL-061 behaviour, flagged for DL-147).
+- Every before-set page still exists: Buttons/Layout/Background/Screen saver, Alerts/Scenes/MCP/Triggers (Agents), Templates, Connect, Security + Ports (old Server), Logs, Startup, About.
+
+**Phone/tablet findings and fixes** (`assets/styles/settings.css`, `ConnectPanel.vue`, `LogsPanel.vue`, `AppearanceButtons.vue`):
+- At <=880px the rail stacked above the content as a sticky block 379px tall (45% of a 844px phone) with 40px rows. Now: brand hidden, search row + one swipeable strip of 44px section pills (~110px total). Grid column changed to `minmax(0, 1fr)` so the strip cannot widen the page.
+- `--target` is 44px at <=880px; sub-tabs, `.btn.sm` and nav pills are >=44px. Topbar action buttons wrap instead of overflowing.
+- Connect: the 380px QR preview overflowed (`max-width: 100%` added on its column). Logs toolbar now wraps. Grid +/- steppers are 44px on coarse pointers / narrow widths.
+- Not fixed (panel internals, out of 3b scope; to DL-147): range-slider tracks are 6px tall (thumb is the hit target), and some panels' dense rows were only checked for overflow, not visually.
+
+**Click counts** (from opening Settings; unchanged because section landing = first page):
+| Task | Before | After |
+|---|---|---|
+| Connect a phone | 1 (Connect) | 1 (Devices & network lands on Connect) |
+| Add a GitHub token | n/a (no UI) | n/a until 3c |
+| Auto scene switching | 1 (Integrations > Apps) | 1 (Agents & automation lands on Scene switching) |
+| Agent alert behaviour | 2 | 2 (Agents & automation > Agent alerts) |
+| Change a button's action | dashboard edit mode | unchanged (not a Settings task) |
+
+**Screenshots:** `design-log/refs/dl146-after-connect-390x844.png`, `dl146-after-ports-768x1024.png`, `dl146-after-agent-alerts-1024x600.png`, `dl146-after-appearance-buttons-1400x900.png` (all < 400 KB).
+
+**Also done**
+- Copy updated to the new paths: `GuideView.vue` (MCP, Security, Connect, tutorial, sidebar blurb), `AgentMissionControl.vue`, `services/tutorial.ts`. `frontend/public/guide/*` is PNG only (no text); `guide-settings.png` still shows the old rail and is refreshed in Phase 4. README/docs paths belong to Phase 4.
+- New mounted test `src/tests/settings-nav.test.ts` (5 tests: sections, `?tab=connect`, `?section=&page=`, search "password", `?anchor=` with mocked `scrollIntoView`); wrapper is unmounted after each test.
+
+#### 3c - Overview, Accounts & keys, password in Connect (implemented; live checks below)
+_2026-10-03. Not committed._
+
+**What changed**
+- **Overview** (new default landing, `panels/OverviewPanel.vue`): "Needs attention" rows (LAN open without password -> Connect; GitHub token not set -> Accounts & keys; "N of 4 agents hooked" -> Agent alerts) or one green "Everything is set up"; Quick switches (Auto scene switching, Agent alerts, Allow LAN, Screen saver); "Edit keys" link to `/?edit=1`, handled in `DashboardView.vue` (enters edit mode once, then drops the flag; hidden on compact-touch devices because the store already refuses edit mode there).
+- **Accounts & keys** (`panels/AccountsPanel.vue`, first page of Integrations): one row per secret from `GET /api/config/integrations` with a Configured / Not set chip, what it unlocks, **Copy line** (`GITHUB_TOKEN=`) and **Get a key**; one **Open .env** button (only shown on the PC itself); CLI rows (gh, Claude Code) Found / Not found + Install link. Never accepts or shows a key value.
+- **Backend:** `POST /api/config/open-env` (auth-protected, **localhost only**, 403 for LAN) opens the env file in the OS default editor, creating it empty if absent. `services/integration_status.open_env_file` / `_launch`. Test: `test_open_env_route.py` (2).
+- **Password beside the LAN switch:** `DeckPasswordForm.vue` extracted from Security (new/confirm, validation, `enable` or `change` mode); `useDeckAuth.setAuthEnabled` holds the require_auth write. Security now uses the form; Connect shows an amber "Protect it with a password" row under the Allow-LAN switch when LAN is on and auth is off.
+- **Advanced:** Devices & network's Ports page is now labelled **Advanced** (title still "Ports & host"; legacy `?tab=server` still lands there).
+- Agents & automation now opens on **Agent alerts** (swapped with Scene switching, as 3b noted).
+- Shared helpers: `useSetupStatus` (integrations + hook counts), `useServerConfig.setAllowLan`, `utils/copyText` (extracted from Connect).
+- Search: "token"/"github" -> Accounts & keys; added Overview, Quick switches, Edit keys, Command-line tools entries.
+
+**Tests:** frontend 812 -> 819 (`settings-nav` +3 incl. token/github search + attention row navigation, new `deck-password-form` 4); `vue-tsc` clean. Backend: see final results below.
+
 ### Phase 4 - README refresh + screenshots
 _Not started._

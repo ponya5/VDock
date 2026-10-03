@@ -201,6 +201,8 @@ import TriggersPanel from '@/components/settings/TriggersPanel.vue'
 // Cascade order matters (equal-specificity ties): view-level child components above,
 // then the shared settings styles, then the panels whose scoped rules refine them.
 import '@/assets/styles/settings.css'
+import OverviewPanel from '@/components/settings/panels/OverviewPanel.vue'
+import AccountsPanel from '@/components/settings/panels/AccountsPanel.vue'
 import AboutPanel from '@/components/settings/panels/AboutPanel.vue'
 import ConnectPanel from '@/components/settings/panels/ConnectPanel.vue'
 import SecurityPanel from '@/components/settings/panels/SecurityPanel.vue'
@@ -288,6 +290,7 @@ const topbarMeta = computed(() => ({
 
 // Registry pages name their panels; this maps those names to components.
 const PANELS: Record<string, Component> = {
+  OverviewPanel, AccountsPanel,
   AppearanceButtons, AppearanceLayout, AppearanceBackground, ScreensaverPanel,
   SceneSwitchingPanel, AgentAlertsPanel, NotificationsPanel, TriggersPanel, McpPanel,
   TemplatesPanel, ConnectPanel, SecurityPanel, PortsPanel,
@@ -487,6 +490,7 @@ function openShortcutManager(app: RunningApp) { selectedAppForShortcuts.value = 
 
 // Props and listeners the view wires into panels that need more than the stores.
 const panelBindings = computed<Record<string, Record<string, unknown>>>(() => ({
+  OverviewPanel: { onNavigate: go },
   AppearanceButtons: {
     animation: previewAnimation.value,
     'onUpdate:animation': (v: string) => { previewAnimation.value = v },

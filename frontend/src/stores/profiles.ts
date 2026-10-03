@@ -18,13 +18,15 @@ export const useProfilesStore = defineStore('profiles', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function loadProfiles() {
+  /** Resolves true when the backend answered, false when the cache fallback ran. */
+  async function loadProfiles(): Promise<boolean> {
     loading.value = true
     error.value = null
     
     try {
       const response = await apiClient.get('/profiles')
       profiles.value = response.data.profiles
+      return true
     } catch (err) {
       console.error('Failed to load profiles from backend:', err)
       // Fallback: load from localStorage
@@ -52,6 +54,7 @@ export const useProfilesStore = defineStore('profiles', () => {
     } finally {
       loading.value = false
     }
+    return false
   }
 
   async function getProfile(profileId: string): Promise<Profile | null> {

@@ -79,3 +79,11 @@ test('the FAB lifts above the footer when the footer is mounted', () => {
   const rule = styles.match(/\.header-reveal-fab\.above-footer\s*\{([^}]*)\}/)?.[1] ?? ''
   expect(/bottom\s*:\s*calc\(/.test(rule), 'above-footer must raise the FAB clear of the footer strip').toBe(true)
 })
+
+test('agent dock lifts above the reveal FAB so they never overlap', () => {
+  const view = readSrc('views/DashboardView.vue')
+  expect(view.includes('reveal-fab-visible'), 'DashboardView publishes FAB presence on <html>').toBe(true)
+  const dock = readSrc('components/AgentWaitingDock.vue')
+  expect(dock.includes('html.reveal-fab-visible'), 'the dock must clear the FAB').toBe(true)
+  expect(dock.includes('html.reveal-fab-footer'), 'the dock must also clear the FAB when it sits above the footer').toBe(true)
+}) 

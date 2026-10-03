@@ -84,6 +84,8 @@ import DeckButton from './DeckButton.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useSettingsStore } from '@/stores/settings'
 import { useWeather } from '@/composables/useWeather'
+import { useDeviceClass } from '@/composables/useDeviceClass'
+import { dashboardLayout } from '@/utils/dashboardLayout'
 
 interface Props {
   dockedButtons: Button[]
@@ -117,8 +119,19 @@ const settingsStore = useSettingsStore()
 const isResizing = ref(false)
 const startX = ref(0)
 const startWidth = ref(0)
-const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
-const isNarrow = ref(typeof window !== 'undefined' ? window.innerWidth < 480 : false)
+// DL-147: strip/narrow come from the shared dashboard layout rule, not local
+// width checks (they disagreed with the dashboard's CSS at exactly 768px).
+const { layoutClass, orientation, viewportWidth, isCompactTouch } = useDeviceClass()
+const layout = computed(() =>
+  dashboardLayout({
+    layoutClass: layoutClass.value,
+    orientation: orientation.value,
+    innerWidth: viewportWidth.value,
+    compactTouch: isCompactTouch.value,
+  })
+)
+const isMobile = computed(() => layout.value.sidebar === 'strip')
+const isNarrow = computed(() => isMobile.value && viewportWidth.value < 480)
 // 7" 1024x600 touch screen (spec 2): cap effective sidebar width so it
 // doesn't eat the grid's horizontal space. Computed in JS (not CSS) so
 // gridStyle's cell-height math below stays in sync with the real width.
@@ -144,8 +157,6 @@ const handleAvailableHeightResize = () => {
 }
 
 const handleWindowResize = () => {
-  isMobile.value = window.innerWidth < 768
-  isNarrow.value = window.innerWidth < 480
   isCompactScreen.value = window.innerWidth <= 1100 || window.innerHeight <= 650
   handleAvailableHeightResize()
 }

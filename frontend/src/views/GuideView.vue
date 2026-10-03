@@ -261,7 +261,7 @@ const features: GuideFeature[] = [
     tagline: 'Agents drive the deck back',
     body: [
       'VDock runs a local <strong>MCP server</strong> — the same protocol Cursor, Claude and Windsurf speak — so agents can press deck buttons, switch scenes, read what’s playing, set the volume, or push a notification.',
-      'Enable it in <strong>Settings → Integrations → MCP server</strong>, then point your agent at the endpoint. The <strong>Help &amp; test</strong> button in that section has copy-paste config blocks for each client and a one-click self-test.',
+      'Enable it in <strong>Settings → Agents &amp; automation → MCP server</strong>, then point your agent at the endpoint. The <strong>Help &amp; test</strong> button in that section has copy-paste config blocks for each client and a one-click self-test.',
     ],
     code: `// .cursor/mcp.json (or claude mcp add --transport http)
 { "mcpServers": { "vdock": { "url": "http://127.0.0.1:5000/api/mcp" } } }`,
@@ -289,7 +289,7 @@ const features: GuideFeature[] = [
     title: 'Settings',
     tagline: 'Organized, searchable',
     body: [
-      'Settings split into sidebar tabs — Appearance, Templates, Server, Integrations, Connect a device, Logs, About — and busy tabs break into <strong>top sub-tabs</strong>, so every panel is one click away, not a scroll away.',
+      'Settings is grouped into sections — Appearance, Agents &amp; automation, Integrations, Devices &amp; network, System — and each section breaks into <strong>top sub-tabs</strong>, so every panel is one click away, not a scroll away.',
       'The sidebar search jumps straight to a setting: “spectrum”, “sidebar”, “MCP” — hit it and you land on the exact panel.',
     ],
     shot: 'guide-settings.png',
@@ -302,7 +302,7 @@ const features: GuideFeature[] = [
     title: 'Security',
     tagline: 'Lock the deck when you need to',
     body: [
-      'Turn on <strong>Settings → Server → Authentication</strong> and every screen — the panel and every browser — lands on a lock gate until it’s unlocked. Setting a password the first time is one inline form; changing it later is a row in the same section.',
+      'Turn on <strong>Settings → Devices &amp; network → Security</strong> and every screen — the panel and every browser — lands on a lock gate until it’s unlocked. Setting a password the first time is one inline form; changing it later is a row in the same section.',
       'The same token protects the HTTP API, the socket, and the MCP endpoint, so an agent on your network can’t press buttons unless you gave it access.',
     ],
     keywords: 'security password auth authentication lock screen token gate login protect api mcp bearer',
@@ -314,7 +314,7 @@ const features: GuideFeature[] = [
     tagline: 'Nine stops, at your pace',
     body: [
       'First run offers a guided tour that spotlights each area — scenes, the deck, settings, this page. It only moves when <em>you</em> press Next, Back or Skip; if a step’s target is hidden (say, the header is tucked away) it waits as a card instead of skipping ahead.',
-      'Replay it any time from <strong>Settings → About → Launch tutorial</strong>.',
+      'Replay it any time from <strong>Settings → System → About → Launch tutorial</strong>.',
     ],
     shot: 'guide-tour.png',
     shotCaption: 'The tour spotlighting the scene pills.',
@@ -326,7 +326,7 @@ const features: GuideFeature[] = [
     title: 'Connect a Device',
     tagline: 'A second deck on the same Wi-Fi',
     body: [
-      'Any browser on your network can be a deck — the 7″ panel, a phone, a tablet next to the keyboard. <strong>Settings → Connect a device</strong> shows the LAN URL and a QR code; open it and the device mirrors the same profile in real time.',
+      'Any browser on your network can be a deck — the 7″ panel, a phone, a tablet next to the keyboard. <strong>Settings → Devices &amp; network → Connect a device</strong> shows the LAN URL and a QR code; open it and the device mirrors the same profile in real time.',
       'With authentication on, each device unlocks once with the deck password.',
     ],
     keywords: 'connect device phone tablet qr lan wifi remote second deck mirror pair',

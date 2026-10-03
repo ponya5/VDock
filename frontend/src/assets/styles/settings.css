@@ -717,7 +717,7 @@
 /* position:relative contains the visually-hidden input + .sr-only label. Without
    it they're absolutely positioned against the page, escape .content's clip,
    and focusing one scrolls the overflow:hidden #app (DL-140 F/U2). */
-:where(.settings-app) .switch:not(.settings-isolate *) { position: relative; display: inline-flex; align-items: center; min-height: calc(var(--target) - 6px); cursor: pointer; }
+:where(.settings-app) .switch:not(.settings-isolate *) { position: relative; display: inline-flex; align-items: center; min-height: var(--target); cursor: pointer; }
 :where(.settings-app) .switch input:not(.settings-isolate *) { position: absolute; opacity: 0; width: 0; height: 0; }
 :where(.settings-app) .switch .track:not(.settings-isolate *) {
   position: relative;
@@ -1096,7 +1096,7 @@
 }
 
 @media (max-width: 880px) {
-  .settings-app:not(.settings-isolate *) { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .settings-app:not(.settings-isolate *) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
   :where(.settings-app) .nav:not(.settings-isolate *) {
     border-right: 0;
     border-bottom: 1px solid var(--line-soft);
@@ -1109,6 +1109,20 @@
        so rows painted through the pinned rail once the page could scroll. */
     background: var(--bg);
   }
+  /* DL-146 3b: phone/tablet — the rail becomes a search row plus one swipeable strip of
+     44px section pills, so the pinned header costs ~110px instead of half the screen. */
+  :where(.settings-app) .nav:not(.settings-isolate *) { max-height: none; overflow: visible; padding: 8px 12px; gap: 8px; }
+  :where(.settings-app) .nav-brand:not(.settings-isolate *) { display: none; }
+  :where(.settings-app) .nav-scroll:not(.settings-isolate *) { display: flex; flex: none; gap: 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  :where(.settings-app) .nav-scroll:not(.settings-isolate *)::-webkit-scrollbar { display: none; }
+  :where(.settings-app) .nav-group + .nav-group:not(.settings-isolate *) { margin-top: 0; }
+  :where(.settings-app) .nav-item:not(.settings-isolate *) { width: auto; white-space: nowrap; min-height: 44px; }
+  :where(.settings-app) .nav-item-ext:not(.settings-isolate *) { margin-left: 0; }
+  :where(.settings-app) .topbar:not(.settings-isolate *) { flex-wrap: wrap; align-items: flex-start; }
+  :where(.settings-app) .topbar-actions:not(.settings-isolate *) { margin-left: 0; flex: 1 1 100%; justify-content: flex-start; }
+  .settings-app:not(.settings-isolate *) { --target: 44px; }
+  .settings-app .btn.sm:not(.settings-isolate *) { min-height: var(--target); }
+  :where(.settings-app) .subtab:not(.settings-isolate *) { min-height: 44px; }
   :where(.settings-app) .row:not(.settings-isolate *) { flex-direction: column; align-items: flex-start; gap: 10px; }
   :where(.settings-app) .row-control:not(.settings-isolate *) { width: 100%; justify-content: flex-start; }
   :where(.settings-app) .list-header:not(.settings-isolate *),

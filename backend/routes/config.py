@@ -215,6 +215,19 @@ def get_integrations():
     })
 
 
+@config_bp.route('/api/config/open-env', methods=['POST'])
+@require_auth
+def open_env():
+    """Open the env file in the default editor. Only from this PC: the file
+    is where keys live, and a LAN device must not make the PC open windows."""
+    if request.remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+        return jsonify({'success': False, 'error': 'Open the env file from the PC VDock runs on.'}), 403
+    from services import integration_status
+    if not integration_status.open_env_file():
+        return jsonify({'success': False, 'error': 'Could not open the env file.'}), 500
+    return jsonify({'success': True})
+
+
 @config_bp.route('/api/app-paths/probe', methods=['GET'])
 @require_auth
 def probe_app_path():

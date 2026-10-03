@@ -19,21 +19,7 @@
               <p>Needed once per device — the panel, your phone, your browser. 4–128 characters.</p>
             </div>
             <div class="row-control">
-              <label class="sr-only" for="auth-pw-new">New password</label>
-              <input id="auth-pw-new" v-model="authPwNew" type="password" class="input w-110" placeholder="Password" autocomplete="new-password" />
-              <label class="sr-only" for="auth-pw-confirm">Confirm password</label>
-              <input id="auth-pw-confirm" v-model="authPwConfirm" type="password" class="input w-110" placeholder="Confirm" autocomplete="new-password" @keyup.enter="saveAuthPassword(true)" />
-              <button type="button" class="btn primary sm" :disabled="authPwBusy" @click="saveAuthPassword(true)">
-                Enable
-              </button>
-              <button type="button" class="btn sm" :disabled="authPwBusy" @click="cancelAuthSetup">
-                Cancel
-              </button>
-            </div>
-          </div>
-          <div v-if="authSetupOpen && authPwError" class="row row-status-row">
-            <div class="row-text">
-              <p class="status-msg status-error">{{ authPwError }}</p>
+              <DeckPasswordForm @done="authSetupOpen = false" @cancel="cancelAuthSetup" />
             </div>
           </div>
           <div v-if="serverConfig?.require_auth" class="row">
@@ -42,26 +28,10 @@
               <p>{{ authChangeOpen ? 'Already-unlocked devices stay unlocked — the new password applies to the next unlock.' : 'Change the password devices use to unlock.' }}</p>
             </div>
             <div class="row-control">
-              <template v-if="authChangeOpen">
-                <label class="sr-only" for="auth-pw-change">New password</label>
-                <input id="auth-pw-change" v-model="authPwNew" type="password" class="input w-110" placeholder="New password" autocomplete="new-password" />
-                <label class="sr-only" for="auth-pw-change2">Confirm new password</label>
-                <input id="auth-pw-change2" v-model="authPwConfirm" type="password" class="input w-110" placeholder="Confirm" autocomplete="new-password" @keyup.enter="saveAuthPassword(false)" />
-                <button type="button" class="btn primary sm" :disabled="authPwBusy" @click="saveAuthPassword(false)">
-                  Save
-                </button>
-                <button type="button" class="btn sm" :disabled="authPwBusy" @click="authChangeOpen = false">
-                  Cancel
-                </button>
-              </template>
+              <DeckPasswordForm v-if="authChangeOpen" mode="change" @done="authChangeOpen = false" @cancel="authChangeOpen = false" />
               <button v-else type="button" class="btn sm" @click="authChangeOpen = true">
                 <FontAwesomeIcon :icon="['fas', 'key']" /> Change password
               </button>
-            </div>
-          </div>
-          <div v-if="authChangeOpen && authPwError" class="row row-status-row">
-            <div class="row-text">
-              <p class="status-msg status-error">{{ authPwError }}</p>
             </div>
           </div>
         </div>
@@ -72,17 +42,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSettingsStore } from '@/stores/settings'
-import { useNotificationsStore } from '@/stores/notifications'
 import { useServerConfig } from '@/composables/useServerConfig'
+import { useDeckAuth } from '@/composables/useDeckAuth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { ServerConfig } from '@/types'
-import { authState, clearAuthToken } from '@/services/auth'
+import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
 import { confirmDialog } from '@/composables/useConfirm'
 
-const settingsStore = useSettingsStore()
-const notificationsStore = useNotificationsStore()
 const { serverConfig } = useServerConfig()
+const { setAuthEnabled } = useDeckAuth()
 
 // ── Authentication (DL-126) ──────────────────────────────────────────────
 // require_auth writes through the same /api/config channel as the other
@@ -92,35 +59,14 @@ const { serverConfig } = useServerConfig()
 // takes over and the user unlocks once with the password they just set.
 const authSetupOpen = ref(false)
 const authChangeOpen = ref(false)
-const authPwNew = ref('')
-const authPwConfirm = ref('')
-const authPwError = ref('')
-const authPwBusy = ref(false)
 let authSwitchEl: HTMLInputElement | null = null
 
 function revertAuthSwitch(enabled: boolean) {
   if (authSwitchEl) authSwitchEl.checked = !enabled
 }
 
-async function applyAuthToggle(enabled: boolean, password?: string) {
-  const payload: Partial<ServerConfig> = { require_auth: enabled }
-  if (password !== undefined) payload.auth_password = password
-  const ok = await settingsStore.updateServerConfig(payload)
-  if (!ok) {
-    notificationsStore.error('Could not save', 'Server rejected the change.')
-    revertAuthSwitch(enabled)
-    return
-  }
-  if (enabled) {
-    // The server now demands a token this device doesn't hold — the gate
-    // takes over; unlocking with the just-set password reloads clean.
-    authState.required = true
-    authState.unlocked = false
-  } else {
-    authState.required = false
-    clearAuthToken()
-    notificationsStore.success('Authentication off', 'Devices no longer need the deck password.')
-  }
+async function applyAuthToggle(enabled: boolean) {
+  if (!(await setAuthEnabled(enabled))) revertAuthSwitch(enabled)
 }
 
 async function toggleAuth(event: Event) {
@@ -132,9 +78,6 @@ async function toggleAuth(event: Event) {
       // collect one inline and send password + toggle in a single PUT.
       authSetupOpen.value = true
       authChangeOpen.value = false
-      authPwError.value = ''
-      authPwNew.value = ''
-      authPwConfirm.value = ''
       return
     }
     const ok = await confirmDialog({
@@ -160,39 +103,6 @@ async function toggleAuth(event: Event) {
 
 function cancelAuthSetup() {
   authSetupOpen.value = false
-  authPwError.value = ''
   revertAuthSwitch(true)
-}
-
-async function saveAuthPassword(enableAfter: boolean) {
-  authPwError.value = ''
-  const pw = authPwNew.value.trim()
-  if (pw.length < 4 || pw.length > 128) {
-    authPwError.value = 'Password must be 4–128 characters.'
-    return
-  }
-  if (pw !== authPwConfirm.value.trim()) {
-    authPwError.value = "Passwords don't match."
-    return
-  }
-  authPwBusy.value = true
-  try {
-    if (enableAfter) {
-      await applyAuthToggle(true, pw)
-      authSetupOpen.value = false
-    } else {
-      const ok = await settingsStore.updateServerConfig({ auth_password: pw })
-      if (ok) {
-        authChangeOpen.value = false
-        notificationsStore.success('Password updated', 'New devices will need it at the lock screen.')
-      } else {
-        authPwError.value = 'Server rejected the change.'
-      }
-    }
-  } finally {
-    authPwBusy.value = false
-    authPwNew.value = ''
-    authPwConfirm.value = ''
-  }
 }
 </script>

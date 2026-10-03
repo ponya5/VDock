@@ -10,6 +10,7 @@ import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
 import { openMissionControl } from '@/services/missionControl'
 import { openLiveMenu } from '@/services/liveActionMenu'
+import { useDeviceClass } from '@/composables/useDeviceClass'
 
 export function useButtonActions() {
   const dashboardStore = useDashboardStore()
@@ -18,6 +19,7 @@ export function useButtonActions() {
   const notificationsStore = useNotificationsStore()
   const actionCatalogStore = useActionCatalogStore()
   const buttonStateStore = useButtonStateStore()
+  const { deviceClass } = useDeviceClass()
 
   const currentProfile = computed(() => dashboardStore.currentProfile)
   const currentScene = computed(() => dashboardStore.currentScene)
@@ -215,6 +217,8 @@ export function useButtonActions() {
   }
 
   function handleButtonEdit(button: Button) {
+    // DL-061/147: phones are a control surface; they never open the editor.
+    if (deviceClass.value === 'phone' && !dashboardStore.isEditMode) return
     editingButton.value = { ...button }
   }
 

@@ -50,7 +50,7 @@
           <dl class="kv-list">
             <div class="kv"><dt>Version</dt><dd>{{ appVersion }}</dd></div>
             <div class="kv"><dt>Licence</dt><dd>MIT — ponya5</dd></div>
-            <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener">github.com/ponya5/VDock2</a></dd></div>
+            <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener">VDock on GitHub</a></dd></div>
           </dl>
         </div>
       </section>
