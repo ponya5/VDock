@@ -1,4 +1,5 @@
 """Configuration routes."""
+import re
 import secrets
 
 from flask import Blueprint, request, jsonify
@@ -213,6 +214,75 @@ def get_integrations():
             'lan_without_password': Config.lan_without_password(),
         },
     })
+
+
+_SECRET_VALUE_RE = re.compile(r'^[\x21-\x7e]+$')
+_SECRET_FORBIDDEN = set('"\'`\\#$')
+
+
+def _is_local_request() -> bool:
+    return request.remote_addr in ('127.0.0.1', '::1', 'localhost')
+
+
+def _validate_secret_value(value):
+    """Return an error message (never containing the value) or None."""
+    if not isinstance(value, str):
+        return 'Value must be text.'
+    if not 1 <= len(value) <= 512:
+        return 'Key must be 1-512 characters.'
+    if not _SECRET_VALUE_RE.match(value):
+        return 'Key cannot contain spaces, line breaks or control characters.'
+    if any(c in _SECRET_FORBIDDEN for c in value):
+        return 'Key cannot contain quotes, backslashes, # or $.'
+    return None
+
+
+@config_bp.route('/api/config/integrations/<secret_id>', methods=['PUT', 'DELETE'])
+@require_auth
+def set_integration_secret(secret_id):
+    """Save or remove one allowlisted key in the env file (this PC only).
+
+    The value is written to the env file and applied to the running process;
+    it is never returned, logged or echoed in an error.
+    """
+    import os
+    import config as cfg
+    from services import secrets as secret_registry
+
+    if not _is_local_request():
+        return jsonify({'success': False, 'error': 'Keys can only be changed from the PC VDock runs on.'}), 403
+    spec = next((s for s in secret_registry.ALL_SECRETS if s.env_var == secret_id), None)
+    if spec is None:
+        return jsonify({'success': False, 'error': 'Unknown key.'}), 404
+
+    value = None
+    if request.method == 'PUT':
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or 'value' not in data:
+            return jsonify({'success': False, 'error': 'Send {"value": "..."}.'}), 400
+        raw = data['value']
+        if raw is None or (isinstance(raw, str) and not raw.strip()):
+            value = None
+        else:
+            if isinstance(raw, str):
+                raw = raw.strip()
+            err = _validate_secret_value(raw)
+            if err:
+                return jsonify({'success': False, 'error': err}), 400
+            value = raw
+
+    try:
+        cfg.set_env_key(cfg.env_file(), spec.env_var, value)
+    except OSError as e:
+        return jsonify({'success': False, 'error': f'Could not write the env file ({e.__class__.__name__}).'}), 500
+
+    if value is None:
+        os.environ.pop(spec.env_var, None)
+    else:
+        os.environ[spec.env_var] = value
+    from logging import getLogger
+    getLogger('vdock').info('%s %s', spec.env_var, 'removed' if value is None else 'saved')
+    return jsonify({'id': spec.env_var, 'configured': secret_registry.is_configured(spec)})
 
 
 @config_bp.route('/api/config/open-env', methods=['POST'])

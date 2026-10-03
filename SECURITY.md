@@ -47,3 +47,4 @@ Never commit real `.env` files, API keys, or credentials. Use `backend/.env.exam
 - API keys (`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `WEATHERAPI_KEY`) live only in the backend `.env` (`backend/.env` from source, `<data dir>/.env` in the installed app). They are never sent to the browser, never logged, and redacted from CLI output.
 - `SECRET_KEY` is generated on first start and saved to the same file; a published example key is replaced automatically.
 - Found a problem? See "Reporting a Vulnerability" above.
+- Keys can be saved or removed in Settings > Integrations > Accounts & keys (`PUT/DELETE /api/config/integrations/<id>`). The endpoint accepts only the three allowlisted names, is refused for any non-localhost request, requires the deck password when auth is on, validates the value, writes the env file atomically and never returns or logs the value.

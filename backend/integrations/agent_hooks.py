@@ -18,6 +18,7 @@ Rules shared by all installers:
 """
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,6 +68,14 @@ class HookInstallResult:
     added_events: Tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class HookUninstallResult:
+    removed: bool
+    already: bool
+    settings_path: Path
+    removed_events: Tuple[str, ...]
+
+
 def hook_script_path() -> Path:
     return Path(__file__).resolve().parent.parent / 'scripts' / 'vdock_agent_hook.py'
 
@@ -104,12 +113,23 @@ def _load_json(path: Path) -> Dict[str, Any]:
     return loaded
 
 
+def _atomic_write(path: Path, data: bytes) -> None:
+    """Write beside the target and swap in, so a crash never leaves half a file."""
+    temp = path.with_name(path.name + '.tmp')
+    temp.write_bytes(data)
+    os.replace(temp, path)
+
+
 def _write_with_backup(path: Path, settings: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         backup = path.with_suffix('.vdock-backup.json')
         backup.write_text(path.read_text(encoding='utf-8'), encoding='utf-8')
-    path.write_text(json.dumps(settings, indent=2) + '\n', encoding='utf-8')
+    _atomic_write(path, (json.dumps(settings, indent=2) + '\n').encode('utf-8'))
+
+
+def _is_vdock_hook(hook: Any) -> bool:
+    return isinstance(hook, dict) and HOOK_MARKER in str(hook.get('command', ''))
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +167,34 @@ def _add_claude_events(settings: Dict[str, Any]) -> List[str]:
     return added
 
 
+def _remove_claude_events(settings: Dict[str, Any]) -> List[str]:
+    hooks = settings.get('hooks')
+    if not isinstance(hooks, dict):
+        return []
+    removed: List[str] = []
+    for event in list(hooks):
+        entries = hooks[event]
+        if not _claude_event_has_hook(entries):
+            continue
+        kept = []
+        for entry in entries:
+            if isinstance(entry, dict) and isinstance(entry.get('hooks'), list):
+                remaining = [hook for hook in entry['hooks'] if not _is_vdock_hook(hook)]
+                if len(remaining) != len(entry['hooks']):
+                    if not remaining:
+                        continue
+                    entry['hooks'] = remaining
+            kept.append(entry)
+        if kept:
+            hooks[event] = kept
+        else:
+            del hooks[event]
+        removed.append(event)
+    if removed and not hooks:
+        del settings['hooks']
+    return removed
+
+
 # ---------------------------------------------------------------------------
 # Cursor: {"version": 1, "hooks": {event: [{"command": "..."}]}}
 # ---------------------------------------------------------------------------
@@ -177,6 +225,26 @@ def _add_cursor_events(settings: Dict[str, Any]) -> List[str]:
         hooks.setdefault(event, []).append({'command': command})
         added.append(event)
     return added
+
+
+def _remove_cursor_events(settings: Dict[str, Any]) -> List[str]:
+    hooks = settings.get('hooks')
+    if not isinstance(hooks, dict):
+        return []
+    removed: List[str] = []
+    for event in list(hooks):
+        entries = hooks[event]
+        if not _cursor_event_has_hook(entries):
+            continue
+        kept = [entry for entry in entries if not _is_vdock_hook(entry)]
+        if kept:
+            hooks[event] = kept
+        else:
+            del hooks[event]
+        removed.append(event)
+    if removed and not hooks:
+        del settings['hooks']
+    return removed
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +302,34 @@ def _add_antigravity_events(settings: Dict[str, Any]) -> List[str]:
     return added
 
 
+def _remove_antigravity_events(settings: Dict[str, Any]) -> List[str]:
+    entry = _agy_entry(settings)
+    removed: List[str] = []
+    for event in list(entry):
+        handlers = entry[event]
+        if not _agy_event_covered(handlers):
+            continue
+        kept = []
+        for handler in handlers:
+            if _is_vdock_hook(handler):
+                continue
+            if isinstance(handler, dict) and isinstance(handler.get('hooks'), list):
+                remaining = [hook for hook in handler['hooks'] if not _is_vdock_hook(hook)]
+                if len(remaining) != len(handler['hooks']):
+                    if not remaining:
+                        continue
+                    handler['hooks'] = remaining
+            kept.append(handler)
+        if kept:
+            entry[event] = kept
+        else:
+            del entry[event]
+        removed.append(event)
+    if removed and set(entry) <= {'enabled'}:
+        del settings[AGY_HOOK_NAME]
+    return removed
+
+
 # ---------------------------------------------------------------------------
 # Codex: ~/.codex/config.toml, top-level ``notify = ["cmd", "arg", ...]``.
 # Codex has one hook, fired when a turn completes, so it can report
@@ -289,6 +385,25 @@ def _install_codex(path: Path) -> HookInstallResult:
     return HookInstallResult(True, False, path, CODEX_HOOK_EVENTS)
 
 
+def _uninstall_codex(path: Path) -> HookUninstallResult:
+    if not path.exists():
+        return HookUninstallResult(False, True, path, ())
+    # Bytes in, bytes out: every other line keeps its exact line ending.
+    text = path.read_bytes().decode('utf-8')
+    top_level_length = len(_codex_top_level(text))
+    kept = []
+    for line in text[:top_level_length].splitlines(keepends=True):
+        if not (_TOML_NOTIFY_RE.match(line) and HOOK_MARKER in line):
+            kept.append(line)
+    updated = ''.join(kept) + text[top_level_length:]
+    if updated == text:
+        return HookUninstallResult(False, True, path, ())
+    path.with_suffix('.vdock-backup.toml').write_bytes(text.encode('utf-8'))
+    _atomic_write(path, updated.encode('utf-8'))
+    logger.info('Removed VDock codex hook from %s', path)
+    return HookUninstallResult(True, False, path, CODEX_HOOK_EVENTS)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -319,6 +434,15 @@ _TARGETS: Dict[str, _AgentHookTarget] = {
 
 
 SUPPORTED_AGENTS: Tuple[str, ...] = (*_TARGETS, 'codex')
+
+#: Strips VDock's own entries from a parsed settings dict, returning the
+#: events it touched. Kept apart from ``_AgentHookTarget`` so installers
+#: and their test doubles stay as they were.
+_REMOVERS: Dict[str, Callable[[Dict[str, Any]], List[str]]] = {
+    'claude': _remove_claude_events,
+    'cursor': _remove_cursor_events,
+    'antigravity': _remove_antigravity_events,
+}
 
 
 def _target(agent: str) -> _AgentHookTarget:
@@ -370,3 +494,24 @@ def install_hook(agent: str) -> HookInstallResult:
     _write_with_backup(path, settings)
     logger.info('Installed VDock %s hook into %s (%s)', agent, path, ', '.join(added))
     return HookInstallResult(True, False, path, tuple(added))
+
+
+def uninstall_hook(agent: str) -> HookUninstallResult:
+    """Remove only VDock's own hook entries from ``agent``'s settings file.
+
+    Nothing to remove is success with ``already=True`` and no write. A file
+    left with nothing in it stays behind as ``{}`` (JSON) rather than being
+    deleted. Raises HookSettingsError when the file can't be parsed, and
+    OSError when it can't be written.
+    """
+    if agent == 'codex':
+        return _uninstall_codex(codex_config_path())
+    target = _target(agent)
+    path = target.path()
+    settings = _load_json(path)
+    removed = _REMOVERS[agent](settings)
+    if not removed:
+        return HookUninstallResult(False, True, path, ())
+    _write_with_backup(path, settings)
+    logger.info('Removed VDock %s hook from %s (%s)', agent, path, ', '.join(removed))
+    return HookUninstallResult(True, False, path, tuple(removed))

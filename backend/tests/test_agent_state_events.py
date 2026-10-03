@@ -332,6 +332,153 @@ def test_install_refuses_unparseable_settings(agent_home):
     assert settings_path.read_text(encoding='utf-8') == '{broken'
 
 
+# --- Uninstall ---------------------------------------------------------------
+
+_FOREIGN_JSON = {
+    'claude': {'theme': 'dark', 'hooks': {
+        'PreToolUse': [{'matcher': 'Bash', 'hooks': [{'type': 'command', 'command': 'lint.sh'}]}],
+        'Stop': [{'matcher': '', 'hooks': [{'type': 'command', 'command': 'notify.sh'}]}],
+    }},
+    'cursor': {'version': 1, 'hooks': {
+        'stop': [{'command': 'mine.sh'}],
+        'beforeShellExecution': [{'command': 'gate.sh'}],
+    }},
+    'antigravity': {'my-linter': {'PostToolUse': [{'matcher': 'run_command', 'hooks': [
+        {'type': 'command', 'command': 'lint.sh'}]}]}},
+}
+_JSON_PATHS = {
+    'claude': ('.claude', 'settings.json'),
+    'cursor': ('.cursor', 'hooks.json'),
+    'antigravity': ('.gemini', 'config', 'hooks.json'),
+}
+
+
+@pytest.mark.parametrize('agent', sorted(_FOREIGN_JSON))
+def test_uninstall_restores_the_pre_install_json(agent_home, agent):
+    path = agent_home.joinpath(*_JSON_PATHS[agent])
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(_FOREIGN_JSON[agent]), encoding='utf-8')
+    agent_hooks.install_hook(agent)
+    assert agent_hooks.hook_status(agent)['installed'] is True
+
+    result = agent_hooks.uninstall_hook(agent)
+
+    assert result.removed and not result.already
+    assert json.loads(path.read_text(encoding='utf-8')) == _FOREIGN_JSON[agent]
+    assert agent_hooks.hook_status(agent)['installed'] is False
+    assert agent_hooks.hook_status(agent)['partial'] is False
+
+
+@pytest.mark.parametrize('agent', sorted(_FOREIGN_JSON))
+def test_uninstall_of_a_vdock_only_file_leaves_a_valid_object(agent_home, agent):
+    path = agent_home.joinpath(*_JSON_PATHS[agent])
+    agent_hooks.install_hook(agent)
+    agent_hooks.uninstall_hook(agent)
+    left = json.loads(path.read_text(encoding='utf-8'))
+    assert left in ({}, {'version': 1})
+    assert path.exists()
+
+
+def test_uninstall_removes_a_partial_dl045_install(agent_home):
+    path = agent_home / '.claude' / 'settings.json'
+    path.parent.mkdir()
+    command = 'python "x/vdock_agent_hook.py" --port 5000'
+    path.write_text(json.dumps({'hooks': {'Stop': [
+        {'matcher': '', 'hooks': [{'type': 'command', 'command': command}]}]}}),
+        encoding='utf-8')
+    assert agent_hooks.uninstall_hook('claude').removed is True
+    assert json.loads(path.read_text(encoding='utf-8')) == {}
+
+
+def test_uninstall_keeps_a_foreign_hook_in_the_same_claude_entry(agent_home):
+    path = agent_home / '.claude' / 'settings.json'
+    path.parent.mkdir()
+    ours = {'type': 'command', 'command': 'python "x/vdock_agent_hook.py"'}
+    theirs = {'type': 'command', 'command': 'mine.sh'}
+    path.write_text(json.dumps({'hooks': {'Stop': [
+        {'matcher': '', 'hooks': [theirs, ours]}]}}), encoding='utf-8')
+    agent_hooks.uninstall_hook('claude')
+    assert json.loads(path.read_text(encoding='utf-8')) == {
+        'hooks': {'Stop': [{'matcher': '', 'hooks': [theirs]}]}}
+
+
+def test_codex_uninstall_restores_the_pre_install_toml_exactly(agent_home):
+    config = agent_home / '.codex' / 'config.toml'
+    config.parent.mkdir()
+    original = '# my config\nmodel = "o4"\n\n[projects."x"]\ntrust = "trusted"\n'
+    config.write_text(original, encoding='utf-8', newline='')
+    agent_hooks.install_hook('codex')
+    result = agent_hooks.uninstall_hook('codex')
+    assert result.removed is True
+    assert config.read_text(encoding='utf-8') == original
+    assert agent_hooks.hook_status('codex')['installed'] is False
+
+
+def test_codex_uninstall_leaves_a_foreign_notify(agent_home):
+    config = agent_home / '.codex' / 'config.toml'
+    config.parent.mkdir()
+    config.write_text('notify = ["say", "done"]\n', encoding='utf-8')
+    result = agent_hooks.uninstall_hook('codex')
+    assert result.already is True and result.removed is False
+    assert config.read_text(encoding='utf-8') == 'notify = ["say", "done"]\n'
+
+
+@pytest.mark.parametrize('agent', ['claude', 'cursor', 'antigravity', 'codex'])
+def test_uninstall_when_not_installed_writes_nothing(agent_home, agent):
+    result = agent_hooks.uninstall_hook(agent)
+    assert result.already is True and result.removed is False
+    assert not any(agent_home.rglob('*'))  # no file, folder or backup created
+
+
+@pytest.mark.parametrize('agent', sorted(_FOREIGN_JSON))
+def test_second_uninstall_is_a_no_op(agent_home, agent):
+    agent_hooks.install_hook(agent)
+    agent_hooks.uninstall_hook(agent)
+    path = agent_home.joinpath(*_JSON_PATHS[agent])
+    after_first = path.read_text(encoding='utf-8')
+    second = agent_hooks.uninstall_hook(agent)
+    assert second.already is True and second.removed is False
+    assert path.read_text(encoding='utf-8') == after_first
+
+
+@pytest.mark.parametrize('agent', sorted(_FOREIGN_JSON))
+def test_uninstall_refuses_unparseable_settings(agent_home, agent):
+    path = agent_home.joinpath(*_JSON_PATHS[agent])
+    path.parent.mkdir(parents=True)
+    path.write_text('{broken', encoding='utf-8')
+    with pytest.raises(agent_hooks.HookSettingsError):
+        agent_hooks.uninstall_hook(agent)
+    assert path.read_text(encoding='utf-8') == '{broken'
+
+
+def test_uninstall_backs_up_before_modifying(agent_home):
+    path = agent_home / '.claude' / 'settings.json'
+    agent_hooks.install_hook('claude')
+    installed_text = path.read_text(encoding='utf-8')
+    agent_hooks.uninstall_hook('claude')
+    assert path.with_suffix('.vdock-backup.json').read_text(encoding='utf-8') == installed_text
+    assert not list(path.parent.glob('*.tmp'))
+
+
+def test_uninstall_route_removes_and_reports(client, agent_home):
+    agent_hooks.install_hook('cursor')
+    body = client.post('/api/agent-events/uninstall-hook?agent=cursor').get_json()
+    assert body['success'] is True and body['removed'] is True and body['already'] is False
+    again = client.post('/api/agent-events/uninstall-hook?agent=cursor').get_json()
+    assert again['already'] is True and again['removed'] is False
+    statuses = client.get('/api/agent-events/hook-status?agent=all').get_json()['agents']
+    assert statuses['cursor']['installed'] is False
+
+
+def test_uninstall_route_refuses_unparseable_settings(client, agent_home):
+    path = agent_home / '.claude' / 'settings.json'
+    path.parent.mkdir()
+    path.write_text('{broken', encoding='utf-8')
+    response = client.post('/api/agent-events/uninstall-hook?agent=claude')
+    assert response.status_code == 400
+    assert path.read_text(encoding='utf-8') == '{broken'
+
+
 # ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
@@ -652,6 +799,7 @@ def test_states_expire(client, monkeypatch):
 def test_hook_routes_reject_unknown_agent(client):
     assert client.get('/api/agent-events/hook-status?agent=vim').status_code == 400
     assert client.post('/api/agent-events/install-hook?agent=vim').status_code == 400
+    assert client.post('/api/agent-events/uninstall-hook?agent=vim').status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -711,3 +859,11 @@ def test_cc_submit_is_a_session_gated_enter():
     submit = COMMANDS_BY_ID['cc_submit']
     assert submit.to_macro_steps() == [{'type': 'hotkey', 'keys': ['enter']}]
     assert submit.requires_session is True
+
+
+def test_install_and_uninstall_hook_are_localhost_only(client, agent_home):
+    for route in ('install-hook', 'uninstall-hook'):
+        resp = client.post(f'/api/agent-events/{route}?agent=claude',
+                           environ_overrides={'REMOTE_ADDR': '192.168.1.50'})
+        assert resp.status_code == 403
+    assert agent_hooks.hook_status('claude')['installed'] is False

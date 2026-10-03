@@ -252,6 +252,8 @@ def hook_status():
 @require_auth
 def install_hook():
     """Merge the VDock hook into the agent's settings file (idempotent)."""
+    if not _localhost_only():
+        return jsonify({'success': False, 'error': 'Localhost only'}), 403
     agent = _requested_agent()
     if agent not in agent_hooks.SUPPORTED_AGENTS:
         return jsonify({'success': False, 'error': f'Unsupported agent: {agent}'}), 400
@@ -267,5 +269,30 @@ def install_hook():
         'installed': result.installed,
         'already': result.already,
         'added_events': list(result.added_events),
+        'settings_path': str(result.settings_path),
+    })
+
+
+@agent_events_bp.route('/api/agent-events/uninstall-hook', methods=['POST'])
+@require_auth
+def uninstall_hook():
+    """Remove only VDock's own hook entries from the agent's settings file."""
+    if not _localhost_only():
+        return jsonify({'success': False, 'error': 'Localhost only'}), 403
+    agent = _requested_agent()
+    if agent not in agent_hooks.SUPPORTED_AGENTS:
+        return jsonify({'success': False, 'error': f'Unsupported agent: {agent}'}), 400
+    try:
+        result = agent_hooks.uninstall_hook(agent)
+    except agent_hooks.HookSettingsError as error:
+        return jsonify({'success': False, 'error': str(error)}), 400
+    except OSError as error:
+        return jsonify({'success': False, 'error': f'Could not write settings: {error}'}), 500
+    return jsonify({
+        'success': True,
+        'agent': agent,
+        'removed': result.removed,
+        'already': result.already,
+        'removed_events': list(result.removed_events),
         'settings_path': str(result.settings_path),
     })

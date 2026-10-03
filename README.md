@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="docs/assets/vdock-banner.svg" alt="VDock — Virtual Stream Deck" width="880" />
 
@@ -89,14 +89,14 @@ Keystroke actions only fire when the target app is focused.
 Settings opens on **Overview**: what's set up, what needs you, and the switches you reach for most. Five sections sit underneath:
 
 - **Appearance** — key size, transparency and design, backgrounds, fonts, docked sidebar, the [screensaver](#the-screensaver)
-- **Agents & automation** — agent alerts and hooks, auto scene switching, triggers, the MCP server
+- **Agents & automation** — agent alerts and hooks (install or remove each agent's hook; only VDock's own entry is touched), auto scene switching, triggers, the MCP server
 - **Integrations** — **Accounts & keys** and one-tap app templates (ChatGPT, Claude, Cursor, Figma, n8n…)
 - **Devices & network** — Connect a device, deck password, ports and host
 - **System** — logs (exportable), startup, About
 
-<img src="docs/assets/screens/settings-accounts.jpg" alt="VDock Settings, Accounts & keys: Anthropic API key, GitHub token and WeatherAPI key all marked Not set with Copy line and Get a key buttons, and GitHub CLI marked Found" width="820" />
+<img src="docs/assets/screens/settings-accounts.jpg" alt="VDock Settings, Accounts & keys: Anthropic API key, GitHub token and WeatherAPI key all marked Not set with Set key and Get a key buttons, and GitHub CLI marked Found" width="820" />
 
-**Accounts & keys** shows which keys and CLIs are configured and what each unlocks. Keys are never shown, typed into the app, or sent to other devices — you copy the line and paste it into the `.env` file. **Find a setting** jumps to any control, **Reset section** restores one page, and changes **save as you make them**.
+**Accounts & keys** shows which keys and CLIs are configured and what each unlocks. Paste a key into **Set key** and it is saved to the `.env` file on the PC and active immediately — keys are only accepted from the PC itself, never shown again, and never sent to other devices (you can still edit the `.env` file by hand under **Advanced**). **Find a setting** jumps to any control, **Reset section** restores one page, and changes **save as you make them**.
 
 ---
 
