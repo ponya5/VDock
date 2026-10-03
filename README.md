@@ -2,13 +2,13 @@
 
 <img src="docs/assets/vdock-banner.svg" alt="VDock — Virtual Stream Deck" width="880" />
 
-### Your desktop. On virtual buttons you design.
+### Your development wingman — on any screen you already own.
 
-**A free, open-source virtual stream deck: on-screen buttons you fully customize to your needs, on any screen you already own — and the only one that speaks fluent Claude Code.**
+**VDock sits next to your editor and keeps your AI agents, your repo and your day moving. It tells you the moment Claude Code or Cursor needs you, lets you approve, prompt, review, test and ship from one tap — on a touch panel, a tablet, your phone or a browser tab. Free, open source, and 100% local.**
 
 https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 
-**▶ [Download the 1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
+**▶ [Launch video](docs/assets/vdock-launch.mp4)** · **▶ [1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.3.0-6ea8ff)](https://github.com/ponya5/VDock2/releases/latest)
@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-[Quick start](#quick-start) · [Dashboard](#a-dashboard-you-design) · [Settings](#settings-for-every-detail) · [Agents](#built-for-ai-coding-agents) · [Phone & tablet](#phone-and-tablet-as-the-touch-screen) · [Screensaver](#the-screensaver) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
+[Quick start](#quick-start) · [A day with VDock](#a-day-with-your-wingman) · [Agents](#built-for-ai-coding-agents) · [Any screen](#phone-and-tablet-as-the-touch-screen) · [Safe by design](#safe-by-design--it-runs-on-your-machine) · [Screensaver](#the-screensaver) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
 
 </div>
 
@@ -25,18 +25,34 @@ https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 
 ## What is VDock?
 
-A traditional stream deck is a box of physical buttons that fire the things you do all day — mute the mic, switch the scene, run the build. The good ones cost £150–£250 and lock you to one vendor's store.
+Coding with AI agents changed the job. You start a session, the agent works, and then it **waits** — for a permission, an answer, a "continue". Meanwhile you're in another window, the build is red, a PR needs a look, and you only find out ten minutes later.
 
-**VDock replaces the box with virtual buttons, in software, for free.** Point any spare screen at it — a £30 USB touch panel, an old tablet, your phone, or just a browser tab — and you get a grid of on-screen buttons you fully customize: what each one does, how it looks, and how many you need.
+**VDock is the co-pilot seat for that loop.** It's a deck of on-screen buttons and live status tiles that runs beside your editor on any spare screen — a £30 USB touch panel, an old tablet, your phone, or just a browser tab. It watches your agents through their official hooks, knows your repo, and turns the things you do fifty times a day into one tap.
 
 <div align="center">
 <img src="docs/assets/screens/panel-on-desk.jpg" alt="A 7-inch touch panel above a keyboard showing VDock's ambient screensaver with clock, weather, headlines and market prices" width="760" />
-<br /><em>A 7-inch panel above the keyboard. No hardware from a vendor, no account, no subscription.</em>
+<br /><em>A 7-inch panel above the keyboard. No vendor hardware, no account, no subscription.</em>
 </div>
 
-Out of the box it ships **79 actions** across 11 categories — apps, hotkeys, media, system control, metrics, webhooks, sliders. It then **detects the tools already on your machine** and adds up to **160 more**, so a developer's install ends up with **239 actions** and a designer's install stays lean. Nothing is configured; nothing that can't run is offered.
+- **It knows when your agent needs you.** Claude Code, Cursor, Copilot, Codex, Devin and more report their state to VDock. The moment one stops to ask, a branded alert rises on the deck — and on your phone.
+- **It talks back.** Approve or deny, send a preset prompt ("Continue", "Write tests", "Fix this error"), run a slash command, compact or resume a session — typed straight into your *live* session, not a new one.
+- **It knows your repo.** Branch, changed files, diffs, test runs, dev servers, Docker, PRs, issues and CI checks as live buttons.
+- **It's still a full stream deck.** 79 built-in actions (apps, hotkeys, media, system, webhooks, sliders), plus up to 160 more detected from the tools on your machine — **239 on a typical developer install**.
 
-What makes it different from every other deck is the last part: **VDock was built around AI coding agents.** Claude Code gets 40 actions of its own, a button that shows whether your session is actually alive, and a full-screen alert the moment your agent stops and waits for you.
+---
+
+## A day with your wingman
+
+| When | What VDock does for you |
+|---|---|
+| **Start of day** | One tap opens your editor and resumes yesterday's Claude Code session; live tiles show your branch and the dev servers that are up. |
+| **Agent at work** | **Mission Control** lists every session — working, waiting, done. A green dot on the scene tab confirms VDock sees the live process. |
+| **Agent waits** | A full-screen alert (Claude, Cursor, Copilot, Devin…) rises over the deck and the screensaver. **Approve / Deny** from the deck or your phone. |
+| **Keep it moving** | **Agent Prompt** presets, **Dictate to Agent** (hold, speak, review, submit) and slash-command keys — sent to the session that's ready. |
+| **Review** | **Review Changes** lists what the agent touched this turn; tap a file for its diff. **Run Tests** detects your test command and shows pass / fail. |
+| **Ship** | Commit, push, open a PR and watch **CI checks** turn green — `gh`-powered buttons with live badges. |
+| **Meetings** | A real Windows **mic mute** with a LIVE / MUTED face, camera, push-to-talk and a volume slider. |
+| **Away from desk** | Your phone becomes an approval remote. Idle, the panel turns into an ambient dashboard — clock, weather, headlines, markets, or a music visualizer. |
 
 ---
 
@@ -113,7 +129,7 @@ Settings opens on **Overview**: what's set up, what needs you, and the switches 
 </tr>
 </table>
 
-Any phone or tablet on your Wi-Fi becomes a deck. No app store, no account — it's the same VDock, served from your PC.
+**No touchscreen? You already own one.** Any phone or tablet on your Wi-Fi becomes a deck — or just keep VDock in a browser tab or its desktop window and click. No app store, no account — it's the same VDock, served from your PC.
 
 - **Phone = a remote.** Portrait layout, safe-area aware, with a Claude Code console and a **phone approval remote**: Approve / Deny a waiting agent from the couch.
 - **Tablet = a full deck.** Portrait and landscape grids that fit the screen, with [edit mode](docs/assets/screens/tablet-edit.jpg) (rearrange keys on the tablet itself), and the screen stays awake while the deck is open.
@@ -142,19 +158,23 @@ Toggle each widget and open its **Options** for feeds, tickers or cities; **Cust
 
 ---
 
-## Why VDock
+## Safe by design — it runs on your machine
 
-Free and MIT (Elgato's virtual deck needs their hardware; Touch Portal's free tier is capped), runs on **Windows, macOS and Linux**, and is the only deck with **agent-native actions and agent-waiting alerts** — Claude Code, Copilot, Cursor, Devin, VS Code and JetBrains — plus an ambient dashboard when idle. Plugin-style extras come as templates and scene packs.
+VDock is built the way you'd want a tool that can type into your terminal to be built:
+
+- **100% local.** The server runs on your PC; your phone or tablet talks to it over your own Wi-Fi. No cloud relay, no account, no telemetry or analytics.
+- **Agents report in, locally.** Claude Code, Cursor and the other agents use their official hooks to post state to VDock's localhost-only endpoint. Install or remove each hook from Settings; only VDock's own entry is touched.
+- **Your keys stay on the PC.** API keys and tokens live in a local `.env`, are accepted only from the PC itself, never shown again, never sent to other devices, and are stripped from logs and notifications.
+- **Locked down by default.** LAN access is off until you turn it on; set a deck password and the QR code carries a single-use, 10-minute pairing token. Keystroke actions only fire when the target app is focused.
+- **Open source, MIT.** Read every line. Startup refuses unsafe combinations (debug on the network, SSL without certificates, an example password). See [SECURITY.md](SECURITY.md).
+
+The only outbound calls are the ones you switch on — weather, headlines and quotes for the screensaver, and GitHub when you add a token.
 
 ---
 
-## Real use cases
+## Why VDock
 
-- **Driving an AI agent from the deck.** Tap **Review** and `/code-review` lands in your live Claude Code session — not a new one. A green dot on the scene tab confirms VDock sees the process, and an alert rises the moment the agent waits for you.
-- **A second screen that earns its desk space.** Idle, it's an [ambient dashboard](#the-screensaver).
-- **Calls and recording.** Mute (a real mic mute), camera, push-to-talk (one action on press, another on release), OBS scene switching, and a volume slider you drag.
-- **Anything with an HTTP endpoint.** One `http_request` action covers Home Assistant, n8n, Zapier and webhooks, and can show a response value on the key.
-- **A kiosk or workshop panel.** Touch presets, 44px minimum targets and a first-run tour.
+Free and MIT (Elgato's virtual deck needs their hardware; Touch Portal's free tier is capped), runs on **Windows, macOS and Linux**, works on **any screen** — touch panel, tablet, phone or browser — and is the only deck with **agent-native actions and agent-waiting alerts** for Claude Code, Cursor, Copilot, Codex, Devin, VS Code and JetBrains. Beyond development: calls and recording (mic mute, camera, push-to-talk, OBS), anything with an HTTP endpoint (Home Assistant, n8n, Zapier, webhooks), and kiosk or workshop panels.
 
 <details>
 <summary><strong>Using a touchscreen as a second monitor (Windows)</strong> — fixing touch landing on the wrong screen</summary>
@@ -229,7 +249,7 @@ Secrets never reach the frontend — Settings shows only *whether* a key is set,
 - **Claude / GitHub buttons greyed out** — hover for the reason, usually the CLI isn't installed or `gh auth login` hasn't run
 - **Keystroke actions do nothing** — they only fire when the target editor is focused; deliberate
 - **Phone can't reach VDock** — **Settings → Devices & network → Connect a device**: allow LAN access, relaunch, allow the Windows firewall prompt for `python.exe`, check both devices are on the same Wi-Fi
-- **Touch lands on the wrong monitor** — see [Using a touchscreen as a second monitor](#real-use-cases), a Windows display-mapping issue, not a VDock bug
+- **Touch lands on the wrong monitor** — see [Using a touchscreen as a second monitor](#why-vdock), a Windows display-mapping issue, not a VDock bug
 - **UI looks like an old build** — it self-heals on reload; if not, hard-refresh once
 - **Something else** — **Settings → Logs**, tail or export the backend/frontend logs with your issue
 
@@ -259,9 +279,9 @@ cd frontend && npm test
 
 **Architecture:** Vue 3 + TypeScript front end, Python Flask + Socket.IO back end, Electron shell for the desktop build. Actions live in a catalog the frontend reads at runtime; integrations are self-detecting plugin packs under `backend/integrations/`.
 
-Every change is written up in **[`design-log/`](design-log/)** — one numbered entry with the problem, the design, and how it was verified. [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) covers adding an action type or writing an integration pack.
+[`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) covers adding an action type or writing an integration pack.
 
-Layout: `backend/` (Flask API, actions, integration packs) · `frontend/` (Vue UI, `electron/` shell) · `scripts/` · `design-log/` · `docs/`. `frontend/dist` is a local build output (gitignored) that Flask serves — run `npm run build` after UI changes.
+Layout: `backend/` (Flask API, actions, integration packs) · `frontend/` (Vue UI, `electron/` shell) · `scripts/` · `docs/`. `frontend/dist` is a local build output (gitignored) that Flask serves — run `npm run build` after UI changes.
 
 ---
 
