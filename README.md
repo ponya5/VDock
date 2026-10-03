@@ -118,16 +118,10 @@ Settings opens on **Overview**: what's set up, what needs you, and the switches 
 
 ## Phone and tablet as the touch screen
 
-<table>
-<tr>
-<td width="32%"><img src="docs/assets/screens/phone-portrait.jpg" alt="VDock on a phone in portrait: a single-column deck with volume keys and slider" /></td>
-<td width="68%"><img src="docs/assets/screens/tablet-portrait.jpg" alt="VDock on an 820 by 1180 tablet in portrait: a larger deck grid that fits the screen" /></td>
-</tr>
-<tr>
-<td align="center"><sub>Phone, portrait</sub></td>
-<td align="center"><sub>Tablet, portrait (820×1180)</sub></td>
-</tr>
-</table>
+<div align="center">
+<img src="docs/assets/screens/mobile-devices.jpg" alt="Two phones side by side, one showing the Media scene with volume controls and a slider, the other showing the Claude Code scene with Submit, Continue and Interrupt" width="760" />
+<br /><em>Media on one phone, Claude Code on another — the same VDock, scanned from the same QR code.</em>
+</div>
 
 **No touchscreen? You already own one.** Any phone or tablet on your Wi-Fi becomes a deck — or just keep VDock in a browser tab or its desktop window and click. No app store, no account — it's the same VDock, served from your PC.
 
