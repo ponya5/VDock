@@ -26,12 +26,11 @@ Utility scripts for **maintainers and advanced users**. End users only need the 
 | `create-icon.ps1` | Generate or copy app icon |
 | `VDock.nsi` | NSIS installer script |
 
-## Deployment
+## Checks (contributors)
 
 | Script | Purpose |
 |--------|---------|
-| `deploy.bat` | Docker deployment (Windows) |
-| `deploy.sh` | Docker deployment (Linux/macOS) |
+| `check.ps1` / `check.sh` | Run what CI runs: backend pytest, `vue-tsc`, vitest, production build. One PASS/FAIL line per step; non-zero exit on failure |
 
 ## Removed scripts
 

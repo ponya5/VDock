@@ -26,7 +26,7 @@ def env_dirs(tmp_path, monkeypatch):
     frontend = tmp_path / 'frontend'
     backend.mkdir()
     frontend.mkdir()
-    monkeypatch.setattr(system, '_backend_dir', lambda: backend)
+    monkeypatch.setattr(system, '_backend_env', lambda: backend / '.env')
     monkeypatch.setattr(system, '_frontend_dir', lambda: frontend)
     monkeypatch.setattr(Config, 'load_config', classmethod(lambda cls: {}))
     saved_configs = []

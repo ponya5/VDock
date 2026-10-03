@@ -3,10 +3,14 @@ import json
 import shutil
 from pathlib import Path
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import date, datetime
 import logging
 
+from .atomic import atomic_write_text
+
 logger = logging.getLogger('vdock')
+
+PROFILE_BACKUPS_KEPT = 7
 
 
 class FileManager:
@@ -24,13 +28,47 @@ class FileManager:
             True if successful, False otherwise
         """
         try:
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            atomic_write_text(file_path, json.dumps(data, indent=2, ensure_ascii=False))
             return True
         except Exception as e:
             logger.error('Error saving JSON file %s: %s', file_path, e)
             return False
+
+    @staticmethod
+    def backup_profiles(data_dir: Path) -> bool:
+        """Copy ``profiles/*.json`` to ``backups/profiles-YYYYMMDD/`` once a day.
+
+        Keeps the newest ``PROFILE_BACKUPS_KEPT`` folders. Never raises: a
+        backup problem must not fail the save that triggered it. Returns True
+        only when a new backup folder was written.
+        """
+        try:
+            target = data_dir / 'backups' / f'profiles-{date.today():%Y%m%d}'
+            if target.exists():
+                return False
+            profiles = data_dir / 'profiles'
+            if not profiles.is_dir():
+                return False
+            target.mkdir(parents=True)
+            try:
+                for src in profiles.glob('*.json'):
+                    shutil.copy2(src, target / src.name)
+            except Exception:
+                shutil.rmtree(target, ignore_errors=True)  # no half-backups
+                raise
+            folders = sorted(p for p in target.parent.glob('profiles-*') if p.is_dir())
+            for stale in folders[:-PROFILE_BACKUPS_KEPT]:
+                shutil.rmtree(stale, ignore_errors=True)
+            return True
+        except Exception as e:
+            logger.warning('Profile backup skipped: %s', e.__class__.__name__)
+            return False
+
+    @staticmethod
+    def save_profile(file_path: Path, data: Dict[str, Any]) -> bool:
+        """``save_json`` for ``profiles/*.json``: takes the daily backup first."""
+        FileManager.backup_profiles(file_path.parent.parent)
+        return FileManager.save_json(file_path, data)
     
     @staticmethod
     def load_json(file_path: Path) -> Optional[Dict[str, Any]]:

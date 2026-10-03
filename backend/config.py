@@ -4,10 +4,13 @@ import json
 import logging
 import re
 import secrets
+import shutil
 import socket
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+
+from utils.atomic import atomic_write_text
 
 logger = logging.getLogger('vdock.config')
 
@@ -160,6 +163,28 @@ def env_file() -> Path:
     return backend_dir() / '.env'
 
 
+def migrate_legacy_env() -> bool:
+    """Frozen builds: copy an install-dir ``.env`` (cwd) to ``env_file()`` once.
+
+    Older installs kept ``.env`` next to the exe. Never overwrites an existing
+    target and never logs file contents. Returns True when a copy was made.
+    """
+    if not getattr(sys, 'frozen', False):
+        return False
+    target = env_file()
+    legacy = Path.cwd() / '.env'
+    if target.exists() or not legacy.is_file():
+        return False
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(legacy, target)
+    except OSError as exc:
+        logger.warning('Could not migrate .env (%s)', exc.__class__.__name__)
+        return False
+    logger.info('Migrated .env to %s', target)
+    return True
+
+
 # Public strings that shipped in older .env.example files. A key equal to one
 # of these is readable on GitHub, so it is as good as no key at all.
 KNOWN_PLACEHOLDER_SECRETS = frozenset({
@@ -167,6 +192,14 @@ KNOWN_PLACEHOLDER_SECRETS = frozenset({
     'your-secret-key-here-change-this-in-production',
     'your-secret-key-here',
 })
+
+
+#: Example passwords that shipped in templates; never valid with auth on.
+EXAMPLE_PASSWORDS = frozenset({
+    'ChangeThisToAStrongPassword123!', 'your-secure-password-here', 'admin',
+})
+
+LOOPBACK_HOSTS = ('127.0.0.1', 'localhost', '::1')
 
 
 def is_weak_secret_key(key: Optional[str]) -> bool:
@@ -210,7 +243,7 @@ def write_env_keys(env_file: Path, updates: Dict[str, str]) -> None:
     for key, value in remaining.items():
         out.append(f'{key}={value}')
 
-    env_file.write_text('\n'.join(out) + '\n')
+    atomic_write_text(env_file, '\n'.join(out) + '\n')
 
 
 class Config:
@@ -315,13 +348,64 @@ class Config:
         """Refuse to start in a configuration that is quietly insecure.
 
         Raises:
-            RuntimeError: authentication is on but no password is set.
+            RuntimeError: authentication is on but no password is set (or it
+                is a published example), DEBUG is combined with a LAN bind, or
+                SSL is on without its certificate files.
         """
         if cls.REQUIRE_AUTH and not cls.AUTH_PASSWORD:
             raise RuntimeError(
                 'REQUIRE_AUTH is enabled but AUTH_PASSWORD is not set. '
                 'Set AUTH_PASSWORD in backend/.env, or disable REQUIRE_AUTH.'
             )
+        if cls.REQUIRE_AUTH and cls.AUTH_PASSWORD in EXAMPLE_PASSWORDS:
+            raise RuntimeError(
+                'AUTH_PASSWORD is still an example value from .env.example. '
+                f'Choose your own in {env_file()} (or Settings > Devices & network), '
+                'or disable REQUIRE_AUTH.'
+            )
+        if cls.DEBUG and (cls.ALLOW_LAN or cls.HOST not in LOOPBACK_HOSTS):
+            raise RuntimeError(
+                'DEBUG exposes the Werkzeug debugger to your network. '
+                f'Set DEBUG=False in {env_file()} or turn off Allow LAN.'
+            )
+        if cls.USE_SSL:
+            for label, value in (('SSL_CERT_PATH', cls.SSL_CERT_PATH), ('SSL_KEY_PATH', cls.SSL_KEY_PATH)):
+                if not Path(value).is_file():
+                    raise RuntimeError(
+                        f'USE_SSL is enabled but {label} points to a missing file: {value}'
+                    )
+
+    @classmethod
+    def lan_without_password(cls) -> bool:
+        return bool(cls.ALLOW_LAN and not (cls.REQUIRE_AUTH and cls.AUTH_PASSWORD))
+
+    @classmethod
+    def report(cls) -> List[str]:
+        """Human-readable startup summary. Names and booleans only -- no values."""
+        from services import integration_status
+
+        lan = 'LAN on' if cls.ALLOW_LAN else 'LAN off'
+        bind_host = cls.HOST if cls.ALLOW_LAN else '127.0.0.1'
+        if cls.ALLOW_LAN and bind_host in LOOPBACK_HOSTS:
+            bind_host = '0.0.0.0'
+        lines = [
+            f'Bind: {bind_host}:{cls.PORT} ({lan})',
+            f"Auth: {'on' if cls.REQUIRE_AUTH else 'off'}",
+        ]
+        marks = []
+        short = {'GITHUB_TOKEN': 'GitHub token', 'ANTHROPIC_API_KEY': 'Anthropic key',
+                 'WEATHERAPI_KEY': 'Weather key', 'gh_cli': 'gh CLI', 'claude_cli': 'Claude CLI'}
+        for item in integration_status.secret_items() + integration_status.cli_items():
+            marks.append(f"{short.get(item['id'], item['label'])} {'✓' if item['configured'] else '✗'}")
+        lines.append('Integrations: ' + ', '.join(marks))
+        for line in lines:
+            logger.info(line)
+        if cls.lan_without_password():
+            logger.warning(
+                'Allow LAN is on without a deck password - anyone on this network '
+                'can press your keys. Set one in Settings > Devices & network.'
+            )
+        return lines
 
     @classmethod
     def apply_saved_toggles(cls):
@@ -424,6 +508,5 @@ class Config:
     def save_config(cls, config: Dict[str, Any]):
         """Save configuration to file."""
         config_file = cls.DATA_DIR / 'config.json'
-        with open(config_file, 'w') as f:
-            json.dump(config, f, indent=2)
+        atomic_write_text(config_file, json.dumps(config, indent=2))
 

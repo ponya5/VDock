@@ -37,4 +37,13 @@ VDock is designed to run **locally, on a trusted machine**, with no login screen
 
 ## Secrets & Environment Files
 
-Never commit real `.env` files, API keys, or credentials. Use `.env.example` and `backend/.env.example` as templates — they contain placeholder values only. `.gitignore` already excludes `.env*` files and local data (`backend/data/config.json`, `backend/data/user_settings.json`, uploads, etc.).
+Never commit real `.env` files, API keys, or credentials. Use `backend/.env.example` and `frontend/.env.example` as templates — they contain placeholder values only. `.gitignore` already excludes `.env*` files and local data (`backend/data/config.json`, `backend/data/user_settings.json`, uploads, etc.).
+
+## Running on your network (phones, tablets, a 7" panel)
+
+- **Set a deck password before you turn on Allow LAN** (Settings, Devices & network). Without one, anyone on the same Wi-Fi can press your keys, type into agent sessions and approve agent permission prompts. VDock logs a warning at startup when LAN is on and no password is set.
+- A device on your network can do everything the deck can do: run actions, open apps, send keystrokes. Treat the LAN like the keyboard.
+- `DEBUG=True` is never safe together with Allow LAN (it exposes the Werkzeug debugger). VDock refuses to start with that combination.
+- API keys (`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `WEATHERAPI_KEY`) live only in the backend `.env` (`backend/.env` from source, `<data dir>/.env` in the installed app). They are never sent to the browser, never logged, and redacted from CLI output.
+- `SECRET_KEY` is generated on first start and saved to the same file; a published example key is replaced automatically.
+- Found a problem? See "Reporting a Vulnerability" above.

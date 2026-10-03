@@ -11,6 +11,7 @@ test to clean up after itself.
 """
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -39,3 +40,22 @@ def restore_config():
     yield
     for name, value in saved.items():
         setattr(Config, name, value)
+
+
+# The user's real backend/.env holds their keys and signing secret. No test may
+# write it (Phase 1 had one rewrite SECRET_KEY): snapshot, compare, and put the
+# original bytes back before failing so a single offender does no lasting harm.
+_REAL_ENV = Path(__file__).resolve().parents[1] / '.env'
+
+
+@pytest.fixture(autouse=True)
+def real_env_file_is_never_written():
+    before = _REAL_ENV.read_bytes() if _REAL_ENV.exists() else None
+    yield
+    after = _REAL_ENV.read_bytes() if _REAL_ENV.exists() else None
+    if after != before:
+        if before is None:
+            _REAL_ENV.unlink()
+        else:
+            _REAL_ENV.write_bytes(before)
+        pytest.fail('A test modified the real backend/.env; point it at tmp_path / monkeypatch env_file.')

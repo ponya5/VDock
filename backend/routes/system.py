@@ -4,7 +4,7 @@ import socket
 from flask import Blueprint, request, jsonify
 from pathlib import Path
 from auth import require_auth
-from config import project_root, backend_dir, write_env_keys, read_env_key
+from config import project_root, env_file, write_env_keys, read_env_key
 
 system_bp = Blueprint('system', __name__)
 
@@ -21,8 +21,9 @@ _MANAGED_ORIGIN = re.compile(
 # collisions, rewrites the env files line-preserving, and reports that a
 # restart is required.
 
-def _backend_dir() -> Path:
-    return backend_dir()
+def _backend_env() -> Path:
+    """The one backend .env (backend/.env from source, DATA_DIR/.env frozen)."""
+    return env_file()
 
 
 def _frontend_dir() -> Path:
@@ -138,7 +139,7 @@ def update_ports():
 
     # backend/.env: PORT + refreshed loopback CORS origins (user-added
     # non-loopback origins survive untouched).
-    backend_env = _backend_dir() / '.env'
+    backend_env = _backend_env()
     existing_origins = [
         o.strip() for o in
         _read_env_key(backend_env, 'CORS_ORIGINS').split(',')

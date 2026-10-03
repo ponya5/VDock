@@ -108,14 +108,6 @@ def test_no_large_new_binaries():
     assert not big, f'new tracked files over 1 MB (compress or allowlist): {big}'
 
 
-# Legacy templates that the user has not yet approved removing (DL-146 Task
-# 1.4 needs an explicit "yes" per `git rm`). Shrink this set as they go; the
-# test fails if one is listed here but already gone, so it cannot go stale.
-PENDING_REMOVAL = {
-    '.env.example',
-    'docs/env.example',
-    'frontend/env.example',
-}
 ALLOWED_TEMPLATES = {'backend/.env.example', 'frontend/.env.example'}
 
 
@@ -125,9 +117,7 @@ def test_no_duplicate_env_templates():
         p for p in tracked
         if p.rsplit('/', 1)[-1] in ('.env.example', 'env.example')
     }
-    stale = PENDING_REMOVAL - templates
-    assert not stale, f'PENDING_REMOVAL entries already removed, delete them: {stale}'
-    extra = templates - ALLOWED_TEMPLATES - PENDING_REMOVAL
+    extra = templates - ALLOWED_TEMPLATES
     assert not extra, f'unexpected env templates: {extra}'
     # On disk, not "tracked": a new template is untracked until committed.
     missing = [p for p in ALLOWED_TEMPLATES if not (REPO_ROOT / p).is_file()]

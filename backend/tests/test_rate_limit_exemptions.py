@@ -13,6 +13,15 @@ POLLED_BLUEPRINTS = {
     'agent_sessions': 'session picker polls every 4 s',
     'agent_events': 'agent hooks must never be throttled',
     'system_metrics': 'metric widgets poll',
+    'app_monitor': 'running-app detection polls',
+    'news': 'news widget refreshes on a timer',
+    'market': 'market widget refreshes on a timer',
+    'weather': 'weather widget refreshes on a timer',
+    'now_playing': 'now-playing widget polls',
+    'config': 'settings/health reads',
+    'logs': 'frontend error posts can burst',
+    'triggers': 'localhost webhook + settings CRUD',
+    'mcp': 'MCP clients poll rapidly',
 }
 
 

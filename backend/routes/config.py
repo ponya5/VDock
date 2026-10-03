@@ -195,6 +195,26 @@ def update_config():
     return jsonify({'success': True})
 
 
+@config_bp.route('/api/config/integrations', methods=['GET'])
+@require_auth
+def get_integrations():
+    """Which keys / CLIs are set up, plus the LAN-safety flags.
+
+    Status only: booleans, labels and help links -- never a secret value and
+    never the user's name (``env_file`` is a display path).
+    """
+    from services import integration_status
+    return jsonify({
+        'env_file': integration_status.display_env_path(),
+        'items': integration_status.secret_items() + integration_status.cli_items(),
+        'security': {
+            'allow_lan': bool(Config.ALLOW_LAN),
+            'require_auth': bool(Config.REQUIRE_AUTH),
+            'lan_without_password': Config.lan_without_password(),
+        },
+    })
+
+
 @config_bp.route('/api/app-paths/probe', methods=['GET'])
 @require_auth
 def probe_app_path():

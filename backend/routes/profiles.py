@@ -109,7 +109,7 @@ def create_profile():
     )
     
     file_path = Config.PROFILES_DIR / f"{profile_id}.json"
-    if FileManager.save_json(file_path, profile.to_dict()):
+    if FileManager.save_profile(file_path, profile.to_dict()):
         return jsonify({'profile': profile.to_dict(), 'success': True}), 201
     
     return jsonify({
@@ -179,7 +179,7 @@ def update_profile(profile_id):
         logger.info(f"Profile dict dockedButtons count: {docked_count}")
         logger.info(f"Profile dict scenes count: {scenes_count}")
         
-        if FileManager.save_json(file_path, profile_dict):
+        if FileManager.save_profile(file_path, profile_dict):
             logger.info("Profile saved successfully")
             return jsonify({
                 'profile': profile_dict,
@@ -234,7 +234,7 @@ def duplicate_profile(profile_id):
                 button.id = str(uuid.uuid4())
         
         dst_file = Config.PROFILES_DIR / f"{new_id}.json"
-        if FileManager.save_json(dst_file, profile.to_dict()):
+        if FileManager.save_profile(dst_file, profile.to_dict()):
             return jsonify({'profile': profile.to_dict(), 'success': True}), 201
         
         return jsonify({'error': 'Failed to duplicate profile', 'success': False}), 500
@@ -279,7 +279,7 @@ def import_profile():
         
         # Save imported profile
         file_path = Config.PROFILES_DIR / f"{new_id}.json"
-        if FileManager.save_json(file_path, profile.to_dict()):
+        if FileManager.save_profile(file_path, profile.to_dict()):
             return jsonify({'profile': profile.to_dict(), 'success': True}), 201
         
         return jsonify({'error': 'Failed to save imported profile', 'success': False}), 500

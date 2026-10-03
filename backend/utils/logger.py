@@ -25,7 +25,12 @@ def setup_logger(name: str = 'vdock', level: int = logging.INFO, log_file: Path 
     logger = logging.getLogger(name)
     logger.setLevel(level)
     
-    # Console handler
+    # Console handler. A legacy-codepage console must not choke on symbols
+    # (the startup report uses check marks): degrade to '?' instead.
+    try:
+        sys.stdout.reconfigure(errors='replace')
+    except (AttributeError, ValueError, OSError):
+        pass
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(level)
     console_formatter = logging.Formatter(

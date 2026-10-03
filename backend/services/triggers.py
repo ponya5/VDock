@@ -51,6 +51,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from config import Config
 from integrations import agent_state
+from utils.atomic import atomic_write_text
 
 logger = logging.getLogger('vdock')
 
@@ -127,15 +128,11 @@ def _save_locked() -> None:
     tmp + ``os.replace`` — a crash mid-write leaves the old file intact,
     which matters on a device that is power-cycled rather than shut down.
     """
-    path = _store_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.parent / (path.name + '.tmp')
-    tmp.write_text(
+    atomic_write_text(
+        _store_path(),
         json.dumps({'enabled': _engine_enabled,
                     'triggers': list(_triggers.values())}, indent=2),
-        encoding='utf-8',
     )
-    os.replace(tmp, path)
 
 
 def _new_id() -> str:
