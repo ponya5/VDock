@@ -55,16 +55,30 @@ import { useAgentAlerts } from '@/services/agentAlerts'
 import type { AgentAlert } from '@/services/agentAlerts'
 import { useSettingsStore } from '@/stores/settings'
 import { isAgentBarVisible } from '@/services/agentState'
+import { waitingChipSources } from '@/services/agentWaiting'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import AgentWaitingDock from '@/components/AgentWaitingDock.vue'
 
 const alerts = useAgentAlerts()
 const settingsStore = useSettingsStore()
 const enabled = computed(() => settingsStore.agentAlertsEnabled !== false)
+const dashboardStore = useDashboardStore()
+const appIntegrations = useAppIntegrations()
+
+// The bottom waiting chip already announces an idle agent (and its Snooze /
+// Dismiss). Showing "<agent> needs you" on top as well is the same event
+// twice, so the banner yields while that chip owns the source.
+const chipOwned = computed(() =>
+  settingsStore.agentWaitingGlowEnabled === false
+    ? new Set<string>()
+    : waitingChipSources(dashboardStore.currentProfile?.scenes ?? [], appIntegrations.value)
+)
 
 // DL-119: one card per waiting source. A source whose action bar is already
 // on screen stands down — the bar shows the state + Approve/Deny itself.
 const visibleAlerts = computed(() =>
-  alerts.alerts.value.filter((a) => !isAgentBarVisible(a.source))
+  alerts.alerts.value.filter((a) => !isAgentBarVisible(a.source) && !chipOwned.value.has(a.source))
 )
 
 type AlertCard =

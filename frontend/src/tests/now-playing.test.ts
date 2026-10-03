@@ -54,10 +54,6 @@ function mockApi(sync: unknown) {
 beforeEach(() => {
   socketHandlers.clear()
   mockApi({ success: true, available: false, track: null })
-  // jsdom has no object-URL support; derive a stable fake from the call order.
-  let n = 0
-  URL.createObjectURL = vi.fn(() => `blob:art-${++n}`)
-  URL.revokeObjectURL = vi.fn()
 })
 
 describe('nowPlaying service', () => {
@@ -93,14 +89,14 @@ describe('nowPlaying service', () => {
     expect(svc.available.value).toBe(true) // supported, just silent
   })
 
-  it('fetches art through the authed client as a blob URL, only when has_art', async () => {
+  it('fetches art through the authed client as a data URL, only when has_art', async () => {
     const svc = await freshService()
     socketHandlers.get('now_playing')?.(trackPayload({ ts: 123 }))
     await flushPromises()
     expect(apiGet).toHaveBeenCalledWith(
       '/now-playing/art', { ts: 123 }, { responseType: 'blob' },
     )
-    expect(svc.artUrl.value).toMatch(/^blob:/)
+    await vi.waitFor(() => expect(svc.artUrl.value).toMatch(/^data:/))
 
     socketHandlers.get('now_playing')?.(trackPayload({ has_art: false, ts: 124 }))
     expect(svc.artUrl.value).toBeNull()
@@ -166,7 +162,7 @@ describe('NowPlayingWidget', () => {
     expect(wrapper.text()).toContain('Artist')
     expect(wrapper.text()).toContain('Spotify') // '.exe' stripped
     const img = wrapper.find('img')
-    expect(img.attributes('src')).toMatch(/^blob:/)
+    await vi.waitFor(() => expect(wrapper.find('img').attributes('src')).toMatch(/^data:/))
     expect(wrapper.find('.np-progress').exists()).toBe(true)
   })
 

@@ -460,7 +460,7 @@ onUnmounted(() => {
 
 .mc-panel {
   width: min(960px, 100%);
-  font-size: 16px;
+  font-size: 1em;
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -646,7 +646,7 @@ onUnmounted(() => {
   border-radius: 0;
   border: none;
   box-shadow: none;
-  font-size: 17px;
+  font-size: 1.0625em;
 }
 .mc-backdrop.mc-phone .mc-head {
   padding: max(12px, env(safe-area-inset-top, 0px)) 14px 12px;

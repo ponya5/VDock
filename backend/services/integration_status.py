@@ -20,18 +20,24 @@ CLI_TOOLS = (
 
 
 def secret_items() -> List[Dict[str, Any]]:
-    return [
-        {
+    items = []
+    for spec in secrets.ALL_SECRETS:
+        configured = secrets.is_configured(spec)
+        # `configured` stays "you set a key"; `builtin` says the feature works
+        # anyway through a free provider, so the UI should not read as missing.
+        builtin = bool(spec.builtin_label) and not configured
+        items.append({
             'id': spec.env_var,
             'label': spec.label,
             'kind': 'secret',
-            'configured': secrets.is_configured(spec),
-            'reason': '' if secrets.is_configured(spec) else spec.reason(),
+            'configured': configured,
+            'builtin': builtin,
+            'builtin_label': spec.builtin_label if builtin else '',
+            'reason': '' if (configured or builtin) else spec.reason(),
             'help_url': spec.help_url,
             'unlocks': spec.unlocks,
-        }
-        for spec in secrets.ALL_SECRETS
-    ]
+        })
+    return items
 
 
 def cli_items() -> List[Dict[str, Any]]:

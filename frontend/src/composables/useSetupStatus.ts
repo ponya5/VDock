@@ -7,6 +7,9 @@ export interface IntegrationItem {
   label: string
   kind: 'secret' | 'cli'
   configured: boolean
+  /** Works without a key through a free built-in provider (e.g. Open-Meteo). */
+  builtin?: boolean
+  builtin_label?: string
   reason: string
   help_url: string
   unlocks?: string

@@ -28,6 +28,9 @@ class SecretSpec:
     missing_reason: str = ''
     #: One line for the Settings "Accounts & keys" page.
     unlocks: str = ''
+    #: Set when the integration works without this key (a free built-in
+    #: provider covers it) - Settings then shows "Built-in", not "Not set".
+    builtin_label: str = ''
 
     def reason(self) -> str:
         if self.missing_reason:
@@ -65,7 +68,11 @@ WEATHERAPI_KEY = SecretSpec(
         'WEATHERAPI_KEY is not set in backend/.env. Only the backend Weather '
         'action needs it; the screensaver weather uses Open-Meteo (no key).'
     ),
-    unlocks='The backend Weather action (the screensaver needs no key)',
+    unlocks=(
+        'The backend Weather action. Works out of the box with the free '
+        'Open-Meteo service; add your own key to use WeatherAPI.com instead.'
+    ),
+    builtin_label='Built-in (Open-Meteo)',
 )
 
 ALL_SECRETS = (ANTHROPIC_API_KEY, GITHUB_TOKEN, WEATHERAPI_KEY)

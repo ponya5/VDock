@@ -43,6 +43,24 @@ export function sceneWaitingAgent(
 }
 
 /**
+ * Sources whose idle state the bottom "waiting" chip already owns — waiting,
+ * snoozed or dismissed. The "needs you" banner stands down for these so one
+ * idle event is not announced twice (permission asks are a different state
+ * and still get the banner).
+ */
+export function waitingChipSources(
+  scenes: readonly Pick<Scene, 'id' | 'name' | 'appId' | 'triggeredByApp' | 'pages'>[],
+  integrations?: readonly AppIntegration[],
+): Set<string> {
+  const sources = new Set<string>()
+  for (const scene of scenes) {
+    const hit = sceneWaitingAgent(scene, integrations) ?? sceneSnoozedAgent(scene, integrations)
+    if (hit) sources.add(hit.entry.source)
+  }
+  return sources
+}
+
+/**
  * Snooze bookkeeping (DL-080 follow-ups #2/#3): each dismissal records the
  * `ready` entry's `ts` plus an expiry. Same-episode + inside the window =
  * silenced; a fresh `ready` event stamps a new `entry.ts` and re-arms the
