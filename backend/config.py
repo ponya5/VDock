@@ -185,6 +185,26 @@ def migrate_legacy_env() -> bool:
     return True
 
 
+def _load_env_file() -> None:
+    """Populate os.environ from .env before ``Config`` reads it.
+
+    ``Config``'s class attributes are evaluated once, when this module is
+    first imported. app.py imports ``config`` (for ``env_file``) *before* its
+    own ``load_dotenv`` runs, so every .env value — AUTH_PASSWORD included —
+    was invisible to ``Config``; with ``require_auth`` saved as true the
+    startup guard then refused to boot. Real environment variables still win.
+    """
+    try:
+        from dotenv import load_dotenv
+        migrate_legacy_env()  # frozen installs: copy the old .env first
+        load_dotenv(env_file(), override=False)
+    except Exception as exc:  # never block startup on an unreadable .env
+        logger.warning('Could not read .env (%s)', exc.__class__.__name__)
+
+
+_load_env_file()
+
+
 # Public strings that shipped in older .env.example files. A key equal to one
 # of these is readable on GitHub, so it is as good as no key at all.
 KNOWN_PLACEHOLDER_SECRETS = frozenset({
