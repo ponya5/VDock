@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { settingsSource } from './helpers/settingsSource'
 
 // DL-109: the dashboard/preview background chain, pinned end-to-end.
 // A live sweep of all 58 catalog ids found two component backgrounds that
@@ -72,7 +73,7 @@ describe('component shader/gpu health', () => {
 
 describe('settings preview failure state', () => {
   it('a failed component preview shows a labelled unavailable state, not a bare checkerboard', () => {
-    const src = read('views/SettingsView.vue')
+    const src = settingsSource() // the preview lives in a panel/composable after the DL-146 split
     expect(src).toContain('bgPreviewFailed.value = settingsStore.background')
     expect(src).toContain('previewBgUnavailable')
     expect(src).toContain('preview-bg-note')

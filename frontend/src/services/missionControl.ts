@@ -27,6 +27,17 @@ export interface MissionSession {
   can_focus: boolean
   /** DL-145: ready, and the agent can take a typed prompt. */
   can_prompt: boolean
+  /** DL-145: Claude Code rows only; null when no transcript is readable. */
+  usage?: MissionUsage | null
+}
+
+/** Estimated spend + context fill of one Claude session. */
+export interface MissionUsage {
+  cost_usd: number
+  /** True unless the session is finished and Claude reported its own total. */
+  estimate: boolean
+  context_pct: number
+  status: 'normal' | 'warning' | 'critical'
 }
 
 /** A built-in prompt the Prompt menu offers (the list lives on the server). */
@@ -105,6 +116,17 @@ export async function promptMissionSession(
   preset: string,
 ): Promise<void> {
   await apiClient.post('/agent-mission/prompt', { source, session_id: sessionId, preset })
+}
+
+/** Types `/compact` into a ready Claude Code session (the server re-checks). */
+export async function compactMissionSession(source: string, sessionId: string): Promise<void> {
+  await apiClient.post('/agent-mission/compact', { source, session_id: sessionId })
+}
+
+/** "≈$1.24" / "$12" - the leading ≈ marks an estimate. */
+export function formatUsageCost(usd: number, estimate: boolean): string {
+  const amount = usd < 10 ? usd.toFixed(2) : Math.round(usd).toString()
+  return `${estimate ? '≈' : ''}$${amount}`
 }
 
 export async function fetchSessionChanges(source: string, sessionId: string): Promise<SessionChanges> {

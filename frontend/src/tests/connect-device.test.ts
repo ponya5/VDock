@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
+import { settingsSource } from './helpers/settingsSource'
 
-const view = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const view = settingsSource()
 
 // DL-069 follow-up: enabling "Allow LAN access" after the dev server (or
 // backend) was already running leaves the QR encoding a URL nothing
@@ -30,13 +31,13 @@ describe('connect-a-device LAN reachability probe', () => {
 
   it('re-probes when the URL changes and whenever the Connect tab opens', () => {
     expect(view).toContain('watch(lanUrl, probeLanReachability)')
-    expect(view).toContain("if (tab !== 'connect') return")
-    expect(view).toContain('probeLanReachability()')
+    expect(view).toContain('onMounted(() => {')
+    expect(view).toContain('void probeLanReachability()')
   })
 
   it('keeps re-probing while the Connect tab is open and stops when it closes', () => {
     expect(view).toContain('setInterval(probeLanReachability, LAN_PROBE_INTERVAL_MS)')
-    expect(view).toContain('stopLanProbePolling()')
-    expect(view).toContain('onBeforeUnmount(stopLanProbePolling)')
+    expect(view).toContain('clearInterval(lanProbeTimer)')
+    expect(view).toContain('onBeforeUnmount(')
   })
 })

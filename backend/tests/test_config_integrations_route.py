@@ -41,6 +41,13 @@ def test_shape(client, monkeypatch):
     assert set(body['security']) == {'allow_lan', 'require_auth', 'lan_without_password'}
 
 
+@pytest.mark.parametrize('junk', ['demo-key-replace-with-your-own', 'your-github-token-here', 'changeme'])
+def test_template_placeholders_do_not_count_as_configured(client, monkeypatch, junk):
+    monkeypatch.setenv('WEATHERAPI_KEY', junk)
+    items = _items(client.get('/api/config/integrations').get_json())
+    assert items['WEATHERAPI_KEY']['configured'] is False
+
+
 def test_env_file_is_a_display_path_without_user_name(client):
     import getpass
     body = client.get('/api/config/integrations').get_json()

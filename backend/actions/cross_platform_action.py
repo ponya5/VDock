@@ -7,7 +7,8 @@ import os
 import sys
 import threading
 import time
-from typing import Dict, Any, Optional
+from types import SimpleNamespace
+from typing import Dict, Any, Optional, Tuple
 from .base_action import BaseAction, ActionResult
 
 # Platform detection
@@ -118,71 +119,60 @@ def _install_com_gc_guard():
 
 _install_com_gc_guard()
 
+PYCAW_MISSING = 'pycaw not installed (pip install pycaw)'
+NO_MICROPHONE = 'No microphone found'
+ENDPOINT_TTL_SECONDS = 60
+# Flap guard: while a device is connecting/disconnecting the default
+# endpoint can change repeatedly; each resolve creates COM pointers, and
+# pointer churn on an unstable stack is the crash fuel. Never resolve
+# more often than this — the stale endpoint (or a clean error) is served
+# until the gap has passed.
+RESOLVE_MIN_GAP_SECONDS = 3.0
 
-def _audio_worker_loop(work_q):
-    """Single-tenant COM thread: initialize once, own the endpoint lifecycle."""
-    global _worker_tid
-    import comtypes
-    import gc as _gc
-    comtypes.CoInitialize()
-    _worker_tid = threading.get_ident()
 
-    # Cached endpoint + how it gets invalidated. Per-call re-resolution was
-    # tried and abandoned: on a machine whose wireless headset flaps the
-    # default output, every CoCreateInstance/Activate rolls the dice on an
-    # access violation. Hold the endpoint; Windows tells us when the default
-    # render device changes, and a TTL hedge covers notifications that never
-    # arrive.
+def _activate_endpoint(pick_device):
+    """Default endpoint (``pick_device(AudioUtilities)``) as an
+    IAudioEndpointVolume that owns its own COM reference."""
+    from comtypes import CLSCTX_ALL
+    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+    device = interface = None
+    try:
+        device = pick_device(AudioUtilities)
+        interface = device.Activate(
+            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        # QueryInterface, not cast(): cast aliases Activate's single
+        # native reference, so releasing `interface` would free the COM
+        # object out from under the endpoint (vtable reads 0xFFFF...).
+        # QI gives the endpoint its own reference — interface can be
+        # released safely below.
+        return interface.QueryInterface(IAudioEndpointVolume)
+    finally:
+        _release_com(device, interface)
+
+
+def _make_endpoint_cache(activate, describe_error):
+    """Cache one audio endpoint and decide when to re-resolve it.
+
+    Per-call re-resolution was tried and abandoned: on a machine whose
+    wireless headset flaps the default output, every CoCreateInstance/Activate
+    rolls the dice on an access violation. Hold the endpoint; Windows tells us
+    when the default device changes (``dirty['device']``), and a TTL hedge
+    covers notifications that never arrive.
+
+    ``activate()`` creates the endpoint on the audio thread;
+    ``describe_error(exc)`` turns a failure into the user-facing message.
+    Returns a namespace with ``get``, ``invalidate``, ``op`` and ``dirty``.
+    """
     state = {'endpoint': None, 'resolved_at': 0.0}
     dirty = {'device': True}
-    ENDPOINT_TTL_SECONDS = 60
-    # Flap guard: while a device is connecting/disconnecting the default
-    # endpoint can change repeatedly; each resolve creates COM pointers, and
-    # pointer churn on an unstable stack is the crash fuel. Never resolve
-    # more often than this — the stale endpoint (or a clean error) is served
-    # until the gap has passed.
-    RESOLVE_MIN_GAP_SECONDS = 3.0
-
-    def _notifier_thread():
-        """Owns the IMMNotificationClient. MTA so Windows dispatches
-        callbacks on COM threads without needing a message pump on this
-        thread — the callback only flips a Python flag, no COM calls."""
-        try:
-            comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
-        except Exception:
-            return
-        try:
-            from pycaw.callbacks import MMNotificationClient
-            from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
-            from pycaw.constants import CLSID_MMDeviceEnumerator
-
-            class _Notifier(MMNotificationClient):
-                def on_default_device_changed(
-                        self, flow, flow_id, role, role_id, device_id):
-                    # eRender + eMultimedia/eConsole — the roles volume uses
-                    if flow == 'eRender' and role in ('eMultimedia', 'eConsole'):
-                        dirty['device'] = True
-            enumerator = comtypes.CoCreateInstance(
-                CLSID_MMDeviceEnumerator, IMMDeviceEnumerator,
-                comtypes.CLSCTX_INPROC_SERVER)
-            notifier = _Notifier()
-            enumerator.RegisterEndpointNotificationCallback(notifier)
-            # Park forever — the frame keeps enumerator + notifier alive.
-            threading.Event().wait()
-        except Exception:
-            pass  # TTL refresh still covers device switches
-
-    threading.Thread(
-        target=_notifier_thread, name='vdock-audio-notify', daemon=True
-    ).start()
 
     def get_endpoint():
-        """The cached default render endpoint; re-resolve only when dirty.
+        """The cached endpoint; re-resolve only when dirty.
 
         Dirty sources: the device-change notification, a failed op (callers
-        invalidate via ctx['invalidate']()), or the TTL. The pointer is
-        created on this thread and stays referenced here until replaced —
-        the DL-058 crash class does not apply to an object that never dies.
+        invalidate), or the TTL. The pointer is created on the audio thread
+        and stays referenced here until replaced — the DL-058 crash class
+        does not apply to an object that never dies.
         """
         now = time.time()
         stale = dirty['device'] or (now - state['resolved_at'] > ENDPOINT_TTL_SECONDS)
@@ -193,34 +183,16 @@ def _audio_worker_loop(work_q):
         if state['endpoint'] is not None and not stale:
             return state['endpoint'], None
 
-        devices = interface = endpoint = None
-        ok = False
         try:
-            from comtypes import CLSCTX_ALL
-            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-            devices = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(
-                IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-            # QueryInterface, not cast(): cast aliases Activate's single
-            # native reference, so releasing `interface` would free the COM
-            # object out from under `endpoint` (vtable reads 0xFFFF...).
-            # QI gives endpoint its own reference — interface can be
-            # released safely below.
-            endpoint = interface.QueryInterface(IAudioEndpointVolume)
-            ok = True
+            endpoint = activate()
         except ImportError:
-            return None, 'pycaw not installed (pip install pycaw)'
+            return None, PYCAW_MISSING
         except Exception as e:
-            return None, f'Audio device unavailable: {e}'
-        finally:
-            _release_com(devices, interface)
-            if not ok:
-                _release_com(endpoint)
-        if ok:
-            _release_com(state['endpoint'])
-            state['endpoint'] = endpoint
-            state['resolved_at'] = time.time()
-            dirty['device'] = False
+            return None, describe_error(e)
+        _release_com(state['endpoint'])
+        state['endpoint'] = endpoint
+        state['resolved_at'] = time.time()
+        dirty['device'] = False
         return state['endpoint'], None
 
     def invalidate():
@@ -248,6 +220,63 @@ def _audio_worker_loop(work_q):
                 invalidate()
                 return None, str(e2)
 
+    return SimpleNamespace(get=get_endpoint, invalidate=invalidate,
+                           op=endpoint_op, dirty=dirty)
+
+
+def _audio_worker_loop(work_q):
+    """Single-tenant COM thread: initialize once, own the endpoint lifecycle."""
+    global _worker_tid
+    import comtypes
+    import gc as _gc
+    comtypes.CoInitialize()
+    _worker_tid = threading.get_ident()
+
+    # Playback (volume) and capture (mic mute) endpoints are cached
+    # independently; see _make_endpoint_cache for the lifecycle.
+    render = _make_endpoint_cache(
+        lambda: _activate_endpoint(lambda au: au.GetSpeakers()),
+        lambda e: f'Audio device unavailable: {e}')
+    capture = _make_endpoint_cache(
+        lambda: _activate_endpoint(lambda au: au.GetMicrophone()),
+        lambda e: NO_MICROPHONE)
+
+    def _notifier_thread():
+        """Owns the IMMNotificationClient. MTA so Windows dispatches
+        callbacks on COM threads without needing a message pump on this
+        thread — the callback only flips a Python flag, no COM calls."""
+        try:
+            comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
+        except Exception:
+            return
+        try:
+            from pycaw.callbacks import MMNotificationClient
+            from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
+            from pycaw.constants import CLSID_MMDeviceEnumerator
+
+            class _Notifier(MMNotificationClient):
+                def on_default_device_changed(
+                        self, flow, flow_id, role, role_id, device_id):
+                    # eMultimedia/eConsole — the roles volume and mic mute use
+                    if role in ('eMultimedia', 'eConsole'):
+                        if flow == 'eRender':
+                            render.dirty['device'] = True
+                        elif flow == 'eCapture':
+                            capture.dirty['device'] = True
+            enumerator = comtypes.CoCreateInstance(
+                CLSID_MMDeviceEnumerator, IMMDeviceEnumerator,
+                comtypes.CLSCTX_INPROC_SERVER)
+            notifier = _Notifier()
+            enumerator.RegisterEndpointNotificationCallback(notifier)
+            # Park forever — the frame keeps enumerator + notifier alive.
+            threading.Event().wait()
+        except Exception:
+            pass  # TTL refresh still covers device switches
+
+    threading.Thread(
+        target=_notifier_thread, name='vdock-audio-notify', daemon=True
+    ).start()
+
     def app_volume(process, set_value=None):
         """Per-app session volume. set_value 0.0-1.0 or None to read.
 
@@ -255,7 +284,7 @@ def _audio_worker_loop(work_q):
         try:
             from pycaw.pycaw import AudioUtilities
         except ImportError:
-            return None, 'pycaw not installed (pip install pycaw)'
+            return None, PYCAW_MISSING
         proc = (process or '').strip().lower()
         if not proc:
             return None, 'No process configured'
@@ -291,9 +320,10 @@ def _audio_worker_loop(work_q):
         fn, done, box = job
         try:
             box['result'] = fn({
-                'endpoint': get_endpoint,
-                'endpoint_op': endpoint_op,
-                'invalidate': invalidate,
+                'endpoint': render.get,
+                'endpoint_op': render.op,
+                'invalidate': render.invalidate,
+                'mic_endpoint_op': capture.op,
                 'app_volume': app_volume,
             })
         except Exception as e:
@@ -324,6 +354,41 @@ def _run_on_audio_thread(fn, timeout=5):
     if 'error' in box:
         raise box['error']
     return box.get('result')
+
+
+def _mic_mute_job(muted: Optional[bool], write: bool):
+    def job(ctx):
+        def use(endpoint):
+            if write:
+                target = (not endpoint.GetMute()) if muted is None else muted
+                endpoint.SetMute(int(target), None)
+            return bool(endpoint.GetMute())
+        return ctx['mic_endpoint_op'](use)
+    return job
+
+
+def _mic_mute(muted: Optional[bool], write: bool) -> Tuple[Optional[bool], Optional[str]]:
+    if _SYSTEM != 'Windows':
+        return None, 'Microphone mute state is only available on Windows'
+    try:
+        state, err = _run_on_audio_thread(_mic_mute_job(muted, write))
+    except Exception as e:
+        return None, f'Microphone unavailable: {e}'
+    return (state, None) if state is not None else (None, err or NO_MICROPHONE)
+
+
+def read_mic_mute() -> Tuple[Optional[bool], Optional[str]]:
+    """(muted, error) of the default capture device; never writes."""
+    return _mic_mute(None, write=False)
+
+
+def set_mic_mute(muted: Optional[bool]) -> Tuple[Optional[bool], Optional[str]]:
+    """Mute (True), unmute (False) or toggle (None) the default microphone.
+
+    Sets the endpoint's mute flag - the same one Windows Settings, Teams and
+    hardware keys use - and returns the state read back, as (state, error).
+    """
+    return _mic_mute(muted, write=True)
 
 
 def read_output_volume():
@@ -1270,15 +1335,20 @@ class CrossPlatformAction(BaseAction):
 
 
     # Microphone Control Actions
+    def _set_windows_mic_mute(self, muted: bool) -> ActionResult:
+        """Set the capture endpoint's mute flag (nircmd only without pycaw)."""
+        state, err = set_mic_mute(muted)
+        if err == PYCAW_MISSING and self._check_nircmd():
+            return self._run_command(
+                f'nircmd.exe mutesysvolume {int(muted)} microphone')
+        if state is None:
+            return ActionResult(False, err or NO_MICROPHONE)
+        return ActionResult(True, 'Microphone muted' if state else 'Microphone unmuted')
+
     def _microphone_mute(self) -> ActionResult:
         """Mute microphone."""
         if _SYSTEM == 'Windows':
-            if self._check_nircmd():
-                return self._run_command('nircmd.exe mutesysvolume 1 microphone')
-            else:
-                # PowerShell method to mute microphone
-                ps_script = "$devices = Get-WmiObject -Class Win32_SoundDevice; foreach ($device in $devices) { if ($device.Name -like '*Microphone*') { $device.Disable() } }"
-                return self._run_command(f'powershell -Command "{ps_script}"')
+            return self._set_windows_mic_mute(True)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'set volume input volume 0'
             return self._run_command(f'osascript -e "{script}"')
@@ -1290,12 +1360,7 @@ class CrossPlatformAction(BaseAction):
     def _microphone_unmute(self) -> ActionResult:
         """Unmute microphone."""
         if _SYSTEM == 'Windows':
-            if self._check_nircmd():
-                return self._run_command('nircmd.exe mutesysvolume 0 microphone')
-            else:
-                # PowerShell method to unmute microphone
-                ps_script = "$devices = Get-WmiObject -Class Win32_SoundDevice; foreach ($device in $devices) { if ($device.Name -like '*Microphone*') { $device.Enable() } }"
-                return self._run_command(f'powershell -Command "{ps_script}"')
+            return self._set_windows_mic_mute(False)
         elif _SYSTEM == 'Darwin':  # macOS
             script = 'set volume input volume 50'
             return self._run_command(f'osascript -e "{script}"')

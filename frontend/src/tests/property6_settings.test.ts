@@ -48,4 +48,10 @@ test('Property 6: SettingsView form controls meet minimum touch target height of
             expect(elems.length).toBeGreaterThan(0);
         })
     );
+
+    // SettingsView kicks off async loads on mount; unmount and let them settle
+    // so a late console.warn can't land after vitest tears the worker down
+    // (it surfaced as an intermittent "Unhandled Rejection" in CI).
+    wrapper.unmount();
+    await new Promise((resolve) => setTimeout(resolve, 50));
 });

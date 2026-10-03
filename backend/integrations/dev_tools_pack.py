@@ -1,16 +1,36 @@
-"""Developer tool buttons: run the repo's tests (DL-145).
+"""Developer tool buttons: tests, git, dev servers, Docker (DL-145).
 
 Logic lives in ``services/``; this pack only exposes it as catalog actions.
 """
 from pathlib import Path
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Optional, Sequence
 
-from actions.catalog import ActionSpec, ConfigField, RUNS_BACKEND
+from actions.catalog import (ActionSpec, ConfigField, PRESS_MENU, RUNS_BACKEND)
 from plugins.base_plugin import PluginInfo
-from services import agent_prompt, test_runner
+from services import (agent_prompt, dev_servers, docker_status, git_context,
+                      test_runner)
+from utils import subprocess_runner as sr
 
 from . import context
 from .live_pack_base import SpecPlugin
+
+_CWD_FIELD = ConfigField(
+    'cwd', 'Project directory', 'path', advanced=True,
+    help='Empty: the project focused in your editor.')
+
+
+def _live_menu_spec(action_id: str, label: str, icon: str, description: str,
+                    keywords: Sequence[str], poll_seconds: int,
+                    unavailable_reason: Optional[str] = None) -> ActionSpec:
+    """A live button with no visible field whose press opens a menu."""
+    return ActionSpec(
+        id=action_id, label=label, category='dev', icon=('fas', icon),
+        action_type=action_id, runs_on=RUNS_BACKEND,
+        description=description, keywords=tuple(keywords),
+        poll_seconds=poll_seconds, poll_config={'op': 'status'},
+        press=PRESS_MENU, config_fields=(_CWD_FIELD,),
+        unavailable_reason=unavailable_reason,
+    )
 
 
 def _specs() -> Sequence[ActionSpec]:
@@ -28,15 +48,39 @@ def _specs() -> Sequence[ActionSpec]:
                             placeholder='Auto-detected'),
                 ConfigField('watch', 'Re-run when files change', 'boolean',
                             default=False, advanced=True),
-                ConfigField('cwd', 'Project directory', 'path', advanced=True,
-                            help='Empty: the project focused in your editor.'),
+                _CWD_FIELD,
             ),
         ),
+        _live_menu_spec(
+            'git_context', 'Git Branch', 'code-branch',
+            'Branch, changed files and ahead/behind at a glance. Tap for '
+            'pull, push, stash and pull request.',
+            ('git', 'status', 'branch', 'commit', 'push', 'pull', 'stash',
+             'pr'), 30),
+        _live_menu_spec(
+            'dev_servers', 'Dev Servers', 'server',
+            'Shows the dev servers running on this machine. Tap to open, '
+            'restart or stop one.',
+            ('server', 'port', 'localhost', 'vite', 'node', 'dev'), 10),
+        _live_menu_spec(
+            'docker_status', 'Docker Containers', 'cubes',
+            'Shows how many containers or compose services are up. Tap to '
+            'start, stop, restart or read logs.',
+            ('docker', 'compose', 'container', 'logs'), 20,
+            None if sr.find_binary('docker')
+            else 'Docker CLI not found - install Docker Desktop'),
     )
 
 
+_LIVE_SERVICES: Dict[str, Any] = {
+    'git_context': git_context,
+    'dev_servers': dev_servers,
+    'docker_status': docker_status,
+}
+
+
 class Plugin(SpecPlugin):
-    """Run Tests."""
+    """Run Tests, Git Branch, Dev Servers and Docker Containers."""
 
     def get_info(self) -> PluginInfo:
         return PluginInfo(
@@ -56,7 +100,22 @@ class Plugin(SpecPlugin):
                        config: Dict[str, Any]) -> Dict[str, Any]:
         if action_id == 'dev_run_tests':
             return self._tests(config)
-        return {'success': False, 'message': f'Unknown action: {action_id}'}
+        service = _LIVE_SERVICES.get(action_id)
+        if service is None:
+            return {'success': False, 'message': f'Unknown action: {action_id}'}
+        return self._live(service, config)
+
+    @staticmethod
+    def _live(service, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Status read by default; ``config.op`` runs a menu item."""
+        repo = context.focused_repo(config.get('cwd') or None)
+        op = str(config.get('op') or 'status')
+        try:
+            if op == 'status':
+                return service.status(repo)
+            return service.run_op(repo, op)
+        except sr.BinaryNotFoundError as e:
+            return {'success': False, 'message': str(e)}
 
     def _tests(self, config: Dict[str, Any]) -> Dict[str, Any]:
         repo = context.focused_repo(config.get('cwd') or None)

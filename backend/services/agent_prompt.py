@@ -185,24 +185,39 @@ def _pinned_risk(target: Target) -> Optional[Dict[str, Any]]:
     return None
 
 
+def check_typeable(target: Target) -> Optional[Dict[str, Any]]:
+    """A failure when typing into ``target`` now would be unsafe, else None.
+
+    Re-reads the session's state (what the caller saw may be seconds old):
+    text typed during an approval prompt would answer it, and a busy agent
+    would swallow it.
+    """
+    if target.session_id is None:
+        return None
+    fresh = next((e for e in agent_state.session_entries(target.source)
+                  if e.get('session_id') == target.session_id), None)
+    if fresh is None:
+        return _failure(404, 'That session is no longer running')
+    state = fresh.get('state')
+    if state == agent_state.STATE_PERMISSION:
+        return _failure(409, 'That session is waiting for approval - '
+                             'answer it first')
+    if state == agent_state.STATE_WORKING:
+        return _failure(409, "That session is busy - try again when "
+                             "it's ready")
+    return _pinned_risk(target)
+
+
+def editor_label(source: str) -> Optional[str]:
+    """Product name used in ``send`` failure messages ('Claude Code')."""
+    return _PROFILE_LABEL.get(source)
+
+
 def send_prompt(target: Target, text: str, submit: bool = True) -> Dict[str, Any]:
     """Type ``text`` into ``target``'s session. Never into a blocked one."""
-    if target.session_id is not None:
-        # Re-read: the state the caller saw may be seconds old.
-        fresh = next((e for e in agent_state.session_entries(target.source)
-                      if e.get('session_id') == target.session_id), None)
-        if fresh is None:
-            return _failure(404, 'That session is no longer running')
-        state = fresh.get('state')
-        if state == agent_state.STATE_PERMISSION:
-            return _failure(409, 'That session is waiting for approval - '
-                                 'answer it first')
-        if state == agent_state.STATE_WORKING:
-            return _failure(409, "That session is busy - try again when "
-                                 "it's ready")
-        risk = _pinned_risk(target)
-        if risk:
-            return risk
+    blocked = check_typeable(target)
+    if blocked:
+        return blocked
 
     command_id = PROMPT_SOURCES.get(target.source)
     command = COMMANDS_BY_ID.get(command_id) if command_id else None
@@ -213,7 +228,7 @@ def send_prompt(target: Target, text: str, submit: bool = True) -> Dict[str, Any
 
     result = editor_base.send(
         command, text_override=text, cwd=target.cwd,
-        editor_label=_PROFILE_LABEL.get(target.source))
+        editor_label=editor_label(target.source))
     if not result.get('success'):
         return _failure(502, result.get('message') or 'Could not send the prompt',
                         result.get('details') or '')

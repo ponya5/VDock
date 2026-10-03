@@ -4,11 +4,13 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { settingsSource } from './helpers/settingsSource'
+import { SECTIONS } from '@/settings/registry'
 
 const settings = readFileSync(resolve(__dirname, '../stores/settings.ts'), 'utf-8')
 const appVue = readFileSync(resolve(__dirname, '../App.vue'), 'utf-8')
 const mainCss = readFileSync(resolve(__dirname, '../assets/styles/main.css'), 'utf-8')
-const settingsView = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const settingsView = settingsSource()
 
 describe('dashboard font option', () => {
   it('declares dashboardFont with default + persists it', () => {
@@ -41,8 +43,9 @@ describe('dashboard font option', () => {
 })
 
 describe('screensaver page (DL-054 merged panels)', () => {
-  it('gates the screensaver page on the appearance sub-route', () => {
-    expect(settingsView).toContain("appearanceSubTab === 'screensaver'")
+  it('registers the screensaver page under Appearance', () => {
+    const page = SECTIONS.find((s) => s.id === 'appearance')!.pages.find((p) => p.id === 'screensaver')
+    expect(page?.panels).toEqual(['ScreensaverPanel'])
   })
 
   it('keeps widgets, timing and background as anchored panels', () => {

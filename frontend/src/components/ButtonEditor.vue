@@ -535,7 +535,7 @@
 
         <!-- Press behaviour: when the action fires + push-to-talk release -->
         <div
-          v-if="actionType && actionType !== 'slider' && isExecutableType"
+          v-if="actionType && actionType !== 'slider' && isExecutableType && !isHoldAction"
           class="press-behaviour"
         >
           <div class="form-group">
@@ -1756,6 +1756,9 @@ const catalogFormSpec = computed<ActionSpec | undefined>(() => {
   if (!type || HAND_WRITTEN_TYPES.has(type) || type.startsWith('metric_')) return undefined
   return actionCatalogStore.byActionType[type]
 })
+// A hold action is always push-to-talk (down starts, up stops), so the
+// manual press-behaviour controls would only contradict it.
+const isHoldAction = computed(() => catalogFormSpec.value?.press === 'hold')
 
 // --- Composite action editors -------------------------------------------------
 

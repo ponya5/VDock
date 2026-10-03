@@ -4,12 +4,16 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { settingsSource, settingsViewSource } from './helpers/settingsSource'
+import { SECTIONS, SEARCH } from '@/settings/registry'
 
-const view = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const view = settingsSource()
 
 describe('button behaviour page (DL-054 merged panels)', () => {
-  it('declares appearanceSubTab with buttons default', () => {
-    expect(view).toContain("appearanceSubTab = ref<'buttons' | 'layout' | 'background' | 'screensaver'>('buttons')")
+  it('registers Buttons as the first Appearance page', () => {
+    const appearance = SECTIONS.find((s) => s.id === 'appearance')!
+    expect(appearance.pages.map((p) => p.id)).toEqual(['buttons', 'layout', 'background', 'screensaver'])
+    expect(appearance.pages[0].panels).toEqual(['AppearanceButtons'])
   })
 
   it('renders the merged panels with anchor ids', () => {
@@ -34,9 +38,9 @@ describe('button behaviour page (DL-054 merged panels)', () => {
     expect(view).toContain('await refreshVdock()')
   })
 
-  it('routes settings search through deepTab anchors', () => {
-    expect(view).toContain('deepTab')
-    expect(view).toContain('deepTabAnchor')
-    expect(view).toContain('scrollToPanel(anchor)')
+  it('routes settings search to the Buttons panels through registry anchors', () => {
+    const anchors = SEARCH.filter((e) => e.page === 'buttons').map((e) => e.anchor)
+    expect(anchors).toEqual(expect.arrayContaining(['touch', 'sizing', 'design', 'motion', 'feedback']))
+    expect(settingsViewSource()).toContain('anchor: match.anchor')
   })
 })

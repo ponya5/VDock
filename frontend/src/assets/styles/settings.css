@@ -1,0 +1,1165 @@
+/* Settings page styles (DL-054 row/panel system). Every rule is prefixed with .settings-app. */
+
+
+/* ── Retained functional styles (logs viewer, integrations list, templates) ── */
+
+:where(.settings-app) .log-line.log-error:not(.settings-isolate *) { color: #ff8a80; }
+
+:where(.settings-app) .log-line.log-warn:not(.settings-isolate *) { color: #f0c674; }
+
+:where(.settings-app) .status-icon.success:not(.settings-isolate *) { color: var(--color-success, #27ae60); }
+
+:where(.settings-app) .test-result:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--spacing-sm) 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-danger, #e74c3c);
+  background: color-mix(in srgb, var(--color-danger, #e74c3c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #e74c3c) 35%, transparent);
+}
+
+:where(.settings-app) .test-result.ok:not(.settings-isolate *) {
+  color: var(--color-success, #27ae60);
+  background: color-mix(in srgb, var(--color-success, #27ae60) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #27ae60) 35%, transparent);
+}
+
+:where(.settings-app) .app-integration-list:not(.settings-isolate *) {
+  border: 1px solid var(--glass-border, var(--color-border));
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+:where(.settings-app) .list-header:not(.settings-isolate *) {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr 80px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: rgba(0,0,0,0.15);
+  font-size: clamp(10px, 0.5vw + 8px, 12px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+
+:where(.settings-app) .app-item:not(.settings-isolate *) {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr 80px;
+  gap: var(--spacing-sm);
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-top: 1px solid var(--glass-border, var(--color-border));
+  transition: background var(--transition-fast);
+  min-height: 56px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .app-item:hover:not(.settings-isolate *) { background: var(--color-surface-hover, rgba(255,255,255,0.04)); }
+}
+:where(.settings-app) .app-item:active:not(.settings-isolate *) { background: rgba(255,255,255,0.06); }
+
+:where(.settings-app) .app-item--dev:not(.settings-isolate *) { border-left: 2px solid var(--color-primary, #3498db); }
+
+:where(.settings-app) .app-toolbar:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+:where(.settings-app) .app-search:not(.settings-isolate *) { position: relative; flex: 1; }
+
+:where(.settings-app) .app-search-icon:not(.settings-isolate *) {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+:where(.settings-app) .app-search-input:not(.settings-isolate *) {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 30px 8px 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border, var(--color-border));
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+:where(.settings-app) .app-search-input:focus:not(.settings-isolate *) {
+  outline: none;
+  border-color: var(--color-primary, #3498db);
+}
+
+:where(.settings-app) .app-search-clear:not(.settings-isolate *) {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .app-search-clear:hover:not(.settings-isolate *) { color: var(--color-text); }
+}
+
+:where(.settings-app) .app-count:not(.settings-isolate *) {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+:where(.settings-app) .app-badge:not(.settings-isolate *) {
+  margin-left: var(--spacing-xs);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+:where(.settings-app) .app-badge--profile:not(.settings-isolate *) {
+  background: color-mix(in srgb, var(--color-primary, #3498db) 22%, transparent);
+  color: var(--color-primary, #3498db);
+}
+
+:where(.settings-app) .app-filter-empty:not(.settings-isolate *) { padding: var(--spacing-md); }
+
+:where(.settings-app) .app-info:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+}
+
+:where(.settings-app) .app-icon:not(.settings-isolate *) { color: var(--color-text-secondary); flex-shrink: 0; }
+
+:where(.settings-app) .app-details:not(.settings-isolate *) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+:where(.settings-app) .app-name:not(.settings-isolate *) {
+  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:where(.settings-app) .app-exe:not(.settings-isolate *) {
+  font-size: clamp(10px, 0.5vw + 8px, 12px);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:where(.settings-app) .app-status:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+}
+
+:where(.settings-app) .status-text:not(.settings-isolate *) { color: var(--color-text-secondary); }
+
+:where(.settings-app) .app-scene:not(.settings-isolate *) { min-width: 0; }
+
+:where(.settings-app) .select-sm:not(.settings-isolate *) {
+  width: 100%;
+  padding: 4px 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+  min-height: 32px;
+}
+
+:where(.settings-app) .scene-placeholder:not(.settings-isolate *) { color: var(--color-text-secondary); font-size: clamp(12px, 0.7vw + 9px, 14px); }
+
+:where(.settings-app) .app-actions:not(.settings-isolate *) {
+  display: flex;
+  gap: var(--spacing-xs);
+  justify-content: flex-end;
+}
+
+:where(.settings-app) .btn-icon:not(.settings-isolate *) {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .btn-icon:hover:not(.settings-isolate *) { background: var(--color-surface-hover); color: var(--color-text); }
+}
+
+:where(.settings-app) .btn-icon.btn-primary:not(.settings-isolate *) { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+
+:where(.settings-app) .integration-summary:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+  color: var(--color-text-secondary);
+  border-top: 1px solid var(--glass-border, var(--color-border));
+}
+
+:where(.settings-app) .loading-state:not(.settings-isolate *),
+:where(.settings-app) .empty-state:not(.settings-isolate *) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+  font-size: clamp(12px, 0.7vw + 9px, 14px);
+  text-align: center;
+}
+
+:where(.settings-app) .category-title:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* DL-084 — per-card executable-path gear + inline editor */
+
+/* DL-084 — executable-path popup from the card gear */
+
+/* ==========================================================================
+   DL-054 — Settings redesign: sidebar shell + row/panel system.
+   Ported from the mockup design system (settings.css) into scoped styles.
+   Type scale is em-based off .settings-app's clamp() base so it scales with
+   viewport width; control heights ride --min-touch-target so touch modes
+   still enforce reachable targets.
+   ========================================================================== */
+
+.settings-app:not(.settings-isolate *) {
+  /* surfaces */
+  --bg: #0a111f;
+  --bg-sunken: #070d18;
+  --panel: #111c2f;
+  --panel-2: #16233a;
+  --field: #0d1728;
+  --line: #1f2f4a;
+  --line-soft: #172540;
+  /* ink */
+  --text: #e9eff8;
+  --text-2: #9fb0c9;
+  --text-3: #7286a4;
+  /* accents */
+  --accent: #4a8cff;
+  --accent-2: #2f6fe0;
+  --accent-ghost: rgba(74, 140, 255, 0.14);
+  --ok: #3ddc97;
+  --warn: #f5b547;
+  --danger: #ff7a7a;
+  /* geometry */
+  --r-lg: 14px;
+  --r-md: 10px;
+  --r-sm: 8px;
+  --nav-w: 240px;
+  --rail-w: 320px;
+  --gutter: 24px;
+  --mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+  /* type scale — em units ride the clamp() base below */
+  --fs-xs: 0.79em;
+  --fs-sm: 0.88em;
+  --fs-md: 0.95em;
+  --fs-lg: 1.07em;
+  --fs-xl: 1.55em;
+  --fs-clock: 3.2em;
+  /* touch-aware minimum control height: 36px normal, grows in touch modes */
+  --target: max(34px, calc(var(--min-touch-target, 40px) - 8px));
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.28);
+
+  display: grid;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  width: 100%;
+  /* DL-124: track #app's resolved height instead of re-resolving vh — where
+     100dvh (on #app) and 100vh disagree, a vh-sized child would paint past
+     #app's clipped box and expose the page canvas below. */
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-size: clamp(12.5px, 0.55vw + 8px, 14.5px);
+  line-height: 1.45;
+  /* touch polish: no double-tap-zoom delay, no grey tap flash */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-app .btn:not(.settings-isolate *),
+.settings-app .select:not(.settings-isolate *),
+:where(.settings-app) .nav-item:not(.settings-isolate *),
+:where(.settings-app) .subtab:not(.settings-isolate *),
+:where(.settings-app) .nav-result:not(.settings-isolate *),
+:where(.settings-app) .switch:not(.settings-isolate *),
+:where(.settings-app) .seg label:not(.settings-isolate *),
+:where(.settings-app) .app-item:not(.settings-isolate *) {
+  touch-action: manipulation;
+}
+
+.settings-app :not(.settings-isolate *)::selection { background: var(--accent-ghost); }
+.settings-app a:not(.settings-isolate *) { color: var(--accent); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) {
+  .settings-app a:hover:not(.settings-isolate *) { color: #7fb0ff; }
+}
+
+/* --- left rail ------------------------------------------------------------ */
+
+:where(.settings-app) .nav:not(.settings-isolate *) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 12px 12px;
+  gap: 14px;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--line-soft);
+}
+
+:where(.settings-app) .nav-brand:not(.settings-isolate *) { display: flex; align-items: center; gap: 10px; padding: 2px 6px 0; }
+
+:where(.settings-app) .nav-mark:not(.settings-isolate *) {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #1d3a68, #142743);
+  border: 1px solid #2a4a7d;
+  color: #9dc2ff;
+  flex: none;
+  overflow: hidden;
+}
+:where(.settings-app) .nav-mark-img:not(.settings-isolate *) { width: 100%; height: 100%; object-fit: cover; }
+
+:where(.settings-app) .nav-name:not(.settings-isolate *) { font-size: var(--fs-lg); font-weight: 650; letter-spacing: 0.18em; text-transform: uppercase; }
+
+:where(.settings-app) .nav-search:not(.settings-isolate *) { position: relative; display: flex; align-items: center; }
+:where(.settings-app) .nav-search-icon:not(.settings-isolate *) {
+  position: absolute;
+  left: 10px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+:where(.settings-app) .nav-search input:not(.settings-isolate *) {
+  width: 100%;
+  min-height: var(--target);
+  padding: 8px 10px 8px 32px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+}
+:where(.settings-app) .nav-search input:not(.settings-isolate *)::placeholder { color: var(--text-3); }
+:where(.settings-app) .nav-search input:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
+/* search results dropdown under the field */
+:where(.settings-app) .nav-results:not(.settings-isolate *) {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: min(46vh, 360px);
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transform-origin: top;
+  animation: popover-in 160ms var(--ease-out, ease);
+}
+@keyframes popover-in {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+}
+:where(.settings-app) .nav-result:not(.settings-isolate *) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 9px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .nav-result:hover:not(.settings-isolate *) { background: #0e1a2c; color: var(--text); }
+}
+:where(.settings-app) .nav-result:active:not(.settings-isolate *) { transform: scale(0.98); }
+:where(.settings-app) .nav-result:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: -2px; }
+:where(.settings-app) .nav-result-icon:not(.settings-isolate *) { flex: none; width: 14px; color: var(--text-3); }
+:where(.settings-app) .nav-result-label:not(.settings-isolate *) { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.settings-app) .nav-result-crumb:not(.settings-isolate *) { flex-basis: 100%; margin-left: 23px; color: var(--text-3); font-size: var(--fs-xs); }
+:where(.settings-app) .nav-results-empty:not(.settings-isolate *) { padding: 10px; color: var(--text-3); font-size: var(--fs-sm); text-align: center; }
+
+:where(.settings-app) .nav-scroll:not(.settings-isolate *) { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+:where(.settings-app) .nav-group + .nav-group:not(.settings-isolate *) { margin-top: 2px; }
+
+:where(.settings-app) .nav-item:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--target);
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .nav-item:hover:not(.settings-isolate *) { background: #0e1a2c; color: var(--text); }
+}
+:where(.settings-app) .nav-item:active:not(.settings-isolate *) { transform: scale(0.98); }
+:where(.settings-app) .nav-item:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: -2px; }
+:where(.settings-app) .nav-item[aria-current="page"]:not(.settings-isolate *),
+:where(.settings-app) .nav-item.is-open:not(.settings-isolate *) {
+  background: #13263f;
+  color: var(--text);
+  font-weight: 600;
+}
+:where(.settings-app) .nav-item svg:not(.settings-isolate *) { flex: none; color: currentColor; opacity: 0.9; }
+
+/* --- dock footer bar ------------------------------------------------------- */
+
+/* Full-width chrome bar under nav + main. bg-sunken keeps it visually
+   continuous with the nav rail; sticky bottom:0 pins it in the ≤880px
+   body-scroll layout (no-op in the fixed-height desktop shell). The
+   centred credit is the only content — actions live in the topbar. */
+:where(.settings-app) .settings-dock:not(.settings-isolate *) {
+  grid-column: 1 / -1;
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 7px var(--gutter);
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-sunken);
+}
+/* the credit block itself is SiteFooter.vue (shared with /guide). */
+:where(.settings-app) .nav-item-ext:not(.settings-isolate *) { font-size: 0.62em; opacity: 0.45; margin-left: auto; }
+
+/* --- main column ---------------------------------------------------------- */
+
+/* .main is the fixed-height column; .content is the scroller. */
+:where(.settings-app) .main:not(.settings-isolate *) { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+:where(.settings-app) .topbar:not(.settings-isolate *) {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px var(--gutter) 14px;
+  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, #0c1424, var(--bg));
+}
+:where(.settings-app) .topbar-text:not(.settings-isolate *) { min-width: 0; }
+:where(.settings-app) .topbar h1:not(.settings-isolate *) { margin: 0; font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.01em; }
+:where(.settings-app) .topbar .crumb:not(.settings-isolate *) { margin: 0 0 2px; color: var(--text-3); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+:where(.settings-app) .topbar p:not(.settings-isolate *) { margin: 4px 0 0; color: var(--text-2); max-width: 62ch; font-size: var(--fs-md); }
+:where(.settings-app) .topbar-actions:not(.settings-isolate *) { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+:where(.settings-app) .topbar-divider:not(.settings-isolate *) { width: 1px; height: 20px; background: var(--line); margin: 0 3px; flex: none; }
+:where(.settings-app) .draft-chip:not(.settings-isolate *) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(245, 181, 71, 0.10);
+  border: 1px solid rgba(245, 181, 71, 0.35);
+  color: var(--warn);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+:where(.settings-app) .draft-dot:not(.settings-isolate *) { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); flex: none; }
+
+/* DL-127: in-content sub-tabs — a fixed strip between topbar and content,
+   scrolls sideways when the labels overflow a narrow panel. */
+:where(.settings-app) .subtab-bar:not(.settings-isolate *) {
+  display: flex;
+  gap: 4px;
+  padding: 8px var(--gutter);
+  border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+}
+:where(.settings-app) .subtab-bar:not(.settings-isolate *)::-webkit-scrollbar { display: none; }
+:where(.settings-app) .subtab:not(.settings-isolate *) {
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--target) - 12px);
+  padding: 5px 14px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .subtab:hover:not(.settings-isolate *) { color: var(--text); background: #0e1a2c; }
+}
+:where(.settings-app) .subtab:active:not(.settings-isolate *) { transform: scale(0.97); }
+:where(.settings-app) .subtab:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: -2px; }
+:where(.settings-app) .subtab[aria-selected="true"]:not(.settings-isolate *) { background: var(--accent-2); color: #fff; }
+
+:where(.settings-app) .content:not(.settings-isolate *) {
+  /* backstop: contain any absolutely-positioned .sr-only descendant so it can
+     never extend #app's scrollable overflow (DL-140 F/U2) */
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px var(--gutter) 32px;
+  display: grid;
+  gap: var(--gutter);
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+:where(.settings-app) .content.has-rail:not(.settings-isolate *) { grid-template-columns: minmax(0, 1fr) var(--rail-w); align-items: start; }
+:where(.settings-app) .content:not(.has-rail) .col:not(.settings-isolate *) { max-width: 1000px; }
+/* Guide tab — the panel fills the viewport and scrolls internally. */
+
+:where(.settings-app) .col:not(.settings-isolate *) { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+:where(.settings-app) .rail:not(.settings-isolate *) { position: sticky; top: 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* page enter: panels rise in with a short stagger — page switches mount via
+   v-if so the animation replays each navigation */
+:where(.settings-app) .col > *:not(.settings-isolate *),
+:where(.settings-app) .rail > *:not(.settings-isolate *) {
+  animation: page-in 0.26s var(--ease-out, ease) backwards;
+}
+:where(.settings-app) .col > *:nth-child(2):not(.settings-isolate *),
+:where(.settings-app) .rail > *:nth-child(2):not(.settings-isolate *) { animation-delay: 45ms; }
+:where(.settings-app) .col > *:nth-child(3):not(.settings-isolate *),
+:where(.settings-app) .rail > *:nth-child(3):not(.settings-isolate *) { animation-delay: 85ms; }
+:where(.settings-app) .col > *:nth-child(4):not(.settings-isolate *),
+:where(.settings-app) .rail > *:nth-child(4):not(.settings-isolate *) { animation-delay: 120ms; }
+:where(.settings-app) .col > *:nth-child(n+5):not(.settings-isolate *),
+:where(.settings-app) .rail > *:nth-child(n+5):not(.settings-isolate *) { animation-delay: 150ms; }
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+/* ==========================================================================
+   Panels & rows
+   ========================================================================== */
+
+:where(.settings-app) .panel:not(.settings-isolate *) {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  scroll-margin-top: 16px;
+}
+:where(.settings-app) .panel-head:not(.settings-isolate *) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--line-soft);
+}
+:where(.settings-app) .panel-head h2:not(.settings-isolate *) {
+  margin: 0;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+:where(.settings-app) .panel-head .hint:not(.settings-isolate *) { color: var(--text-3); font-size: var(--fs-sm); }
+:where(.settings-app) .panel-head .spacer:not(.settings-isolate *) { margin-left: auto; }
+
+:where(.settings-app) .panel-body:not(.settings-isolate *) { padding: 4px 18px; }
+:where(.settings-app) .panel-body.flush:not(.settings-isolate *) { padding: 0; }
+:where(.settings-app) .panel-body.pad:not(.settings-isolate *) { padding: 16px 18px; }
+
+/* one setting = one row: label + description left, control right */
+:where(.settings-app) .row:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+:where(.settings-app) .row:last-child:not(.settings-isolate *) { border-bottom: 0; }
+:where(.settings-app) .row-text:not(.settings-isolate *) { min-width: 0; flex: 1 1 auto; }
+:where(.settings-app) .row-text .label:not(.settings-isolate *) { display: block; font-size: var(--fs-md); font-weight: 560; color: var(--text); }
+:where(.settings-app) .row-text p:not(.settings-isolate *) { margin: 2px 0 0; color: var(--text-3); font-size: var(--fs-sm); max-width: 64ch; }
+:where(.settings-app) .row-control:not(.settings-isolate *) { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* stacked variant for wide controls */
+:where(.settings-app) .row.stack:not(.settings-isolate *) { display: block; }
+:where(.settings-app) .row.stack .row-control:not(.settings-isolate *) { margin-top: 10px; display: block; }
+:where(.settings-app) .row-head:not(.settings-isolate *) { display: flex; align-items: center; gap: 10px; }
+
+/* expanded inline detail under a widget row */
+:where(.settings-app) .row-inset:not(.settings-isolate *) {
+  margin: 0 0 6px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+}
+:where(.settings-app) .widget-detail:not(.settings-isolate *) { display: block; }
+:where(.settings-app) .widget-detail-foot:not(.settings-isolate *) { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+:where(.settings-app) .field-label:not(.settings-isolate *) { font-size: var(--fs-sm); color: var(--text-2); }
+:where(.settings-app) .field-note:not(.settings-isolate *) { margin: 4px 0 0; font-size: var(--fs-xs); }
+:where(.settings-app) .field-inline:not(.settings-isolate *) { display: flex; align-items: center; gap: 10px; }
+:where(.settings-app) .val-inline:not(.settings-isolate *) { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   Controls — scoped overrides of the global .btn/.select/.input so the
+   settings chrome can be denser than the dashboard's touch-first sizing.
+   ========================================================================== */
+
+.settings-app .btn:not(.settings-isolate *) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--target);
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.14s var(--ease-out, ease);
+}
+.settings-app .btn:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-app .btn.primary:not(.settings-isolate *) { background: var(--accent-2); border-color: #3c7ef0; color: #fff; }
+.settings-app .btn.ghost:not(.settings-isolate *) { background: transparent; border-color: var(--line); color: var(--text-2); }
+.settings-app .btn.quiet:not(.settings-isolate *) { background: transparent; border-color: transparent; color: var(--text-2); }
+.settings-app .btn.danger:not(.settings-isolate *) { background: transparent; border-color: #5a2c33; color: var(--danger); }
+@media (hover: hover) and (pointer: fine) {
+  .settings-app .btn:hover:not(:disabled):not(.settings-isolate *) { background: #1b2b45; border-color: #2a3e60; }
+  .settings-app .btn.primary:hover:not(:disabled):not(.settings-isolate *) { background: #3b7ded; }
+  .settings-app .btn.ghost:hover:not(:disabled):not(.settings-isolate *) { color: var(--text); }
+  .settings-app .btn.quiet:hover:not(:disabled):not(.settings-isolate *) { background: var(--panel-2); color: var(--text); }
+  .settings-app .btn.danger:hover:not(:disabled):not(.settings-isolate *) { background: rgba(255, 122, 122, 0.1); border-color: var(--danger); }
+}
+.settings-app .btn:active:not(:disabled):not(.settings-isolate *) { transform: scale(0.97); }
+.settings-app .btn.sm:not(.settings-isolate *) { min-height: calc(var(--target) - 6px); padding: 0 10px; font-size: var(--fs-sm); }
+.settings-app .btn[disabled]:not(.settings-isolate *) { opacity: 0.45; cursor: not-allowed; }
+
+/* --- switch --------------------------------------------------------------- */
+
+/* position:relative contains the visually-hidden input + .sr-only label. Without
+   it they're absolutely positioned against the page, escape .content's clip,
+   and focusing one scrolls the overflow:hidden #app (DL-140 F/U2). */
+:where(.settings-app) .switch:not(.settings-isolate *) { position: relative; display: inline-flex; align-items: center; min-height: calc(var(--target) - 6px); cursor: pointer; }
+:where(.settings-app) .switch input:not(.settings-isolate *) { position: absolute; opacity: 0; width: 0; height: 0; }
+:where(.settings-app) .switch .track:not(.settings-isolate *) {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #24344f;
+  border: 1px solid #2c3f5f;
+  transition: background 0.15s ease;
+  flex: none;
+}
+:where(.settings-app) .switch .track:not(.settings-isolate *)::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #cfdcee;
+  transition: transform 0.22s cubic-bezier(0.34, 1.3, 0.64, 1), background 0.15s ease;
+}
+:where(.settings-app) .switch input:checked + .track:not(.settings-isolate *) { background: var(--accent-2); border-color: #4a86e8; }
+:where(.settings-app) .switch input:checked + .track:not(.settings-isolate *)::after { transform: translateX(20px); background: #fff; }
+:where(.settings-app) .switch input:focus-visible + .track:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:where(.settings-app) .switch input:disabled + .track:not(.settings-isolate *) { opacity: 0.45; }
+
+/* --- segmented ------------------------------------------------------------ */
+
+:where(.settings-app) .seg:not(.settings-isolate *) {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--field);
+  gap: 2px;
+}
+:where(.settings-app) .seg label:not(.settings-isolate *) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: calc(var(--target) - 8px);
+  padding: 5px 13px;
+  border-radius: 7px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+:where(.settings-app) .seg input:not(.settings-isolate *) { position: absolute; opacity: 0; width: 0; height: 0; }
+@media (hover: hover) and (pointer: fine) {
+  :where(.settings-app) .seg label:hover:not(.settings-isolate *) { color: var(--text); }
+}
+:where(.settings-app) .seg label:active:not(.settings-isolate *) { transform: scale(0.97); }
+:where(.settings-app) .seg label:has(input:checked):not(.settings-isolate *) { background: var(--accent-2); color: #fff; }
+:where(.settings-app) .seg label:has(input:focus-visible):not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:where(.settings-app) .seg .sub:not(.settings-isolate *) { opacity: 0.7; font-weight: 450; font-variant-numeric: tabular-nums; }
+
+/* --- select / text input -------------------------------------------------- */
+
+.settings-app .select:not(.settings-isolate *),
+.settings-app .input:not(.settings-isolate *) {
+  min-height: var(--target);
+  padding: 0 32px 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237286a4' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .settings-app .select:hover:not(.settings-isolate *),
+.settings-app .input:hover:not(.settings-isolate *) { border-color: #2c4368; }
+}
+.settings-app .input:not(.settings-isolate *) { padding: 8px 12px; background-image: none; cursor: text; font-variant-numeric: tabular-nums; }
+.settings-app .textarea:not(.settings-isolate *) { padding: 10px 12px; line-height: 1.5; resize: vertical; min-height: 72px; font-family: var(--mono); font-size: var(--fs-sm); }
+.settings-app .select:focus-visible:not(.settings-isolate *),
+.settings-app .input:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.settings-app .select.w-220:not(.settings-isolate *) { width: 220px; }
+.settings-app .input.w-110:not(.settings-isolate *) { width: 110px; }
+.settings-app input[type="number"].input:not(.settings-isolate *) { padding-right: 12px; }
+
+/* --- slider --------------------------------------------------------------- */
+
+:where(.settings-app) .slider:not(.settings-isolate *) { display: flex; align-items: center; gap: 12px; width: 100%; }
+:where(.settings-app) .slider input[type="range"]:not(.settings-isolate *),
+:where(.settings-app) .slider-bare:not(.settings-isolate *) {
+  flex: 1 1 auto;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 6px;
+  min-width: 120px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 50%), #22334f var(--fill, 50%));
+  cursor: pointer;
+}
+:where(.settings-app) .slider input[type="range"]:not(.settings-isolate *)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 0.12s var(--ease-out, ease);
+}
+:where(.settings-app) .slider input[type="range"]:active:not(.settings-isolate *)::-webkit-slider-thumb { transform: scale(1.2); }
+:where(.settings-app) .slider input[type="range"]:not(.settings-isolate *)::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent);
+  transition: transform 0.12s var(--ease-out, ease);
+}
+:where(.settings-app) .slider input[type="range"]:active:not(.settings-isolate *)::-moz-range-thumb { transform: scale(1.2); }
+:where(.settings-app) .slider input[type="range"]:focus-visible:not(.settings-isolate *) { outline: 2px solid var(--accent); outline-offset: 6px; }
+:where(.settings-app) .slider .val:not(.settings-isolate *) { flex: none; min-width: 52px; text-align: right; color: var(--text); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+:where(.settings-app) .slider .cap:not(.settings-isolate *) { flex: none; color: var(--text-3); font-size: var(--fs-xs); }
+
+/* --- chips / meta --------------------------------------------------------- */
+
+:where(.settings-app) .chips:not(.settings-isolate *) { display: flex; flex-wrap: wrap; gap: 6px; }
+:where(.settings-app) .chip:not(.settings-isolate *) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+:where(.settings-app) .chip b:not(.settings-isolate *) { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+:where(.settings-app) .chip-warn:not(.settings-isolate *) { border-color: #5c4a1f; background: rgba(245, 181, 71, 0.09); color: #f2cd8d; }
+:where(.settings-app) .row-now:not(.settings-isolate *) { margin-left: 8px; color: #9cc0ff; border-color: #2c4a7d; background: var(--accent-ghost); }
+:where(.settings-app) .row-empty:not(.settings-isolate *) { padding: 10px 0; }
+:where(.settings-app) .row-status:not(.settings-isolate *) { margin-left: 4px; }
+:where(.settings-app) .kv-code:not(.settings-isolate *) { font-family: var(--mono); color: var(--text); }
+
+:where(.settings-app) .status-msg:not(.settings-isolate *) {
+  font-size: clamp(11px, 0.6vw + 8px, 13px);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin-top: var(--spacing-xs);
+}
+:where(.settings-app) .status-success:not(.settings-isolate *) {
+  background: rgba(39, 174, 96, 0.15);
+  color: #27ae60;
+}
+:where(.settings-app) .status-error:not(.settings-isolate *) {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+}
+
+:where(.settings-app) .note:not(.settings-isolate *) {
+  display: flex;
+  gap: 9px;
+  padding: 11px 12px;
+  border-radius: var(--r-md);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+:where(.settings-app) .note svg:not(.settings-isolate *) { flex: none; margin-top: 1px; }
+:where(.settings-app) .note code:not(.settings-isolate *) { font-family: var(--mono); color: var(--text); font-size: var(--fs-sm); }
+
+
+/* ==========================================================================
+   Pickers (fonts, backgrounds, uploads)
+   ========================================================================== */
+
+:where(.settings-app) .picker:not(.settings-isolate *) { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+:where(.settings-app) .picker-3:not(.settings-isolate *) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+:where(.settings-app) .pick:not(.settings-isolate *) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: var(--field);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+@keyframes tick-pop {
+  from { transform: scale(0.3); opacity: 0; }
+}
+:where(.settings-app) .picker-row:not(.settings-isolate *) { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+:where(.settings-app) .design-row .design-swatch-grid { width: 100%; }
+
+/* upload drop zone */
+:where(.settings-app) .drop:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  border: 1px dashed #2b4066;
+  background: var(--field);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+:where(.settings-app) .drop .btn:not(.settings-isolate *) { margin-left: auto; }
+:where(.settings-app) .drop .btn ~ .btn:not(.settings-isolate *) { margin-left: 0; }
+
+:where(.settings-app) .scene-thumb:not(.settings-isolate *) {
+  width: 74px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+/* ==========================================================================
+   Preview rail
+   ========================================================================== */
+
+:where(.settings-app) .preview:not(.settings-isolate *) { border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--panel); overflow: hidden; }
+:where(.settings-app) .preview-head:not(.settings-isolate *) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+:where(.settings-app) .preview-stage:not(.settings-isolate *) {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  min-height: 180px;
+  background: radial-gradient(120% 90% at 50% 0%, #17294a 0%, #0c1526 60%, #0a111f 100%);
+}
+:where(.settings-app) .preview-stage-bg:not(.settings-isolate *) { background-size: cover; background-position: center; position: relative; }
+/* scaled-viewport host for real component backgrounds (DL-059) */
+:where(.settings-app) .preview-bg-clip:not(.settings-isolate *) { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; z-index: 0; }
+:where(.settings-app) .preview-bg-viewport:not(.settings-isolate *) { width: 100vw; height: 100vh; transform-origin: top left; }
+:where(.settings-app) .preview-bg-note:not(.settings-isolate *) { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: var(--color-text-secondary, #94a3b8); text-align: center; padding: 0.5rem; pointer-events: none; }
+:where(.settings-app) .preview-stage-bg .mock-grid:not(.settings-isolate *) { position: relative; z-index: 1; }
+:where(.settings-app) .preview-stage-grid:not(.settings-isolate *) { min-height: 150px; }
+:where(.settings-app) .preview-stage-bg-tall:not(.settings-isolate *) { min-height: 240px; }
+:where(.settings-app) .preview-foot:not(.settings-isolate *) { padding: 11px 14px; border-top: 1px solid var(--line-soft); color: var(--text-3); font-size: var(--fs-xs); }
+
+/* ghost key grid for layout/background previews */
+:where(.settings-app) .mock-grid:not(.settings-isolate *) { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
+:where(.settings-app) .mock-key:not(.settings-isolate *) {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1d3a68, #142743);
+  border: 1px solid #2a4a7d;
+}
+:where(.settings-app) .preview-stage-grid .mock-grid:not(.settings-isolate *) { grid-template-columns: repeat(4, 1fr); max-width: 240px; }
+
+/* In-context grid steppers — resize the real page grid from the preview */
+:where(.settings-app) .grid-foot:not(.settings-isolate *) { display: flex; flex-direction: column; gap: 8px; }
+:where(.settings-app) .grid-steppers:not(.settings-isolate *) { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--text-2); }
+:where(.settings-app) .grid-ctl:not(.settings-isolate *) { display: inline-flex; align-items: center; gap: 6px; }
+
+/* mini dashboard mock (Layout & sidebar preview rail) */
+:where(.settings-app) .mock-dash:not(.settings-isolate *) { display: flex; gap: 12px; width: 100%; max-width: 300px; align-items: stretch; }
+:where(.settings-app) .mock-dash-side:not(.settings-isolate *) { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+:where(.settings-app) .mock-dash-grid:not(.settings-isolate *) { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1; align-content: start; }
+
+/* screensaver mock */
+:where(.settings-app) .ss-mock:not(.settings-isolate *) { display: grid; place-items: center; gap: 6px; text-align: center; color: #dfe9f7; }
+:where(.settings-app) .ss-mock-clock:not(.settings-isolate *) { font-size: var(--fs-clock); font-weight: 250; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+:where(.settings-app) .ss-mock-date:not(.settings-isolate *) { font-size: var(--fs-sm); color: rgba(223, 233, 247, 0.7); }
+:where(.settings-app) .ss-mock-chips:not(.settings-isolate *) { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+:where(.settings-app) .ss-mock-ticker:not(.settings-isolate *) { margin-top: 10px; font-size: var(--fs-xs); color: rgba(223, 233, 247, 0.55); }
+
+/* ==========================================================================
+   QR + server rows
+   ========================================================================== */
+/* Thumbnail beside the QR code showing the mobile chrome the scanned link
+   opens into — the QR itself only proves the link works, not what the
+   phone will actually look like once it's on the other end. Pushed to the
+   right edge of the row (margin-left: auto) and sized well past the QR box
+   so it reads as the payoff, not an afterthought next to it. */
+
+/* ==========================================================================
+   About
+   ========================================================================== */
+:where(.settings-app) .about-lead:not(.settings-isolate *) { margin: 4px 0 0; color: var(--text-2); font-size: var(--fs-md); max-width: 56ch; }
+:where(.settings-app) .about-meta:not(.settings-isolate *) { margin-left: auto; text-align: right; color: var(--text-3); font-size: var(--fs-sm); }
+:where(.settings-app) .about-links:not(.settings-isolate *) { display: flex; flex-wrap: wrap; gap: 10px; }
+:where(.settings-app) .about-links .btn:not(.settings-isolate *) { text-decoration: none; }
+
+/* Sticky to the .content scrollport bottom: the support CTA never gets
+   clipped by the dock on short viewports — it floats in view until the
+   natural end of the column scrolls it home. */
+
+/* ==========================================================================
+   Misc utilities
+   ========================================================================== */
+
+:where(.settings-app) .grid-3:not(.settings-isolate *) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+:where(.settings-app) .stack-8:not(.settings-isolate *) { display: flex; flex-direction: column; gap: 8px; }
+:where(.settings-app) .stack-12:not(.settings-isolate *) { display: flex; flex-direction: column; gap: 12px; }
+:where(.settings-app) .muted:not(.settings-isolate *) { color: var(--text-3); }
+:where(.settings-app) .spacer:not(.settings-isolate *) { flex: 1; }
+:where(.settings-app) .sr-only:not(.settings-isolate *) {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:where(.settings-app) .chev:not(.settings-isolate *) { transition: transform 0.2s var(--ease-out, ease); }
+:where(.settings-app) .chevron-open:not(.settings-isolate *) { transform: rotate(180deg); }
+
+/* Collapse inner wrapper participates as a normal block child */
+:where(.settings-app) .collapse-inner { min-width: 0; }
+
+/* ==========================================================================
+   Responsive — 1024×600 touch panel and up
+   ========================================================================== */
+
+@media (max-width: 1180px) {
+  :where(.settings-app) .content.has-rail:not(.settings-isolate *) { grid-template-columns: minmax(0, 1fr); }
+  :where(.settings-app) .rail:not(.settings-isolate *) { position: static; }
+}
+
+@media (max-width: 1100px) {
+  .settings-app:not(.settings-isolate *) { --nav-w: 212px; --gutter: 18px; --rail-w: 300px; }
+  :where(.settings-app) .topbar:not(.settings-isolate *) { padding-top: 14px; padding-bottom: 12px; }
+  :where(.settings-app) .topbar p:not(.settings-isolate *) { display: none; }
+  :where(.settings-app) .content:not(.settings-isolate *) { padding-top: 16px; }
+}
+
+/* keep usable height on the 600px-tall panel */
+@media (max-height: 700px) {
+  :where(.settings-app) .settings-dock:not(.settings-isolate *) { padding-top: 5px; padding-bottom: 5px; }
+  :where(.settings-app) .nav:not(.settings-isolate *) { padding-top: 10px; gap: 10px; }
+  :where(.settings-app) .nav-brand:not(.settings-isolate *) { padding-top: 0; }
+  :where(.settings-app) .topbar:not(.settings-isolate *) { padding-top: 12px; padding-bottom: 10px; }
+  :where(.settings-app) .content:not(.settings-isolate *) { padding-top: 14px; padding-bottom: 20px; }
+  :where(.settings-app) .panel-head:not(.settings-isolate *) { padding-top: 10px; padding-bottom: 9px; }
+  :where(.settings-app) .row:not(.settings-isolate *) { padding-top: 10px; padding-bottom: 10px; }
+}
+
+/* DL-140 F/U: body-scroll fallback when the viewport is too small for the
+   fixed-height shell — narrow width (≤880px) OR collapsed height (≤480px).
+   The height branch covers the panel's on-screen keyboard: index.html sets
+   interactive-widget=resizes-content, so the OSK shrinks the layout viewport
+   and 100dvh collapses, squeezing the whole grid into a ~90px sliver with
+   the sticky dock pinned mid-screen. The matching #app clip release lives
+   in App.vue. */
+@media (max-width: 880px), (max-height: 480px) {
+  .settings-app:not(.settings-isolate *) { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
+  :where(.settings-app) .main:not(.settings-isolate *),
+:where(.settings-app) .content:not(.settings-isolate *) { overflow: visible; }
+  :where(.settings-app) .topbar:not(.settings-isolate *) { position: static; }
+  /* a viewport-pinned dock floating over content is the reported break —
+     in a scrolling document the footer belongs at the end of the page */
+  :where(.settings-app) .settings-dock:not(.settings-isolate *) { position: static; }
+}
+
+@media (max-width: 880px) {
+  .settings-app:not(.settings-isolate *) { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+  :where(.settings-app) .nav:not(.settings-isolate *) {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+    max-height: 52vh;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    /* --bg-1 doesn't exist in this palette — it silently resolved transparent,
+       so rows painted through the pinned rail once the page could scroll. */
+    background: var(--bg);
+  }
+  :where(.settings-app) .row:not(.settings-isolate *) { flex-direction: column; align-items: flex-start; gap: 10px; }
+  :where(.settings-app) .row-control:not(.settings-isolate *) { width: 100%; justify-content: flex-start; }
+  :where(.settings-app) .list-header:not(.settings-isolate *),
+:where(.settings-app) .app-item:not(.settings-isolate *) { grid-template-columns: 1fr 60px; }
+  :where(.settings-app) .list-header span:nth-child(3):not(.settings-isolate *),
+:where(.settings-app) .list-header span:nth-child(4):not(.settings-isolate *),
+:where(.settings-app) .app-item .app-scene:not(.settings-isolate *),
+:where(.settings-app) .app-item .app-actions:not(.settings-isolate *) { display: none; }
+  :where(.settings-app) .grid-3:not(.settings-isolate *) { grid-template-columns: 1fr; }
+  :where(.settings-app) .about-meta:not(.settings-isolate *) { margin-left: 0; text-align: left; }
+}
+
+/* DL-123: spectrum skin picker — live canvas swatches. */
+:where(.settings-app) .skin-grid:not(.settings-isolate *) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+:where(.settings-app) .skin-card:not(.settings-isolate *) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.settings-app) .nav-item:not(.settings-isolate *),
+:where(.settings-app) .subtab:not(.settings-isolate *),
+:where(.settings-app) .nav-result:not(.settings-isolate *),
+:where(.settings-app) .chev:not(.settings-isolate *),
+:where(.settings-app) .switch .track:not(.settings-isolate *),
+:where(.settings-app) .switch .track:not(.settings-isolate *)::after,
+:where(.settings-app) .seg label:not(.settings-isolate *),
+.settings-app .btn:not(.settings-isolate *),
+.settings-app .select:not(.settings-isolate *),
+.settings-app .input:not(.settings-isolate *),
+:where(.settings-app) .slider input[type="range"]:not(.settings-isolate *),
+:where(.settings-app) .slider input[type="range"]:not(.settings-isolate *)::-webkit-slider-thumb,
+:where(.settings-app) .slider input[type="range"]:not(.settings-isolate *)::-moz-range-thumb {
+    transition: none;
+  }
+  :where(.settings-app) .nav-results:not(.settings-isolate *),
+:where(.settings-app) .col > *:not(.settings-isolate *),
+:where(.settings-app) .rail > *:not(.settings-isolate *) {
+    animation: none;
+  }
+}

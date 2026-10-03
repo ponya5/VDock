@@ -15,6 +15,7 @@ session is re-checked server-side to still be in ``permission`` first.
 """
 import logging
 import time
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
@@ -22,7 +23,7 @@ from flask import Blueprint, jsonify, request
 from auth import require_auth
 from integrations import agent_state, editor_base
 from integrations.keymaps import COMMANDS_BY_ID
-from services import agent_prompt, turn_baseline
+from services import agent_prompt, claude_usage, turn_baseline
 from utils import window_focus
 
 logger = logging.getLogger('vdock')
@@ -49,6 +50,8 @@ _STATE_RANK = {
 }
 
 REPLY_EXCERPT_CHARS = 280
+
+COMPACT_COMMAND = '/compact'
 
 
 def _excerpt(text: str, limit: int) -> str:
@@ -82,7 +85,23 @@ def _row(entry: Dict[str, Any], now: float) -> Dict[str, Any]:
         'can_focus': source in _MARKER_BY_SOURCE,
         'can_prompt': (source in agent_prompt.PROMPT_SOURCES
                        and state == agent_state.STATE_READY),
+        'usage': _usage(source, entry.get('session_id')),
     }
+
+
+def _usage(source: str, session_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Cost + context chip data for Claude sessions; never breaks the list."""
+    if source != 'claude' or not session_id:
+        return None
+    try:
+        usage = claude_usage.session_usage(session_id, date.today())
+    except Exception as error:  # a bad transcript must not hide the sessions
+        logger.debug('Usage unavailable for %s: %s', session_id, error)
+        return None
+    if usage is None:
+        return None
+    return {key: usage[key] for key in
+            ('cost_usd', 'estimate', 'context_pct', 'status')}
 
 
 def mission_rows() -> List[Dict[str, Any]]:
@@ -230,6 +249,32 @@ def prompt_session():
             result.get('status_code', 502)
     logger.info('Mission control: prompt %s -> %s session %s',
                 preset or 'custom', source, session_id)
+    return jsonify({'success': True})
+
+
+@agent_mission_bp.route('/api/agent-mission/compact', methods=['POST'])
+@require_auth
+def compact_session():
+    """Type ``/compact`` into ONE ready Claude Code session.
+
+    A dedicated verb instead of a generic "run command": the only thing this
+    can ever type is ``/compact``, and ``send_prompt`` re-checks the session
+    is ``ready`` (never into a permission prompt or a busy turn).
+    """
+    _, source, session_id = _body_target()
+    if source != 'claude':
+        return jsonify({'success': False,
+                        'error': 'Only Claude Code sessions can be compacted'}), 400
+    target = agent_prompt.resolve_target(source=source, session_id=session_id)
+    if target is None:
+        return jsonify({'success': False,
+                        'error': 'Session is no longer running'}), 404
+    result = agent_prompt.send_prompt(target, COMPACT_COMMAND)
+    if not result.get('success'):
+        return jsonify({'success': False, 'error': result.get('message'),
+                        'details': result.get('details')}), \
+            result.get('status_code', 502)
+    logger.info('Mission control: compact claude session %s', session_id)
     return jsonify({'success': True})
 
 

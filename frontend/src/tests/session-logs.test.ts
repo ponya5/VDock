@@ -4,6 +4,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { settingsSource } from './helpers/settingsSource'
+import { SECTIONS } from '@/settings/registry'
 
 const root = resolve(__dirname, '..', '..', '..')
 const logsRoute = readFileSync(resolve(root, 'backend/routes/logs.py'), 'utf-8')
@@ -12,7 +14,7 @@ const launcher = readFileSync(resolve(root, 'scripts/VDock-Launcher.py'), 'utf-8
 const appPy = readFileSync(resolve(root, 'backend/app.py'), 'utf-8')
 const sessionLog = readFileSync(resolve(__dirname, '../services/sessionLog.ts'), 'utf-8')
 const mainTs = readFileSync(resolve(__dirname, '../main.ts'), 'utf-8')
-const settingsView = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const settingsView = settingsSource()
 
 describe('bounded log storage', () => {
   it('rotates the app log via RotatingFileHandler', () => {
@@ -73,9 +75,10 @@ describe('frontend session capture', () => {
 
 describe('logs settings tab', () => {
   it('adds a Logs tab and loads files when activated', () => {
-    expect(settingsView).toContain("id: 'logs'")
-    expect(settingsView).toContain("activeTab === 'logs'")
-    expect(settingsView).toContain("if (tab === 'logs')")
+    const logs = SECTIONS.find((s) => s.id === 'system')!.pages.find((p) => p.id === 'logs')
+    expect(logs?.panels).toEqual(['LogsPanel'])
+    expect(settingsView).toContain('LogsPanel')
+    expect(settingsSource()).toContain('onMounted(loadLogs)')
   })
 
   it('shows the file list, tail viewer, export, and clear controls', () => {

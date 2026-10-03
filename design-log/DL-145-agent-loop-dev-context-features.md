@@ -483,13 +483,168 @@ If kept:
 - Browser console was not captured as a log; no errors surfaced during the exercised flows.
 
 ### Phase 2 - Agent usage / cost meter
-_Not started._
+
+**Status:** implemented and verified. **Env vars added: none** (`backend/.env.example` unchanged; `CLAUDE_CONFIG_DIR` support was tried and dropped because it would be a new documented variable and the hook installer ignores it too).
+
+**New action:** `agent_usage` (AI Assistants) - live button, polled every 60 s. Face: today's estimated spend ("≈$4.20", or tokens such as "850k" via Advanced "Show"), sublabel "today". One visible field, "Daily budget (USD)" (0 = no colour); amber at 80 %, red at 100 %. Tapping it opens Mission Control. Empty state: "No Claude Code usage today" with a `$0` face.
+
+**Built**
+- `services/claude_usage.py`: incremental transcript reader (per-file offset/size/mtime cache, partial last line deferred, a final complete line without `\n` accepted, re-read from 0 when a file shrinks or the day changes), cost estimate, context %, per-session and today totals. In-memory only, so no persisted cache and no atomic-write use.
+- `routes/agent_usage.py`: `GET /api/agent-usage?limit_usd=` (today, live Claude sessions, limit status). `GET /api/agent-mission` rows gained `usage {cost_usd, estimate, context_pct, status}` for Claude rows (guarded - a bad transcript yields `null`, never a 500).
+- `POST /api/agent-mission/compact {source, session_id}`: types only `/compact`, Claude only, via `send_prompt` so a `permission`/`working` session is refused (409) and nothing is typed.
+- Frontend: Mission Control usage chip ("≈$1.24 · ctx 72%", amber/red from the server status, tooltip states estimate vs reported), a Compact button shown only when context is warning/critical, and `useButtonActions` opens Mission Control when a result carries `open_mission_control`.
+
+**Verified on-disk format (Claude Code 2.1.x, this machine, read-only)** - matches the design: `assistant.message.{id, model, usage.{input,output,cache_read_input,cache_creation_input}_tokens}` plus `usage.cache_creation.{ephemeral_5m,ephemeral_1h}_input_tokens`, UTC `timestamp`, `sessionId` == file stem; repeated `message.id` (dedupe confirmed: 512 unique of 1026 records in one file); `cost-state.totalCostUSD` once at file end; subagent files under `<slug>/<id>/subagents/`. Differences found: `<synthetic>` assistant records exist (ignored); transcripts record plain `claude-opus-5` while `cost-state.modelUsage` names `claude-opus-5[1m]` (so the `[1m]` window hint never reaches the reader - only the "> 200k tokens" rule can detect a 1M window); `cost-state` can sit mid-file in resumed sessions.
+
+**Deviations from the plan**
+- Prices are matched by ordered substring per model version, not by family: Opus 5.5 ($4/$20), Opus 5/4.5-4.8 ($5/$25), Opus 4/4.1 ($15/$75), Sonnet 5 and 5.5 ($2/$10), Sonnet 4.x ($3/$15), Haiku ($1/$5); a single "opus" row would misprice by up to 25 %. Source: platform.claude.com pricing page, checked 2026-10-03. The 5-minute vs 1-hour cache-write split from the transcript is used (not a flat 5m rate).
+- A `cost-state` counts as exact only while it is still the last usage record in the file (a resumed session keeps writing after an old one).
+- The Compact verb is its own route (`/compact`), not a generic `/command` with an allowlist: it can only ever type `/compact`.
+- Pack action `agent_usage` shares the `agent_loop_pack` (pack requires pynput like its siblings, although this action does not type).
+
+**Tests (before -> after)**: backend 1354 -> 1414 passed (new: `test_claude_usage`, `test_agent_usage_route`, usage cases in `test_agent_loop_pack`); frontend 666 -> 674 (usage chip/compact in `mission-control`, press-opens-Mission-Control in `widget-press-opens-url`). `vue-tsc` clean, `npm run build` ok, `scripts/check.ps1` all PASS.
+
+**Accuracy: exact vs estimated** - cost is exact only for a finished session whose `cost-state` is last in the file; live sessions and "today" are always estimates (API list prices; subscription plans are not billed per token). Cross-checked against Claude's own `cost-state` on the 8 largest finished sessions: 5 within ~5 % (e.g. 26.82 vs 25.86, 7.28 vs 7.15), 3 not: 61.97 exact vs 157.50 estimated (the transcript holds ~3x the cache-read tokens `cost-state` counted, probably because `cost-state` covers only the last run of a resumed session), 32.31 vs 23.96 and 11.14 vs 10.48 (cost-state larger, e.g. work not persisted in subagent files). So "≈" figures can be far off for resumed or subagent-heavy sessions; the number is a sanity gauge, not an invoice. Today's spend matched an independent probe over the same day (0.10 / 104,251 tokens on 2026-10-02, identical). Context % assumes a 200k window unless the count exceeds 200k, so a 1M-window session below 200k shows an inflated percentage.
+
+**Live verification** (backend restarted, `npm run build`, http://127.0.0.1:5000, simulated sessions with real transcript ids as read-only data sources, all ended afterwards)
+- `GET /api/agent-usage` and the catalog respond; `agent_usage` listed (poll 60 s, press run). Cold read of all 147 transcripts (about 117 MB): 0.55 s; warm: 0.011 s; cold `/api/agent-usage` for the empty day: 45 ms.
+- Picker: searching "agent usage" lists one entry under AI Assistants; opening it shows exactly one visible field ("Daily budget (USD)") with Advanced collapsed - two interactions from search to a configured button, well under 30 s. Placed button face showed `$0` / "today" (no Claude usage after midnight); pressing it opened Mission Control.
+- Mission Control with two simulated Claude rows and one Cursor row: the finished session showed "$0.10 · ctx 18%" (no ≈), the live one "≈$20 · ctx 77%", the Cursor row no chip.
+- Budget colouring (synthetic transcript in a temp home, no real data): limit 0/10 -> normal, 4.5 -> warning, 4 -> critical against a ≈$4.00 day. No real session reached 80 % context, so the amber/red chip and the Compact button were verified by unit tests only; Compact was never pressed against a real window.
+- Screenshots: `C:\Users\Daniel\AppData\Local\Temp\cursor\screenshots\page-2026-10-02T22-54-33-592Z.png` (editor, one field), `...page-2026-10-02T22-55-32-444Z.png` (button face), `...page-2026-10-02T22-56-46-938Z.png` (Mission Control chips).
+
+**Mistake and cleanup:** clicking a picker entry in edit mode adds the button to the profile immediately and Cancel does not remove it. The live check therefore saved an "Agent Usage" button into the user's real `My VDock` profile; it was removed again by hand (profile JSON re-validated, no `agent_usage` left). The `Agent Prompt` button already in that profile has the same origin (Phase 1 live check) and was left in place.
+
+**Known limits**
+- Claude Code only; Cursor/Devin/Antigravity rows have no chip.
+- Browser console output was not captured as a log; no errors surfaced during the exercised flows.
+- The first scan after a backend restart re-reads transcripts (0.55 s for everything here; scales with transcript size).
 
 ### Phase 3 - Git context, dev servers, Docker
-_Not started._
 
-### Phase 4 - Mic mute (+ layouts / audio devices if kept)
-_Not started._
+**Status:** implemented and verified. **Env vars added: none** (`backend/.env.example` unchanged). **Docker was not available on this machine** (Docker Desktop installed, daemon not running), so the "Docker not running" state was verified live and everything else by mocked unit tests only.
 
-### Phase 5 - Push-to-talk (+ Google Calendar if kept)
-_Not started._
+**New actions** (all in the existing `dev_tools_pack`, category Developer, live, `press: 'menu'`, no visible config field; Project directory under Advanced)
+- `git_context` "Git Branch" (poll 30 s) - badge = changed-file count or a tick, sublabel `main ↑2 ↓1`; amber when behind or dirty+ahead, red on conflicts or a merge/rebase in progress. Menu: Pull (fast-forward only), Push (asks first; sets upstream when none), Stash changes (asks first, only when dirty), Pop stash (only when a stash exists), Open pull request (only with `gh`). Empty state: "Not a git repository - focus a project in your editor".
+- `dev_servers` "Dev Servers" (poll 10 s) - badge = servers running, sublabel `:5173 :8000`; amber when a server seen earlier is gone (it then offers Start). Menu per server: Open, Restart (asks), Stop (asks). Empty state: "No dev servers running".
+- `docker_status` "Docker Containers" (poll 20 s) - badge `2/3`, amber when partly up. Compose project: Start stack, Stop stack (asks), Restart and Logs per service; otherwise Logs per running container. Daemon down: badge "–", "Docker isn't running - start Docker Desktop" (normal tone, not an error). Picker greys it out with "Docker CLI not found - install Docker Desktop" when the CLI is missing.
+
+**Built**
+- `services/git_context.py`, `services/dev_servers.py`, `services/docker_status.py`; the pack dispatches `config.op` (default `status`) to each service's `status(repo)` / `run_op(repo, op)`. The repo is `context.focused_repo()`; git ops re-resolve `git rev-parse --show-toplevel` so only a real repository is ever acted on.
+- Safety: argv lists only; no force/reset/clean/rebase/checkout/`down`/`rm`/`prune`/`-v` can be built (asserted over every argv in tests); Docker service and container names are accepted only if they appear in the CLI's own `ps` output; dev-server ops address a port that must be in a fresh scan (pid and command line never come from the request); command output goes through `secrets.redact`.
+- Frontend: no new component. One fix to `openLiveMenu`: an empty cached menu is re-fetched so the backend's plain-language empty state shows in the sheet (previously only "Nothing to show right now."). Test added.
+
+**Deviations from the plan**
+- Labels are "Git Branch" and "Docker Containers", not "Git Status" / "Docker": the picker already has a generated "Git Status" template (types `git status` into a terminal) and a "Docker" app launcher, and the live check showed picking by name grabbed the wrong one. Search keywords still include "git status" and "docker".
+- Down-server memory is per backend run and never forgets a server the user stopped on purpose; it clears on backend restart.
+- Dev-runtime allow-list is process names only (`node`, `python`, `pythonw`, `bun`, `deno`, `java`, `dotnet`, `ruby`, `php`, `uvicorn`, `gunicorn`, with `.exe`); `go`-built binaries are not detected.
+- VDock's own ports (backend `Config.PORT`, panel frontend port) are excluded by importing `routes.system._configured_frontend_port`; a service importing a route helper is a small layering compromise, guarded by try/except.
+- Restart/Start use `sr.spawn`, which opens the server in its own console window on Windows.
+- `docker compose ps --format json` shape could not be sampled (daemon down); the parser accepts both a JSON array and one object per line, and fixtures use Compose v2's field names (`Name`, `Service`, `State`).
+
+**Tests (before -> after)**: backend 1414 -> 1477 passed (new: `test_git_context`, `test_dev_servers`, `test_docker_status`, pack cases in `test_dev_tools_pack`); frontend 674 -> 675 (`live-action-menu`). `vue-tsc` clean, `npm run build` ok, `scripts/check.ps1` all PASS.
+
+**Live verification** (backend restarted on :5000, built bundle, http://127.0.0.1:5000, throwaway profile; read-only commands only)
+- Catalog lists the three actions with poll 30/10/20 s and `press: menu`. Status calls against the real repo: git 126 ms (branch `main`, 69 changed files then 71 as work continued, no stash, `gh` menu item present), dev servers 47 ms (none), docker 261 ms ("Docker not running").
+- Placed from the picker into a throwaway profile (searching, tapping the entry, Save: three interactions each, well under 30 s). Faces painted by polling: `Git Branch | main | 69`, `Dev Servers | none running | 0`, `Docker Containers | Docker not running | –`. The Git press menu listed Pull, Push, Stash changes, Open pull request; Pull/Push/Stash were not pressed.
+- Empty-state sheets after the fix: "No dev servers running", "Docker isn't running - start Docker Desktop". No console errors or unhandled rejections captured during these flows.
+- Screenshot: `C:\Users\Daniel\AppData\Local\Temp\cursor\screenshots\page-2026-10-02T23-17-50-765Z.png` (faces plus Git menu).
+- Cleanup: the stray "Agent Prompt" button was removed from `My VDock` (single entry, file re-validated, API load fine, no `agent_prompt` left). Live checks used a throwaway profile, since deleted; the active profile was switched to it and restored to `My VDock`. Mistaken picks (a generated "Git Status" and the "Docker" launcher) were only ever in the throwaway profile.
+
+**Not verified live / known limits**
+- Docker with a running daemon (compose "2/2", logs panel, Stop confirmation): mocked tests only.
+- Dev server Open/Restart/Stop/Start and its non-empty list: no scratch server was started (verification was read-only); covered by mocked psutil tests, including the stop-then-spawn order.
+- Pull, Push, Stash, Pop and Open pull request were never run against the real repo. The confirmation text is covered by tests; the confirm dialog itself was not exercised in a browser.
+- Focused-repo switching when the editor changes was not exercised.
+
+### Phase 4 - True mic mute
+
+**Status:** implemented and verified. **Env vars added: none.** Window layouts (4b) and audio device switching (4c) stay deferred per the user's decision.
+
+**New action:** `mic_mute` "Mic Mute" (System) - live button, polled every 3 s, no config fields at all. Face: `LIVE` (normal) or `MUTED` (red) with sublabel "Microphone"; tapping toggles. It follows mutes made in Windows Settings, Teams, Zoom or a hardware key. No microphone: the poll paints a `!` face with "No microphone found"; a press shows the same as an error. Off Windows the picker greys it out.
+
+**Changed (no new id):** `microphone_mute` / `microphone_unmute` on Windows now set the capture endpoint's mute flag instead of disabling the sound device through WMI (`Win32_SoundDevice.Disable()`, which needs admin and takes the device offline). nircmd is used only when pycaw is missing. macOS/Linux paths are unchanged.
+
+**Built**
+- `actions/cross_platform_action.py`: the playback endpoint cache was extracted into `_make_endpoint_cache(activate, describe_error)` and instantiated twice on the audio worker thread (playback for volume, capture for the mic) - same TTL, flap guard, invalidate-and-retry-once and QueryInterface ownership as before, now not duplicated. The device-change notifier marks the matching cache dirty for `eRender` or `eCapture`. New `read_mic_mute()` / `set_mic_mute(muted|None)` run on the audio thread through `ctx['mic_endpoint_op']` and return the state read back.
+- `integrations/system_live_pack.py`: the `mic_mute` spec and face. Kept apart from `dev_tools_pack` because a mic button is not a developer tool.
+- Tests: `tests/test_mic_mute.py` (20).
+
+**Deviations from the plan**
+- The plan put the endpoint helper "inside the worker context"; the cache is a module-level factory instead so the retry behaviour is unit-testable without COM.
+- A status poll with a failure returns `success: true` (polls are silent; the face explains), while a press failure is `success: false`.
+- The icon stays the plan's `microphone-slash` for both states (the badge carries the state), so a LIVE button still shows a slashed mic. A state-dependent icon is possible later.
+
+**Tests (before -> after):** backend 1477 -> 1497; frontend 675 -> 675 (no frontend change needed: the generic live-button path already renders it). `vue-tsc` clean, `npm run build` ok, `scripts/check.ps1` all PASS. No "Errors N error" from vitest.
+
+**Live verification** (backend restarted on :5000, built bundle, throwaway profile)
+- pycaw 20240210 / comtypes 1.4.17 on Python 3.13.14: `GetMicrophone()` resolves a real capture device on the audio thread; reads return `(False, None)`.
+- Real mic state: read-only everywhere except one controlled toggle through `set_mic_mute(None)` in a separate Python process (before `False` -> toggled `True` -> read `True`), restored in a `finally` to `False` and re-read `False`. The mic was left unmuted, as found. Nothing else wrote to the device; the browser button was never pressed.
+- 100 consecutive status polls through `POST /api/actions/execute` returned `LIVE` every time; no audio errors in `vdock.log`.
+- Picker: searching "mic" lists "Mic Mute" under System (next to the two old actions under Audio & Volume); one tap opens the editor with no config fields; Save + Save Profile placed it, about four interactions. The placed button painted `LIVE` / "Microphone".
+- Screenshots: `C:\Users\Daniel\AppData\Local\Temp\cursor\screenshots\page-2026-10-02T23-36-20-532Z.png` (picker), `...page-2026-10-02T23-36-36-685Z.png` (editor, no fields), `...page-2026-10-02T23-37-44-546Z.png` (live face).
+- Cleanup: the throwaway profile "Zz Mic Throwaway" was deleted and the active profile restored to My VDock; `My VDock` contains no `agent_*`, `git_context`, `dev_servers`, `docker_status` or `mic_mute` entries.
+
+**Not verified / known limits**
+- The `MUTED` face and the 50-rapid-toggles DL-058 regression check were not exercised live (they would flip the user's real mic); covered by mocked tests plus 100 live reads. Muting from Teams/Windows flipping the face within 3 s was not tried.
+- "No microphone found" was verified by mocks only (this machine has a microphone). Browser console output was not captured as a log.
+
+### Phase 5 - Push-to-talk to the agent (Windows voice typing)
+
+**Status:** implemented and verified. **Env vars added: none.** Local Whisper (5.2) and Google Calendar (5.3) stay deferred per the user's decision.
+
+**New action:** `agent_dictate` "Dictate to Agent" (AI Assistants, microphone icon). Hold the button, speak, let go. Holding opens Windows voice typing (Win+H) in the agent's terminal/chat; releasing closes it. The text stays in the prompt box - nothing is ever submitted; tap Submit/Continue after reading it. No visible config field; Agent and Session directory sit under the collapsed Advanced section. Not offered off Windows (picker greys it out with the reason).
+
+**Built**
+- `services/agent_dictate.py`: `start` / `stop` / `dictate(op)`. It builds a one-off keymap `Command` from the agent's prompt command (so it inherits the terminal exes, title hint and session marker) with only the voice-typing chord - no text, `submit=False`, no Enter possible - and sends it through `editor_base.send` (resolve the session window, focus it, refuse if the foreground window is not it, refuse if the session is dead, refuse on a locked desktop). Target and states reuse Agent Prompt: refuses `permission` and `working` sessions with its messages; Cursor first presses its chat-focus chord so the text has an input to land in.
+- `stop` only acts after a start of ours (Win+H toggles, so a stray release would otherwise open the panel). A second start while listening sends nothing and says "Already listening", so a missed release self-heals on the next press/release. A lock serialises start and stop so a quick release waits for the start to finish.
+- Unavailable copy: off Windows, or when the registry flag `OnlineSpeechPrivacy\HasAccepted` is explicitly 0, the press fails with "Online speech recognition is off - turn it on in Settings > Privacy & security > Speech. Turn on voice typing in Settings > Time & language > Typing (or press Win+H once in any text box to set it up)." The first successful start per backend run also carries a one-line hint to the same settings.
+- `agent_prompt.check_typeable()` and `editor_label()` extracted from `send_prompt` so prompts and dictation share the same state/pinned-host checks (no duplication).
+- Frontend: catalog `press: 'hold'` (already reserved in the types) now drives the pointer pipeline. `DeckButton` treats a hold spec like push-to-talk (dispatch on pointerdown, capture the pointer, release on up/cancel); `useButtonActions` sends `op: 'start'` on press and `op: 'stop'` on release (shared `dispatchAction` helper replaces the duplicated release code), and ignores a bare click so keyboard activation can never start dictation with no way to stop it. `ButtonEditor` hides the manual "Fires on / Push-to-talk" controls for hold actions, since they would contradict the built-in behaviour.
+
+**Deviations from the plan**
+- Stop re-focuses the session window (`focus_first` stays on) instead of "only if the foreground is still the session". On a touch deck the press itself takes focus, so a no-refocus stop would never close the panel; the focus still goes through the verified-window path.
+- A failed stop returns a failure with "Press Win+H in the agent window to close it", not a silent success, because the panel may still be open.
+- The registry check only blocks on an explicit "off" value (it is absent on this machine), so a machine that never opened voice typing proceeds and Windows shows its own first-run prompt.
+- With no hooked session the target falls back to the legacy "focused project" path exactly like Agent Prompt, guarded by the session-alive and foreground checks.
+
+**Tests (before -> after):** backend 1497 -> 1516 (`test_agent_dictate.py`: sends Win+H to the session's directory, no Enter or text in any built command, Cursor chat-focus chord, permission/working refusals send nothing, stop-without-start sends nothing, stop once, double start, first-use hint once, unavailable copy and registry cases, unknown op, spec shape); frontend 675 -> 680 (`hold-press.test.ts`: down starts, up and cancel stop exactly once, trailing click ignored, bare click never starts, normal buttons unaffected). `vue-tsc` clean, `npm run build` ok, `scripts/check.ps1` all PASS, no vitest "Errors" line.
+
+**Live verification** (backend restarted on :5000, built bundle, http://127.0.0.1:5000, throwaway profile; **no keystroke was sent to any window**)
+- Catalog lists `agent_dictate` with `press: hold`; API calls with `op: stop` ("Not listening") and no op ("Hold the button to talk") answered without touching any window. `op: start` was deliberately never sent to the real backend: with no hooked session it targets a running Claude process on this PC.
+- Picker: searching "dictate" lists one entry under AI Assistants; one tap opens the editor with no config field, Advanced (collapsed) holds Agent and Session directory, and the "Fires on / Push-to-talk" controls are gone. Search to configured button was two interactions, well under 30 s.
+- Placed button, pointer events with the execute request blocked in the browser (captured, never sent): pointerdown -> `op: start`, two pointerups plus a click -> exactly one `op: stop`; pointerdown + pointercancel -> `start`, `stop`.
+- Screenshots: `C:\Users\Daniel\AppData\Local\Temp\cursor\screenshots\page-2026-10-02T23-49-14-199Z.png` (picker result), `...page-2026-10-02T23-51-12-703Z.png` (editor, Advanced open), `...page-2026-10-02T23-51-36-267Z.png` (placed button).
+- Cleanup: the throwaway profile was deleted and My VDock reloaded; `backend/data/profiles/0027a602-99fa-4a3f-882d-2f32e6bccc9a.json` contains no `agent_dictate`, `agent_prompt`, `agent_usage`, `git_context`, `dev_servers`, `docker_status` or `mic_mute` entries. The edit-mode gate in the browser blocks desktop-less viewports, so edit mode was entered through the store.
+
+**Not verified / known limits**
+- The real Win+H path (panel appears in the terminal, speech lands in the prompt, release closes it) was not exercised, by design; covered by mocked `editor_base.send` tests only. Whether the Windows voice typing panel keeps the terminal as the foreground window (needed for the verified stop) is untested.
+- The "Online speech recognition is off" and not-Windows messages are covered by unit tests with mocked registry/platform; they were not triggered live.
+- Windows voice typing needs a mic, the right language and (unless on-device) internet. If the user closes the panel by hand mid-hold, the release toggles it open again.
+- A short stuck-spinner on the button after the blocked requests was seen in the test only because the requests were aborted on purpose.
+
+## Overall summary - DL-145 (Phases 1-5)
+
+**Shipped (9 new action ids, the plan's recommended count; target range 9-12):**
+1. `agent_prompt` - preset/custom prompt to the ready agent session.
+2. `agent_review_changes` - files the agent changed this turn, tap for diff.
+3. `dev_run_tests` - detects and runs the repo's tests, pass/fail face.
+4. `agent_usage` - today's Claude Code spend/tokens (API-equivalent estimate).
+5. `git_context` - branch/dirty/ahead-behind with a pull/push/stash menu.
+6. `dev_servers` - running dev servers with open/restart/stop.
+7. `docker_status` - containers/compose status with start/stop/logs.
+8. `mic_mute` - real Windows microphone mute, LIVE/MUTED face.
+9. `agent_dictate` - hold to dictate to the agent via Windows voice typing.
+
+Plus shared infrastructure: catalog metadata (`advanced`, `show_when`, `poll_seconds`, `press`), generic catalog config form, press-menu sheet, generalised widget polling, `focused_repo()`, Mission Control Prompt/changes/usage/Compact; `microphone_mute` now sets the endpoint mute flag. **Env vars added: none, in any phase.**
+
+**Deferred (not built):** window layout presets, audio device switching, Google Calendar next meeting, local Whisper STT.
+
+**Known limits (see each phase):** no keystroke path was exercised against a real agent window in any phase (mocked/unit only); cost figures are estimates and can be far off for resumed or subagent-heavy sessions; Docker with a running daemon, dev-server start/stop and git write ops were not run live; the MUTED face, DL-058 50-toggle check and real voice typing were not exercised live.
+
+**Try-it checklist**
+1. Settings > Time & language > Typing: make sure voice typing works (press Win+H in any text box once; allow Online speech recognition if asked).
+2. Start a Claude Code (or Cursor) session and let it reach the ready state.
+3. Edit mode > search "dictate" > tap Dictate to Agent > Save. Hold it, speak, release; read the text, then tap Submit yourself.
+4. Try Agent Prompt (Continue / Write tests), Review Changes, Run Tests, Agent Usage, Git Branch, Dev Servers, Docker Containers and Mic Mute from the picker; each needs at most one field.
+5. Check Mission Control (Prompt menu, change chip, cost/context chip).
