@@ -69,15 +69,6 @@
         </div>
         <div class="topbar-actions">
           <button
-            v-if="!isStandaloneSettings"
-            type="button"
-            class="btn ghost sm"
-            title="Open only the settings panel in your browser so VDock stays on the dashboard"
-            @click="openSettingsInBrowserTab"
-          >
-            <FontAwesomeIcon :icon="['fas', 'up-right-from-square']" /> Open in browser
-          </button>
-          <button
             v-if="section === 'appearance'"
             type="button"
             class="btn ghost sm"
@@ -189,7 +180,7 @@ import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import AppShortcutManager from '@/components/AppShortcutManager.vue'
 import type { AppShortcut } from '@/api/appProfiles'
 import type { RunningApp, Button } from '@/types'
-import { openStandaloneSettings, isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
+import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { useAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
 import { getAppScene, createButtonFromShortcut } from '@/composables/useAppShortcutScenes'
@@ -228,22 +219,6 @@ const profilesStore = useProfilesStore()
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
 const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
-
-function openSettingsInBrowserTab() {
-  const opened = openStandaloneSettings({
-    router,
-    query: { section: section.value, page: page.value },
-    returnMainWindowToDashboard: true,
-  })
-
-  if (!opened) {
-    notificationsStore.warning(
-      'Popup blocked',
-      'Allow popups for VDock to open settings in your browser.',
-      { duration: 6000 }
-    )
-  }
-}
 
 // Opens the real screensaver in drag/resize edit mode — mounted inside this
 // window so it always works: the previous design sent a ui_command to the

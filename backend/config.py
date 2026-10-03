@@ -246,6 +246,51 @@ def write_env_keys(env_file: Path, updates: Dict[str, str]) -> None:
     atomic_write_text(env_file, '\n'.join(out) + '\n')
 
 
+def set_env_key(path: Path, key: str, value: Optional[str]) -> None:
+    """Set (or, when ``value`` is None, remove) one ``KEY=value`` line.
+
+    Byte-level and atomic: other lines, comments, order, BOM and newline style
+    are preserved; only the named key's line changes. Creates the file when it
+    does not exist. Never logs the value.
+    """
+    path = Path(path)
+    raw = path.read_bytes() if path.exists() else b''
+    bom = b'\xef\xbb\xbf' if raw.startswith(b'\xef\xbb\xbf') else b''
+    text = raw[len(bom):].decode('utf-8', errors='surrogateescape')
+    newline = '\r\n' if '\r\n' in text else '\n'
+    lines = text.splitlines()
+
+    out: List[str] = []
+    done = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.upper().startswith(f'{key.upper()}='):
+            if value is not None and not done:
+                out.append(f'{key}={value}')
+            done = True
+            continue
+        out.append(line)
+    if value is not None and not done:
+        out.append(f'{key}={value}')
+
+    body = newline.join(out) + (newline if out else '')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + '.tmp')
+    try:
+        tmp.write_bytes(bom + body.encode('utf-8', errors='surrogateescape'))
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
 class Config:
     """Application configuration."""
     

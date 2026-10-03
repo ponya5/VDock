@@ -62,6 +62,7 @@
         <div class="row-text">
           <span class="label">Agent hooks</span>
           <p>Adds a state hook to the agent's settings file — <code class="kv-code">{{ selectedHookTarget.settingsFile }}</code> — so the deck knows when it's ready for a prompt, working, or idle. Restart a running session to pick the hook up.</p>
+          <p v-if="canRemoveSelectedHook">Removing a hook means VDock stops getting alerts from this agent; your other hooks are untouched.</p>
         </div>
         <div class="row-control hook-picker">
           <select v-model="selectedHookAgent" class="select" aria-label="Agent to hook">
@@ -73,6 +74,17 @@
             <FontAwesomeIcon :icon="['fas', agentHooks[selectedHookAgent].installing ? 'spinner' : 'plug']" :spin="agentHooks[selectedHookAgent].installing" />
             {{ agentHookButtonLabel(selectedHookAgent) }}
           </button>
+          <template v-if="canRemoveSelectedHook">
+            <button v-if="!confirmingRemove" type="button" class="btn sm" data-action="remove-hook" :disabled="agentHooks[selectedHookAgent].installing" @click="confirmingRemove = true">
+              <FontAwesomeIcon :icon="['fas', 'plug-circle-xmark']" />
+              Remove hook
+            </button>
+            <span v-else class="hook-confirm" role="group" aria-label="Confirm hook removal">
+              <span class="hook-confirm-text">Remove?</span>
+              <button type="button" class="btn sm danger" data-action="confirm-remove-hook" :disabled="agentHooks[selectedHookAgent].installing" @click="removeAgentHook(selectedHookAgent)">Yes</button>
+              <button type="button" class="btn sm" data-action="cancel-remove-hook" @click="confirmingRemove = false">Cancel</button>
+            </span>
+          </template>
         </div>
       </div>
     </div>
@@ -80,13 +92,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSetupStatus } from '@/composables/useSetupStatus'
 import apiClient from '@/api/client'
 
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
+const { refresh: refreshSetupStatus } = useSetupStatus()
+
+// The hook files live on the PC VDock runs on; other devices can't edit them.
+const isLocalDevice = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
 
 // --- Agent attention alerts -------------------------------------------------
 type HookAgentId = 'claude' | 'cursor' | 'antigravity' | 'codex'
@@ -116,6 +133,13 @@ const agentHooks = reactive<Record<HookAgentId, AgentHookState>>(
 )
 
 const selectedHookAgent = ref<HookAgentId>('claude')
+const confirmingRemove = ref(false)
+watch(selectedHookAgent, () => { confirmingRemove.value = false })
+
+const canRemoveSelectedHook = computed(() => {
+  const hookState = agentHooks[selectedHookAgent.value]
+  return isLocalDevice && (hookState.installed || hookState.partial)
+})
 
 const selectedHookTarget = computed(
   () => AGENT_HOOK_TARGETS.find(t => t.id === selectedHookAgent.value) ?? AGENT_HOOK_TARGETS[0]
@@ -197,6 +221,28 @@ async function installAgentHook(agent: HookAgentId) {
   }
 }
 
+async function removeAgentHook(agent: HookAgentId) {
+  const hookState = agentHooks[agent]
+  const agentLabel = AGENT_HOOK_TARGETS.find(target => target.id === agent)?.label ?? agent
+  hookState.installing = true
+  try {
+    const res = await apiClient.post('/agent-events/uninstall-hook', null, { params: { agent } })
+    if (!res.data?.success) {
+      notificationsStore.error('Hook removal failed', res.data?.error || 'Unknown error')
+      return
+    }
+    hookState.installed = false
+    hookState.partial = false
+    notificationsStore.success('Hook removed', `VDock no longer follows ${agentLabel}. Your other hooks are untouched.`)
+    void refreshSetupStatus()
+  } catch (e: any) {
+    notificationsStore.error('Hook removal failed', e?.response?.data?.error || 'Backend unreachable')
+  } finally {
+    confirmingRemove.value = false
+    hookState.installing = false
+  }
+}
+
 onMounted(fetchAgentHookStatus)
 </script>
 
@@ -211,6 +257,14 @@ onMounted(fetchAgentHookStatus)
   width: auto;
   min-width: 190px;
 }
+.settings-app .hook-picker .btn.sm { min-height: 44px; min-width: 44px; }
+.hook-confirm {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hook-confirm-text { font-weight: 600; }
 .chip-ok {
   border-color: #1f5c41;
   background: rgba(61, 220, 151, 0.09);
