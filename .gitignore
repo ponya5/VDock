@@ -211,11 +211,17 @@ backend/data/backups/
 DEVELOPMENT-GUIDELINES.md
 SKILL.md
 
+# Maintainer design log (decision records) - kept locally, not published
+design-log/
+
+# Promo video tooling and render output (only the final mp4 ships in docs/assets)
+video/
+
 # Build/cache artifacts and stray debug dumps
 *.tsbuildinfo
 _diff*.txt
 
-# Screenshots belong in design-log/refs/ or docs/assets/screens/, never the repo root
+# Screenshots belong in docs/assets/screens/, never the repo root
 /*.png
 /*.jpg
 /*.jpeg

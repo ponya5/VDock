@@ -4,7 +4,7 @@ import apiClient from '@/api/client'
  * Triggers API (DL-120) — thin wrapper over /api/triggers.
  *
  * A trigger is {id, label, enabled, event, action}; see
- * design-log/collab/contracts/rest-api.md for the route contract and
+ * backend/routes/triggers.py for the route contract and
  * backend/services/triggers.py for the event/action vocabularies.
  */
 

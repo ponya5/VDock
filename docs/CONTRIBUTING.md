@@ -265,7 +265,7 @@ npm run test:coverage
 
 Line endings are set by `.gitattributes` (LF everywhere; `.bat`/`.ps1`/`.nsi`
 stay CRLF). Never commit `.env` files, logs or scratch screenshots; images
-belong in `docs/assets/screens` or `design-log/refs` and should stay under
+belong in `docs/assets/screens` and should stay under
 400 KB. `backend/tests/test_repo_hygiene.py` enforces this. Run
 `scripts/check.ps1` (or `bash scripts/check.sh`) before pushing: it runs what
 CI runs (backend tests, type check, frontend tests, build).
