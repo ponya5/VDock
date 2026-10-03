@@ -1226,12 +1226,12 @@ onMounted(async () => {
   // profile load), so `tutorialCompleted` is guaranteed to hold its real
   // server value here rather than the `ref(false)` default.
   //
-  // Skipped entirely on phones (DL-061 follow-up): the tour's first step
-  // navigates to '/profiles' to walk through profile selection — a screen
-  // mobile has no business showing (DL-061, "mobile = control surface
-  // only") — and every phone connecting to an already-set-up desktop has
-  // already had that walkthrough there.
-  if (!isMobileViewport.value) {
+  // First-run auto-start is skipped on phones (DL-061): the tour's first
+  // step walks profile selection, a screen mobile does not show. An
+  // explicit "Launch tutorial" from Settings → About still runs, so the
+  // 7" panel and a tablet can replay it (DL-146 leftover).
+  const tourPending = localStorage.getItem('vdock_tutorial_pending') === '1'
+  if (tourPending || !isMobileViewport.value) {
     // Delayed so the deck renders before the tour starts measuring targets.
     setTimeout(() => tour.consumePendingOrFirstRun(), 800)
   }
