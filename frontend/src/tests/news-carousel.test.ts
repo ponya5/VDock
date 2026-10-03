@@ -306,6 +306,6 @@ describe('screensaver layout', () => {
     expect(source).toContain("'save-layout'")
     // Children must not receive pointer events while editing or a drag
     // would trigger a news row's click.
-    expect(source).toMatch(/\.ss-editing\s*>\s*\*:not\(\.ss-resize\)\s*\{[^}]*pointer-events:\s*none/)
+    expect(source).toMatch(/\.ss-editing\s*>\s*\*:not\(\.ss-resize\):not\(\.ss-remove\)\s*\{[^}]*pointer-events:\s*none/)
   })
 })

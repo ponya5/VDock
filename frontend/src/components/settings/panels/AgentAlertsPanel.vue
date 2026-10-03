@@ -21,7 +21,7 @@
       <div class="row">
         <div class="row-text">
           <span class="label">Glow when an agent is waiting</span>
-          <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Dismiss on the frame to quiet it for 3 minutes (or until the agent needs you again); tap Undo dismiss to bring the alert back early.</p>
+          <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Snooze 3m on the frame to quiet it for 3 minutes, or Dismiss to silence it until the agent is idle again. A snooze can be ended early from the small chip that replaces it.</p>
         </div>
         <div class="row-control">
           <label class="switch"><span class="sr-only">Agent waiting glow</span><input type="checkbox" :checked="settingsStore.agentWaitingGlowEnabled" @change="toggleWaitingGlow" /><span class="track"></span></label>
@@ -38,6 +38,24 @@
             <option value="pulse">Pulse</option>
             <option value="orbit">Comet</option>
           </select>
+        </div>
+      </div>
+      <!-- Live miniature of the chosen style, so picking one is not blind. -->
+      <div v-if="settingsStore.agentWaitingGlowEnabled" class="row">
+        <div class="row-text">
+          <span class="label">Preview</span>
+          <p>How the frame looks while an agent is waiting for you.</p>
+        </div>
+        <div class="row-control">
+          <div
+            class="alert-preview"
+            :class="[`pv-${settingsStore.agentWaitingGlowStyle ?? 'flash'}`, { 'pv-still': !settingsStore.animationsEnabled }]"
+            data-testid="alert-preview"
+            aria-hidden="true"
+          >
+            <span class="pv-orbit"></span>
+            <span class="pv-label">Agent waiting</span>
+          </div>
         </div>
       </div>
       <div class="row" v-if="settingsStore.agentAlertsEnabled">
@@ -269,5 +287,57 @@ onMounted(fetchAgentHookStatus)
   border-color: #1f5c41;
   background: rgba(61, 220, 151, 0.09);
   color: #8fe8bd;
+}
+/* Miniature of AgentWaitingGlow's three frame styles (same timings), in the
+   Claude-ish accent. Static when animations are off or motion is reduced. */
+.alert-preview {
+  --pv-rgb: 217, 119, 87;
+  --pv-light-rgb: 244, 170, 140;
+  position: relative;
+  width: 168px;
+  height: 84px;
+  border-radius: 8px;
+  background: rgba(8, 12, 24, 0.7);
+  border: 3px solid rgba(var(--pv-rgb), 0.5);
+  box-shadow: inset 0 0 14px rgba(var(--pv-rgb), 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.pv-label { font-size: 0.75rem; opacity: 0.7; }
+.pv-orbit { display: none; }
+.alert-preview.pv-flash { animation: pv-flash 2.4s linear infinite; }
+.alert-preview.pv-pulse { animation: pv-breathe 2.4s ease-in-out infinite; }
+.alert-preview.pv-orbit .pv-orbit {
+  display: block;
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  background: conic-gradient(from var(--pv-angle, 0deg), transparent 0turn, transparent 0.62turn,
+    rgba(var(--pv-rgb), 0.55) 0.78turn, rgba(var(--pv-light-rgb), 0.95) 0.9turn,
+    rgba(var(--pv-rgb), 0.55) 0.99turn, transparent 1turn) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: pv-orbit 4.5s linear infinite;
+}
+.alert-preview.pv-still,
+.alert-preview.pv-still .pv-orbit { animation: none; }
+.alert-preview.pv-still { border-color: rgba(var(--pv-rgb), 0.85); }
+
+@property --pv-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes pv-orbit { to { --pv-angle: 1turn; } }
+@keyframes pv-flash {
+  0%, 12%, 26%, 100% { border-color: rgba(var(--pv-rgb), 0.4); box-shadow: inset 0 0 12px rgba(var(--pv-rgb), 0.3); }
+  4%, 17% { border-color: rgba(var(--pv-light-rgb), 1); box-shadow: inset 0 0 28px rgba(var(--pv-rgb), 0.75); }
+}
+@keyframes pv-breathe {
+  0%, 100% { border-color: rgba(var(--pv-rgb), 0.5); box-shadow: inset 0 0 14px rgba(var(--pv-rgb), 0.35); }
+  50% { border-color: rgba(var(--pv-rgb), 0.95); box-shadow: inset 0 0 26px rgba(var(--pv-rgb), 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alert-preview, .alert-preview .pv-orbit { animation: none !important; }
 }
 </style>

@@ -115,3 +115,13 @@ describe('screensaver layout wiring', () => {
     expect(screensaver).toContain("ssBgId.value !== DEFAULT_BACKGROUND_ID")
   })
 })
+
+describe('layout editor × button', () => {
+  it('stays clickable: the inert-children rule exempts .ss-remove', () => {
+    // `.ss-editing > *` is pointer-events:none so the card is one drag target;
+    // without this exemption the × never received the click and the widget
+    // could not be removed.
+    expect(screensaver).toContain('.ss-editing > *:not(.ss-resize):not(.ss-remove)')
+    expect(screensaver).toMatch(/\.ss-remove \{[^}]*pointer-events: auto/)
+  })
+})

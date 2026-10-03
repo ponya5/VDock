@@ -1685,7 +1685,9 @@ onUnmounted(() => {
   cursor: grabbing;
 }
 
-.ss-editing > *:not(.ss-resize) {
+/* Content is inert so the whole card is one drag target; the corner handles
+   (resize, ×) must stay clickable. */
+.ss-editing > *:not(.ss-resize):not(.ss-remove) {
   pointer-events: none;
 }
 
@@ -1707,6 +1709,7 @@ onUnmounted(() => {
   padding: 0;
   cursor: pointer;
   touch-action: manipulation;
+  pointer-events: auto;
   z-index: 4;
 }
 

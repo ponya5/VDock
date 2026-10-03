@@ -230,13 +230,22 @@ describe('AgentWaitingGlow', () => {
 
   // --- DL-080 follow-up #2: snooze ----------------------------------------
 
+  it('offers a Dismiss button next to Snooze that silences until the next idle', async () => {
+    const wrapper = mountGlow()
+    const buttons = wrapper.findAll('.agent-waiting-snooze .snooze-btn')
+    expect(buttons.map(b => b.text())).toEqual(['Snooze 3m', 'Dismiss'])
+    await wrapper.find('[data-testid="dismiss-btn"]').trigger('click')
+    expect(dismissCalls).toEqual(['claude'])
+    expect(wrapper.find('.agent-waiting-snooze').exists()).toBe(false)
+  })
+
   it('after snoozing, shows a Resume chip with time left; Resume re-arms the alert', async () => {
     const wrapper = mountGlow()
     await wrapper.find('.snooze-btn').trigger('click')
 
     const chip = wrapper.find('[data-testid="snoozed-chip"]')
     expect(chip.exists()).toBe(true)
-    expect(chip.text()).toContain('Claude Code alert dismissed')
+    expect(chip.text()).toContain('Claude Code snoozed')
     expect(chip.text()).toContain('3m left') // 150 s rounds up to 3m
     expect(wrapper.find('.agent-waiting-glow').exists()).toBe(false)
 

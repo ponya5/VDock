@@ -249,8 +249,8 @@ class ApiClient {
     }
   }
 
-  async get(url: string, params?: any) {
-    return this.client.get(url, { params })
+  async get(url: string, params?: any, config?: any) {
+    return this.client.get(url, { ...config, params })
   }
 
   async post(url: string, data?: any, config?: any) {

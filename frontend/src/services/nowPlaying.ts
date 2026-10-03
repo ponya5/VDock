@@ -113,10 +113,11 @@ async function loadArt(track: NowPlayingTrack): Promise<void> {
   if (art.key === key) return
   art.key = key
   try {
-    const response = await apiClient.get('/now-playing/art', {
-      params: { ts: track.ts },
-      responseType: 'blob',
-    })
+    const response = await apiClient.get(
+      '/now-playing/art',
+      { ts: track.ts },
+      { responseType: 'blob' },
+    )
     if (art.key !== key) return // a newer track superseded this fetch
     if (art.src) URL.revokeObjectURL(art.src)
     art.src = URL.createObjectURL(response.data as Blob)

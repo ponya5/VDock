@@ -55,15 +55,25 @@ export const AGENT_SNOOZE_MS = 3 * 60 * 1000
 const dismissedReadyTs = reactive<Record<string, { ts: number; until: number }>>({})
 const snoozeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
-export function dismissAgentWaiting(source: string | null | undefined): void {
+/**
+ * Silence this waiting episode. Default is the time-boxed snooze; pass
+ * `Infinity` for a full dismiss — no timer, quiet until the agent records a
+ * fresh `ready` event (the next idle), which stamps a new `entry.ts`.
+ */
+export function dismissAgentWaiting(
+  source: string | null | undefined,
+  durationMs: number = AGENT_SNOOZE_MS,
+): void {
   const entry = agentStateEntry(source)
   if (!source || !entry) return
-  dismissedReadyTs[source] = { ts: entry.ts, until: Date.now() + AGENT_SNOOZE_MS }
   clearTimeout(snoozeTimers.get(source))
+  snoozeTimers.delete(source)
+  dismissedReadyTs[source] = { ts: entry.ts, until: Date.now() + durationMs }
+  if (!Number.isFinite(durationMs)) return
   snoozeTimers.set(source, setTimeout(() => {
     const d = dismissedReadyTs[source]
     if (d && d.until <= Date.now()) delete dismissedReadyTs[source]
-  }, AGENT_SNOOZE_MS + 250))
+  }, durationMs + 250))
 }
 
 /** End a snooze early: the next read sees the agent as waiting again. */
@@ -74,7 +84,8 @@ export function resumeAgentWaiting(source: string | null | undefined): void {
   delete dismissedReadyTs[source]
 }
 
-/** ms left on this source's active snooze, or 0 when it isn't snoozed. */
+/** ms left on this source's active snooze (Infinity for a full dismiss), or 0
+    when it isn't snoozed. */
 export function agentSnoozeRemainingMs(source: string | null | undefined): number {
   if (!isAgentWaitingDismissed(source)) return 0
   return Math.max(0, dismissedReadyTs[source as string].until - Date.now())
