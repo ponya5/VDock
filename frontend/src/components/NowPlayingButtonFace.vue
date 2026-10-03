@@ -6,7 +6,7 @@
  * The press itself is intercepted upstream (media_play_pause toggle) —
  * this component is display only.
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   nowPlayingIcon,
@@ -17,6 +17,9 @@ import {
 const props = defineProps<{ compact?: boolean }>()
 
 const { track, playing, available, artUrl } = useNowPlaying()
+
+const artFailed = ref(false)
+watch(artUrl, () => { artFailed.value = false })
 
 // Site-aware label/icon: "YouTube" + its logo beats "chrome.exe" + a note
 // when the backend has attributed the session to a site.
@@ -42,7 +45,7 @@ const stateText = computed(() => {
   <div class="np-face" :class="{ compact: props.compact }">
     <template v-if="track">
       <div class="np-art" :class="{ 'is-paused': !playing }">
-        <img v-if="artUrl" :src="artUrl" alt="" class="np-art-img" />
+        <img v-if="artUrl && !artFailed" :src="artUrl" alt="" class="np-art-img" @error="artFailed = true" />
         <FontAwesomeIcon v-else :icon="brandIcon || ['fas', 'music']" class="np-art-fallback np-brand" :class="brandClass" />
       </div>
       <div class="np-meta">

@@ -97,8 +97,40 @@ interface NowPlayingState {
 const state = reactive<NowPlayingState>({ available: null, track: null })
 let initialized = false
 
+// An <img src> can't send the Bearer header, so with the deck locked the art
+// endpoint 401s and the image breaks. Fetch it through apiClient and expose
+// a blob: URL instead.
+const art = reactive<{ src: string | null, key: string }>({ src: null, key: '' })
+
+function clearArt(): void {
+  if (art.src) URL.revokeObjectURL(art.src)
+  art.src = null
+  art.key = ''
+}
+
+async function loadArt(track: NowPlayingTrack): Promise<void> {
+  const key = `${track.ts}`
+  if (art.key === key) return
+  art.key = key
+  try {
+    const response = await apiClient.get('/now-playing/art', {
+      params: { ts: track.ts },
+      responseType: 'blob',
+    })
+    if (art.key !== key) return // a newer track superseded this fetch
+    if (art.src) URL.revokeObjectURL(art.src)
+    art.src = URL.createObjectURL(response.data as Blob)
+  } catch (error) {
+    if (art.key !== key) return
+    console.warn('Could not load now-playing art:', error)
+    clearArt()
+  }
+}
+
 function applyTrack(payload: NowPlayingTrack | null | undefined): void {
   state.track = payload && payload.title ? payload : null
+  if (state.track?.has_art) void loadArt(state.track)
+  else clearArt()
 }
 
 async function syncFromBackend(): Promise<void> {
@@ -129,9 +161,6 @@ export function useNowPlaying() {
   const track = computed(() => state.track)
   const playing = computed(() => Boolean(state.track?.playing))
   const available = computed(() => state.available)
-  const artUrl = computed(() => {
-    const t = state.track
-    return t?.has_art ? `/api/now-playing/art?ts=${t.ts}` : null
-  })
+  const artUrl = computed(() => (state.track?.has_art ? art.src : null))
   return { track, playing, available, artUrl }
 }

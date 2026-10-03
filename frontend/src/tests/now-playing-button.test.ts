@@ -170,9 +170,14 @@ describe('now_playing face', () => {
   })
 
   it('renders title, artist and source for a live track', async () => {
-    apiGet.mockResolvedValue({
-      data: { success: true, available: true, track: trackPayload() },
-    })
+    // Art is fetched via the authed client and shown as a blob: URL.
+    URL.createObjectURL = vi.fn(() => 'blob:art')
+    URL.revokeObjectURL = vi.fn()
+    apiGet.mockImplementation((url: string) => Promise.resolve({
+      data: url === '/now-playing/art'
+        ? new Blob(['x'], { type: 'image/jpeg' })
+        : { success: true, available: true, track: trackPayload() },
+    }))
     const wrapper = await mountFace()
     expect(wrapper.find('.np-title').text()).toBe('Song')
     expect(wrapper.find('.np-artist').text()).toBe('Artist · Spotify')
