@@ -18,7 +18,7 @@ vi.mock('@/services/appDetection', () => ({
 
 import {
   dismissAgentWaiting, isAgentWaitingDismissed, sceneWaitingAgent, AGENT_SNOOZE_MS,
-  resumeAgentWaiting, sceneSnoozedAgent, agentSnoozeRemainingMs,
+  resumeAgentWaiting, sceneSnoozedAgent, agentSnoozeRemainingMs, waitingChipSources,
 } from '@/services/agentWaiting'
 
 function readyEntry(ts: number): AgentStateEntry {
@@ -113,5 +113,16 @@ describe('agentWaiting snooze window', () => {
     dismissAgentWaiting('claude')
     vi.advanceTimersByTime(60_000)
     expect(agentSnoozeRemainingMs('claude')).toBe(AGENT_SNOOZE_MS - 60_000)
+  })
+  it('the chip owns a source while waiting, snoozed or dismissed — never for other states', () => {
+    expect([...waitingChipSources([scene])]).toEqual(['claude'])         // waiting
+    dismissAgentWaiting('claude')
+    expect([...waitingChipSources([scene])]).toEqual(['claude'])         // snoozed
+    dismissAgentWaiting('claude', Infinity)
+    expect([...waitingChipSources([scene])]).toEqual(['claude'])         // dismissed
+    entryRef.value = { ...readyEntry(3000), state: 'permission' }
+    expect(waitingChipSources([scene]).size).toBe(0)                     // approval asks keep the banner
+    entryRef.value = { ...readyEntry(4000), prompted: false }
+    expect(waitingChipSources([scene]).size).toBe(0)                     // never prompted: no chip, banner stays
   })
 })

@@ -21,7 +21,7 @@
       <div class="row">
         <div class="row-text">
           <span class="label">Glow when an agent is waiting</span>
-          <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Snooze 3m on the frame to quiet it for 3 minutes, or Dismiss to silence it until the agent is idle again. A snooze can be ended early from the small chip that replaces it.</p>
+          <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Snooze 3m on the frame to quiet it for 3 minutes, or Dismiss to silence it until the agent is idle again.</p>
         </div>
         <div class="row-control">
           <label class="switch"><span class="sr-only">Agent waiting glow</span><input type="checkbox" :checked="settingsStore.agentWaitingGlowEnabled" @change="toggleWaitingGlow" /><span class="track"></span></label>

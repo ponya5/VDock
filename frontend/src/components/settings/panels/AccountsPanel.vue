@@ -7,14 +7,14 @@
           <div v-for="item in secrets" :key="item.id" class="row stack key-row" :data-key="item.id">
             <div class="key-top">
               <div class="row-text">
-                <span class="label">{{ item.label }} <span class="status" :class="item.configured ? 'is-ok' : 'is-off'">{{ item.configured ? 'Set' : 'Not set' }}</span></span>
+                <span class="label">{{ item.label }} <span class="status" :class="item.configured || item.builtin ? 'is-ok' : 'is-off'">{{ item.configured ? 'Set' : item.builtin ? (item.builtin_label || 'Built-in') : 'Not set' }}</span></span>
                 <p>{{ item.unlocks }}</p>
               </div>
               <div v-if="editingId !== item.id" class="row-control">
                 <button v-if="isLocalDevice" type="button" class="btn sm touch" data-action="set" @click="startEdit(item.id)">
-                  <FontAwesomeIcon :icon="['fas', 'key']" /> {{ item.configured ? 'Replace' : 'Set key' }}
+                  <FontAwesomeIcon :icon="['fas', 'key']" /> {{ item.configured ? 'Replace' : item.builtin ? 'Use my own key' : 'Set key' }}
                 </button>
-                <a v-if="item.help_url" class="btn sm touch" :href="item.help_url" target="_blank" rel="noopener">
+                <a v-if="item.help_url && !item.builtin" class="btn sm touch" :href="item.help_url" target="_blank" rel="noopener">
                   <FontAwesomeIcon :icon="['fas', 'up-right-from-square']" /> Get a key
                 </a>
               </div>

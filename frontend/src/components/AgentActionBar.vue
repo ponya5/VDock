@@ -126,6 +126,7 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   --agent-accent: #38bdf8;
   --agent-action-height: clamp(52px, 11vh, 84px);
   display: flex;
+  flex-wrap: wrap; /* tablets: when the buttons can't fit beside the state + picker, they drop to their own row */
   align-items: stretch;
   gap: clamp(8px, 1.4vw, 14px);
   margin: 12px 12px 0;
@@ -187,14 +188,17 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 
 .agent-actions {
   display: flex;
-  flex: 1;
+  flex: 1 1 340px;
+  flex-wrap: wrap;
   min-width: 0;
   gap: clamp(6px, 1vw, 10px);
 }
 
 .agent-action {
-  flex: 1 1 0;
-  min-width: 0;
+  /* A floor keeps every label readable; extra buttons wrap instead of
+     squeezing to "S…" / "C…". */
+  flex: 1 1 96px;
+  min-width: 88px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -218,9 +222,15 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 }
 
 .agent-action-label {
+  /* Wrap onto a second line rather than truncating. */
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-align: center;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .agent-action:hover:not(:disabled) {
@@ -264,9 +274,9 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   }
 }
 
-/* Up to 7"-panel widths: stack icon over label so six buttons fit a row (or
-   a wrapped grid) without truncating their labels. */
-@media (max-width: 1100px) {
+/* Up to 7"-panel and 10" tablet widths: stack icon over label so six buttons
+   fit a row (or a wrapped grid) without truncating their labels. */
+@media (max-width: 1400px) {
   .agent-action {
     flex-direction: column;
     gap: 4px;

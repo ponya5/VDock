@@ -98,12 +98,20 @@ const state = reactive<NowPlayingState>({ available: null, track: null })
 let initialized = false
 
 // An <img src> can't send the Bearer header, so with the deck locked the art
-// endpoint 401s and the image breaks. Fetch it through apiClient and expose
-// a blob: URL instead.
+// endpoint 401s and the image breaks. Fetch it through apiClient and expose a
+// data: URL — the backend CSP allows `img-src data:` but not `blob:`.
 const art = reactive<{ src: string | null, key: string }>({ src: null, key: '' })
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read album art'))
+    reader.readAsDataURL(blob)
+  })
+}
+
 function clearArt(): void {
-  if (art.src) URL.revokeObjectURL(art.src)
   art.src = null
   art.key = ''
 }
@@ -118,9 +126,9 @@ async function loadArt(track: NowPlayingTrack): Promise<void> {
       { ts: track.ts },
       { responseType: 'blob' },
     )
+    const dataUrl = await blobToDataUrl(response.data as Blob)
     if (art.key !== key) return // a newer track superseded this fetch
-    if (art.src) URL.revokeObjectURL(art.src)
-    art.src = URL.createObjectURL(response.data as Blob)
+    art.src = dataUrl
   } catch (error) {
     if (art.key !== key) return
     console.warn('Could not load now-playing art:', error)

@@ -239,19 +239,13 @@ describe('AgentWaitingGlow', () => {
     expect(wrapper.find('.agent-waiting-snooze').exists()).toBe(false)
   })
 
-  it('after snoozing, shows a Resume chip with time left; Resume re-arms the alert', async () => {
+  it('leaves nothing behind after Snooze — no resume/undo chip', async () => {
     const wrapper = mountGlow()
     await wrapper.find('.snooze-btn').trigger('click')
-
-    const chip = wrapper.find('[data-testid="snoozed-chip"]')
-    expect(chip.exists()).toBe(true)
-    expect(chip.text()).toContain('Claude Code snoozed')
-    expect(chip.text()).toContain('3m left') // 150 s rounds up to 3m
+    expect(wrapper.find('.agent-waiting-snooze').exists()).toBe(false)
     expect(wrapper.find('.agent-waiting-glow').exists()).toBe(false)
-
-    await wrapper.find('[data-testid="resume-btn"]').trigger('click')
     expect(wrapper.find('[data-testid="snoozed-chip"]').exists()).toBe(false)
-    expect(wrapper.find('.agent-waiting-glow').exists()).toBe(true)
+    expect(wrapper.text()).not.toMatch(/resume|undo/i)
   })
 
   it('offers a snooze chip naming the waiting agent', () => {

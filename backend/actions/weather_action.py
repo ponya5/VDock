@@ -38,15 +38,19 @@ class WeatherAction(BaseAction):
             location = self.config.get('weather_location', 'auto')
             temp_unit = self.config.get('temperature_unit', 'C')
 
-            # Check if API key is available
+            # No WeatherAPI key: use the free, keyless Open-Meteo service (the
+            # same provider as the screensaver) instead of demo data.
             if not self.api_key or self.api_key == 'demo-key-replace-with-your-own':
-                logger.warning("WeatherAPI.com API key not configured, using mock data")
-                mock_data = self._get_mock_weather_data(location, temp_unit)
-                return ActionResult(
-                    success=True,
-                    message=f"Weather data fetched for {location} (demo mode - get your own API key at weatherapi.com)",
-                    data=mock_data['data']
-                )
+                try:
+                    return self._open_meteo(location, temp_unit)
+                except Exception as e:
+                    logger.warning("Open-Meteo weather failed (%s), using mock data", e)
+                    mock_data = self._get_mock_weather_data(location, temp_unit)
+                    return ActionResult(
+                        success=True,
+                        message=f"Weather data fetched for {location} (demo mode - weather service unreachable)",
+                        data=mock_data['data']
+                    )
 
             # Real API implementation using WeatherAPI.com
             params = {
@@ -137,6 +141,65 @@ class WeatherAction(BaseAction):
                 message=f"Weather data fetched for {location} (demo mode - error occurred, get your own key at weatherapi.com)",
                 data=mock_data['data']
             )
+
+    # WMO weather codes -> text (Open-Meteo `weather_code`).
+    _WMO = {
+        0: 'Clear Sky', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+        45: 'Fog', 48: 'Fog', 51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle',
+        56: 'Freezing Drizzle', 57: 'Freezing Drizzle', 61: 'Light Rain', 63: 'Rain',
+        65: 'Heavy Rain', 66: 'Freezing Rain', 67: 'Freezing Rain', 71: 'Light Snow',
+        73: 'Snow', 75: 'Heavy Snow', 77: 'Snow Grains', 80: 'Rain Showers',
+        81: 'Rain Showers', 82: 'Violent Rain Showers', 85: 'Snow Showers',
+        86: 'Snow Showers', 95: 'Thunderstorm', 96: 'Thunderstorm With Hail',
+        99: 'Thunderstorm With Hail',
+    }
+
+    def _open_meteo(self, location: str, temp_unit: str) -> ActionResult:
+        """Current weather from Open-Meteo (free, no API key)."""
+        city = location if location != 'auto' else 'London'
+        geo = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={'name': city, 'count': 1, 'format': 'json'}, timeout=10,
+        )
+        geo.raise_for_status()
+        places = geo.json().get('results') or []
+        if not places:
+            raise ValueError(f"unknown location {city!r}")
+        place = places[0]
+
+        metric = temp_unit == 'C'
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                'latitude': place['latitude'],
+                'longitude': place['longitude'],
+                'current': 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
+                'temperature_unit': 'celsius' if metric else 'fahrenheit',
+                'wind_speed_unit': 'kmh' if metric else 'mph',
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        current = resp.json().get('current') or {}
+        text = self._WMO.get(current.get('weather_code'), 'Unknown')
+        wind = float(current.get('wind_speed_10m') or 0)
+
+        return ActionResult(
+            success=True,
+            message=f"Weather data fetched for {place.get('name', city)}",
+            data={
+                'location': place.get('name', city),
+                'temperature': round(current.get('temperature_2m') or 0),
+                'description': text,
+                'condition': text,
+                'humidity': current.get('relative_humidity_2m') or 0,
+                'windSpeed': f"{wind:.1f} {'km/h' if metric else 'mph'}",
+                'visibility': '',
+                'unit': temp_unit,
+                'unit_symbol': '°C' if metric else '°F',
+                'icon': '',
+            },
+        )
 
     def _get_mock_weather_data(
         self, location: str, temp_unit: str
