@@ -66,6 +66,33 @@ export function dismissAgentWaiting(source: string | null | undefined): void {
   }, AGENT_SNOOZE_MS + 250))
 }
 
+/** End a snooze early: the next read sees the agent as waiting again. */
+export function resumeAgentWaiting(source: string | null | undefined): void {
+  if (!source) return
+  clearTimeout(snoozeTimers.get(source))
+  snoozeTimers.delete(source)
+  delete dismissedReadyTs[source]
+}
+
+/** ms left on this source's active snooze, or 0 when it isn't snoozed. */
+export function agentSnoozeRemainingMs(source: string | null | undefined): number {
+  if (!isAgentWaitingDismissed(source)) return 0
+  return Math.max(0, dismissedReadyTs[source as string].until - Date.now())
+}
+
+/** The mirror of `sceneWaitingAgent`: a prompted `ready` agent the user has
+    snoozed — what the "Resume" chip is shown for. */
+export function sceneSnoozedAgent(
+  scene: Pick<Scene, 'id' | 'name' | 'appId' | 'triggeredByApp' | 'pages'>,
+  integrations?: readonly AppIntegration[],
+): { profile: AppProfileDto | null; entry: AgentStateEntry } | null {
+  const profile = sceneAppProfile(scene, integrations)
+  const source = profile?.status_source
+  const entry = agentStateEntry(source)
+  if (entry?.state !== 'ready' || !entry.prompted || !isAgentWaitingDismissed(source)) return null
+  return { profile, entry }
+}
+
 export function isAgentWaitingDismissed(source: string | null | undefined): boolean {
   const entry = agentStateEntry(source)
   if (!source || !entry || entry.state !== 'ready') return false

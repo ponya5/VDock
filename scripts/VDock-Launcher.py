@@ -247,6 +247,12 @@ def wait_for_url(url: str, timeout_seconds: int = 45, interval_seconds: float = 
             with urllib.request.urlopen(url, timeout=2) as response:
                 if response.status < 500:
                     return True
+        except urllib.error.HTTPError as http_error:
+            # An HTTP answer means the server is up — including 401/403 when
+            # the deck is password-protected (REQUIRE_AUTH).
+            if http_error.code < 500:
+                return True
+            time.sleep(interval_seconds)
         except (urllib.error.URLError, TimeoutError, ConnectionError):
             time.sleep(interval_seconds)
 
@@ -260,7 +266,9 @@ def backend_supports_user_settings(port: int = DEFAULT_BACKEND_PORT) -> bool:
         with urllib.request.urlopen(user_settings_url, timeout=2) as response:
             return response.status == 200
     except urllib.error.HTTPError as http_error:
-        return http_error.code == 200
+        # 401/403 = the route exists but the deck is locked (REQUIRE_AUTH);
+        # only a missing route (404/405) means a stale backend.
+        return http_error.code in (401, 403)
     except (urllib.error.URLError, TimeoutError, ConnectionError):
         return False
 

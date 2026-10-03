@@ -16,7 +16,10 @@ vi.mock('@/services/appDetection', () => ({
   sceneAppProfile: () => ({ id: 'claude-code', status_source: 'claude', label: 'Claude Code' }),
 }))
 
-import { dismissAgentWaiting, isAgentWaitingDismissed, sceneWaitingAgent, AGENT_SNOOZE_MS } from '@/services/agentWaiting'
+import {
+  dismissAgentWaiting, isAgentWaitingDismissed, sceneWaitingAgent, AGENT_SNOOZE_MS,
+  resumeAgentWaiting, sceneSnoozedAgent, agentSnoozeRemainingMs,
+} from '@/services/agentWaiting'
 
 function readyEntry(ts: number): AgentStateEntry {
   return { source: 'claude', state: 'ready', message: '', cwd: '', project: 'backend', prompted: true, ts }
@@ -78,5 +81,24 @@ describe('agentWaiting snooze window', () => {
     vi.advanceTimersByTime(120_000)
     await nextTick()
     expect(isAgentWaitingDismissed('claude')).toBe(false)
+  })
+  it('resume ends the snooze at once and re-arms the alert', () => {
+    dismissAgentWaiting('claude')
+    expect(sceneWaitingAgent(scene)).toBeNull()
+    expect(sceneSnoozedAgent(scene)).not.toBeNull()
+    expect(agentSnoozeRemainingMs('claude')).toBeGreaterThan(0)
+
+    resumeAgentWaiting('claude')
+    expect(isAgentWaitingDismissed('claude')).toBe(false)
+    expect(sceneWaitingAgent(scene)).not.toBeNull()
+    expect(sceneSnoozedAgent(scene)).toBeNull()
+    expect(agentSnoozeRemainingMs('claude')).toBe(0)
+  })
+
+  it('reports remaining snooze time and no snoozed agent when not snoozed', () => {
+    expect(sceneSnoozedAgent(scene)).toBeNull()
+    dismissAgentWaiting('claude')
+    vi.advanceTimersByTime(60_000)
+    expect(agentSnoozeRemainingMs('claude')).toBe(AGENT_SNOOZE_MS - 60_000)
   })
 })

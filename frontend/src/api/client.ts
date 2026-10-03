@@ -2,6 +2,20 @@ import axios from 'axios'
 import type { AxiosInstance, AxiosError } from 'axios'
 import { getAuthToken, markUnauthorized } from '@/services/auth'
 
+// After a phone unlocks / the tab returns / the network comes back, the radio
+// is often not up yet: requests fail for a few seconds and then work. Inside
+// this window GETs retry quietly and the "Network Error" toast is held back.
+const RESUME_GRACE_MS = 10000
+const RESUME_RETRY_DELAYS_MS = [1500, 3000, 4500]
+let resumeGraceUntil = 0
+
+/** Call when the page resumes (visible/online) to enter the grace window. */
+export function markNetworkResume(): void {
+  resumeGraceUntil = Date.now() + RESUME_GRACE_MS
+}
+
+const inResumeGrace = () => Date.now() < resumeGraceUntil
+
 class ApiClient {
   private client: AxiosInstance
   private notificationsStore: any = null
@@ -45,6 +59,17 @@ class ApiClient {
             && !error.config?.url?.includes('/auth/login')) {
           markUnauthorized()
         }
+        // Resume grace: retry idempotent GETs while the network wakes up.
+        const cfg = error.config as (typeof error.config & { _resumeRetry?: number }) | undefined
+        if (!error.response && cfg && cfg.method?.toLowerCase() === 'get' && inResumeGrace()) {
+          const attempt = cfg._resumeRetry ?? 0
+          if (attempt < RESUME_RETRY_DELAYS_MS.length) {
+            cfg._resumeRetry = attempt + 1
+            return new Promise((resolve, reject) => {
+              setTimeout(() => this.client.request(cfg).then(resolve, reject), RESUME_RETRY_DELAYS_MS[attempt])
+            })
+          }
+        }
         this.handleError(error)
         return Promise.reject(error)
       }
@@ -69,6 +94,10 @@ class ApiClient {
     
     // Network error
     if (!response) {
+      if (inResumeGrace()) {
+        console.warn('Network error during resume grace (suppressed):', config?.url)
+        return
+      }
       // Throttle network errors to prevent spam on page load
       if (currentTime - this.lastErrorTime < this.errorThrottleMs) {
         console.warn('Network error throttled:', config?.url)
