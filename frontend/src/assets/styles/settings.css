@@ -1135,6 +1135,25 @@
   :where(.settings-app) .about-meta:not(.settings-isolate *) { margin-left: 0; text-align: left; }
 }
 
+/* DL-146 3c: fingers get 44px targets at any width (tablet landscape, 7" panel),
+   not only below the 880px stacked layout. */
+@media (pointer: coarse) {
+  .settings-app:not(.settings-isolate *) { --target: 44px; }
+  .settings-app .btn.sm:not(.settings-isolate *) { min-height: var(--target); }
+  :where(.settings-app) .subtab:not(.settings-isolate *),
+:where(.settings-app) .nav-item:not(.settings-isolate *) { min-height: 44px; }
+}
+
+/* DL-147: tablets (touch, both sides >= 700px - the 7" panel is excluded) also get
+   44px reset buttons, credit links and the bell. Range inputs are measured by their row. */
+@media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
+  .setting-reset,
+  .dock-credit-link,
+  .dock-dismiss,
+  .dock-inbox,
+  .notification-bell { min-width: 44px; min-height: 44px; }
+}
+
 /* DL-123: spectrum skin picker — live canvas swatches. */
 :where(.settings-app) .skin-grid:not(.settings-isolate *) {
   display: grid;

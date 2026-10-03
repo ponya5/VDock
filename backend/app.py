@@ -415,6 +415,26 @@ def handle_user_settings_changed(data):
     emit('user_settings_updated', {'settings': settings}, broadcast=True, include_self=False)
 
 
+_MAX_PROFILE_ID_LEN = 128
+
+
+@socketio.on('profile_changed')
+def handle_profile_changed(data):
+    """Tell other open decks a profile was saved so they can re-fetch it.
+
+    Client-initiated on purpose: emits from HTTP handlers never reach clients on
+    this server stack. Only the id is relayed, never profile content.
+    """
+    if not isinstance(data, dict):
+        return
+
+    profile_id = data.get('id')
+    if not isinstance(profile_id, str) or not profile_id or len(profile_id) > _MAX_PROFILE_ID_LEN:
+        return
+
+    emit('profile_changed', {'id': profile_id}, broadcast=True, include_self=False)
+
+
 # This event reaches every connected client, so it is an allowlist, not a
 # passthrough — a generic relay would be a remote-command channel.
 ALLOWED_UI_COMMANDS = {'show_screensaver', 'screensaver_layout_edit', 'toggle_quick_deck'}
@@ -494,6 +514,17 @@ def serve_frontend(path):
 # Main Entry Point
 # ============================================================================
 
+def ssl_run_kwargs() -> dict:
+    """``socketio.run`` kwargs that serve HTTPS when USE_SSL is on (else none).
+
+    Config.validate() already refuses to start when the cert or key file is
+    missing, so the paths here are known to exist.
+    """
+    if not Config.USE_SSL:
+        return {}
+    return {'ssl_context': (Config.SSL_CERT_PATH, Config.SSL_KEY_PATH)}
+
+
 if __name__ == '__main__':
     # ALLOW_LAN asked for a LAN-visible server but HOST defaults to localhost —
     # bind broadly unless the user pinned a specific interface.
@@ -528,5 +559,6 @@ if __name__ == '__main__':
         host=host,
         port=port,
         debug=Config.DEBUG,
-        allow_unsafe_werkzeug=True
+        allow_unsafe_werkzeug=True,
+        **ssl_run_kwargs(),
     )

@@ -97,7 +97,7 @@ function rollupLabel(list: AgentAlert[]): string {
    viewport, so it is large at 1024x600 and still fits a phone. */
 .agent-alert-stack {
   position: fixed;
-  top: clamp(12px, 3vh, 28px);
+  top: max(clamp(12px, 3vh, 28px), env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 30000;

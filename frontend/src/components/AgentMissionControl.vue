@@ -199,6 +199,7 @@ import {
   type SessionChanges,
 } from '@/services/missionControl'
 import { useNotificationsStore } from '@/stores/notifications'
+import { vibrate } from '@/utils/haptics'
 
 /**
  * DL-144 - one place for every live agent session, plus the approval inbox
@@ -366,6 +367,7 @@ async function decide(s: MissionSession, decision: MissionDecision) {
   busy.add(key)
   try {
     await decideMissionSession(s.source, s.session_id, decision)
+    vibrate(15)
     notifications.success(
       decision === 'approve' ? 'Approved' : 'Denied',
       `${sourceLabelFor(s.source)}${s.project ? ` - ${s.project}` : ''}`,
@@ -441,7 +443,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(8px, 2.5vh, 28px);
+  padding:
+    max(clamp(8px, 2.5vh, 28px), env(safe-area-inset-top, 0px))
+    max(clamp(8px, 2.5vh, 28px), env(safe-area-inset-right, 0px))
+    max(clamp(8px, 2.5vh, 28px), env(safe-area-inset-bottom, 0px))
+    max(clamp(8px, 2.5vh, 28px), env(safe-area-inset-left, 0px));
   background: rgba(4, 8, 16, 0.72);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -483,7 +489,7 @@ onUnmounted(() => {
 }
 .mc-close {
   flex: none;
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   border-radius: 10px;
   border: 1px solid #243556;
   background: #16233a;

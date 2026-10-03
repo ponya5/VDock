@@ -1,6 +1,7 @@
 import { io, type Socket } from 'socket.io-client'
 import type { ActionResult } from '@/types'
 import { getAuthToken, onAuthTokenChanged, probeAuth } from '@/services/auth'
+import { markConnected, markDisconnected } from '@/services/connection'
 
 type SocketListener = (...args: any[]) => void
 
@@ -12,10 +13,14 @@ class SocketClient {
     timeout: ReturnType<typeof setTimeout>
   }> = new Map()
   private actionIdCounter = 0
-  private pendingListeners: Array<{ event: string; callback: SocketListener }> = []
+  // Every registered listener, kept for the client's lifetime so a socket that
+  // is replaced (reconnect() on a token change, a manual refresh) is re-wired.
+  private listeners: Array<{ event: string; callback: SocketListener }> = []
   private lastAuthProbe = 0
 
   connect() {
+    if (this.socket) return
+
     // The socket lives on the backend port, not necessarily the page's origin:
     // dev serves the app from Vite (:5173/:4444) while the API stays on the
     // backend. Deriving the host from location.hostname is what makes a second
@@ -32,10 +37,11 @@ class SocketClient {
       auth: (cb) => cb({ token: getAuthToken() })
     })
 
-    for (const { event, callback } of this.pendingListeners) {
+    for (const { event, callback } of this.listeners) {
       this.socket.on(event, callback)
     }
-    this.pendingListeners = []
+
+    this.socket.on('connect', markConnected)
 
     this.socket.on('connected', (data) => {
       console.log('Connected to VDock server:', data.message)
@@ -58,6 +64,7 @@ class SocketClient {
 
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error)
+      markDisconnected()
       // A rejected handshake may mean the token expired — re-probe so the
       // lock screen appears instead of retrying forever. Throttled: socket.io
       // retries fast and this is a real request per error.
@@ -68,8 +75,11 @@ class SocketClient {
       }
     })
 
-    this.socket.on('disconnect', () => {
+    this.socket.on('disconnect', (reason: string) => {
       console.log('Disconnected from VDock server')
+      // A deliberate disconnect (token change, manual refresh) is followed by
+      // an immediate reconnect; only a dropped link is worth a banner.
+      if (reason !== 'io client disconnect') markDisconnected()
     })
 
     this.socket.on('toggle_fullscreen', (data) => {
@@ -88,6 +98,15 @@ class SocketClient {
   reconnect() {
     this.disconnect()
     this.connect()
+  }
+
+  /** Dial now instead of waiting out socket.io's back-off (phone just woke up). */
+  ensureConnected() {
+    if (!this.socket) {
+      this.connect()
+      return
+    }
+    if (!this.socket.connected) this.socket.connect()
   }
 
   isConnected(): boolean {
@@ -124,6 +143,13 @@ class SocketClient {
     }
   }
 
+  /** Tell other open decks this profile was saved so they re-fetch it. */
+  emitProfileChanged(id: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('profile_changed', { id })
+    }
+  }
+
   sendUiCommand(command: string) {
     if (this.socket?.connected) {
       this.socket.emit('ui_command', { command })
@@ -131,27 +157,14 @@ class SocketClient {
   }
 
   on(event: string, callback: SocketListener) {
-    if (this.socket) {
-      this.socket.on(event, callback)
-      return
-    }
-
-    this.pendingListeners.push({ event, callback })
+    this.listeners.push({ event, callback })
+    this.socket?.on(event, callback)
   }
 
   off(event: string, callback?: SocketListener) {
-    if (this.socket) {
-      this.socket.off(event, callback)
-      return
-    }
-
-    if (!callback) {
-      this.pendingListeners = this.pendingListeners.filter((listener) => listener.event !== event)
-      return
-    }
-
-    this.pendingListeners = this.pendingListeners.filter(
-      (listener) => !(listener.event === event && listener.callback === callback)
+    this.socket?.off(event, callback)
+    this.listeners = this.listeners.filter(
+      (listener) => !(listener.event === event && (!callback || listener.callback === callback))
     )
   }
 

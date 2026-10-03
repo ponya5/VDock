@@ -9,11 +9,31 @@ import { useSettingsStore } from '@/stores/settings'
 import { useProfilesStore } from '@/stores/profiles'
 import { LAST_PROFILE_STORAGE_KEY, useDashboardStore } from '@/stores/dashboard'
 import socketClient from '@/api/socket'
+import type { Profile } from '@/types'
 
 const REFRESH_REQUEST_CHANNEL = 'vdock-refresh-request'
 const REFRESH_REQUEST_STORAGE_KEY = 'vdock_refresh_request'
 
-export async function refreshVdock(): Promise<void> {
+/**
+ * `setProfile` for a profile the user is already looking at: it resets to the
+ * first scene and page, so put the viewer back where they were (when that
+ * scene still exists). Used when the refresh was not asked for by the user.
+ */
+export function setProfileKeepingPosition(profile: Profile): void {
+  const dashboardStore = useDashboardStore()
+  const sceneId = dashboardStore.currentScene?.id
+  const pageIndex = dashboardStore.currentPageIndex
+
+  dashboardStore.setProfile(profile)
+
+  const sceneIndex = dashboardStore.currentProfile?.scenes.findIndex(s => s.id === sceneId) ?? -1
+  if (sceneIndex >= 0) {
+    dashboardStore.setScene(sceneIndex)
+    dashboardStore.setPage(pageIndex)
+  }
+}
+
+export async function refreshVdock(options: { keepPosition?: boolean } = {}): Promise<void> {
   const settingsStore = useSettingsStore()
   const profilesStore = useProfilesStore()
   const dashboardStore = useDashboardStore()
@@ -26,7 +46,8 @@ export async function refreshVdock(): Promise<void> {
     if (profileId) {
       const profile = await profilesStore.getProfile(profileId)
       if (profile) {
-        dashboardStore.setProfile(profile)
+        if (options.keepPosition) setProfileKeepingPosition(profile)
+        else dashboardStore.setProfile(profile)
       }
     }
 

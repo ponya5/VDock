@@ -81,7 +81,7 @@
         :class="{ 'mc-fullscreen-callout-persist': fullscreenUnsupported }"
         role="status"
       >
-        {{ fullscreenUnsupported ? 'Add to Home Screen for fullscreen (Share → Add to Home Screen)' : 'Tap for fullscreen' }}
+        {{ fullscreenUnsupported ? IOS_FULLSCREEN_CALLOUT : 'Tap for fullscreen' }}
         <span class="mc-fullscreen-callout-arrow" aria-hidden="true"></span>
       </div>
       <button
@@ -105,8 +105,56 @@
         @click="menuOpen = !menuOpen"
       >
         <FontAwesomeIcon :icon="['fas', 'ellipsis-vertical']" />
+        <span v-if="needsYou > 0" class="mc-more-badge" aria-hidden="true"></span>
       </button>
       <div v-if="menuOpen" class="mc-menu" role="menu">
+        <button
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
+          data-testid="mc-menu-mission"
+          @click="onMissionControl"
+        >
+          <FontAwesomeIcon :icon="['fas', 'satellite-dish']" />
+          <span>Mission Control</span>
+          <span v-if="needsYou > 0" class="mc-menu-count">{{ needsYou }}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
+          data-testid="mc-menu-layout"
+          @click="toggleLayout"
+        >
+          <FontAwesomeIcon :icon="['fas', 'table-cells-large']" />
+          <span>Layout: {{ devicePrefs.layout === 'fit' ? 'Fit to screen' : 'As designed' }}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
+          data-testid="mc-menu-keep-awake"
+          @click="devicePrefs.keepAwake = !devicePrefs.keepAwake"
+        >
+          <FontAwesomeIcon :icon="['fas', 'lightbulb']" />
+          <span class="mc-menu-label">
+            Keep screen on: {{ devicePrefs.keepAwake ? 'On' : 'Off' }}
+            <small v-if="keepAwakeNeedsApp" class="mc-menu-hint" data-testid="mc-keep-awake-hint">
+              Needs the installed app or HTTPS (USE_SSL)
+            </small>
+          </span>
+        </button>
+        <button
+          v-if="!isStandalone"
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
+          data-testid="mc-menu-install"
+          @click="onInstall"
+        >
+          <FontAwesomeIcon :icon="['fas', 'square-plus']" />
+          <span>Add to Home Screen</span>
+        </button>
         <button type="button" role="menuitem" class="mc-menu-item" @click="onRefresh">
           <FontAwesomeIcon :icon="['fas', 'rotate-right']" :spin="isRefreshing" />
           <span>Refresh</span>
@@ -117,6 +165,8 @@
         </button>
       </div>
     </div>
+
+    <InstallSheet v-if="showInstall" @close="showInstall = false" />
 
     <!-- Exit confirmation (same flow as the desktop header). -->
     <div v-if="showExitConfirm" class="mc-confirm-overlay" @click.self="cancelExit">
@@ -148,7 +198,12 @@ import { sceneAgentIsWaiting, sceneWaitingAgent } from '@/services/agentWaiting'
 import { sceneSwipe } from '@/services/sceneSwipe'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
+import { useNeedsYouCount } from '@/composables/useNeedsYouCount'
+import { useDevicePrefs } from '@/services/devicePrefs'
+import { openMissionControl } from '@/services/missionControl'
 import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSupport'
+import { IOS_FULLSCREEN_CALLOUT } from '@/utils/installCopy'
+import InstallSheet from '@/components/InstallSheet.vue'
 import type { Scene } from '@/types'
 
 interface Props {
@@ -167,6 +222,8 @@ const emit = defineEmits<{
 
 const appIntegrations = useAppIntegrations()
 const settingsStore = useSettingsStore()
+const needsYou = useNeedsYouCount()
+const devicePrefs = useDevicePrefs()
 const { quitApp, isElectron, toggleFullscreen: toggleElectronFullscreen, isFullscreen: getElectronFullscreen } = useElectron()
 
 // The desktop pill owns this watcher — on mobile it doesn't mount, so the
@@ -416,6 +473,16 @@ let fullscreenCalloutTimer: ReturnType<typeof setTimeout> | null = null
 // toggle. Computed once per mount; it can't change while the page is open.
 const isStandalone = isRunningStandalone()
 
+// Screen Wake Lock only exists in a secure context, and a deck on plain
+// http://192.168.x.x is not one (HTTPS via USE_SSL, or the installed app, fixes it).
+const keepAwakeNeedsApp = !window.isSecureContext
+const showInstall = ref(false)
+
+function onInstall() {
+  menuOpen.value = false
+  showInstall.value = true
+}
+
 // iPhone Safari never implements the Fullscreen API (see fullscreenSupport.ts)
 // — Electron always has its own native call, so only a plain browser tab
 // without the DOM API is actually stuck.
@@ -457,6 +524,18 @@ async function onFullscreen() {
   } catch (err) {
     console.error('Failed to toggle fullscreen:', err)
   }
+}
+
+function onMissionControl() {
+  menuOpen.value = false
+  openMissionControl()
+}
+
+// Device-local (DL-147): never part of the synced settings, so flipping it
+// on a phone does not touch the desktop or any other device.
+function toggleLayout() {
+  devicePrefs.layout = devicePrefs.layout === 'fit' ? 'designed' : 'fit'
+  menuOpen.value = false
 }
 
 async function onRefresh() {
@@ -928,6 +1007,7 @@ onUnmounted(() => {
 /* --- Overflow menu ---------------------------------------------------------- */
 .mc-more-wrap { position: relative; flex: 0 0 auto; }
 .mc-more-btn {
+  position: relative;
   width: 44px;
   height: 44px;
   display: flex;
@@ -941,6 +1021,30 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .mc-more-btn:active { transform: scale(0.94); }
+
+/* Something needs you (permission prompt / prompted idle agent): a dot on
+   the menu button, and the count next to Mission Control inside it. */
+.mc-more-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f5a524;
+  box-shadow: 0 0 0 2px rgba(24, 24, 40, 0.92);
+}
+.mc-menu-count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(245, 165, 36, 0.2);
+  color: #ffd89e;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
 
 .mc-menu {
   position: absolute;
@@ -975,6 +1079,8 @@ onUnmounted(() => {
 }
 .mc-menu-item:active { background: rgba(255, 255, 255, 0.1); }
 .mc-menu-item > svg { width: 16px; color: rgba(255, 255, 255, 0.6); }
+.mc-menu-label { display: flex; flex-direction: column; gap: 2px; }
+.mc-menu-hint { font-size: 0.7rem; font-weight: 400; color: rgba(255, 255, 255, 0.5); }
 .mc-menu-danger { color: #ff8a80; }
 .mc-menu-danger > svg { color: #ff8a80; }
 

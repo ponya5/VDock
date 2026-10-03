@@ -4244,5 +4244,16 @@ onUnmounted(() => {
   flex-shrink: 0;
   font-size: 0.8rem;
 }
+
+/* DL-147: finger-sized header buttons and checkbox rows on phones and tablets.
+   Desktop and the 7" panel keep the compact editor. */
+html:is(.device-phone, .device-tablet) .save-profile-btn,
+html:is(.device-phone, .device-tablet) .close-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+html:is(.device-phone, .device-tablet) .checkbox-label {
+  min-height: 44px;
+}
 </style>
 

@@ -108,6 +108,12 @@ const filteredTemplates = computed(() => {
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* DL-147: finger-sized on phones and tablets. */
+html:is(.device-phone, .device-tablet) .collapse-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .templates-content {
   padding: var(--spacing-md);
 }

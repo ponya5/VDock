@@ -23,6 +23,7 @@
     <AgentAlertOverlay />
     <AgentMissionControl v-if="!isStandaloneSettings" />
     <LiveActionMenu v-if="!isStandaloneSettings" />
+    <ConnectionBanner v-if="!isStandaloneSettings" />
     <!-- The lock screen sits above everything, including standalone settings -->
     <AuthGate />
   </div>
@@ -46,7 +47,10 @@ import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
 import AgentMissionControl from '@/components/AgentMissionControl.vue'
 import LiveActionMenu from '@/components/LiveActionMenu.vue'
 import AuthGate from '@/components/AuthGate.vue'
+import ConnectionBanner from '@/components/ConnectionBanner.vue'
 import { probeAuth } from '@/services/auth'
+import { initConnectionResume } from '@/services/connectionResume'
+import { initProfileSync } from '@/services/profileSync'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { useToggleSync } from '@/services/toggleSync'
 import { initTriggerEvents } from '@/services/triggerEvents'
@@ -72,6 +76,8 @@ watch(isStandaloneSettings, (standalone) => {
 
 const showNotifications = ref(true)
 let stopLiveSettingsSync: (() => void) | undefined
+let stopConnectionResume: (() => void) | undefined
+let stopProfileSync: (() => void) | undefined
 
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
@@ -91,6 +97,8 @@ onMounted(async () => {
   await actionCatalogStore.load()
 
   socketClient.connect()
+  stopConnectionResume = initConnectionResume()
+  stopProfileSync = initProfileSync()
   useAgentAlerts().init()
   initTriggerEvents()
   useToggleSync().init()
@@ -158,6 +166,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleSummonKey)
   window.removeEventListener('beforeunload', handleBeforeUnload)
   stopLiveSettingsSync?.()
+  stopConnectionResume?.()
+  stopProfileSync?.()
 })
 </script>
 

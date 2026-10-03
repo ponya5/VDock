@@ -1058,6 +1058,18 @@ function triggerRipple(event: PointerEvent) {
   box-shadow: 0 2px 8px rgba(8, 6, 30, 0.4);
 }
 
+/* DL-147: finger-sized chips on tablets, stacked so the pair never reaches the
+   delete badge on the top-left of a 96px key. */
+html.device-tablet .edit-overlay-actions {
+  flex-direction: column;
+}
+
+html.device-tablet .edit-btn,
+html.device-tablet .copy-btn {
+  width: 44px;
+  height: 44px;
+}
+
 .edit-btn:hover,
 .copy-btn:hover {
   background: rgba(255, 255, 255, 0.28);

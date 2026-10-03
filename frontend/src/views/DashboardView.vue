@@ -5,7 +5,7 @@
       dashboardBackgroundClass,
       `device-${layoutClass}`,
       `orient-${orientation}`,
-      { mobile: isMobileViewport, 'layout-stacked': deckLayout.stacked },
+      { mobile: isMobileViewport, 'layout-stacked': deckLayout.stacked, 'footer-open': footerVisible },
     ]"
     :style="dashboardBackgroundStyle"
   >
@@ -124,6 +124,21 @@
         </div>
       </div>
 
+      <!-- DL-147: on tablets the edit sidebar is an overlay drawer (it must not
+           shrink the grid); this handle slides it away so every column stays
+           reachable while editing. -->
+      <button
+        v-if="isEditMode && layoutClass === 'tablet'"
+        type="button"
+        class="edit-drawer-toggle"
+        :class="{ 'is-open': editDrawerOpen }"
+        :aria-label="editDrawerOpen ? 'Hide actions' : 'Show actions'"
+        :aria-expanded="editDrawerOpen"
+        @click="editDrawerOpen = !editDrawerOpen"
+      >
+        <FontAwesomeIcon :icon="['fas', 'bars']" />
+      </button>
+
       <!-- Decomposed Edit Sidebar component -->
       <EditSidebar
         v-if="isEditMode"
@@ -132,6 +147,8 @@
         :filtered-categories="filteredCategories"
         @toggle-category="toggleCategory"
         @select-action="selectAction"
+        :class="{ 'drawer-closed': !editDrawerOpen }"
+        :inert="!editDrawerOpen"
         @close="closeSidebar"
       />
     </main>
@@ -292,7 +309,9 @@ import { listenForUiCommands } from '@/composables/useUiCommands'
 import { confirmDialog } from '@/composables/useConfirm'
 import { useMobileViewport } from '@/utils/mobileViewport'
 import { useDeviceClass } from '@/composables/useDeviceClass'
+import { useWakeOnPermission } from '@/composables/useWakeOnPermission'
 import { dashboardLayout } from '@/utils/dashboardLayout'
+import { startKeepAwake } from '@/services/keepAwake'
 import { loadInitialProfile } from '@/services/initialProfile'
 import { useSwipe } from '@/composables/useGestures'
 import { sceneSwipe } from '@/services/sceneSwipe'
@@ -749,6 +768,9 @@ const currentPage = computed(() => dashboardStore.currentPage)
 const currentSceneIndex = computed(() => dashboardStore.currentSceneIndex)
 const currentPageIndex = computed(() => dashboardStore.currentPageIndex)
 const isEditMode = computed(() => dashboardStore.isEditMode)
+// Tablet edit drawer (DL-147): open whenever edit mode starts.
+const editDrawerOpen = ref(true)
+watch(isEditMode, (editing) => { if (editing) editDrawerOpen.value = true })
 // DL-102: the footer only earns its strip for real content — edit controls
 // or multi-page dots. The header reveal floats independently and lifts
 // above the strip via .above-footer whenever this is true.
@@ -778,6 +800,20 @@ watch([revealFabVisible, footerVisible], ([fab, footer]) => {
   root.toggle('reveal-fab-visible', fab)
   root.toggle('reveal-fab-footer', fab && footer)
 }, { immediate: true })
+
+// Teleported surfaces (agent dock, Mission Control, toasts) sit outside the
+// `.device-<class>` root, so the phone/tablet layout class is mirrored on <html>.
+const HTML_DEVICE_CLASSES = ['phone', 'tablet'] as const
+watch(layoutClass, (cls) => {
+  const root = document.documentElement.classList
+  for (const name of HTML_DEVICE_CLASSES) root.toggle(`device-${name}`, cls === name)
+}, { immediate: true })
+
+useWakeOnPermission(dismissScreensaver)
+
+// DL-147: a phone/tablet deck in fullscreen or installed keeps its screen on.
+const stopKeepAwake = startKeepAwake()
+onUnmounted(stopKeepAwake)
 
 function toggleCategory(categoryId: string) {
   const index = expandedCategories.value.indexOf(categoryId)
@@ -1240,7 +1276,7 @@ onUnmounted(() => {
 
   stopVdockRefreshListener?.()
   stopUiCommandListener?.()
-  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer')
+  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer', 'device-phone', 'device-tablet')
   // Unmounting the deck (e.g. route to Settings) must not leave the app
   // background suspended — the saver is gone with it.
   setScreensaverVisible(false)
@@ -1460,6 +1496,117 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+/* DL-147: notch / home-indicator padding. The root takes top and sides; the
+   deck host takes the bottom (the agent console pads its own). Panel and
+   desktop are untouched. */
+.dashboard-view:is(.device-phone, .device-tablet) {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
+}
+
+.dashboard-view:is(.device-phone, .device-tablet) .deck-grid-host {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* A tablet can mount the footer (page dots, edit controls); then the footer
+   owns the home-indicator inset instead of the deck above it. */
+.dashboard-view.device-tablet.footer-open .deck-grid-host {
+  padding-bottom: 0;
+}
+
+.dashboard-view.device-tablet.footer-open .deck-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* DL-147: a tablet held in portrait keeps the docked sidebar as a strip ABOVE
+   the deck. The generic mobile bar is fixed to the bottom edge, which here
+   would sit over the header reveal FAB and the home indicator. */
+.dashboard-view.device-tablet.layout-stacked :deep(.docked-sidebar.is-mobile) {
+  position: relative;
+  width: 100% !important;
+  flex: 0 0 auto;
+}
+
+.dashboard-view.device-tablet.layout-stacked :deep(.docked-sidebar.is-mobile .sidebar-grid) {
+  width: 100%;
+}
+
+/* DL-147: tablet edit mode. The action sidebar overlays the deck as a drawer
+   (right edge in landscape, bottom sheet in portrait) so the grid keeps its
+   full size; the handle slides it away to reach the covered cells. */
+.dashboard-view.device-tablet {
+  --edit-drawer-w: min(92vw, calc(280px * min(var(--touch-multiplier, 1), 1.5)));
+}
+
+.dashboard-view.device-tablet .edit-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--edit-drawer-w);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s var(--ease-io);
+}
+
+.dashboard-view.device-tablet .edit-sidebar.drawer-closed {
+  transform: translateX(100%);
+}
+
+.dashboard-view.device-tablet.orient-portrait .edit-sidebar {
+  top: auto;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  border-left: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-view.device-tablet.orient-portrait .edit-sidebar.drawer-closed {
+  transform: translateY(100%);
+}
+
+.edit-drawer-toggle {
+  position: absolute;
+  z-index: 81;
+  top: 12px;
+  right: 0;
+  width: 44px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-right: none;
+  border-radius: 14px 0 0 14px;
+  background: rgba(10, 8, 32, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: right 0.25s var(--ease-io), bottom 0.25s var(--ease-io);
+}
+
+.edit-drawer-toggle.is-open {
+  right: var(--edit-drawer-w);
+}
+
+.dashboard-view.orient-portrait .edit-drawer-toggle {
+  top: auto;
+  right: 12px;
+  bottom: 0;
+  width: 56px;
+  height: 44px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+}
+
+.dashboard-view.orient-portrait .edit-drawer-toggle.is-open {
+  right: 12px;
+  bottom: 50%;
+}
+
 .main-content.with-sidebar {
   margin-right: 0; /* Decomposed sidebar handles its own layout next to grid inside flex container */
 }
@@ -1498,8 +1645,8 @@ onUnmounted(() => {
    readable; ≥44px touch floor on both axes. */
 .header-reveal-fab {
   position: fixed;
-  right: var(--spacing-touch-md, var(--spacing-md));
-  bottom: var(--spacing-touch-md, var(--spacing-md));
+  right: max(var(--spacing-touch-md, var(--spacing-md)), env(safe-area-inset-right, 0px));
+  bottom: max(var(--spacing-touch-md, var(--spacing-md)), env(safe-area-inset-bottom, 0px));
   width: max(120px, calc(120px * min(var(--touch-multiplier, 1), 1.4)));
   height: max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)));
   border-radius: 18px;
@@ -1659,8 +1806,8 @@ onUnmounted(() => {
 
 .action-toast {
   position: fixed;
-  bottom: var(--spacing-lg);
-  right: var(--spacing-lg);
+  bottom: max(var(--spacing-lg), env(safe-area-inset-bottom, 0px));
+  right: max(var(--spacing-lg), env(safe-area-inset-right, 0px));
   padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);

@@ -4,6 +4,8 @@ from threading import Lock
 
 from flask import Blueprint, request, jsonify
 from auth import AuthManager
+from config import Config
+from services import pairing
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -61,6 +63,47 @@ def login():
 
     _record_failure(ip)
     return jsonify({'error': 'Invalid password', 'success': False}), 401
+
+
+@auth_bp.route('/api/auth/pair-token', methods=['POST'])
+def create_pair_token():
+    """Mint a single-use token for the Connect page's QR (needs a signed-in caller)."""
+    from auth import require_auth
+
+    @require_auth
+    def _create():
+        if not Config.REQUIRE_AUTH:
+            return jsonify({
+                'error': 'Pairing is only needed when a deck password is set',
+                'success': False,
+            }), 409
+        return jsonify({'token': pairing.issue(), 'ttl_s': pairing.TTL_S, 'success': True})
+
+    return _create()
+
+
+@auth_bp.route('/api/auth/pair', methods=['POST'])
+def pair():
+    """Trade a pairing token for a normal login token. Same throttle as login."""
+    ip = request.remote_addr or 'unknown'
+    if _throttled(ip):
+        return jsonify({
+            'error': 'Too many attempts — wait a minute and try again',
+            'success': False,
+        }), 429
+
+    data = request.get_json(silent=True)
+    pair_token = data.get('token') if isinstance(data, dict) else None
+    if not isinstance(pair_token, str) or not pair_token:
+        return jsonify({'error': 'Token is required', 'success': False}), 400
+
+    if Config.REQUIRE_AUTH and pairing.redeem(pair_token):
+        _clear_failures(ip)
+        token = AuthManager.generate_token({'authenticated': True})
+        return jsonify({'token': token, 'success': True})
+
+    _record_failure(ip)
+    return jsonify({'error': 'Invalid or expired pairing code', 'success': False}), 401
 
 
 @auth_bp.route('/api/auth/verify', methods=['GET'])

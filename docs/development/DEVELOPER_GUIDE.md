@@ -67,6 +67,26 @@ them in the shell, not in `.env`:
 | `VDOCK_SKIP_BACKEND_SPAWN` | Electron | Attach to an already running backend |
 | `VDOCK_DEV_SERVER`, `VDOCK_AUTO_CLOSE_LAUNCHER` | `scripts/VDock-Launcher.py` | Launcher behaviour |
 
+### HTTPS for phones and tablets (`USE_SSL`)
+
+Plain `http://192.168.x.x` is not a secure context, so a phone cannot install
+VDock as a real app, run its service worker, or use Screen Wake Lock
+(Keep screen on). `USE_SSL=True` makes the backend serve HTTPS on its normal port;
+the Connect page's QR then encodes `https://`. It is off by default and no
+certificate ships with the repo.
+
+1. Install [mkcert](https://github.com/FiloSottile/mkcert) on the PC and run `mkcert -install`.
+2. In `backend/`, generate a certificate for the PC's LAN IP and any `DECK_HOST` name:
+   `mkcert -cert-file cert.pem -key-file key.pem 192.168.1.20 deck.local localhost`
+3. Trust the CA on each phone/tablet (`mkcert -CAROOT` shows `rootCA.pem`; install it as a
+   certificate authority, and on iOS also enable it under Settings > General > About >
+   Certificate Trust Settings). Without this the device shows a certificate warning.
+4. Set `USE_SSL=True` in `backend/.env` (`SSL_CERT_PATH` / `SSL_KEY_PATH` default to
+   `cert.pem` / `key.pem` in `backend/`; the backend refuses to start if they are missing)
+   and relaunch. Keep `cert.pem` and `key.pem` out of git.
+
+The Vite dev server stays on HTTP; `USE_SSL` only affects the backend (the built bundle).
+
 ### Adding a New Action Type
 
 1. Create a new file in `backend/actions/`:
