@@ -25,7 +25,8 @@
         <img v-if="brand.logo" :src="brand.logo" alt="" class="snooze-logo" data-testid="snooze-logo" />
         <FontAwesomeIcon v-else :icon="['fas', 'robot']" class="snooze-icon" />
         <span class="snooze-label">{{ waitingLabel }} is waiting for input</span>
-        <button type="button" class="snooze-btn" @click="snooze">Dismiss 3m</button>
+        <button type="button" class="snooze-btn" @click="snooze">Snooze 3m</button>
+        <button type="button" class="snooze-btn is-secondary" data-testid="dismiss-btn" title="Silence until the agent is idle again" @click="dismiss">Dismiss</button>
       </div>
     </Transition>
     <!-- Snoozed: the waiting chip is gone, so give the user a way to end the
@@ -33,8 +34,8 @@
     <Transition name="snooze-pop">
       <div v-if="isSnoozed" class="agent-snoozed" :style="snoozedVars" data-testid="snoozed-chip">
         <FontAwesomeIcon :icon="['fas', 'bell-slash']" class="snooze-icon" />
-        <span class="snooze-label">{{ snoozedLabel }} alert dismissed · {{ snoozeLeftText }} left</span>
-        <button type="button" class="snooze-btn" data-testid="resume-btn" @click="resume">Undo dismiss</button>
+        <span class="snooze-label">{{ snoozedLabel }} snoozed · {{ snoozeLeftText }} left</span>
+        <button type="button" class="snooze-btn" data-testid="resume-btn" @click="resume">Resume alerts</button>
       </div>
     </Transition>
   </Teleport>
@@ -96,6 +97,10 @@ const glowStyle = computed(() => settingsStore.agentWaitingGlowStyle ?? 'flash')
 function snooze() {
   dismissAgentWaiting(waitingInfo.value?.entry.source)
 }
+// Full dismiss: no timer — stays quiet until the agent next goes idle.
+function dismiss() {
+  dismissAgentWaiting(waitingInfo.value?.entry.source, Infinity)
+}
 
 // Snoozed state — mirrors waitingInfo. `nowTick` only exists to re-run the
 // countdown each second; Date.now() alone isn't reactive.
@@ -106,14 +111,22 @@ const snoozedInfo = computed(() => {
   }
   return null
 })
+// Only a timed snooze gets the chip. A full Dismiss is final until the agent
+// is idle again, so there is nothing to show (and no undo).
 const isSnoozed = computed(() =>
   settingsStore.agentWaitingGlowEnabled !== false &&
   !dashboardStore.isEditMode &&
   !isWaiting.value &&
-  snoozedInfo.value !== null
+  snoozedInfo.value !== null &&
+  isTimedSnooze.value
 )
 const snoozedLabel = computed(() => snoozedInfo.value?.profile?.label ?? 'Agent')
 const snoozedVars = computed(() => agentBrandVars(snoozedInfo.value?.entry.source))
+
+const isTimedSnooze = computed(() => {
+  void nowTick.value
+  return Number.isFinite(agentSnoozeRemainingMs(snoozedInfo.value?.entry.source))
+})
 
 const nowTick = ref(0)
 let tickTimer: ReturnType<typeof setInterval> | null = null
@@ -298,6 +311,12 @@ function resume() {
   font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.snooze-btn.is-secondary {
+  background: transparent;
+  color: var(--agent-text);
+  border: 1.5px solid rgba(var(--agent-rgb), 0.7);
 }
 
 .snooze-btn:hover { filter: brightness(1.1); }

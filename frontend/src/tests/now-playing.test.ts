@@ -97,10 +97,9 @@ describe('nowPlaying service', () => {
     const svc = await freshService()
     socketHandlers.get('now_playing')?.(trackPayload({ ts: 123 }))
     await flushPromises()
-    expect(apiGet).toHaveBeenCalledWith('/now-playing/art', {
-      params: { ts: 123 },
-      responseType: 'blob',
-    })
+    expect(apiGet).toHaveBeenCalledWith(
+      '/now-playing/art', { ts: 123 }, { responseType: 'blob' },
+    )
     expect(svc.artUrl.value).toMatch(/^blob:/)
 
     socketHandlers.get('now_playing')?.(trackPayload({ has_art: false, ts: 124 }))

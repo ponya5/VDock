@@ -4,6 +4,7 @@
       <div
         v-if="missionControlOpen"
         class="mc-backdrop"
+        :class="[`mc-${layoutClass}`, { 'mc-portrait': orientation === 'portrait' }]"
         role="dialog"
         aria-modal="true"
         aria-label="Agent mission control"
@@ -199,6 +200,7 @@ import {
   type SessionChanges,
 } from '@/services/missionControl'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useDeviceClass } from '@/composables/useDeviceClass'
 import { vibrate } from '@/utils/haptics'
 
 /**
@@ -209,6 +211,9 @@ import { vibrate } from '@/utils/haptics'
  */
 
 const notifications = useNotificationsStore()
+// Layout follows the device: phone = full-screen sheet, panel/tablet = big
+// touch sizing, desktop = centred dialog (see the mc-phone / mc-touch CSS).
+const { layoutClass, orientation } = useDeviceClass()
 
 const snapshot = ref<MissionSnapshot>({ sessions: [], presets: [], needs_you: 0, pending_approvals: 0 })
 const loaded = ref(false)
@@ -454,7 +459,8 @@ onUnmounted(() => {
 }
 
 .mc-panel {
-  width: min(880px, 100%);
+  width: min(960px, 100%);
+  font-size: 16px;
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -476,9 +482,9 @@ onUnmounted(() => {
   border-bottom: 1px solid #1f2f4a;
 }
 .mc-title { display: flex; align-items: center; gap: 12px; min-width: 0; color: #7fb0ff; }
-.mc-title h2 { margin: 0; font-size: clamp(1rem, 2.6vh, 1.25rem); color: #e9eff8; letter-spacing: 0.02em; }
+.mc-title h2 { margin: 0; font-size: 1.25em; color: #e9eff8; letter-spacing: 0.02em; }
 .mc-count {
-  font-size: 0.8rem;
+  font-size: 0.8em;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
@@ -506,13 +512,13 @@ onUnmounted(() => {
 .mc-group-title {
   display: flex; align-items: center; gap: 8px;
   margin: 8px 0;
-  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 0.78em; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
   color: #7286a4;
 }
 .mc-g-approval { color: #ffb84d; }
 .mc-g-waiting { color: #6fd4a3; }
 .mc-group-n {
-  font-size: 0.72rem; padding: 1px 8px; border-radius: 999px;
+  font-size: 0.72em; padding: 1px 8px; border-radius: 999px;
   background: #16233a; color: #9fb0c9; letter-spacing: 0;
 }
 
@@ -534,10 +540,10 @@ onUnmounted(() => {
 .mc-row-main { min-width: 0; flex: 1 1 auto; }
 .mc-row-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
 .mc-agent { font-weight: 700; }
-.mc-project { color: #9fb0c9; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 36ch; }
-.mc-idle { margin-left: auto; color: #7286a4; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.mc-project { color: #9fb0c9; font-size: 0.92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 36ch; }
+.mc-idle { margin-left: auto; color: #7286a4; font-size: 0.82em; font-variant-numeric: tabular-nums; }
 .mc-chip {
-  font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+  font-size: 0.72em; font-weight: 700; padding: 2px 9px; border-radius: 999px;
   background: #1b2b45; color: #9fb0c9; white-space: nowrap;
 }
 .mc-chip-permission { background: rgba(245, 165, 36, 0.18); color: #ffd89e; }
@@ -547,7 +553,7 @@ onUnmounted(() => {
 .mc-line {
   margin: 6px 0 0;
   color: #b9c7dc;
-  font-size: 0.88rem;
+  font-size: 0.88em;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -558,7 +564,7 @@ onUnmounted(() => {
 .mc-ask { color: #ffd89e; font-weight: 600; }
 .mc-tag {
   display: inline-block; margin-right: 8px; padding: 0 6px; border-radius: 4px;
-  font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+  font-size: 0.68em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
   background: #1b2b45; color: #9fb0c9; vertical-align: 1px;
 }
 .mc-tag-ai { background: rgba(74, 140, 255, 0.2); color: #9cc2ff; }
@@ -568,7 +574,7 @@ onUnmounted(() => {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 44px; padding: 0 14px;
   border-radius: 10px; border: 1px solid #2a3e60; background: #16233a; color: #e9eff8;
-  font: inherit; font-size: 0.92rem; font-weight: 600; cursor: pointer; touch-action: manipulation; white-space: nowrap;
+  font: inherit; font-size: 0.92em; font-weight: 600; cursor: pointer; touch-action: manipulation; white-space: nowrap;
 }
 .mc-btn:active:not(:disabled) { transform: scale(0.97); }
 .mc-btn:disabled { opacity: 0.5; cursor: progress; }
@@ -579,12 +585,12 @@ onUnmounted(() => {
   display: inline-flex; align-items: center; gap: 8px; margin-top: 8px;
   min-height: 36px; padding: 0 12px; border-radius: 999px;
   border: 1px solid #2a3e60; background: #16233a; color: #b9c7dc;
-  font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; touch-action: manipulation;
+  font: inherit; font-size: 0.82em; font-weight: 600; cursor: pointer; touch-action: manipulation;
 }
 .mc-usage {
   display: inline-block; margin-top: 8px; padding: 2px 10px; border-radius: 999px;
   border: 1px solid #2a3e60; background: #16233a; color: #b9c7dc;
-  font-size: 0.8rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: 0.8em; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 .mc-usage-warning { border-color: rgba(245, 165, 36, 0.6); background: rgba(245, 165, 36, 0.16); color: #ffd89e; }
 .mc-usage-critical { border-color: rgba(220, 70, 70, 0.7); background: rgba(220, 70, 70, 0.18); color: #ffb0b0; }
@@ -593,17 +599,87 @@ onUnmounted(() => {
   width: 100%; display: flex; justify-content: space-between; gap: 12px; align-items: center;
   min-height: 40px; padding: 0 12px; border-radius: 8px;
   border: 1px solid #1f2f4a; background: #0f1829; color: #cfdcee;
-  font: inherit; font-size: 0.84rem; text-align: left; cursor: pointer; touch-action: manipulation;
+  font: inherit; font-size: 0.84em; text-align: left; cursor: pointer; touch-action: manipulation;
 }
 .mc-file-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mc-file-stat { flex: none; color: #7fe6b6; font-variant-numeric: tabular-nums; }
 .mc-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .mc-preset { min-height: 40px; }
 
-.mc-foot { padding: 10px clamp(14px, 2.4vw, 22px); border-top: 1px solid #1f2f4a; color: #7286a4; font-size: 0.78rem; }
+.mc-foot { padding: 10px clamp(14px, 2.4vw, 22px); border-top: 1px solid #1f2f4a; color: #7286a4; font-size: 0.78em; }
 
 .mc-fade-enter-active, .mc-fade-leave-active { transition: opacity 0.16s ease; }
 .mc-fade-enter-from, .mc-fade-leave-to { opacity: 0; }
+
+/* ---- Panel (7" touch) and tablet: the same dialog, scaled for a finger ----
+   Fills the screen and scales type + targets as one unit (everything above
+   is in em), so it reads like the deck instead of a desktop popup. */
+.mc-backdrop.mc-panel .mc-panel,
+.mc-backdrop.mc-tablet .mc-panel {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  font-size: clamp(18px, 3.4vh, 24px);
+  border-radius: 14px;
+}
+.mc-backdrop.mc-panel,
+.mc-backdrop.mc-tablet { padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.mc-backdrop.mc-panel .mc-btn,
+.mc-backdrop.mc-tablet .mc-btn { min-height: 3em; padding: 0 1.1em; }
+.mc-backdrop.mc-panel .mc-close,
+.mc-backdrop.mc-tablet .mc-close { width: 3em; height: 3em; }
+.mc-backdrop.mc-panel .mc-line,
+.mc-backdrop.mc-tablet .mc-line { -webkit-line-clamp: 3; line-clamp: 3; }
+.mc-backdrop.mc-panel .mc-row-actions,
+.mc-backdrop.mc-tablet .mc-row-actions { min-width: 9em; }
+.mc-backdrop.mc-panel .mc-foot { display: none; } /* every pixel of height is for the list */
+
+/* ---- Phone: dedicated full-screen sheet --------------------------------
+   One column. The header stays pinned, each session is a card, and the
+   actions become large two-up thumb buttons (Approve / Deny side by side,
+   everything else full width). No hover/precision assumptions. */
+.mc-backdrop.mc-phone { padding: 0; align-items: stretch; background: #0b1424; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mc-backdrop.mc-phone .mc-panel {
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  font-size: 17px;
+}
+.mc-backdrop.mc-phone .mc-head {
+  padding: max(12px, env(safe-area-inset-top, 0px)) 14px 12px;
+  background: #0f1829;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.mc-backdrop.mc-phone .mc-title { gap: 10px; }
+.mc-backdrop.mc-phone .mc-title h2 { font-size: 1.15em; }
+.mc-backdrop.mc-phone .mc-close { width: 48px; height: 48px; border-radius: 14px; }
+.mc-backdrop.mc-phone .mc-body { padding: 10px 12px calc(16px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.mc-backdrop.mc-phone .mc-group-title { font-size: 0.8em; margin: 14px 2px 8px; }
+.mc-backdrop.mc-phone .mc-row { flex-direction: column; gap: 12px; padding: 14px; margin-bottom: 12px; border-radius: 16px; }
+.mc-backdrop.mc-phone .mc-row-top { gap: 6px 8px; }
+.mc-backdrop.mc-phone .mc-agent { font-size: 1.05em; }
+.mc-backdrop.mc-phone .mc-project { max-width: 100%; flex: 1 1 100%; order: 3; font-size: 0.9em; }
+.mc-backdrop.mc-phone .mc-idle { margin-left: auto; }
+.mc-backdrop.mc-phone .mc-line { -webkit-line-clamp: 4; line-clamp: 4; font-size: 0.92em; }
+.mc-backdrop.mc-phone .mc-row-actions {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mc-backdrop.mc-phone .mc-btn { min-height: 52px; width: 100%; font-size: 1em; border-radius: 14px; }
+.mc-backdrop.mc-phone .mc-row-actions > .mc-btn:last-child:nth-child(odd) { grid-column: 1 / -1; } /* a lone/odd last button spans the row */
+.mc-backdrop.mc-phone .mc-presets { flex-direction: column; }
+.mc-backdrop.mc-phone .mc-preset { width: 100%; min-height: 52px; justify-content: flex-start; }
+.mc-backdrop.mc-phone .mc-changes { min-height: 44px; }
+.mc-backdrop.mc-phone .mc-file { min-height: 48px; }
+.mc-backdrop.mc-phone .mc-foot { display: none; }
+.mc-backdrop.mc-phone .mc-empty { margin: 28px 6px; font-size: 1em; }
 
 @media (max-width: 560px) {
   .mc-row { flex-direction: column; }

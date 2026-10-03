@@ -82,6 +82,19 @@ describe('agentWaiting snooze window', () => {
     await nextTick()
     expect(isAgentWaitingDismissed('claude')).toBe(false)
   })
+  it('a full dismiss never lapses on a timer, and a new idle episode re-arms it', async () => {
+    dismissAgentWaiting('claude', Infinity)
+    expect(agentSnoozeRemainingMs('claude')).toBe(Infinity)
+    vi.advanceTimersByTime(AGENT_SNOOZE_MS * 10)
+    await nextTick()
+    expect(isAgentWaitingDismissed('claude')).toBe(true)
+    expect(sceneWaitingAgent(scene)).toBeNull()
+
+    entryRef.value = readyEntry(2000) // agent went idle again
+    expect(isAgentWaitingDismissed('claude')).toBe(false)
+    expect(sceneWaitingAgent(scene)).not.toBeNull()
+  })
+
   it('resume ends the snooze at once and re-arms the alert', () => {
     dismissAgentWaiting('claude')
     expect(sceneWaitingAgent(scene)).toBeNull()

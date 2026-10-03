@@ -2,9 +2,11 @@
 // (list / approve / deny / open / live refresh) and the dock + deck-action
 // entry points.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { nextTick } from 'vue'
+import { nextTick, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 const handlers = new Map<string, () => void>()
 const apiGet = vi.fn()
@@ -25,6 +27,12 @@ vi.mock('@/utils/haptics', () => ({ vibrate: (...a: unknown[]) => vibrateMock(..
 vi.mock('@/stores/notifications', () => ({ useNotificationsStore: () => toast }))
 vi.mock('@/stores/settings', () => ({
   useSettingsStore: () => ({ agentAlertsEnabled: true, agentWaitingDockEnabled: true }),
+}))
+
+// Layout follows the device class; tests flip it per case (default desktop).
+const deviceState = { layout: ref<'phone' | 'tablet' | 'panel' | 'desktop'>('desktop'), orientation: ref<'portrait' | 'landscape'>('landscape') }
+vi.mock('@/composables/useDeviceClass', () => ({
+  useDeviceClass: () => ({ layoutClass: deviceState.layout, orientation: deviceState.orientation }),
 }))
 
 import AgentMissionControl from '@/components/AgentMissionControl.vue'
@@ -124,6 +132,34 @@ describe('formatIdle', () => {
 })
 
 describe('AgentMissionControl', () => {
+  describe('device layouts', () => {
+    afterEach(() => { deviceState.layout.value = 'desktop'; deviceState.orientation.value = 'landscape' })
+
+    it.each(['phone', 'tablet', 'panel', 'desktop'] as const)('tags the dialog with the %s layout', async (layout) => {
+      deviceState.layout.value = layout
+      const wrapper = mountPanel()
+      openMissionControl()
+      await flushPromises()
+      expect(wrapper.find('.mc-backdrop').classes()).toContain(`mc-${layout}`)
+    })
+
+    it('marks portrait so phone/tablet CSS can adapt', async () => {
+      deviceState.layout.value = 'phone'
+      deviceState.orientation.value = 'portrait'
+      const wrapper = mountPanel()
+      openMissionControl()
+      await flushPromises()
+      expect(wrapper.find('.mc-backdrop').classes()).toEqual(expect.arrayContaining(['mc-phone', 'mc-portrait']))
+    })
+
+    it('ships a dedicated full-screen phone sheet and scaled panel/tablet sizing', () => {
+      const source = readFileSync(resolve(__dirname, '../components/AgentMissionControl.vue'), 'utf8')
+      expect(source).toMatch(/\.mc-backdrop\.mc-phone \.mc-panel \{[^}]*100dvh/)
+      expect(source).toMatch(/\.mc-backdrop\.mc-phone \.mc-btn \{[^}]*min-height: 52px/)
+      expect(source).toMatch(/\.mc-backdrop\.mc-tablet \.mc-panel \{[^}]*height: 100%/)
+    })
+  })
+
   it('stays hidden until opened, then loads and lists every session', async () => {
     const wrapper = mountPanel()
     expect(wrapper.find('.mc-panel').exists()).toBe(false)
