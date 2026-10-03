@@ -35,7 +35,14 @@ _GUARDED_SETTINGS = (
 
 @pytest.fixture(autouse=True)
 def restore_config():
-    """Restore mutated Config flags after every test."""
+    """Start every test from a clean auth baseline, restore flags after.
+
+    Config now reads the developer's real backend/.env and data/config.json
+    (saved require_auth + AUTH_PASSWORD). Tests must not depend on them, so
+    auth starts off with no password; tests that need auth set it themselves.
+    """
+    Config.REQUIRE_AUTH = False
+    Config.AUTH_PASSWORD = ''
     saved = {name: getattr(Config, name) for name in _GUARDED_SETTINGS}
     yield
     for name, value in saved.items():
