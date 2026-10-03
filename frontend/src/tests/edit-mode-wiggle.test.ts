@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { settingsSource } from './helpers/settingsSource'
 
 const grid = readFileSync(
   resolve(__dirname, '../components/DeckGrid.vue'),
@@ -13,10 +14,7 @@ const store = readFileSync(
   resolve(__dirname, '../stores/settings.ts'),
   'utf-8'
 )
-const view = readFileSync(
-  resolve(__dirname, '../views/SettingsView.vue'),
-  'utf-8'
-)
+const view = settingsSource()
 
 describe('edit-mode wiggle setting', () => {
   it('is off by default', () => {

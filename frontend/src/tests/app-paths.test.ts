@@ -3,8 +3,9 @@ import { resolve } from 'node:path'
 import { describe, test, expect } from 'vitest'
 import { templateAppKey, launchApps } from '../api/appPaths'
 import { templateCategories } from '../data/appTemplates'
+import { settingsSource } from './helpers/settingsSource'
 
-const settingsSource = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const settingsUiSource = settingsSource()
 const editorSource = readFileSync(resolve(__dirname, '../components/AppPathEditor.vue'), 'utf-8')
 
 describe('templateAppKey', () => {
@@ -110,14 +111,14 @@ describe('templateCategories order', () => {
 
 describe('app path editor popup', () => {
   test('the standalone App launch paths panel is gone', () => {
-    expect(settingsSource).not.toContain('id="app-paths"')
-    expect(settingsSource).not.toContain('appPathRows')
+    expect(settingsUiSource).not.toContain('id="app-paths"')
+    expect(settingsUiSource).not.toContain('appPathRows')
   })
 
   test('the card gear opens a dialog, not an inline editor', () => {
-    expect(settingsSource).toContain('aria-haspopup="dialog"')
-    expect(settingsSource).toContain('role="dialog"')
-    expect(settingsSource).toContain('modal-overlay')
+    expect(settingsUiSource).toContain('aria-haspopup="dialog"')
+    expect(settingsUiSource).toContain('role="dialog"')
+    expect(settingsUiSource).toContain('modal-overlay')
   })
 
   test('the popup carries path input, Save, and Close', () => {

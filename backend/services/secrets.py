@@ -83,10 +83,22 @@ def register_runtime_secret(value: Optional[str]) -> None:
         _runtime_secrets.add(value.strip())
 
 
+#: Template text people leave behind when they copy an example file (the old
+#: .env.example shipped ``demo-key-replace-with-your-own``). Not a credential.
+_PLACEHOLDER_HINTS = ('replace-with', 'replace_with', 'your-', 'your_', 'demo-key', 'changeme')
+
+
+def _looks_like_placeholder(value: str) -> bool:
+    lowered = value.lower()
+    return any(hint in lowered for hint in _PLACEHOLDER_HINTS)
+
+
 def get(spec: SecretSpec) -> Optional[str]:
     """Return the secret's value, or None when unset or blank."""
     value = os.environ.get(spec.env_var, '').strip()
-    return value or None
+    if not value or _looks_like_placeholder(value):
+        return None
+    return value
 
 
 def is_configured(spec: SecretSpec) -> bool:

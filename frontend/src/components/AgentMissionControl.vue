@@ -58,6 +58,15 @@
                     <span class="mc-chip" :class="`mc-chip-${s.state}`">{{ stateLabel(s) }}</span>
                     <span class="mc-idle" :title="'Time since the last event'">{{ idleFor(s) }}</span>
                   </div>
+                  <span
+                    v-if="s.usage"
+                    class="mc-usage"
+                    :class="`mc-usage-${s.usage.status}`"
+                    :title="usageTitle(s.usage)"
+                    data-testid="mc-usage"
+                  >
+                    {{ formatUsageCost(s.usage.cost_usd, s.usage.estimate) }} · ctx {{ s.usage.context_pct }}%
+                  </span>
                   <p v-if="s.message && s.state === 'permission'" class="mc-line mc-ask">{{ s.message }}</p>
                   <p v-if="s.prompt" class="mc-line"><span class="mc-tag">You</span>{{ s.prompt }}</p>
                   <p v-if="s.reply" class="mc-line"><span class="mc-tag mc-tag-ai">Agent</span>{{ s.reply }}</p>
@@ -108,6 +117,16 @@
                     @click="promptOpen = promptOpen === rowKey(s) ? null : rowKey(s)"
                   >
                     <FontAwesomeIcon :icon="['fas', 'paper-plane']" /> Prompt
+                  </button>
+                  <button
+                    v-if="canCompact(s)"
+                    type="button"
+                    class="mc-btn"
+                    :disabled="isBusy(s)"
+                    data-testid="mc-compact"
+                    @click="compact(s)"
+                  >
+                    <FontAwesomeIcon :icon="['fas', 'compress']" /> Compact
                   </button>
                   <template v-if="s.can_decide">
                     <button
@@ -161,7 +180,9 @@ import socketClient from '@/api/socket'
 import { sourceLabelFor } from '@/services/agentAlerts'
 import {
   closeMissionControl,
+  compactMissionSession,
   decideMissionSession,
+  formatUsageCost,
   fetchMission,
   focusMissionSession,
   fetchSessionChanges,
@@ -174,6 +195,7 @@ import {
   type MissionPreset,
   type MissionSession,
   type MissionSnapshot,
+  type MissionUsage,
   type SessionChanges,
 } from '@/services/missionControl'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -279,6 +301,37 @@ async function openDiff(s: MissionSession, path: string) {
     await openSessionDiff(s.source, s.session_id, path)
   } catch (error: any) {
     notifications.error('Could not open the diff', error?.response?.data?.error || 'The editor did not respond.')
+  }
+}
+
+function usageTitle(usage: MissionUsage): string {
+  const basis = usage.estimate
+    ? 'Estimated at API list prices (subscription plans are not billed per token)'
+    : 'Reported by Claude Code when the session closed'
+  return `${basis}. Context: ${usage.context_pct}% of the window used.`
+}
+
+/** Offered once context is filling up (the server only accepts a ready Claude session). */
+function canCompact(s: MissionSession): boolean {
+  return s.source === 'claude' && s.can_prompt && !!s.usage && s.usage.status !== 'normal'
+}
+
+async function compact(s: MissionSession) {
+  const key = rowKey(s)
+  if (busy.has(key)) return
+  busy.add(key)
+  try {
+    await compactMissionSession(s.source, s.session_id)
+    notifications.success('Compacting context', `${sourceLabelFor(s.source)}${s.project ? ` - ${s.project}` : ''}`)
+  } catch (error: any) {
+    notifications.error(
+      'Could not compact the session',
+      error?.response?.data?.error || 'The session did not accept the command.',
+      error?.response?.data?.details,
+    )
+  } finally {
+    busy.delete(key)
+    void refresh()
   }
 }
 
@@ -522,6 +575,13 @@ onUnmounted(() => {
   border: 1px solid #2a3e60; background: #16233a; color: #b9c7dc;
   font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; touch-action: manipulation;
 }
+.mc-usage {
+  display: inline-block; margin-top: 8px; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid #2a3e60; background: #16233a; color: #b9c7dc;
+  font-size: 0.8rem; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.mc-usage-warning { border-color: rgba(245, 165, 36, 0.6); background: rgba(245, 165, 36, 0.16); color: #ffd89e; }
+.mc-usage-critical { border-color: rgba(220, 70, 70, 0.7); background: rgba(220, 70, 70, 0.18); color: #ffb0b0; }
 .mc-files { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
 .mc-file {
   width: 100%; display: flex; justify-content: space-between; gap: 12px; align-items: center;

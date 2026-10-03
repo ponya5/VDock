@@ -45,7 +45,9 @@ async function refreshFace(button: Button): Promise<ActionResult | undefined> {
 export async function openLiveMenu(button: Button): Promise<void> {
   const buttonState = useButtonStateStore()
   let message: string | undefined
-  if (!buttonState.states[button.id]?.menu) {
+  // An empty cached menu is refreshed too: only the fresh result carries the
+  // backend's plain-language empty state ("No dev servers running").
+  if (!buttonState.states[button.id]?.menu?.length) {
     try {
       message = (await refreshFace(button))?.message
     } catch {

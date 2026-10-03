@@ -230,6 +230,7 @@ import CalendarButton from './CalendarButton.vue'
 import conditionalState from '@/services/conditionalState'
 import { evaluateRules } from '@/services/buttonRules'
 import timerButtons from '@/services/timerButtons'
+import { useActionCatalogStore } from '@/stores/actionCatalog'
 import { useButtonStateStore } from '@/stores/buttonState'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
@@ -256,6 +257,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const buttonStateStore = useButtonStateStore()
+const actionCatalogStore = useActionCatalogStore()
 const dashboardStore = useDashboardStore()
 const settingsStore = useSettingsStore()
 const liveState = computed(() => buttonStateStore.states[props.button.id])
@@ -796,11 +798,14 @@ function handlePointerDown(event: PointerEvent) {
   const action = props.button.action
   if (!action || action.type === 'slider') return // slider owns its pointer lifecycle
 
-  if (action.trigger === 'press' || action.release_action) {
+  // A hold action (catalog press:'hold') is push-to-talk without a configured
+  // release_action: down starts it, up stops it.
+  const isHold = actionCatalogStore.byActionType[action.type]?.press === 'hold'
+  if (action.trigger === 'press' || action.release_action || isHold) {
     pressFiredOnDown = true
     emit('press', props.button)
   }
-  if (action.release_action) {
+  if (action.release_action || isHold) {
     releasePending = true
     // Capture so a finger sliding off still delivers pointerup — PTT must
     // never wedge in the "held" state.

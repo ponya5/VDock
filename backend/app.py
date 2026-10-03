@@ -60,6 +60,7 @@ from routes.logs import logs_bp
 from routes.agent_events import agent_events_bp, set_emitter as set_agent_events_emitter
 from routes.agent_sessions import agent_sessions_bp
 from routes.agent_mission import agent_mission_bp
+from routes.agent_usage import agent_usage_bp
 from routes.feedback import feedback_bp
 from routes.now_playing import now_playing_bp
 from routes.geo import geo_bp
@@ -189,6 +190,7 @@ app.register_blueprint(logs_bp)
 app.register_blueprint(agent_events_bp)
 app.register_blueprint(agent_sessions_bp)
 app.register_blueprint(agent_mission_bp)
+app.register_blueprint(agent_usage_bp)
 app.register_blueprint(feedback_bp)
 app.register_blueprint(now_playing_bp)
 app.register_blueprint(geo_bp, url_prefix='/api')

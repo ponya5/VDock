@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { settingsSource } from './helpers/settingsSource'
 
 // DL-098: the screensaver Clock widget becomes toggleable via a persisted
 // `screensaverClockEnabled` flag (default true — a separate flag rather
@@ -18,7 +19,7 @@ function readSrc(rel: string) {
 const store = readSrc('stores/settings.ts')
 const backend = readFileSync(resolve(src, '../../backend/routes/user_settings.py'), 'utf-8')
 const screensaver = readSrc('components/ScreenSaver.vue')
-const settingsView = readSrc('views/SettingsView.vue')
+const settingsView = settingsSource()
 
 test('screensaverClockEnabled is a persisted setting end-to-end', () => {
   for (const marker of [

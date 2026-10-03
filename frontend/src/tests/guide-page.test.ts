@@ -7,6 +7,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineComponent, h } from 'vue'
+import { settingsViewSource } from './helpers/settingsSource'
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: {} }),
@@ -18,8 +19,7 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
-const settingsSrc = readFileSync(
-  resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const settingsSrc = settingsViewSource()
 const routerSrc = readFileSync(
   resolve(__dirname, '../router/index.ts'), 'utf-8')
 const guideSrc = readFileSync(
@@ -101,13 +101,13 @@ describe('SettingsView guide hand-off', () => {
   })
 
   it('search and deep links still reach the guide', () => {
-    expect(settingsSrc).toContain("match.tabId === 'guide'")
-    expect(settingsSrc).toContain("tabQuery === 'guide'")
+    expect(settingsSrc).toContain("match.section === 'guide'")
+    expect(settingsSrc).toContain("route.query.tab === 'guide'")
   })
 
   it('footer is the shared SiteFooter', () => {
     expect(settingsSrc).toContain("import SiteFooter from '@/components/SiteFooter.vue'")
-    expect(settingsSrc).toContain('<SiteFooter class="settings-dock" />')
+    expect(settingsSrc).toMatch(/<SiteFooter class="settings-dock[^"]*" \/>/)
     expect(guideSrc).toContain('<SiteFooter />')
   })
 })

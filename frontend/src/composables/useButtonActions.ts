@@ -117,6 +117,10 @@ export function useButtonActions() {
       }
     }
 
+    // A hold button acts on pointerdown/up only; a bare click (keyboard,
+    // accessibility) must not start dictation with no way to stop it.
+    if (holdAction(button, 'start')) return
+
     // A live button with a press menu (DL-145) opens its sheet instead of
     // running anything; the menu rows run the actual operations.
     if (actionCatalogStore.byActionType[button.action.type]?.press === 'menu') {
@@ -146,6 +150,10 @@ export function useButtonActions() {
       if (url && button.action?.type?.startsWith('gh_widget_')) {
         void dashboardStore.executeAction({ type: 'url', config: { url } }, button.id)
       }
+      // A usage meter answers a tap by showing the per-session breakdown.
+      if (result?.success && result.data?.open_mission_control) {
+        openMissionControl()
+      }
     }).catch((error) => {
       const result = {
         success: false,
@@ -161,25 +169,49 @@ export function useButtonActions() {
    * trigger:'press' buttons, or the engage half of a push-to-talk pair.
    */
   function handleButtonPress(button: Button) {
+    const start = holdAction(button, 'start')
+    if (start) {
+      dispatchAction(button, start, 'Action failed')
+      return
+    }
     handleButtonClick(button)
   }
 
-  /** Push-to-talk disengage — runs the button's release_action if configured. */
-  function handleButtonRelease(button: Button) {
-    const release = button.action?.release_action
-    if (!release?.type) return
+  /**
+   * A hold-to-talk action (catalog `press: 'hold'`, DL-145): the backend gets
+   * `op: 'start'` on pointerdown and `op: 'stop'` on release — the user never
+   * configures a release_action for it.
+   */
+  function holdAction(button: Button, op: 'start' | 'stop') {
+    const action = button.action
+    if (!action || actionCatalogStore.byActionType[action.type]?.press !== 'hold') return null
+    return { type: action.type, config: { ...action.config, op } }
+  }
+
+  function dispatchAction(
+    button: Button,
+    action: { type: string; config: Record<string, any> },
+    failureMessage: string
+  ) {
     buttonStateStore.markRunning(button.id)
-    dashboardStore.executeAction(release, button.id).then((result) => {
+    dashboardStore.executeAction(action, button.id).then((result) => {
       buttonStateStore.markFinished(button.id, result)
       showActionResult(result)
     }).catch((error) => {
       const result = {
         success: false,
-        message: error instanceof Error ? error.message : 'Release action failed'
+        message: error instanceof Error ? error.message : failureMessage
       }
       buttonStateStore.markFinished(button.id, result)
       showActionResult(result)
     })
+  }
+
+  /** Push-to-talk disengage — runs the button's release_action (or a hold action's stop). */
+  function handleButtonRelease(button: Button) {
+    const release = holdAction(button, 'stop') ?? button.action?.release_action
+    if (!release?.type) return
+    dispatchAction(button, release, 'Release action failed')
   }
 
   function handleButtonEdit(button: Button) {

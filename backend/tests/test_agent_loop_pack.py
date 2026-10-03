@@ -130,3 +130,73 @@ def test_review_empty_states(plugin, mocker):
     zero = plugin.execute_action('agent_review_changes', {'op': 'status'})
     assert zero['message'] == 'No changes this turn'
     assert zero['data']['badge'] == '0'
+
+
+# --- agent_usage ---------------------------------------------------------------
+
+def _today(cost, tokens):
+    return {'tokens': {'total': tokens}, 'cost_usd': cost, 'estimate': True,
+            'sessions': 1}
+
+
+def test_usage_has_one_visible_field_and_polls(plugin):
+    spec = _spec(plugin, 'agent_usage')
+    assert [f.name for f in _visible(spec)] == ['daily_limit_usd']
+    assert (spec.poll_seconds, spec.press) == (60, 'run')
+    assert spec.poll_config == {'op': 'status'}
+
+
+@pytest.mark.parametrize('usd,expected', [(0.42, '≈$0.42'), (4.2, '≈$4.20'),
+                                          (12.4, '≈$12')])
+def test_cost_badge_format(usd, expected):
+    assert pack.format_cost(usd) == expected
+
+
+@pytest.mark.parametrize('count,expected', [(850_000, '850k'), (1_200_000, '1.2M'),
+                                            (420, '420')])
+def test_token_badge_format(count, expected):
+    assert pack.format_tokens(count) == expected
+
+
+def test_usage_face_and_mission_control_flag(plugin, mocker):
+    mocker.patch.object(pack.claude_usage, 'today_usage',
+                        return_value=_today(4.2, 1_200_000))
+    result = plugin.execute_action('agent_usage', {'daily_limit_usd': 0})
+    assert result['success'] is True
+    assert result['data']['badge'] == '≈$4.20'
+    assert result['data']['sublabel'] == 'today'
+    assert result['data']['status'] == 'normal'
+    assert result['data']['open_mission_control'] is True
+
+
+@pytest.mark.parametrize('limit,status', [(0, 'normal'), (10, 'normal'),
+                                          (5, 'warning'), (4.2, 'critical')])
+def test_usage_limit_thresholds(plugin, mocker, limit, status):
+    mocker.patch.object(pack.claude_usage, 'today_usage',
+                        return_value=_today(4.2, 10))
+    result = plugin.execute_action('agent_usage', {'daily_limit_usd': limit})
+    assert result['data']['status'] == status
+
+
+def test_usage_tokens_metric_has_no_limit_colour(plugin, mocker):
+    mocker.patch.object(pack.claude_usage, 'today_usage',
+                        return_value=_today(40, 850_000))
+    result = plugin.execute_action(
+        'agent_usage', {'metric': 'tokens', 'daily_limit_usd': 1})
+    assert result['data']['badge'] == '850k'
+    assert result['data']['status'] == 'normal'
+
+
+def test_usage_empty_state(plugin, mocker):
+    mocker.patch.object(pack.claude_usage, 'today_usage',
+                        return_value=_today(0, 0))
+    result = plugin.execute_action('agent_usage', {})
+    assert result['success'] is True
+    assert result['message'] == 'No Claude Code usage today'
+    assert result['data']['badge'] == '$0'
+
+
+def test_usage_read_error_is_a_failure_not_a_crash(plugin, mocker):
+    mocker.patch.object(pack.claude_usage, 'today_usage',
+                        side_effect=OSError('disk'))
+    assert plugin.execute_action('agent_usage', {})['success'] is False

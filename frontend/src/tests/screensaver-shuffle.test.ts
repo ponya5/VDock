@@ -13,6 +13,7 @@ import {
   saverTypeLabel,
 } from '@/services/screensaverTypes'
 import { useSettingsStore } from '@/stores/settings'
+import { settingsSource } from './helpers/settingsSource'
 
 beforeEach(() => {
   localStorage.clear()
@@ -109,8 +110,7 @@ describe('ScreenSaver wiring (source contract)', () => {
 })
 
 describe('SettingsView wiring (source contract)', () => {
-  const src = readFileSync(
-    resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+  const src = settingsSource()
 
   it('the Screensaver Type select sits in the first, generic panel on the tab', () => {
     // DL-137: type + activation merged into one "General" panel — ss-type

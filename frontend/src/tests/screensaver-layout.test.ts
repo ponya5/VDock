@@ -11,6 +11,7 @@ import {
   normalizeScreensaverLayout,
   SCREENSAVER_WIDGET_IDS,
 } from '@/utils/screensaverLayout'
+import { settingsSource } from './helpers/settingsSource'
 
 const screensaver = readFileSync(
   resolve(__dirname, '../components/ScreenSaver.vue'),
@@ -24,10 +25,7 @@ const dashboard = readFileSync(
   resolve(__dirname, '../views/DashboardView.vue'),
   'utf-8'
 )
-const settingsView = readFileSync(
-  resolve(__dirname, '../views/SettingsView.vue'),
-  'utf-8'
-)
+const settingsView = settingsSource()
 
 describe('normalizeScreensaverLayout', () => {
   it('returns the default layout for missing or malformed input', () => {
@@ -96,7 +94,8 @@ describe('screensaver layout wiring', () => {
   })
 
   it('exposes the editor + background picker in Screensaver settings', () => {
-    expect(settingsView).toContain('handleCustomizeScreensaverLayout')
+    expect(settingsView).toContain('onCustomizeLayout: () => { screensaverLayoutEditOpen.value = true }')
+    expect(settingsView).toContain("$emit('customize-layout')")
     // The editor mounts directly inside the settings window â€” it no longer
     // depends on a deck window being reachable via ui_command.
     expect(settingsView).toContain('screensaverLayoutEditOpen')

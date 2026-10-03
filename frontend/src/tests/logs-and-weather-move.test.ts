@@ -3,12 +3,14 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { settingsSource } from './helpers/settingsSource'
+import { SECTIONS, SEARCH } from '@/settings/registry'
 
-const view = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const view = settingsSource()
 
 describe('weather location move', () => {
   it('tab is renamed to Integrations and header drops widget copy', () => {
-    expect(view).toContain("name: 'Integrations'")
+    expect(SECTIONS.some((s) => s.name === 'Integrations')).toBe(true)
     expect(view).not.toContain('Widgets & Integration')
   })
 
@@ -30,11 +32,8 @@ describe('weather location move', () => {
   })
 
   it('search routes Weather Widget Location to appearance→screensaver→widgets', () => {
-    const idx = view.indexOf("'Weather Widget Location'")
-    const entry = view.slice(idx, idx + 260)
-    expect(entry).toContain("tabId: 'appearance'")
-    expect(entry).toContain("subTab: 'screensaver'")
-    expect(entry).toContain("deepTab: 'widgets'")
+    const entry = SEARCH.find((e) => e.label === 'Weather Widget Location')
+    expect(entry).toMatchObject({ section: 'appearance', page: 'screensaver', anchor: 'ss-widgets' })
   })
 })
 

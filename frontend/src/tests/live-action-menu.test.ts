@@ -78,6 +78,15 @@ describe('openLiveMenu', () => {
     expect(liveMenu.value?.items).toEqual([])
     expect(liveMenu.value?.message).toBe('No changes this turn')
   })
+
+  it('re-fetches when the cached menu is empty so the empty-state copy shows', async () => {
+    states.b1 = { menu: [], sublabel: 'none running' }
+    executeButtonAction.mockResolvedValue({ success: true, message: 'No dev servers running', data: { badge: '0', menu: [] } })
+    await openLiveMenu(button)
+
+    expect(executeButtonAction).toHaveBeenCalledTimes(1)
+    expect(liveMenu.value?.message).toBe('No dev servers running')
+  })
 })
 
 describe('chooseLiveMenuItem', () => {

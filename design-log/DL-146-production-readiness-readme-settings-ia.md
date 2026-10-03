@@ -431,10 +431,84 @@ _Implemented 2026-10-03. Not committed (per instruction)._
 **Not verified:** fresh-clone simulation (nothing committed); `npm run build` (no frontend source changed); packaged/frozen `.env` location (code path covered by unit test only).
 
 ### Phase 2 - Production hardening + CI
-_Not started._
+_Implemented 2026-10-03. Not committed, tagged or pushed (per instruction)._
+
+**User decisions recorded**
+- Electron: bump approved for the 6 high advisories. Release **2.3.0** approved (applied only after all verification passed). Docker leftovers (`scripts/deploy.sh|bat`, Docker mentions in `docs/ARCHITECTURE.md`) and the three legacy env templates approved for removal. API-keys UX = status + "copy line / open .env" only, so **Task 2.8 (write-only key endpoint) was NOT built** (superseded, as already recorded in Phase 1).
+- Standing guidance: proportionate hardening for a local desktop + LAN panel.
+
+**What changed (user terms)**
+- Installed (frozen) builds now have one writable `.env` (`<DATA_DIR>/.env`); an old `.env` next to the exe is copied there once. Ports route also writes through it.
+- Startup refuses unsafe combos with an actionable message: `DEBUG` + LAN/non-loopback host, `USE_SSL` with missing cert/key, auth on with an example password (`ChangeThisToAStrongPassword123!`, `your-secure-password-here`, `admin`). LAN on without a deck password logs a WARNING. A names-only startup report is logged (`Bind`, `Auth`, `Integrations: GitHub token ✓ ...`).
+- Profiles, `config.json`, `user_settings.json`, triggers and `.env` writes are atomic (tmp + fsync + replace, retries on Windows locks). A daily rolling backup of `profiles/*.json` goes to `<DATA_DIR>/backups/profiles-YYYYMMDD/` (newest 7 kept; backup failure never fails a save).
+- One version source `backend/version.py`; `/api/health` (now with `uptime_s`) and the MCP server read it; a test keeps it equal to both `package.json` files.
+- `GET /api/config/integrations` (auth-protected): per-secret and per-CLI status, `unlocks`, help URL, display-only env path (no user name), `security.lan_without_password`. WeatherAPI added to the redacted/known secrets. Template placeholder values (e.g. the old `demo-key-replace-with-your-own`) no longer count as "configured".
+- CI: `permissions: contents: read`; new `backend-windows` job (Python 3.13); new advisory `audit` job (npm audit frontend + electron, `pip-audit` of the installed env). `scripts/check.ps1` / `check.sh` run the CI steps locally. `engines.node >=20`, `.nvmrc`. `SECURITY.md` "Running on your network" section; `RELEASING.md` version-bump note.
+- Release version bumped 2.2.0 -> **2.3.0** in `backend/version.py`, `frontend/package.json`, `frontend/electron/package.json` (+ both lockfile root entries).
+
+**Files**
+- Created: `backend/version.py`, `backend/utils/atomic.py`, `backend/services/integration_status.py`, `scripts/check.ps1`, `scripts/check.sh`, `.nvmrc`; tests `test_env_file_location.py`, `test_config_validate.py`, `test_atomic_writes.py`, `test_version_consistency.py`, `test_config_integrations_route.py`, `test_real_env_guard.py`.
+- Modified: `backend/config.py` (`migrate_legacy_env`, `EXAMPLE_PASSWORDS`, `validate`, `report`, `lan_without_password`, atomic writes), `app.py`, `routes/{config,system,mcp,profiles,user_settings}.py`, `services/{secrets,triggers}.py`, `utils/{file_manager,logger}.py` (stdout `errors='replace'` so check marks can't break a cp1252 console), `requirements.txt`, `requirements-dev.txt`, tests `conftest.py` (guard), `test_rate_limit_exemptions.py` (9 more polled blueprints), `test_repo_hygiene.py` (pending-removal set dropped), `test_mcp.py`, `test_properties.py`, `test_system_ports.py`; `.github/workflows/ci.yml`, `frontend/package.json`, `frontend/electron/package-lock.json`, `SECURITY.md`, `docs/{RELEASING,CONTRIBUTING,ARCHITECTURE}.md`, `scripts/README.md`.
+- Removed with `git rm` (index; nothing committed): `scripts/deploy.sh`, `scripts/deploy.bat`, `.env.example`, `docs/env.example`, `frontend/env.example`. Docker mentions + "Docker Architecture" diagram removed from `docs/ARCHITECTURE.md`; `docs/CONTRIBUTING.md` link fixed to `frontend/.env.example`.
+
+**Already done in Phase 1 (re-verified, not redone):** Task 2.2 SECRET_KEY placeholder fix and `limiter.exempt(agent_mission_bp)`; this phase added the table-driven exemption test and the frozen `.env` migration.
+
+**Counts**
+- Backend pytest: 1294 -> **1354** (+60). Frontend vitest: 666 -> **666** (no frontend source changed); `vue-tsc` clean; `npm run build` OK.
+- `npm audit` frontend: 1 low -> 1 low (transitive `serialize-javascript`, left per plan). Electron shell: **6 high -> 0** (lockfile refresh within `^41`: electron 41.10.3 -> 41.10.7, @xmldom/xmldom, brace-expansion etc.; `package.json` range unchanged, no `--force`, no major bump).
+- `pip-audit` (installed env): 49 vulns in 9 packages -> **8 in 2** (`flask-cors` 4.0.2 -> 6.x and `pytest` 8 -> 9 are major bumps, deferred). Pins bumped: Flask 3.1.3, Werkzeug 3.1.6, PyJWT 2.15.1, python-socketio 5.16.2, python-dotenv 1.2.2 and requests 2.33.0 (both with `python_version >= "3.10"` markers; 3.9 keeps dotenv 1.0.1 / requests 2.32.4 because the newer wheels need 3.10+), urllib3 upgraded in the venv. Full suite verified in a fresh temp venv built from the new pins; `pip check` clean. `pip-audit==2.10.1` added to `requirements-dev.txt`.
+
+**Evidence**
+- `scripts/check.ps1`: 4/4 PASS (twice, before and after the version bump). CI YAML parses (jobs: backend, frontend, backend-windows, audit; `permissions` read-only).
+- Backend restarted (port 5000, parent + child python.exe replaced). `/api/health` -> `{"status":"ok","version":"2.3.0","uptime_s":...}`; `/api/agent-mission` 200 x120 in a burst with `RATELIMIT_ENABLED=True` still set in this machine's `.env` (no 429); `/api/config/integrations` returns booleans/labels only.
+- Startup log shows `Bind: 0.0.0.0:5000 (LAN on)`, `Auth: off`, `Integrations: ... ✓/✗` and the LAN-without-password WARNING; `grep ghp_|sk-ant|github_pat_` over `vdock.log` = 0 hits; `SECRET_KEY` in `backend/.env` is 64 chars (length only printed).
+- Insecure combo: `DEBUG=True` + `ALLOW_LAN=True` (temp `DATA_DIR`, env-var overrides, user's `.env` untouched) -> `python app.py` exits 1 with "DEBUG exposes the Werkzeug debugger to your network. Set DEBUG=False in ...".
+- Electron: headless smoke on a temp install of the patched electron 41.10.7 -> runtime starts, `preload.js` loads, built `frontend/dist/index.html` loads with 0 renderer console errors; `node --check` on `main.js` / `preload.js`.
+- Guard: `conftest.py` now snapshots the real `backend/.env` around every test, restores it and fails if a test changed it (`test_real_env_guard.py` proves it).
+
+**Deviations / notes**
+- Electron `node_modules` on this machine was **not** reinstalled: the user's desktop app (4 `electron.exe` processes) holds `node_modules/electron/dist` open (`EBUSY` on rename; npm left the tree intact). The patched lockfile is in place; the fix applies after the app is closed and `cd frontend\electron; npm ci` is run. I did not kill the running desktop app.
+- Plan said `pip-audit -r requirements.txt`; that refuses range specifiers (`comtypes>=`, `numpy>=`), so local use and CI audit the installed environment (`pip-audit --skip-editable`).
+- Task 2.7 `unlocks` added to `SecretSpec`; `kind: "cli"` rows report "found on PATH" only (no `gh auth status` spawn at request time).
+- `scripts/check.sh` has no executable bit (would require staging); run via `bash scripts/check.sh`.
+- README badge / `docs/testing/MORNING-TEST-GUIDE.md` still say 2.2.0 (README belongs to Phase 4).
+- This machine's `backend/.env` still has `RATELIMIT_ENABLED=True` and dead `SPOTIFY_*` lines (user file, untouched); `WEATHERAPI_KEY` there is the old demo placeholder and now correctly reads as "not set".
+
+**Security note:** this machine runs Allow LAN with **no deck password** (`backend/data/config.json`); startup now warns about it. Recommend setting a password in Settings > Server now.
+
+**Not verified:** the new CI jobs (`backend-windows`, `audit`) have never run on GitHub - only after the user pushes; a packaged installer build (`scripts/build-release.ps1`, needs the PyInstaller backend + closed desktop app) and a frozen-build `.env` run (covered by unit tests only); Python 3.9 behaviour of the new pins (wheels confirmed to exist for 3.9, suite not run on 3.9); 20-minute Mission Control soak (replaced by a 120-request burst).
 
 ### Phase 3 - Settings IA (3a split, 3b registry + nav, 3c overview + keys + connect)
-_Not started._
+
+#### 3a - split (implemented)
+`SettingsView.vue` went from 5,521 to 821 lines. Thirteen panels now live in `components/settings/panels/` (About, AgentAlerts, AppearanceBackground, AppearanceButtons, AppearanceLayout, Connect, Logs, Mcp, RecentActions, SceneSwitching, Screensaver, Server, Templates), with shared state in `composables/useServerConfig.ts`, `useAppShortcutScenes.ts`, `useBackgroundPreview.ts`, `utils/sliderFill.ts` and shared styles in `assets/styles/settings.css`. Source-reading tests were migrated to `tests/helpers/settingsSource.ts`. "Before" screenshots are in `design-log/refs/dl146-before-*`.
+
+The implementing run was cut off by a usage limit after the extraction; it left one test (`background-health.test.ts`) still reading the old file location and wrote no results. Finished by hand: that test now uses `settingsSource()`. Verified: `vue-tsc` clean, vitest 680/680, `npm run build`. A live sweep of every sidebar section at the built bundle produced no console errors and rendered each panel.
+
+**Not done in 3a:** a side-by-side visual diff of every panel against the before set (only the Connect page and a content sweep were checked), and `TemplatesPanel`/`ScreensaverPanel` size review.
+
+#### 3b - registry + nav (PAUSED, partially implemented)
+Work stopped at the user's request. Tree is green: `vue-tsc` clean, vitest 691/691 (680 -> 691), `npm run build` OK. **Not verified in a browser at all** (no live check, no tour run, no screenshots).
+
+**Done**
+- `frontend/src/settings/registry.ts`: typed `SECTIONS` (Overview, Appearance, Agents & automation, Integrations, Devices & network, System), `SEARCH` (about 35 entries, all anchors real), `NOT_SEARCHABLE`, `LEGACY_TABS`/`LEGACY_SUBS`, `resolveRoute`, `searchSettings`, `NAV_SECTIONS`/`LANDING`. Overview is registered with no pages, so the sidebar lists 5 sections and Settings lands on Appearance until 3c adds the Overview panel.
+- `frontend/src/composables/useSettingsNavigation.ts`: section/page state synced to `?section=&page=`; legacy `?tab=&sub=` and `?anchor=` resolved; last section kept in `sessionStorage`; ignores query changes once the route leaves `/settings`.
+- `SettingsView.vue` now loops `NAV_SECTIONS` for the sidebar and `activeSection.pages` for the sub-tab bar, uses `searchSettings`, and mounts each page's panels from the registry (`PANELS`, `panelBindings`, `STACKED_PANELS`). Old `activeTab`/`appearanceSubTab`/`integrationSubTab`, `PAGE_META` and the hand-written search index are gone. The topbar Apply button is hidden on pages flagged `autosaves` (Logs, About, Templates, Connect, Security, Ports, Triggers, MCP). `data-tour` values are carried by `tour` on sections/pages (`nav-appearance`, `nav-integration`, `nav-templates`, `nav-server`, `nav-connect`, `nav-logs`, `nav-about`, `subtab-screensaver`).
+- `ServerPanel.vue` split into `panels/SecurityPanel.vue` (auth), `panels/PortsPanel.vue` (host and ports), `panels/StartupPanel.vue`; Notifications moved out of `AppearanceLayout.vue` into `panels/NotificationsPanel.vue` (shown under Agent alerts). Shared `.status-msg` rules moved to `assets/styles/settings.css`. The Layout "Reset section" no longer resets the toast level (it has its own reset button).
+- Tests: new `tests/settings-registry.test.ts`; updated `settings-subtabs`, `button-behaviour-subtabs`, `logs-and-weather-move`, `session-logs`, `screensaver-layout`, `guide-page`, `dashboard-font` to read the registry or the new wiring.
+
+**Deviations**
+- Agents & automation lists Scene switching first (not Agent alerts) so its click count stays at 3. Swap the order in 3c once Overview has the quick switch.
+- Registry pages use `panels: string[]` (a page can mount several panels) instead of `component: string`.
+- The "every `<h2>` has a search entry" test is implemented as "every `<section class="panel" id>` is a registered anchor, and every anchor is searchable or exempt".
+- No search entries for GitHub token, Anthropic key or weather key: there is no Accounts & keys page yet (3c).
+
+**Not done**
+- `GuideView.vue` and `AgentMissionControl.vue` copy still names old paths (`Settings -> Integrations -> MCP server`, `Settings -> Server -> Authentication`, `Settings -> Connect a device`, `Settings -> About -> Launch tutorial`); `services/tutorial.ts` text mentions the old rail.
+- Live verification at 1024x600 and 1400x900, deep-link checks, search checks, tutorial tour run, click-count table, `design-log/refs/dl146-after-*` screenshots, `scripts/check.ps1`.
+- A mounted-component test for nav (6 sections, `?tab=connect`, search "password", `?anchor=touch` scroll) in `settings-subtabs.test.ts`; coverage is registry-level only.
+- Not yet checked: `?anchor=` scroll timing after a page switch, that the Appearance Buttons v-model bindings via `panelBindings` still update the draft chip, and that `openStandaloneSettings` links (now `?section=&page=`) open correctly.
+- README row note "Phase 3b implemented" deliberately not added (3b is not complete).
 
 ### Phase 4 - README refresh + screenshots
 _Not started._

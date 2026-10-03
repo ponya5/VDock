@@ -12,8 +12,10 @@ vi.mock('@/api/client', () => ({
 }))
 import apiClient from '@/api/client'
 import McpInfoModal from '@/components/settings/McpInfoModal.vue'
+import { settingsSource, settingsViewSource } from './helpers/settingsSource'
 
-const view = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const view = settingsViewSource()
+const allSettingsSource = settingsSource()
 
 describe('top sub-tab bar', () => {
   it('renders a tablist strip between the topbar and content', () => {
@@ -21,42 +23,22 @@ describe('top sub-tab bar', () => {
     expect(view).toContain('role="tablist"')
     expect(view).toContain('role="tab"')
     expect(view).toContain('aria-selected')
-    expect(view).toContain('v-for="sub in subTabsForTab"')
-  })
-
-  it('drives appearance subs through the shared selectSubTab', () => {
-    expect(view).toContain("activeTab.value === 'appearance' ? appearanceSubs")
-    expect(view).toContain("activeTab.value === 'integration' ? integrationSubs")
-    expect(view).toContain('function selectSubTab(')
+    expect(view).toContain('v-for="p in activeSection.pages"')
     // The old sidebar nav-sub block is gone.
     expect(view).not.toContain('class="nav-sub"')
-    expect(view).not.toContain('selectAppearanceSub')
   })
 
-  it('sections the integration page by integrationSubTab', () => {
-    for (const sub of ['apps', 'alerts', 'triggers', 'mcp']) {
-      expect(view).toContain(`id: '${sub}'`)
+  it('mounts the panels a registry page lists, not hand-written v-ifs', () => {
+    expect(view).toContain('v-for="name in activePage.panels"')
+    expect(view).not.toContain('activeTab')
+    for (const id of ['auto-switch', 'running-apps', 'agent-alerts', 'recent-actions', 'mcp-server']) {
+      expect(allSettingsSource).toContain(`id="${id}"`)
     }
-    expect(view).toContain(`v-if="integrationSubTab === 'apps'" class="panel" id="auto-switch"`)
-    expect(view).toContain(`v-if="integrationSubTab === 'alerts'" class="panel" id="agent-alerts"`)
-    expect(view).toContain(`v-if="integrationSubTab === 'triggers'" class="panel" id="recent-actions"`)
-    expect(view).toContain(`v-if="integrationSubTab === 'mcp'" class="panel" id="mcp-server"`)
-    expect(view).toContain('<TriggersPanel v-if="integrationSubTab === \'triggers\'" />')
   })
 
-  it('resolves ?sub= against the active tab and keeps per-sub crumbs', () => {
-    expect(view).toContain("integrationSubs.some(s => s.id === subQuery)")
-    expect(view).toContain("integrationSubTab.value = subQuery as IntegrationSubId")
-    expect(view).toContain('`integration/${integrationSubTab.value}`')
-    expect(view).toContain("'integration/mcp'")
-    expect(view).toContain("'integration/apps'")
-  })
-
-  it('routes search hits to the right integration sub-tab', () => {
-    expect(view).toContain("tabId: 'integration', subTab: 'mcp'")
-    expect(view).toContain("tabId: 'integration', subTab: 'alerts'")
-    expect(view).toContain("tabId: 'integration', subTab: 'triggers'")
-    expect(view).toContain("tabId: 'integration', subTab: 'apps'")
+  it('routes search hits through the registry', () => {
+    expect(view).toContain('searchSettings(settingsSearch.value)')
+    expect(view).toContain('go({ section: match.section')
   })
 })
 
@@ -64,7 +46,8 @@ describe('MCP help modal', () => {
   it('is mounted from SettingsView and opened by the panel button', () => {
     expect(view).toContain("import McpInfoModal from '@/components/settings/McpInfoModal.vue'")
     expect(view).toContain('<McpInfoModal v-if="mcpHelpOpen" :endpoint="mcpEndpoint"')
-    expect(view).toContain("@click=\"mcpHelpOpen = true\"")
+    expect(view).toContain('onShowHelp: () => { mcpHelpOpen.value = true }')
+    expect(allSettingsSource).toContain("@click=\"$emit('show-help')\"")
   })
 })
 

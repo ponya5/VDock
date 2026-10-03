@@ -356,6 +356,83 @@ describe('DL-145 prompt menu and turn changes', () => {
   })
 })
 
+describe('DL-145 usage chip and compact', () => {
+  const usage = (status: string, pct: number, estimate = true) =>
+    ({ cost_usd: 1.236, estimate, context_pct: pct, status }) as any
+  const claude = (over: Partial<MissionSession>) =>
+    session({ session_id: 'u1', project: 'api', state: 'ready', needs_you: true, can_prompt: true, ...over })
+
+  function respond(rows: MissionSession[]) {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve(url === '/agent-mission/changes'
+        ? { data: { success: true, files: [], totals: { files: 0, added: 0, removed: 0 } } }
+        : snapshotResponse(rows)))
+  }
+
+  it('shows estimated cost and context on a Claude row', async () => {
+    respond([claude({ usage: usage('normal', 72) })])
+    const wrapper = await mountOpen()
+
+    const chip = wrapper.find('[data-testid="mc-usage"]')
+    expect(chip.text()).toBe('≈$1.24 · ctx 72%')
+    expect(chip.classes()).not.toContain('mc-usage-warning')
+    expect(chip.attributes('title')).toContain('Estimated')
+  })
+
+  it('drops the ≈ for a total Claude reported itself', async () => {
+    respond([claude({ usage: usage('normal', 10, false) })])
+    const wrapper = await mountOpen()
+
+    expect(wrapper.find('[data-testid="mc-usage"]').text()).toBe('$1.24 · ctx 10%')
+  })
+
+  it('colours the chip amber and red from the server status', async () => {
+    respond([
+      claude({ session_id: 'w', usage: usage('warning', 85) }),
+      claude({ session_id: 'c', usage: usage('critical', 97) }),
+    ])
+    const wrapper = await mountOpen()
+
+    const chips = wrapper.findAll('[data-testid="mc-usage"]')
+    expect(chips.map((c) => c.classes().find((k) => k.startsWith('mc-usage-')))).toEqual(
+      ['mc-usage-warning', 'mc-usage-critical'])
+  })
+
+  it('shows no chip when the row has no usage (non-Claude or unreadable)', async () => {
+    respond([claude({ usage: null }), claude({ session_id: 'x', source: 'cursor' })])
+    const wrapper = await mountOpen()
+
+    expect(wrapper.find('[data-testid="mc-usage"]').exists()).toBe(false)
+  })
+
+  it('offers Compact only when context is filling and posts it for that session', async () => {
+    respond([
+      claude({ session_id: 'ok', usage: usage('normal', 20) }),
+      claude({ session_id: 'hot', usage: usage('warning', 88) }),
+    ])
+    const wrapper = await mountOpen()
+
+    const buttons = wrapper.findAll('[data-testid="mc-compact"]')
+    expect(buttons).toHaveLength(1)
+    await buttons[0].trigger('click')
+    await flushPromises()
+
+    expect(apiPost).toHaveBeenCalledWith('/agent-mission/compact', { source: 'claude', session_id: 'hot' })
+    expect(toast.success).toHaveBeenCalledWith('Compacting context', 'Claude Code - api')
+  })
+
+  it('shows the server refusal when compact is not allowed (busy session)', async () => {
+    respond([claude({ usage: usage('critical', 96) })])
+    apiPost.mockRejectedValueOnce({ response: { status: 409, data: { error: 'That session is busy' } } })
+    const wrapper = await mountOpen()
+
+    await wrapper.find('[data-testid="mc-compact"]').trigger('click')
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('Could not compact the session', 'That session is busy', undefined)
+  })
+})
+
 describe('entry points', () => {
   it('the waiting dock offers a Mission Control button that opens it', async () => {
     vi.resetModules()

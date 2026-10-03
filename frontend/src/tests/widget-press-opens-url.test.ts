@@ -88,6 +88,29 @@ describe('widget press', () => {
   })
 })
 
+describe('Agent Usage press', () => {
+  it('opens Mission Control when the result asks for it', async () => {
+    executeButtonAction.mockResolvedValue({
+      success: true, message: '≈$4.20 today', data: { badge: '≈$4.20', open_mission_control: true },
+    })
+
+    await press(button('agent_usage'))
+
+    expect(missionControlOpen.value).toBe(true)
+  })
+
+  it('does not open it when the read failed or the flag is absent', async () => {
+    executeButtonAction.mockResolvedValue({ success: false, message: 'x', data: { open_mission_control: true } })
+    await press(button('agent_usage'))
+    expect(missionControlOpen.value).toBe(false)
+
+    markFinished.mockReset()
+    executeButtonAction.mockResolvedValue({ success: true, message: 'ok', data: { badge: '1' } })
+    await press(button('agent_usage'))
+    expect(missionControlOpen.value).toBe(false)
+  })
+})
+
 describe('Mission Control deck action', () => {
   it('opens the modal without calling the backend', () => {
     useButtonActions().handleButtonClick(button('ui_control', { action: 'open_mission_control' }))

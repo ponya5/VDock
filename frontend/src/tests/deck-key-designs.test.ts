@@ -4,13 +4,14 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { settingsSource } from './helpers/settingsSource'
 
 const types = readFileSync(resolve(__dirname, '../types/index.ts'), 'utf-8')
 const deckButton = readFileSync(resolve(__dirname, '../components/DeckButton.vue'), 'utf-8')
 const mainCss = readFileSync(resolve(__dirname, '../assets/styles/main.css'), 'utf-8')
 const picker = readFileSync(resolve(__dirname, '../components/ButtonDesignPicker.vue'), 'utf-8')
 const editor = readFileSync(resolve(__dirname, '../components/ButtonEditor.vue'), 'utf-8')
-const settingsView = readFileSync(resolve(__dirname, '../views/SettingsView.vue'), 'utf-8')
+const settingsView = settingsSource()
 const buttonActions = readFileSync(resolve(__dirname, '../composables/useButtonActions.ts'), 'utf-8')
 
 describe('deck-key design effects', () => {
