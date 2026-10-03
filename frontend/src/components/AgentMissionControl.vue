@@ -29,7 +29,7 @@
 
             <p v-else-if="loaded && !snapshot.sessions.length" class="mc-empty" data-testid="mc-empty">
               No agent sessions are reporting right now. Start Claude Code, Cursor
-              or Codex with the VDock hook installed (Settings → Integrations →
+              or Codex with the VDock hook installed (Settings → Agents &amp; automation →
               Agent alerts) and they appear here.
             </p>
 

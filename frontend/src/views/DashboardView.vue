@@ -1,5 +1,14 @@
 <template>
-  <div class="dashboard-view" :class="[dashboardBackgroundClass, { mobile: isMobileViewport }]" :style="dashboardBackgroundStyle">
+  <div
+    class="dashboard-view"
+    :class="[
+      dashboardBackgroundClass,
+      `device-${layoutClass}`,
+      `orient-${orientation}`,
+      { mobile: isMobileViewport, 'layout-stacked': deckLayout.stacked },
+    ]"
+    :style="dashboardBackgroundStyle"
+  >
     <!-- Dedicated slim chrome on phones: scene rail + page steppers only.
          While the header is revealed on mobile (DL-137: the reveal FAB is
          no longer desktop-only — the 7" touch panel is a mobile viewport),
@@ -101,11 +110,14 @@
 
         <div v-if="!currentPage" class="no-profile">
           <FontAwesomeIcon :icon="['fas', 'folder-open']" class="no-profile-icon" />
-          <p>No profile loaded</p>
+          <p>{{ profileUnreachable ? "Can't reach VDock" : 'No profile loaded' }}</p>
           <!-- Mobile never gets profile-management UI (DL-061) — this state
                means the desktop app hasn't set one up yet either, so send
                the user there instead of into a picker phones shouldn't have. -->
-          <button v-if="!isMobileViewport" class="btn btn-primary" @click="router.push('/profiles')">
+          <button v-if="profileUnreachable" class="btn btn-primary" @click="retryProfileLoad">
+            Retry
+          </button>
+          <button v-else-if="!isMobileViewport" class="btn btn-primary" @click="router.push('/profiles')">
             Select Profile
           </button>
           <p v-else class="no-profile-hint">Set up a profile on the VDock desktop app first.</p>
@@ -279,6 +291,9 @@ import { listenForVdockRefreshRequests } from '@/composables/useVdockRefresh'
 import { listenForUiCommands } from '@/composables/useUiCommands'
 import { confirmDialog } from '@/composables/useConfirm'
 import { useMobileViewport } from '@/utils/mobileViewport'
+import { useDeviceClass } from '@/composables/useDeviceClass'
+import { dashboardLayout } from '@/utils/dashboardLayout'
+import { loadInitialProfile } from '@/services/initialProfile'
 import { useSwipe } from '@/composables/useGestures'
 import { sceneSwipe } from '@/services/sceneSwipe'
 import type { ScreensaverLayout } from '@/utils/screensaverLayout'
@@ -744,6 +759,25 @@ const footerVisible = computed(() =>
 // header overlay instead of squeezing the deck, and reserve a slim top
 // strip so the header-reveal pill never sits on buttons.
 const { isMobileViewport } = useMobileViewport()
+const { deviceClass, layoutClass, orientation, viewportWidth } = useDeviceClass()
+const deckLayout = computed(() =>
+  dashboardLayout({
+    layoutClass: layoutClass.value,
+    orientation: orientation.value,
+    innerWidth: viewportWidth.value,
+    compactTouch: isMobileViewport.value,
+  })
+)
+
+// The header-reveal FAB owns the bottom-right corner, which the agent dock
+// (Mission Control + waiting chips) also uses. Publish its presence on <html>
+// so the dock can lift clear of it instead of overlapping.
+const revealFabVisible = computed(() => !settingsStore.showHeader && !isEditMode.value)
+watch([revealFabVisible, footerVisible], ([fab, footer]) => {
+  const root = document.documentElement.classList
+  root.toggle('reveal-fab-visible', fab)
+  root.toggle('reveal-fab-footer', fab && footer)
+}, { immediate: true })
 
 function toggleCategory(categoryId: string) {
   const index = expandedCategories.value.indexOf(categoryId)
@@ -972,6 +1006,27 @@ async function createDefaultProfileForFirstTimeUser() {
   }
 }
 
+// DL-147 (X7): only a reachable-but-empty backend on a desktop/panel creates a
+// profile; a failed fetch, or a phone/tablet, shows a hint instead.
+const profileUnreachable = ref(false)
+
+async function loadInitialProfileState() {
+  const outcome = await loadInitialProfile({
+    lastProfileId: settingsStore.activeProfileId || localStorage.getItem(LAST_PROFILE_STORAGE_KEY),
+    canCreateProfile: deviceClass.value === 'desktop' || deviceClass.value === 'panel',
+    getProfile: profilesStore.getProfile,
+    loadProfiles: profilesStore.loadProfiles,
+    profiles: () => profilesStore.profiles,
+    setProfile: dashboardStore.setProfile,
+    createDefaultProfile: createDefaultProfileForFirstTimeUser,
+  })
+  profileUnreachable.value = outcome === 'unreachable'
+}
+
+function retryProfileLoad() {
+  void loadInitialProfileState()
+}
+
 function nextScene() {
   if (!currentProfile.value || currentProfile.value.scenes.length <= 1) return
   const nextIdx = (currentSceneIndex.value + 1) % currentProfile.value.scenes.length
@@ -1122,27 +1177,12 @@ onMounted(async () => {
   // settings-fetch-failed case) or, worse, falling all the way through to
   // "first profile on the backend" or bootstrapping a brand new one.
   await settingsStore.ensureSettingsLoaded()
-  const lastProfileId = settingsStore.activeProfileId || localStorage.getItem(LAST_PROFILE_STORAGE_KEY)
-  let profileLoaded = false
-  if (lastProfileId) {
-    const profile = await profilesStore.getProfile(lastProfileId)
-    if (profile) {
-      dashboardStore.setProfile(profile)
-      profileLoaded = true
-    }
-  }
-  if (!profileLoaded) {
-    await profilesStore.loadProfiles()
-    if (profilesStore.profiles.length > 0) {
-      const profile = await profilesStore.getProfile(profilesStore.profiles[0].id)
-      if (profile) {
-        dashboardStore.setProfile(profile)
-        profileLoaded = true
-      }
-    }
-  }
-  if (!profileLoaded) {
-    await createDefaultProfileForFirstTimeUser()
+  await loadInitialProfileState()
+
+  // Settings > Overview "Edit keys" lands here with ?edit=1: enter edit mode once, then drop the flag.
+  if (router.currentRoute.value.query.edit === '1') {
+    if (!isEditMode.value) dashboardStore.toggleEditMode()
+    void router.replace({ path: router.currentRoute.value.path })
   }
 
   // First-run bubble tutorial (or a "Launch Tutorial" request from Settings).
@@ -1200,6 +1240,7 @@ onUnmounted(() => {
 
   stopVdockRefreshListener?.()
   stopUiCommandListener?.()
+  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer')
   // Unmounting the deck (e.g. route to Settings) must not leave the app
   // background suspended — the saver is gone with it.
   setScreensaverVisible(false)
@@ -1678,15 +1719,11 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* Responsive .deck-main at <768px — sidebar becomes bottom drawer */
-@media (max-width: 768px) {
-  .deck-main {
-    flex-direction: column;
-  }
-
-  .main-content {
-    flex: 1;
-  }
+/* DL-147: stacked deck column (sidebar becomes a strip above the deck). The
+   rule lives in utils/dashboardLayout.ts so DockedSidebar and this CSS can't
+   disagree about the boundary (they did at exactly 768px). */
+.dashboard-view.layout-stacked .deck-main {
+  flex-direction: column;
 }
 
 /* Dashboard grid layout */

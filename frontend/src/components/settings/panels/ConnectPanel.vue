@@ -18,6 +18,15 @@
               <label class="switch"><span class="sr-only">Allow LAN access</span><input type="checkbox" :checked="serverConfig?.allow_lan ?? false" @change="toggleAllowLan" /><span class="track"></span></label>
             </div>
           </div>
+          <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn">
+            <div class="row-text">
+              <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Protect it with a password</span>
+              <p>Without one, anyone on this Wi-Fi can press your keys and answer your agents. Each device enters it once.</p>
+            </div>
+            <div class="row-control">
+              <DeckPasswordForm :cancellable="false" />
+            </div>
+          </div>
           <div class="row" v-if="lanUrl">
             <div class="row-text">
               <span class="label">Deck address</span>
@@ -95,10 +104,13 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useServerConfig } from '@/composables/useServerConfig'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { copyText } from '@/utils/copyText'
+import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
 
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
-const { serverConfig, lanUrl } = useServerConfig()
+const { serverConfig, lanUrl, setAllowLan } = useServerConfig()
 
 // --- Connect a device (QR) ----------------------------------------------------
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
@@ -148,12 +160,7 @@ const lanDeadHint = import.meta.env.DEV
   : 'Relaunch VDock — the bind address is chosen at startup.'
 
 async function toggleAllowLan(event: Event) {
-  const enabled = (event.target as HTMLInputElement).checked
-  const ok = await settingsStore.updateServerConfig({ allow_lan: enabled })
-  notificationsStore[ok ? 'success' : 'error'](
-    ok ? 'LAN access ' + (enabled ? 'enabled' : 'disabled') : 'Could not save',
-    ok ? 'Relaunch VDock to apply — the bind address is chosen at startup.' : 'Server rejected the change.'
-  )
+  await setAllowLan((event.target as HTMLInputElement).checked)
   await nextTick()
   renderQr()
 }
@@ -175,35 +182,10 @@ async function saveDeckHost() {
   if (ok) { await nextTick(); renderQr() }
 }
 
-function copyLanUrl() {
+async function copyLanUrl() {
   if (!lanUrl.value) return
-  // navigator.clipboard needs a secure context — the LAN deck URL is
-  // http://, so on phones hitting it the API is undefined entirely.
-  // Fall back to the legacy textarea+execCommand path.
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(lanUrl.value)
-      .then(() => notificationsStore.success('Copied', lanUrl.value ?? ''))
-      .catch(() => copyLanUrlLegacy())
-  } else {
-    copyLanUrlLegacy()
-  }
-}
-
-function copyLanUrlLegacy() {
-  const ta = document.createElement('textarea')
-  ta.value = lanUrl.value ?? ''
-  ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none'
-  document.body.appendChild(ta)
-  ta.select()
-  ta.setSelectionRange(0, ta.value.length) // iOS needs an explicit range
-  try {
-    const ok = document.execCommand('copy')
-    notificationsStore[ok ? 'success' : 'info'](ok ? 'Copied' : 'Copy failed', lanUrl.value ?? '')
-  } catch {
-    notificationsStore.info('Copy failed', lanUrl.value ?? '')
-  } finally {
-    ta.remove()
-  }
+  const ok = await copyText(lanUrl.value)
+  notificationsStore[ok ? 'success' : 'info'](ok ? 'Copied' : 'Copy failed', lanUrl.value)
 }
 
 // Re-probe whenever the page is opened — the deck address may have come up
@@ -226,6 +208,7 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
 
 <style scoped>
 .kv-accent { color: #9cc0ff; }
+.row-warn .label svg { color: var(--warn); }
 .note.warn {
   border-color: #4a3a18;
   background: #261e0d;
@@ -265,7 +248,7 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
   padding: 6px;
   flex: none;
 }
-.qr-preview-col { margin-left: auto; }
+.qr-preview-col { margin-left: auto; max-width: 100%; }
 .qr-preview-img {
   width: 380px;
   max-width: 100%;

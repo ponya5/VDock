@@ -100,6 +100,24 @@ function navigate(source: string) {
   gap: clamp(8px, 1.6vh, 14px);
 }
 
+/* The header-reveal FAB (DashboardView) sits in this same corner while the
+   header is hidden — lift the dock above it (same size/offset math as the FAB). */
+:global(html.reveal-fab-visible) .agent-waiting-dock {
+  bottom: calc(
+    var(--spacing-touch-md, var(--spacing-md, 16px))
+    + max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)))
+    + 12px
+  );
+}
+
+:global(html.reveal-fab-footer) .agent-waiting-dock {
+  bottom: calc(
+    max(44px, calc(56px * var(--touch-multiplier, 1))) + 10px
+    + max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)))
+    + 12px
+  );
+}
+
 .dock-chip {
   display: flex;
   align-items: center;

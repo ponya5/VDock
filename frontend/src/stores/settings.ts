@@ -5,6 +5,8 @@ import apiClient from '@/api/client'
 import { useAppIntegrations, setAppIntegrations, useAutoSceneSwitching, setAutoSceneSwitching } from '@/composables/useAppIntegrations'
 import type { AppIntegration } from '@/types'
 import socketClient from '@/api/socket'
+import { useDeviceClass } from '@/composables/useDeviceClass'
+import { useDevicePrefs } from '@/services/devicePrefs'
 import { DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID, FACTORY_BACKGROUND_ID } from '@/data/backgrounds'
 import {
   defaultScreensaverLayout,
@@ -260,8 +262,21 @@ export const useSettingsStore = defineStore('settings', () => {
   
   const touchMode = ref<'normal' | 'touch-friendly' | 'tablet'>('normal')
   const minimumTouchTargetSize = ref(44)
+  // DL-147: phones/tablets scale from a device-local pref (auto: phone 1.0,
+  // tablet 1.5) so they neither read nor write the shared `touchMode`;
+  // desktop and the panel keep using the shared value unchanged.
+  const { deviceClass } = useDeviceClass()
+  const devicePrefs = useDevicePrefs()
+  const usesDeviceTouchScale = computed(
+    () => deviceClass.value === 'phone' || deviceClass.value === 'tablet'
+  )
+  const effectiveTouchMode = computed<'normal' | 'touch-friendly' | 'tablet'>(() => {
+    if (!usesDeviceTouchScale.value) return touchMode.value
+    if (devicePrefs.touchMode !== 'auto') return devicePrefs.touchMode
+    return deviceClass.value === 'tablet' ? 'touch-friendly' : 'normal'
+  })
   const touchModeMultiplier = computed(() => {
-    switch (touchMode.value) {
+    switch (effectiveTouchMode.value) {
       case 'normal':
         return 1.0
       case 'touch-friendly':
@@ -1022,14 +1037,17 @@ export const useSettingsStore = defineStore('settings', () => {
     const multiplier = touchModeMultiplier.value
     
     root.style.setProperty('--touch-multiplier', multiplier.toString())
-    root.style.setProperty('--min-touch-target', `${minimumTouchTargetSize.value}px`)
+    const minTouchTarget = usesDeviceTouchScale.value
+      ? Math.max(minimumTouchTargetSize.value, 44)
+      : minimumTouchTargetSize.value
+    root.style.setProperty('--min-touch-target', `${minTouchTarget}px`)
     root.style.setProperty('--spacing-touch-xs', `${0.25 * multiplier}rem`)
     root.style.setProperty('--spacing-touch-sm', `${0.5 * multiplier}rem`)
     root.style.setProperty('--spacing-touch-md', `${1 * multiplier}rem`)
     root.style.setProperty('--spacing-touch-lg', `${1.5 * multiplier}rem`)
     root.style.setProperty('--button-padding-v', `${0.75 * multiplier}rem`)
     root.style.setProperty('--button-padding-h', `${1 * multiplier}rem`)
-    root.style.setProperty('--button-min-height', `${Math.max(36 * multiplier, minimumTouchTargetSize.value)}px`)
+    root.style.setProperty('--button-min-height', `${Math.max(36 * multiplier, minTouchTarget)}px`)
     root.style.setProperty('--icon-size', `${1 * multiplier}rem`)
     root.style.setProperty('--text-scale', multiplier.toString())
   }
@@ -1101,11 +1119,15 @@ export const useSettingsStore = defineStore('settings', () => {
   loadSettings()
   detectSmallScreenDefaults()
   applyTouchModeStyles()
+  watch(usesDeviceTouchScale, applyTouchModeStyles)
+  watch(effectiveTouchMode, applyTouchModeStyles)
   applyUIBrightnessFilter()
   applyButtonTransparency()
 
   function detectSmallScreenDefaults() {
     if (typeof window === 'undefined') return
+    // DL-147: phones/tablets scale per device, never by writing the shared key.
+    if (usesDeviceTouchScale.value) return
 
     const isCompactScreen = window.innerWidth <= 1100 || window.innerHeight <= 650
     const isTouchDevice =

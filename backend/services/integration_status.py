@@ -5,6 +5,8 @@ so the log and Settings always agree. Nothing here returns or logs a secret
 value, and it never spawns a process (``shutil.which`` lookups only).
 """
 import os
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -47,6 +49,32 @@ def cli_items() -> List[Dict[str, Any]]:
             'help_url': help_url,
         })
     return items
+
+
+def _launch(path: Path) -> None:
+    """Hand a file to the OS default application."""
+    if sys.platform == 'win32':
+        os.startfile(str(path))  # type: ignore[attr-defined]
+    else:
+        subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', str(path)])
+
+
+def open_env_file() -> bool:
+    """Open the env file in the OS default editor, creating it empty if absent.
+
+    Local convenience for "paste your key here"; callers must gate on a
+    localhost request. Returns False when the OS could not open it.
+    """
+    from config import env_file
+
+    target = env_file()
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.touch(exist_ok=True)
+        _launch(target)
+        return True
+    except OSError:
+        return False
 
 
 def display_env_path() -> str:

@@ -429,6 +429,21 @@ const resolvedVisual = computed(() => {
   return out
 })
 
+const isHoldAction = computed(() => {
+  const type = props.button.action?.type
+  return !!type && actionCatalogStore.byActionType[type]?.press === 'hold'
+})
+
+// DL-147: keys that act on pointerdown and/or release own their touch outright
+// (touch-action: none). Otherwise the browser claims a drifting finger as a
+// pan inside the scene-swipe area, sends pointercancel and cuts a hold-to-talk
+// off mid-sentence.
+const ownsTouch = computed(() => {
+  const action = props.button.action
+  if (!action || action.type === 'slider') return false
+  return action.trigger === 'press' || !!action.release_action || isHoldAction.value
+})
+
 const buttonClasses = computed(() => {
   const vis = resolvedVisual.value
   const anim = props.button.layers?.behaviour ?? props.button.style?.animation ?? 'none'
@@ -443,6 +458,7 @@ const buttonClasses = computed(() => {
     'is-placeholder': props.isPlaceholder,
     'edit-mode': props.isEditMode,
     'has-action': !!props.button.action,
+    'is-hold': ownsTouch.value && !props.isEditMode,
     'disabled': !props.button.enabled,
     'deck-button-enhanced': props.button.style?.enhanced,
 
@@ -800,7 +816,7 @@ function handlePointerDown(event: PointerEvent) {
 
   // A hold action (catalog press:'hold') is push-to-talk without a configured
   // release_action: down starts it, up stops it.
-  const isHold = actionCatalogStore.byActionType[action.type]?.press === 'hold'
+  const isHold = isHoldAction.value
   if (action.trigger === 'press' || action.release_action || isHold) {
     pressFiredOnDown = true
     emit('press', props.button)
@@ -834,7 +850,10 @@ function handleClick() {
 }
 
 function handleRightClick() {
-  if (!props.isEditMode) {
+  // DL-147: only a real mouse right-click opens the editor. On touch the
+  // browser fires `contextmenu` for a long-press — mid-hold on a push-to-talk
+  // key that would pop the editor open (and phones are not editors, DL-061).
+  if (!props.isEditMode && downPointerType === 'mouse') {
     emit('edit', props.button)
   }
 }
@@ -880,6 +899,8 @@ function triggerRipple(event: PointerEvent) {
 
 <style scoped>
 .deck-button {
+  /* iOS: no callout / magnifier when a key is held. */
+  -webkit-touch-callout: none;
   --btn-bg: rgba(20, 16, 50, 0.4);
   --btn-radius: 24px;
   position: relative;
@@ -903,6 +924,11 @@ function triggerRipple(event: PointerEvent) {
     0 10px 24px rgba(8, 6, 30, 0.28);
   /* Lets the label react to the real rendered button height (below). */
   container-type: size;
+}
+
+/* Hold / press-on-down keys keep their finger: no browser pan, no pointercancel. */
+.deck-button.is-hold {
+  touch-action: none;
 }
 
 /* Hover state */

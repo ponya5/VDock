@@ -47,8 +47,12 @@ export interface SettingsRoute {
 }
 
 export const SECTIONS: SettingsSection[] = [
-  // Pages arrive with the Overview panel; until then the section has none and is not listed.
-  { id: 'overview', name: 'Overview', icon: ['fas', 'gauge-high'], pages: [] },
+  {
+    id: 'overview', name: 'Overview', icon: ['fas', 'gauge-high'],
+    pages: [
+      { id: 'overview', name: 'Overview', title: 'Overview', blurb: "What's set up and what needs you.", panels: ['OverviewPanel'], anchors: ['attention', 'quick-switches', 'edit-keys'], autosaves: true },
+    ],
+  },
   {
     id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'], tour: 'nav-appearance',
     pages: [
@@ -61,8 +65,8 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'agents', name: 'Agents & automation', icon: ['fas', 'robot'], tour: 'nav-integration',
     pages: [
-      { id: 'scenes', name: 'Scene switching', title: 'Scene switching', blurb: 'Scenes that follow the app in focus.', panels: ['SceneSwitchingPanel'], anchors: ['auto-switch', 'running-apps'] },
       { id: 'alerts', name: 'Agent alerts', title: 'Agent alerts', blurb: 'Banner, glow, deck chips and toasts when something needs you.', panels: ['AgentAlertsPanel', 'NotificationsPanel'], anchors: ['agent-alerts', 'notifications'] },
+      { id: 'scenes', name: 'Scene switching', title: 'Scene switching', blurb: 'Scenes that follow the app in focus.', panels: ['SceneSwitchingPanel'], anchors: ['auto-switch', 'running-apps'] },
       { id: 'triggers', name: 'Triggers', title: 'Triggers', blurb: 'Automatic rules: when something happens (a time, an app opens, an AI agent needs you, a script calls in), VDock switches scene, shows a notification or runs an action.', panels: ['TriggersPanel'], anchors: [], autosaves: true },
       { id: 'mcp', name: 'MCP server', title: 'MCP server', blurb: 'Let local agents act on the deck.', panels: ['McpPanel'], anchors: ['mcp-server'], autosaves: true },
     ],
@@ -70,6 +74,7 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'integrations', name: 'Integrations', icon: ['fas', 'plug'], tour: 'nav-templates',
     pages: [
+      { id: 'accounts', name: 'Accounts & keys', title: 'Accounts & keys', blurb: 'Which keys and tools VDock can use, and where to add them.', panels: ['AccountsPanel'], anchors: ['accounts', 'tools'], autosaves: true },
       { id: 'templates', name: 'App templates', title: 'App templates', blurb: 'Drop-in scenes for popular apps.', panels: ['TemplatesPanel'], anchors: [], autosaves: true },
     ],
   },
@@ -78,7 +83,7 @@ export const SECTIONS: SettingsSection[] = [
     pages: [
       { id: 'connect', name: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.', panels: ['ConnectPanel'], anchors: [], tour: 'nav-connect', autosaves: true },
       { id: 'security', name: 'Security', title: 'Security', blurb: 'Require a deck password on every device.', panels: ['SecurityPanel'], anchors: ['security'], autosaves: true },
-      { id: 'ports', name: 'Ports & host', title: 'Ports & host', blurb: 'Ports and the interface the server binds to.', panels: ['PortsPanel'], anchors: ['connection'], autosaves: true },
+      { id: 'ports', name: 'Advanced', title: 'Ports & host', blurb: 'Ports and the interface the server binds to. Most setups never need this.', panels: ['PortsPanel'], anchors: ['connection'], autosaves: true },
     ],
   },
   {
@@ -92,7 +97,7 @@ export const SECTIONS: SettingsSection[] = [
 ]
 
 /** Anchors that exist on a page but deliberately have no search entry. */
-export const NOT_SEARCHABLE: string[] = ['features', 'build']
+export const NOT_SEARCHABLE: string[] = ['features', 'build', 'attention']
 
 export const SEARCH: SearchEntry[] = [
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications follow app focus', section: 'agents', page: 'scenes', anchor: 'auto-switch', icon: ['fas', 'shuffle'] },
@@ -102,6 +107,12 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Notifications', keywords: 'notifications toast toasts popups alerts errors', section: 'agents', page: 'alerts', anchor: 'notifications', icon: ['fas', 'bell'] },
   { label: 'Triggers & Schedules', keywords: 'triggers schedules automation time app foreground agent webhook scene switch pause resume', section: 'agents', page: 'triggers', icon: ['fas', 'bolt'] },
   { label: 'MCP Server', keywords: 'mcp server agents model context protocol tools press button enable disable', section: 'agents', page: 'mcp', anchor: 'mcp-server', icon: ['fas', 'robot'] },
+  { label: 'GitHub Token', keywords: 'github token key pat api env accounts keys live pr ci buttons', section: 'integrations', page: 'accounts', anchor: 'accounts', icon: ['fab', 'github'] },
+  { label: 'Accounts & Keys', keywords: 'accounts keys anthropic claude weather api key token env secrets cli gh', section: 'integrations', page: 'accounts', anchor: 'accounts', icon: ['fas', 'key'] },
+  { label: 'Overview', keywords: 'overview needs attention status quick switches setup', section: 'overview', page: 'overview', icon: ['fas', 'gauge-high'] },
+  { label: 'Quick Switches', keywords: 'quick switches toggles lan screensaver agent alerts auto scene', section: 'overview', page: 'overview', anchor: 'quick-switches', icon: ['fas', 'toggle-on'] },
+  { label: 'Command-line Tools', keywords: 'cli tools gh github cli claude code cli installed path', section: 'integrations', page: 'accounts', anchor: 'tools', icon: ['fas', 'terminal'] },
+  { label: 'Edit Keys', keywords: 'edit keys buttons change action dashboard edit mode', section: 'overview', page: 'overview', anchor: 'edit-keys', icon: ['fas', 'pen-to-square'] },
   { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck allow lan deck address', section: 'devices', page: 'connect', icon: ['fas', 'mobile-screen-button'] },
   { label: 'Deck Password', keywords: 'password authentication auth login lock secure require unlock', section: 'devices', page: 'security', anchor: 'security', icon: ['fas', 'lock'] },
   { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'ports', anchor: 'connection', icon: ['fas', 'server'] },

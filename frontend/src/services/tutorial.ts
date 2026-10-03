@@ -106,7 +106,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     route: '/settings',
     target: '.nav',
     title: 'Settings',
-    text: 'Everything is configured from this rail — appearance & key design, templates, server, integrations, connect a device, logs.',
+    text: 'Everything is configured from this rail — Appearance, Agents & automation, Integrations, Devices & network, and System.',
     placement: 'right',
   },
   {
@@ -119,7 +119,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     route: '/',
     title: 'You\'re all set',
-    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Guide lives in Settings → Guide — re-run this tour anytime from Settings → About.',
+    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Guide is in the Settings sidebar — re-run this tour anytime from Settings → System → About.',
   },
 ]
 

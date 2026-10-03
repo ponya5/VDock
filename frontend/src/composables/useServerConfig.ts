@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotificationsStore } from '@/stores/notifications'
 
 /**
  * Read-only view of the backend server config plus the addresses derived from
@@ -33,5 +34,16 @@ export function useServerConfig() {
     return `http://${host}:${port}/api/mcp`
   })
 
-  return { serverConfig, lanUrl, mcpEndpoint }
+  // The bind address is chosen at startup, so the change only lands on relaunch.
+  async function setAllowLan(enabled: boolean): Promise<boolean> {
+    const ok = await settingsStore.updateServerConfig({ allow_lan: enabled })
+    const notifications = useNotificationsStore()
+    notifications[ok ? 'success' : 'error'](
+      ok ? 'LAN access ' + (enabled ? 'enabled' : 'disabled') : 'Could not save',
+      ok ? 'Relaunch VDock to apply — the bind address is chosen at startup.' : 'Server rejected the change.'
+    )
+    return ok
+  }
+
+  return { serverConfig, lanUrl, mcpEndpoint, setAllowLan }
 }

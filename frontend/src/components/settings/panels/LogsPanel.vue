@@ -374,7 +374,7 @@ onMounted(loadLogs)
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   padding-bottom: 8px;
   margin-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -410,6 +410,8 @@ onMounted(loadLogs)
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 .log-toolbar-actions .btn {
   white-space: nowrap;

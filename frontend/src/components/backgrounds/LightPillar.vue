@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useDeviceClass } from '@/composables/useDeviceClass'
 
 interface Props {
   topColor?: string
@@ -171,7 +172,8 @@ onMounted(() => {
   const canvas = canvasRef.value
   if (!canvas) return
 
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  const { deviceClass } = useDeviceClass()
+  const isMobile = deviceClass.value === 'phone' || deviceClass.value === 'tablet'
   const isLowEnd  = isMobile || (navigator.hardwareConcurrency != null && navigator.hardwareConcurrency <= 4)
   let effectiveQuality = props.quality
   if (isLowEnd && effectiveQuality === 'high') effectiveQuality = 'medium'

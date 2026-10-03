@@ -393,6 +393,9 @@ function stepPreviewGrid(axis: 'cols' | 'rows', delta: number) {
   cursor: pointer;
   touch-action: manipulation;
 }
+@media (pointer: coarse), (max-width: 880px) {
+  .grid-ctl button { width: 44px; height: 44px; }
+}
 .grid-ctl button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
 .grid-ctl button:disabled {
   opacity: 0.35;

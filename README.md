@@ -274,7 +274,7 @@ cd frontend && npm test
 Every change is written up in **[`design-log/`](design-log/)** — one numbered entry with the problem, the design, and how it was verified. [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) covers adding an action type or writing an integration pack.
 
 ```
-VDock2/
+VDock/
 ├── setup.bat / setup.sh      ← interactive installer
 ├── launch.bat / launch.sh    ← daily launcher
 ├── backend/                  ← Flask API, actions, integration packs
@@ -301,7 +301,7 @@ MIT — see [LICENSE](LICENSE). Use it, fork it, ship it.
 <div align="center">
 <br />
 
-**VDock2** · built by [Daniel Shalom (@ponya5)](https://github.com/ponya5)
+**VDock** · built by [Daniel Shalom (@ponya5)](https://github.com/ponya5)
 
 If it saved you a click today, a ⭐ helps other people find it.
 
