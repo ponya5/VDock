@@ -43,11 +43,21 @@ async function freshService() {
   return svc
 }
 
+/** Route the art fetch to a blob; everything else gets `sync`. */
+function mockApi(sync: unknown) {
+  apiGet.mockReset().mockImplementation((url: string) =>
+    url === '/now-playing/art'
+      ? Promise.resolve({ data: new Blob(['x'], { type: 'image/jpeg' }) })
+      : Promise.resolve({ data: sync }))
+}
+
 beforeEach(() => {
   socketHandlers.clear()
-  apiGet.mockReset().mockResolvedValue({
-    data: { success: true, available: false, track: null },
-  })
+  mockApi({ success: true, available: false, track: null })
+  // jsdom has no object-URL support; derive a stable fake from the call order.
+  let n = 0
+  URL.createObjectURL = vi.fn(() => `blob:art-${++n}`)
+  URL.revokeObjectURL = vi.fn()
 })
 
 describe('nowPlaying service', () => {
@@ -83,12 +93,25 @@ describe('nowPlaying service', () => {
     expect(svc.available.value).toBe(true) // supported, just silent
   })
 
-  it('builds the art URL with the track ts as cache-buster, only when has_art', async () => {
+  it('fetches art through the authed client as a blob URL, only when has_art', async () => {
     const svc = await freshService()
     socketHandlers.get('now_playing')?.(trackPayload({ ts: 123 }))
-    expect(svc.artUrl.value).toBe('/api/now-playing/art?ts=123')
+    await flushPromises()
+    expect(apiGet).toHaveBeenCalledWith('/now-playing/art', {
+      params: { ts: 123 },
+      responseType: 'blob',
+    })
+    expect(svc.artUrl.value).toMatch(/^blob:/)
 
     socketHandlers.get('now_playing')?.(trackPayload({ has_art: false, ts: 124 }))
+    expect(svc.artUrl.value).toBeNull()
+  })
+
+  it('drops the art when the fetch fails', async () => {
+    const svc = await freshService()
+    apiGet.mockRejectedValue(new Error('401'))
+    socketHandlers.get('now_playing')?.(trackPayload({ ts: 5 }))
+    await flushPromises()
     expect(svc.artUrl.value).toBeNull()
   })
 
@@ -134,9 +157,7 @@ describe('NowPlayingWidget', () => {
   const mountOpts = { global: { stubs: { FontAwesomeIcon: true } } }
 
   it('renders the track: section head, title, artist, source tag, art', async () => {
-    apiGet.mockResolvedValue({
-      data: { success: true, available: true, track: trackPayload() },
-    })
+    mockApi({ success: true, available: true, track: trackPayload() })
     const Widget = await freshWidget()
     const wrapper = mount(Widget, mountOpts)
     await flushPromises()
@@ -146,7 +167,7 @@ describe('NowPlayingWidget', () => {
     expect(wrapper.text()).toContain('Artist')
     expect(wrapper.text()).toContain('Spotify') // '.exe' stripped
     const img = wrapper.find('img')
-    expect(img.attributes('src')).toBe('/api/now-playing/art?ts=1759200000')
+    expect(img.attributes('src')).toMatch(/^blob:/)
     expect(wrapper.find('.np-progress').exists()).toBe(true)
   })
 
