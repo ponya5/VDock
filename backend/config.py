@@ -482,16 +482,19 @@ class Config:
         frontend_port = _read_env_port(
             cls.BASE_DIR.parent / 'frontend' / '.env', 'VITE_PORT', 3000
         )
+        # With USE_SSL the browser's Origin is https:// - an http-only list
+        # would refuse every socket and the deck would sit on "Can't reach VDock".
+        scheme = 'https' if cls.USE_SSL else 'http'
         for host in ('localhost', '127.0.0.1'):
-            origins.add(f'http://{host}:{cls.PORT}')       # backend serves dist
-            origins.add(f'http://{host}:{frontend_port}')  # vite dev
+            origins.add(f'{scheme}://{host}:{cls.PORT}')       # backend serves dist
+            origins.add(f'http://{host}:{frontend_port}')      # vite dev
         if cls.ALLOW_LAN:
             # Whitelist every host a device may legitimately load: the
             # auto-detected NIC address AND the deck_host override — a
             # phone on http://deck.local:PORT must not lose its socket.
             for host in {lan_ip(), cls.DECK_HOST or None}:
                 if host:
-                    origins.add(f'http://{host}:{cls.PORT}')
+                    origins.add(f'{scheme}://{host}:{cls.PORT}')
                     origins.add(f'http://{host}:{frontend_port}')
         return sorted(origins)
 

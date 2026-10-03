@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VDock 2.3.0 - What's new, why it matters, and what's left</title>
+<style>
+  :root{--bg:#0f1624;--card:#182235;--card2:#1f2c45;--text:#e8eefc;--mute:#9fb0cf;--acc:#6ea8ff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--line:#2a3a5c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,Segoe UI,Roboto,sans-serif}
+  header{padding:48px 24px 28px;text-align:center;background:linear-gradient(160deg,#1b2a4a,#0f1624)}
+  header h1{margin:0 0 8px;font-size:2.1rem}
+  header p{margin:0 auto;max-width:760px;color:var(--mute)}
+  nav{position:sticky;top:0;z-index:5;background:#0f1624ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;overflow-x:auto;white-space:nowrap}
+  nav a{color:var(--mute);text-decoration:none;padding:6px 12px;border-radius:999px;font-size:.9rem}
+  nav a:hover{background:var(--card2);color:var(--text)}
+  main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+  h2{margin:48px 0 6px;font-size:1.5rem;border-left:4px solid var(--acc);padding-left:12px}
+  .lead{color:var(--mute);margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .card h3{margin:0 0 6px;font-size:1.05rem}
+  .tag{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--acc);margin-bottom:8px}
+  .row{margin:8px 0 0;font-size:.93rem}
+  .row b{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:.92rem}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--card2);color:var(--mute);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+  .stats{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:22px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 18px;min-width:130px}
+  .stat b{display:block;font-size:1.4rem;color:var(--ok)}
+  .stat span{font-size:.8rem;color:var(--mute)}
+  .note{background:#2a2410;border:1px solid #5b4a14;border-radius:12px;padding:12px 16px;color:#fde9a8;margin:14px 0}
+  code{background:var(--card2);padding:1px 6px;border-radius:6px;font-size:.88em}
+  footer{text-align:center;color:var(--mute);padding:24px;font-size:.85rem}
+  @media(max-width:600px){header h1{font-size:1.6rem}th:nth-child(3),td:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>VDock 2.3.0 - what was added</h1>
+  <p>A plain-language summary of the new features since the improvement plan started: what each one does, a real situation where you would use it, why it was worth adding, and what still needs you to test it on a real device.</p>
+  <div class="stats">
+    <div class="stat"><b>1546</b><span>backend tests passing</span></div>
+    <div class="stat"><b>952</b><span>frontend tests passing</span></div>
+    <div class="stat"><b>9</b><span>new developer actions</span></div>
+    <div class="stat"><b>4</b><span>phone / tablet phases</span></div>
+  </div>
+</header>
+<nav>
+  <a href="#dev">Developer actions</a><a href="#alerts">Agent alerts</a><a href="#mobile">Phone &amp; tablet</a>
+  <a href="#settings">Settings</a><a href="#prod">Production-ready</a><a href="#polish">Fixes</a>
+  <a href="#verified">Just verified</a><a href="#manual">Needs you</a><a href="#notdone">Not built</a>
+</nav>
+<main>
+
+<h2 id="dev">1. Developer actions (DL-145)</h2>
+<p class="lead">Nine new keys aimed at people who work with AI coding agents all day. Each one is a normal action you drop on a key; most have a single visible setting.</p>
+<div class="grid">
+
+<div class="card"><span class="tag">Agent loop</span><h3>Agent Prompt</h3>
+<div class="row"><b>What it does</b>Sends a ready-made prompt (continue, fix the failing tests, explain, commit message...) to the agent session you target. Pick from a dropdown; a custom prompt is tucked under Advanced.</div>
+<div class="row"><b>Real use</b>Claude Code stops and asks "what next?" while you are making coffee or on the sofa with your phone. One tap sends "continue" instead of walking back to type it.</div>
+<div class="row"><b>Why it matters</b>Most agent prompts you type are the same five sentences. A key removes the typing and the window switching.</div></div>
+
+<div class="card"><span class="tag">Agent loop</span><h3>Review Changes</h3>
+<div class="row"><b>What it does</b>Asks the agent to review what it just changed, and Mission Control shows a "changes" chip so you see how much was touched.</div>
+<div class="row"><b>Real use</b>The agent finishes a task and edited 14 files. Before accepting, one tap asks it to double-check its own diff.</div>
+<div class="row"><b>Why it matters</b>Catching a bad edit before it is committed is cheaper than reverting afterwards.</div></div>
+
+<div class="card"><span class="tag">Agent loop</span><h3>Run Tests</h3>
+<div class="row"><b>What it does</b>Runs the project's test command and paints the key green or red with the result.</div>
+<div class="row"><b>Real use</b>You glance at your deck from across the desk and see red: tests broke after the last agent change.</div>
+<div class="row"><b>Why it matters</b>Status you can see without opening a terminal keeps you in flow.</div></div>
+
+<div class="card"><span class="tag">Agent loop</span><h3>Agent usage / context chip + Compact</h3>
+<div class="row"><b>What it does</b>Shows how full the agent's context is and how much you have used, plus a Compact button.</div>
+<div class="row"><b>Real use</b>A long session starts forgetting things. The chip turns warm at 80%, you hit Compact before quality drops.</div>
+<div class="row"><b>Why it matters</b>Running out of context mid-task is the most common silent failure of long agent sessions. It also helps you watch your spend.</div></div>
+
+<div class="card"><span class="tag">Dev context</span><h3>Git Branch</h3>
+<div class="row"><b>What it does</b>A live key showing the current branch and whether the tree is dirty.</div>
+<div class="row"><b>Real use</b>You are about to let an agent loose and realise you are still on <code>main</code>.</div>
+<div class="row"><b>Why it matters</b>Prevents the classic "committed to the wrong branch" mistake.</div></div>
+
+<div class="card"><span class="tag">Dev context</span><h3>Dev Servers</h3>
+<div class="row"><b>What it does</b>Shows which local dev servers are listening (Vite, Flask, etc.) and lets you act on them from a press menu.</div>
+<div class="row"><b>Real use</b>"Port 5173 already in use" - you see what holds it and stop it without hunting through Task Manager.</div>
+<div class="row"><b>Why it matters</b>Orphaned dev servers waste minutes every week.</div></div>
+
+<div class="card"><span class="tag">Dev context</span><h3>Docker Containers</h3>
+<div class="row"><b>What it does</b>Shows the running container count/state with a menu to open or restart.</div>
+<div class="row"><b>Real use</b>Your database container stopped overnight; the key goes grey before your app errors.</div>
+<div class="row"><b>Why it matters</b>Infrastructure state at a glance, no terminal.</div></div>
+
+<div class="card"><span class="tag">Calls &amp; voice</span><h3>Mic Mute</h3>
+<div class="row"><b>What it does</b>One key to mute the microphone system-wide, with live red/green state.</div>
+<div class="row"><b>Real use</b>Mid stand-up, the dog barks: tap mute without finding the call window.</div>
+<div class="row"><b>Why it matters</b>Works for any call app, not only one vendor.</div></div>
+
+<div class="card"><span class="tag">Calls &amp; voice</span><h3>Hold-to-talk dictation</h3>
+<div class="row"><b>What it does</b>Hold the key, speak, release. It triggers Windows voice typing and never presses Enter for you.</div>
+<div class="row"><b>Real use</b>Dictate a long prompt to the agent instead of typing it, then read it before sending.</div>
+<div class="row"><b>Why it matters</b>Speaking is faster than typing for long instructions; never auto-submitting avoids sending a mis-heard command.</div></div>
+
+<div class="card"><span class="tag">Mission Control</span><h3>Prompt presets + changes chip</h3>
+<div class="row"><b>What it does</b>The existing Mission Control window now offers the same prompt presets and shows the changes chip, so you do not need extra keys.</div>
+<div class="row"><b>Real use</b>Several agents running; you answer each from one screen.</div>
+<div class="row"><b>Why it matters</b>Reuses a surface you already have rather than adding clutter.</div></div>
+
+</div>
+
+<h2 id="alerts">2. Agent alerts you can recognise</h2>
+<p class="lead">When an agent needs you, the popup now looks like that agent.</p>
+<div class="grid">
+<div class="card"><span class="tag">Alerts</span><h3>Branded popups, glow and dock chips</h3>
+<div class="row"><b>What it does</b>Claude Code shows its logo with the orange theme; Cursor, Antigravity and Codex each get their own logo and colour. The waiting dock and screen-edge glow follow the same colours.</div>
+<div class="row"><b>Real use</b>Three agents are running. Orange means Claude wants you, silver means Cursor - you know who before reading.</div>
+<div class="row"><b>Why it matters</b>You triage by colour in under a second.</div></div>
+<div class="card"><span class="tag">Alerts</span><h3>Auto scene switching + clearer trigger wording</h3>
+<div class="row"><b>What it does</b>The deck switches scenes by the app you are in, with rewritten, plainer trigger labels.</div>
+<div class="row"><b>Real use</b>Open Spotify and the media scene appears by itself.</div>
+<div class="row"><b>Why it matters</b>The right keys are already in front of you.</div></div>
+</div>
+
+<h2 id="mobile">3. Phone and tablet as the touch screen (DL-147)</h2>
+<p class="lead">Most people do not own a spare touch panel, but everyone has a phone or tablet. VDock now treats them as first-class decks.</p>
+<div class="grid">
+<div class="card"><span class="tag">Foundation</span><h3>One device model: phone / tablet / panel / desktop</h3>
+<div class="row"><b>What it does</b>A single place decides which layout and touch size to use, with a per-device touch scale (phones 1.0, tablets 1.5).</div>
+<div class="row"><b>Real use</b>The same profile looks right on your 7" panel, your phone and your iPad.</div>
+<div class="row"><b>Why it matters</b>Scattered width checks caused a blank deck on 768px tablets and your desktop shared the tablet's 2x size. Both are fixed.</div></div>
+<div class="card"><span class="tag">Phone</span><h3>Portrait deck and approval remote</h3>
+<div class="row"><b>What it does</b>Portrait phones fold the deck into 3 columns (no more "rotate to landscape" wall). The phone menu has Mission Control with a count of agents that need you; Approve/Deny give a short vibration.</div>
+<div class="row"><b>Real use</b>You are in the kitchen, a permission prompt appears, you approve it from your phone.</div>
+<div class="row"><b>Why it matters</b>This is the highest-value mobile use: unblocking an agent from anywhere in the room.</div></div>
+<div class="card"><span class="tag">Tablet</span><h3>Tablet layouts and edit mode</h3>
+<div class="row"><b>What it does</b>Checked on iPad mini, 10th gen, Air/Pro 11", Pro 12.9", Galaxy Tab and Fire HD 10, portrait and landscape. Edit mode uses a drawer (bottom sheet in portrait) so keys stay large. Windows narrower than 600px use the phone layout.</div>
+<div class="row"><b>Real use</b>An old iPad on a stand becomes your deck.</div>
+<div class="row"><b>Why it matters</b>Tablets are the most common "free" touch screen.</div></div>
+<div class="card"><span class="tag">Connection</span><h3>Reconnect banner and live profile sync</h3>
+<div class="row"><b>What it does</b>If the phone sleeps or Wi-Fi drops, a banner explains it and the deck resumes when you return. Profile changes made on the PC reach open phones within about half a second.</div>
+<div class="row"><b>Real use</b>You edit a key on the PC and your tablet updates without a refresh.</div>
+<div class="row"><b>Why it matters</b>Phones sleep constantly; silent dead decks looked broken.</div></div>
+<div class="card"><span class="tag">Pairing</span><h3>QR pairing, install guidance and optional HTTPS</h3>
+<div class="row"><b>What it does</b>Scan the QR on the Connect page; with a deck password set, the QR carries a single-use token that expires in 10 minutes. An "Add to Home Screen" guide and a keep-screen-on toggle are included. HTTPS (<code>USE_SSL</code>) is off by default.</div>
+<div class="row"><b>Real use</b>Pair a new phone in seconds without typing an address or password.</div>
+<div class="row"><b>Why it matters</b>First-time setup is where most people give up. HTTPS is needed for true app install and the wake lock.</div></div>
+<div class="card"><span class="tag">Fixes</span><h3>Touch bugs</h3>
+<div class="row"><b>What it does</b>Hold keys keep working when a finger drifts; a long press no longer opens the button editor; a failed server connection no longer creates a stray profile.</div>
+<div class="row"><b>Why it matters</b>These made the phone feel unreliable.</div></div>
+</div>
+
+<h2 id="settings">4. Settings you can find things in (DL-146)</h2>
+<div class="grid">
+<div class="card"><span class="tag">Settings</span><h3>Overview, five sections, search and deep links</h3>
+<div class="row"><b>What it does</b>Settings opens on Overview with "Needs attention" rows and quick switches. Sections: Appearance, Agents &amp; automation, Integrations, Devices &amp; network, System. Search jumps to the right page; old links still work.</div>
+<div class="row"><b>Real use</b>Type "token" and land on where to add your GitHub token.</div>
+<div class="row"><b>Why it matters</b>Settings had grown into one 5,500-line page that was hard to navigate.</div></div>
+<div class="card"><span class="tag">Settings</span><h3>Accounts &amp; keys</h3>
+<div class="row"><b>What it does</b>Shows which integrations have a key set (status chips). Buttons copy the line to add or open the <code>.env</code> file. It never asks for or displays a key.</div>
+<div class="row"><b>Why it matters</b>Keys stay in <code>.env</code> where they belong, but you can see what is missing.</div></div>
+<div class="card"><span class="tag">Settings</span><h3>Deck password next to the network switch</h3>
+<div class="row"><b>What it does</b>Turning on phone access prompts for a password right there.</div>
+<div class="row"><b>Why it matters</b>Anyone on your Wi-Fi could previously control your PC if you forgot to set one.</div></div>
+</div>
+
+<h2 id="prod">5. Production readiness</h2>
+<div class="grid">
+<div class="card"><h3>Safer setup</h3><div class="row">Startup validator that names missing settings (never their values), atomic file writes so a crash cannot corrupt config, a secret key generated automatically, <code>.env.example</code> files for backend and frontend, one version source (2.3.0), a health endpoint with uptime.</div></div>
+<div class="card"><h3>Repo hygiene</h3><div class="row">Build and scratch folders untracked and ignored, Docker and old deploy scripts removed, <code>.gitattributes</code> and <code>.editorconfig</code> added, a test that fails if anything touches your real <code>.env</code>.</div></div>
+<div class="card"><h3>Automation and security</h3><div class="row">CI with read-only permissions, Windows and audit jobs, <code>scripts/check.ps1</code> to run everything locally, Electron updated to clear high-severity audit findings, SECURITY.md network guidance.</div></div>
+<div class="card"><h3>README</h3><div class="row">Refreshed (under 300 lines) with screenshots of the new features.</div></div>
+</div>
+
+<h2 id="polish">6. Smaller fixes and polish</h2>
+<table>
+<tr><th>Change</th><th>What you noticed</th><th>Result</th></tr>
+<tr><td>Night moon icon</td><td>Looked like stars</td><td>Real crescent shape</td></tr>
+<tr><td>PWA icon</td><td>Samsung home-screen icon missing</td><td>VDock icon generated and manifest fixed</td></tr>
+<tr><td>Connect warning</td><td>Static "isn't answering" message</td><td>Re-checks every 5 seconds</td></tr>
+<tr><td>Header button overlap</td><td>"Show header" covered Mission Control</td><td>Agent buttons lift above it on every device size</td></tr>
+<tr><td>GitHub widgets</td><td>-</td><td>Covered by 19 new backend tests</td></tr>
+<tr><td>"VDock2" in labels/docs</td><td>Wrong name displayed</td><td>Docs say VDock; repo links left unchanged so Git is not affected</td></tr>
+</table>
+
+<h2 id="verified">7. What I just verified (this pass)</h2>
+<p class="lead">The leftover run was cut off by a usage limit. I finished it here. Type check is clean, frontend 952, backend 1546, <code>scripts/check.ps1</code> 4/4, build OK, <code>/api/health</code> reports 2.3.0. Integrations status returns chips only (no key values).</p>
+<table>
+<tr><th>Item</th><th>Result</th></tr>
+<tr><td>Repeated phone/tablet README shots</td><td>Not a deck bug. Live DOM has one grid. The stacked look is a capture artefact. Files left as-is so your live profile was not rewritten.</td></tr>
+<tr><td>"Can't reach VDock" banner</td><td>Fixed: the built app now dials the page origin, and HTTPS origins are allowed when <code>USE_SSL</code> is on. After rebuild, a fresh load shows no banner.</td></tr>
+<tr><td>Tutorial on phones / 7" panel</td><td>Auto-start still skipped on phones. Settings → About → Launch tutorial works on compact touch.</td></tr>
+<tr><td>Remaining tablet sizes</td><td>768×1024, 924×1480, 1180×820, 1194×834, 1366×1024: one grid, no horizontal scroll, no banner. Smallest key 155–297 px. Five sub-44 px chips are the volume slider presets (known leftover).</td></tr>
+</table>
+
+<h2 id="manual">8. What still needs you (and how to test it)</h2>
+<div class="note">Everything below needs a real device or account. Full steps: <code>docs/testing/MANUAL-TEST-CHECKLIST.md</code>.</div>
+<table>
+<tr><th>Check</th><th>How to test</th><th>Pass looks like</th></tr>
+<tr><td>Approve / Deny a real Claude Code prompt</td><td>Start a Claude Code session in a project with the hook installed, ask it to run a command, press Approve on the deck or phone.</td><td>The prompt is approved in the terminal and the key shows "working".</td></tr>
+<tr><td>Agent Prompt to a real session</td><td>Press a preset key with one Claude Code window open.</td><td>The text appears in that window only.</td></tr>
+<tr><td>Hold-to-talk on a phone</td><td>Hold the key for 5 seconds, drifting your finger slightly.</td><td>Dictation stays on until you release.</td></tr>
+<tr><td>Mic mute on a call</td><td>Join a call, tap Mic Mute.</td><td>The call app shows you muted and the key turns red.</td></tr>
+<tr><td>Win+H dictation</td><td>Click a text box, hold the dictation key and speak.</td><td>Text appears; nothing is submitted.</td></tr>
+<tr><td>Docker state</td><td>Start Docker Desktop with one container.</td><td>Key shows running count.</td></tr>
+<tr><td>Samsung home-screen icon</td><td>Open the deck address in Chrome, Add to Home Screen.</td><td>VDock icon, not a letter.</td></tr>
+<tr><td>QR pairing</td><td>Set a deck password, scan the QR on Connect with a fresh phone, time it.</td><td>Deck loads with no typing, under 60 seconds.</td></tr>
+<tr><td>Wake lock / HTTPS</td><td>Enable <code>USE_SSL</code> (mkcert steps in the developer guide), install the app, enable keep-awake.</td><td>Screen stays on while the deck is open.</td></tr>
+<tr><td>Deck password</td><td>Settings, Devices &amp; network, Connect: set one.</td><td>A second device must log in.</td></tr>
+<tr><td>Electron update</td><td>Close the desktop app, run <code>cd frontend\electron; npm ci</code>, start it.</td><td>App opens normally.</td></tr>
+<tr><td>CI on GitHub</td><td>After you push, open the Actions tab.</td><td>All jobs green.</td></tr>
+</table>
+
+<h2 id="notdone">9. Deliberately not built</h2>
+<p class="lead">Parked to keep VDock from becoming overloaded: window layout presets, audio device switching, Google Calendar, local Whisper speech-to-text, Web Push, short pairing codes, button editing on phones, per-device layouts, HTTPS by default.</p>
+
+</main>
+<footer>VDock 2.3.0 - generated from the design logs DL-144 to DL-147.</footer>
+</body>
+</html>

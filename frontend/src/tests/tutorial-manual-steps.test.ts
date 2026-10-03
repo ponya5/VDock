@@ -147,6 +147,12 @@ describe('header-targeted steps', () => {
     expect(agents?.target).toContain('.mobile-agent-console')
   })
 
+  it('an explicit Launch tutorial still starts on compact-touch viewports', () => {
+    const dash = readFileSync(resolve(__dirname, '../views/DashboardView.vue'), 'utf-8')
+    expect(dash).toContain("vdock_tutorial_pending")
+    expect(dash).toMatch(/tourPending \|\| !isMobileViewport/)
+  })
+
   it('agent step switches to an agent-backed scene before measuring', () => {
     const agents = TUTORIAL_STEPS.find((s) => s.title === 'Agent Sessions')
     expect(agents?.needsAgentScene).toBe(true)

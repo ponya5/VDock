@@ -596,3 +596,14 @@ _Implemented 2026-10-03. Not committed (per instruction)._
 **Not verified:** the phone/tablet shots are Chromium emulation, not real devices (the emulated page showed the "Can't reach VDock" banner, an artefact of this embedded browser's socket, hidden in the DOM before capture - the banner itself is genuine UI); I could not inspect the images pixel-by-pixel, only through descriptions, so crop/layout of `phone-portrait.jpg` and `tablet-portrait.jpg` deserve a glance; new CI jobs have never run on GitHub; packaged installer build; the real-device checklist in the morning guide; README `screens/` files from earlier releases (e.g. `settings-buttons.png`) remain on disk but are no longer referenced.
 
 **DL-146 overall:** Phases 1, 2, 3 (a/b/c) and 4 implemented. Open user actions: `cd frontend\electron; npm ci` after closing the desktop app (patched lockfile), commit/push, set a deck password.
+
+### Follow-up - closure + test pass
+_2026-10-03._ Claude usage limit cut a leftover run mid-build; finished in-session.
+
+- **README shots:** live DOM has one `.deck-grid` and `scrollHeight == innerHeight`. The stacked look is a CDP-emulation capture artefact, not a deck bug. Files left as-is (retaking on a throwaway profile was skipped so the owner's live profile stayed untouched). "Volume Slider (Copy)" is a label on the live profile.
+- **"Can't reach VDock":** built bundle now dials `location.origin` (`utils/socketUrl.ts`). `socket_origins()` uses `https` when `USE_SSL` is on. Tests: `socket-url.test.ts`, `test_socket_origins_ssl.py`.
+- **Tour:** first-run still skipped on phones; Settings → About → Launch tutorial now starts on compact-touch (7" panel / phone).
+- **Remaining tablet sizes (remeasured live):** 768x1024 (min key 226), 924x1480 (297), 1180x820 (155), 1194x834 (158), 1366x1024 (186) — one grid, no horizontal scroll, no banner. Five sub-44px chips are slider presets (known leftover).
+- **Skipped:** empty-state unification (many panels); guide-settings.png recapture; throwaway-profile screenshot retake; tap-outside edit drawer.
+- **Docs:** `docs/FEATURE-SUMMARY-2.3.0.html`, `docs/testing/MANUAL-TEST-CHECKLIST.md`.
+- **Verification:** vue-tsc clean; vitest 952; pytest 1546; `scripts/check.ps1` 4/4; `/api/health` ok 2.3.0; `/api/config/integrations` returns status only (no secret values). Secret-pattern scan of source hit CSS `mask-` only. Real `.env` / profiles not modified.

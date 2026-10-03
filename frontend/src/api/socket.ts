@@ -2,6 +2,7 @@ import { io, type Socket } from 'socket.io-client'
 import type { ActionResult } from '@/types'
 import { getAuthToken, onAuthTokenChanged, probeAuth } from '@/services/auth'
 import { markConnected, markDisconnected } from '@/services/connection'
+import { resolveSocketUrl } from '@/utils/socketUrl'
 
 type SocketListener = (...args: any[]) => void
 
@@ -26,9 +27,12 @@ class SocketClient {
     // backend. Deriving the host from location.hostname is what makes a second
     // device work — a phone loading http://192.168.1.100:5000 must dial that
     // same LAN address, not 127.0.0.1 (which would be the phone itself).
-    const backendPort = import.meta.env.VITE_BACKEND_PORT || '5000'
-    const url = import.meta.env.VITE_WS_URL
-      || `${window.location.protocol}//${window.location.hostname}:${backendPort}`
+    const url = resolveSocketUrl({
+      wsUrl: import.meta.env.VITE_WS_URL,
+      backendPort: import.meta.env.VITE_BACKEND_PORT,
+      isDev: import.meta.env.DEV,
+      location: window.location
+    })
 
     this.socket = io(url, {
       transports: ['websocket', 'polling'],
