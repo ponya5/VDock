@@ -124,7 +124,5 @@ Set a deck password first (Settings → Devices & network → Connect a device).
 
 ## If something's off
 
-Every change is documented in `design-log/DL-114` … `DL-133` with
-frozen design + implementation results. `git log` / `git show 34acf1e`
-for the full diff. Profile backup before all mutations:
+`git log` / `git show 34acf1e` for the full diff. Profile backup before all mutations:
 `backend/data/backups/profile-pre-orchestrated-tests-*.json`.

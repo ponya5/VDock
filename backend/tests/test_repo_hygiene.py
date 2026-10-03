@@ -25,7 +25,10 @@ def _tracked_files():
     return [p for p in out.decode('utf-8', 'replace').split('\0') if p]
 
 
-FORBIDDEN_PREFIXES = ('.devin-shots/', 'backend/test-scripts/', '.benchmarks/')
+# design-log/ is the maintainer's private decision log (DL-148).
+FORBIDDEN_PREFIXES = (
+    '.devin-shots/', 'backend/test-scripts/', '.benchmarks/', 'design-log/',
+)
 FORBIDDEN_EXACT = {'.env', 'backend/.env', 'frontend/.env'}
 
 
@@ -80,11 +83,6 @@ def test_no_absolute_user_paths_in_code():
 # Tracked files > 1 MB on 2026-10-03. The test only blocks NEW large files;
 # new images should stay <= 400 KB (see docs/CONTRIBUTING.md).
 KNOWN_LARGE = {
-    'design-log/refs/market-horizontal-2-2026-09-28T00-28-37-626Z.png',
-    'design-log/refs/market-horizontal-2026-09-28T00-27-05-475Z.png',
-    'design-log/refs/saver-clock-off.png',
-    'design-log/refs/saver-clock-on.png',
-    'design-log/refs/screensaver-bloom-mid-2026-09-28-2026-09-27T21-58-54-990Z.png',
     'docs/assets/screens/dashboard-live.gif',
     'docs/assets/vdock-readme.gif',
     'docs/assets/vdock-readme.mp4',
