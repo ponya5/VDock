@@ -24,14 +24,17 @@ export function useServerConfig() {
       ? Number(import.meta.env.VITE_PORT) || 3000
       : serverConfig.value?.port
     if (!host || !port) return null
-    return `http://${host}:${port}`
+    // With USE_SSL the backend serves HTTPS on that port; the dev server stays HTTP.
+    const scheme = serverConfig.value?.use_ssl && !import.meta.env.DEV ? 'https' : 'http'
+    return `${scheme}://${host}:${port}`
   })
 
   // MCP clients always hit the backend port (never the Vite dev server).
   const mcpEndpoint = computed(() => {
     const host = serverConfig.value?.deck_host || serverConfig.value?.lan_ip || '127.0.0.1'
     const port = serverConfig.value?.port ?? 5000
-    return `http://${host}:${port}/api/mcp`
+    const scheme = serverConfig.value?.use_ssl ? 'https' : 'http'
+    return `${scheme}://${host}:${port}/api/mcp`
   })
 
   // The bind address is chosen at startup, so the change only lands on relaunch.

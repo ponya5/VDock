@@ -8,6 +8,7 @@ import { fab } from '@fortawesome/free-brands-svg-icons'
 import App from './App.vue'
 import router from './router'
 import { installSessionLog } from './services/sessionLog'
+import { consumePairQuery } from './services/pairing'
 import './assets/styles/main.css'
 
 // Add all icons to the library
@@ -46,5 +47,8 @@ if ('serviceWorker' in navigator) {
 
 installSessionLog(app)
 
-app.mount('#app')
+// A scanned QR carries a one-time login (?pair=). Trade it before anything
+// mounts: components fire API calls on mount, and a 401 from one sent without
+// the token would clear the token the exchange is about to store.
+void consumePairQuery(router).finally(() => app.mount('#app'))
 

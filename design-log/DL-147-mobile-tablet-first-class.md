@@ -530,10 +530,218 @@ the FAB vs agent-dock overlap at each class (needs a waiting session; pinned by
 Electron `screen` size inside the 7" panel window, S9 live-button menus.
 
 ### Phase 2 - Phone experience (portrait reflow, approval remote, safe areas)
-_Not started._
+
+**Status: implemented and verified (unit + live); STOP for user review.** D1 applied
+(rotate gate retired for phones showing the fitted layout). Backend untouched.
+
+Baseline: vue-tsc clean, vitest 819 passing. After: 875 passing (111 files). `npm run build`
+and `scripts/check.ps1` run at the end (see Verification).
+
+Changes:
+- `utils/gridReflow.ts` (new): pure `reflowPage()` - landscape-authored page (`cols > rows`)
+  in a portrait pane folds into `clamp(rows, 2, cols)` columns, enabled buttons first-fit
+  packed in reading order, spans clamped, copies only (never mutates the store's page);
+  below `minCell` (72 px) it flags `scroll: 'y'` (fixed-height rows, `overflow-x: hidden`).
+- `DeckGrid.vue`: renders `deckPage` (reflowed copy) on the phone **layout** class, not in
+  edit mode, device pref `layout: 'fit'`. Edit/drag/swap/placeholder/slider-edge paths still
+  read the authored `renderedPage`. Landscape, panel, desktop and tablet are untouched.
+- `RotateToLandscape.vue`: no longer blocks when the layout class is phone and the device
+  pref is `fit`; `designed` brings the DL-060 gate back; screensaver/agent-console exemption
+  kept; the 7" panel (compact touch, not phone) still gates in portrait exactly as before.
+- Approval remote: `useNeedsYouCount` (permission + prompted-idle, same rule as the waiting
+  glow), phone ⋮ menu = Mission Control (+count) / Layout: Fit to screen | As designed
+  (device pref, no settings write) / Refresh / Exit, dot badge on ⋮; `useWakeOnPermission`
+  dismisses the screensaver on phone/tablet when a session enters `permission` (desktop and
+  panel unchanged); Approve/Deny `vibrate(15)` after success only.
+- Safe areas: `.dashboard-view.device-phone` pads top/sides, `.deck-grid-host` pads bottom
+  (the agent console keeps its own); FAB, dock, action toast, toast container, alert stack,
+  Mission Control backdrop and the rotate gate use `max(base, env(safe-area-inset-*))`.
+  `DashboardView` mirrors `device-phone`/`device-tablet` on `<html>` for teleported surfaces.
+- 44 px (phone only, via `html.device-phone`): dock inbox/dismiss, toast close + Show Details,
+  notification bell, slider quick-jump chips (hit-slop `::before`, chip itself unchanged).
+  Mission Control close is 44 px at every class.
+
+Deviations from the plan:
+- **Reflow is phone-layout only.** Task 2.2 also listed tablet portrait; tablet portrait fit
+  stays Phase 3 (its stacked layout and 96 px cells are designed there).
+- **Real bug found and fixed:** `:global(html.reveal-fab-visible) .agent-waiting-dock` compiled
+  to a bare `html.reveal-fab-visible { bottom }` rule (the descendant selector was dropped), so
+  the dock never lifted above the header FAB in the built bundle and overlapped it on every
+  class. Rewritten as `html.reveal-fab-visible .agent-waiting-dock` (scoped attribute lands on
+  the last compound); pinned by a `compileStyle` test. This changes the dock position on
+  panel/desktop on purpose (it now clears the FAB, the user-reported bug); deck geometry there
+  is identical to Phase 1.
+- Safe-area test is not "scoped to `.device-phone`" for teleported/fixed surfaces: they use
+  `max(base, env(...))`, which is 0 on panel/desktop; the root and grid-host rules are scoped.
+  `MobileDeckChrome` needs no own rule: the padded root already insets it.
+- `device-audit` script and the 60-second proxy remain unbuilt (D5); live checks used the
+  Cursor browser. Tests were written before the implementation except the 44 px/safe-area
+  source tests, which were added alongside it.
+
+Verification (live, Cursor browser on the built bundle at :5000, CDP device emulation + a
+simulated `generic` permission session posted to `/api/agent-events` and ended afterwards;
+no key pressed, no settings or profile written, Approve/Deny never tapped):
+
+| Size | Class | Result |
+|---|---|---|
+| 390x844 | phone | no rotate gate; 3 columns, keys 119x123 px; no horizontal scroll; FAB top 760 vs dock bottom 748 (no overlap) |
+| 360x800 | phone | 3 columns, keys 109x117 px; FAB 716 vs dock 704 (no overlap) |
+| 844x390 | phone | authored 6 columns, 131x101 (unchanged from Phase 1); FAB/dock clear |
+| 1024x600 touch | panel | 161x171 keys (identical); FAB/dock clear |
+| 1400x900 | desktop | 192x192 keys (identical to the authored fit); FAB/dock clear |
+
+⋮ menu at 390: Mission Control with count `1`, Layout toggle, Refresh, Exit; tapping Mission
+Control opened the modal (close button 44x44). Screenshots:
+`design-log/refs/dl147-after-phone-{390x844-portrait,360x800-portrait,844x390-landscape,panel-1024x600,desktop-1400x900}.jpg`
+(all <= 101 KB).
+
+Not verified: real-device notch/home-indicator insets (emulation has none), wake-on-permission
+and haptics on a real phone, long reflow scroll with a real 30-key page (unit-tested only),
+quick-jump chip effective width measured 42 px before the `-2px` side slop was added (not
+re-measured live after it), notification bell 44 px not re-measured live, tablet matrix (P3).
+Emulation reported a transient 399 px layout width right after reloads (animated ambient
+overlay inside clipped cells); it settles to 390 and `scrollWidth` equals the viewport.
 
 ### Phase 3 - Tablet experience (portrait fit, edit-mode fit, keep awake)
-_Not started._
+
+**Status: implemented and verified (unit + live); STOP for user review.** Backend untouched.
+Baseline: vue-tsc clean, vitest 875 passing. After: 904 passing (114 files). `npm run build` and
+`scripts/check.ps1` PASS.
+
+Changes:
+- Portrait reflow now also runs on the **tablet** layout class (`DeckGrid.vue`, per-class cell floor:
+  phone 72, tablet 96). Landscape, edit mode, panel and desktop keep the authored grid.
+- **Real bug fixed (also affected phones):** invisible quick-add placeholder tiles were still rendered
+  from the *authored* grid inside the folded deck, auto-placing into stray implicit rows that halved the
+  key height (tablet portrait keys were 127 px with half the screen empty). Folded decks now render none.
+- Tablet portrait: the docked sidebar strip is in flow above the deck (was `position: fixed` over the
+  bottom edge, the FAB and the home indicator); `DashboardView.vue` CSS, tablet only.
+- Safe areas: top/sides on the tablet root, bottom on the deck host, or on the footer when it is mounted
+  (`footer-open` root class).
+- Edit mode on tablets: `EditSidebar` is an overlay drawer (right edge in landscape, bottom sheet <= 50 %
+  height in portrait) so the grid keeps its size; a 44 px handle slides it away. The sidebar's own X still
+  exits edit mode. Edit/copy chips and slider resize chips are 44 px on tablets (stacked / spaced so they
+  do not collide with the delete badge); `--chip-offset` replaces the hard-coded 17 px.
+- 44 px: dock inbox/dismiss, toast close/Show Details, notification bell, slider quick-jump hit-slop now
+  use `html:is(.device-phone, .device-tablet)` (was phone only).
+- Settings "Touch mode" row (`AppearanceButtons.vue`) is per device on phone/tablet (Auto / Normal /
+  Touch-friendly / Tablet bound to the device pref, reset = Auto); desktop/panel keep the shared control.
+- Keep awake (`services/keepAwake.ts`, started by `DashboardView`): Screen Wake Lock while fullscreen or
+  installed on phone/tablet, visible, pref on; re-acquired on visible; released on exit. Phone ⋮ menu
+  gets "Keep screen on: On/Off" (device pref). Tablets inherit the default (no switch, as planned).
+- Rotation/resize never touches scene or page (layout-only); split view (< 600 px) lays out as phone.
+
+Deviations / not done:
+- **No video fallback for keep-awake.** No ffmpeg on this machine to build the plan's tiny mp4, so over
+  plain `http://192.168.x.x` (no secure context, no Wake Lock) the OS timeout still applies. Needs a decision:
+  supply an asset / allow the NoSleep.js media, or ship HTTPS (Phase 4, D3).
+- Edit drawer has no "close on outside tap": tapping an action adds a key at the first empty slot and
+  drags start from the drawer, so an outside-tap close would fight both; the handle does it instead.
+- Task 3.5 (ButtonEditor CSS) and 3.6 (Settings at tablet sizes) were **not changed**: not measured in
+  this pass (the audit script is unbuilt, D5), recorded for the Phase 3 review. Fullscreen guidance on
+  tablets is unchanged (header FAB -> fullscreen button).
+- Tests: 28 new/updated (keep-awake, tablet layout CSS contracts, tablet reflow, touch-mode row,
+  menu item); written first except the CSS-contract file.
+
+Live (Cursor browser, built bundle at :5000, CDP emulation `mobile` + touch with matching `screen`
+size + `screenOrientation` (otherwise the override silently does not apply); read-only: no key pressed,
+no setting/profile written; the screensaver overlay was dismissed with synthetic events on the overlay
+only; emulation reset after). Deck of the current profile (8 keys). "Small" = interactive box < 44 px
+without effective hit-slop:
+
+| Size | Class / layout | Keys (min) | Notes |
+|---|---|---|---|
+| 744x1133 portrait | tablet, stacked | 237 | strip 80 px on top, no horizontal scroll, 0 small |
+| 1133x744 landscape | tablet | 147 | same scene, 0 small |
+| 820x1180 / 1180x820 | tablet | 263 / ~155 | 0 small |
+| 834x1194 / 1194x834 | tablet | 267 / 158 | 0 small |
+| 1024x1366 / 1366x1024 | tablet | 312 / 186 | 0 small |
+| 800x1280 / 1280x800 | tablet | 256 / 172 | 0 small (Galaxy Tab and Fire HD 10 are the same box) |
+| 405x1180, 590x820 (split) | **phone** layout | 124 / 181 | 0 small |
+| 1024x600 touch | panel | 161x171 | identical to before |
+| 1440x900 | desktop | 199x199 | identical to before |
+
+Edit mode (`?edit=1`): 820x1180 bottom sheet 512 px tall (half), keys 127 px, 1180x820 drawer 420 px at
+the right edge, keys 155 px (not shrunk; was 63), edit/copy/delete/resize chips 44 px, Add Page 175x66,
+handle toggles the drawer and marks it inert while hidden. Footer is 157 px tall (controls wrap).
+The landscape deck leaves empty space under row 2 because the authored page has an empty third row (unchanged).
+Screenshots: `design-log/refs/dl147-after-tablet-{744x1133,820x1180,834x1194,1024x1366,800x1280}-portrait.jpg`,
+`...-{1133x744,1180x820,1194x834,1366x1024,1280x800}-landscape.jpg`,
+`dl147-after-tablet-edit-{820x1180-portrait,1180x820-landscape}.jpg` (all <= 106 KB).
+
+Not verified: real-device safe-area insets and Wake Lock (needs secure context + real tablet), touch drag
+of keys in edit mode (existing touch path, only unit-covered), FAB vs agent dock at tablet sizes with a
+waiting session (CSS pinned by `header-reveal-dock.test.ts`; not simulated live), 924x1480 (non-gating),
+768x1024 (not re-measured this pass), the screenshot content (the tool returned no pixels to me; checked
+by measurements only).
 
 ### Phase 4 - Reconnect, profile relay, pairing, install guidance, HTTPS (D3)
-_Not started._
+
+**Status: implemented and verified (unit + live); STOP for final user review.** Tests: vitest 904 -> 947
+(121 files), backend pytest 1518 -> 1544; `vue-tsc`, `npm run build`, `scripts/check.ps1` PASS.
+Decisions: D3 = wire `USE_SSL` (off by default, no cert committed, mkcert steps in
+`docs/development/DEVELOPER_GUIDE.md`, comment in `.env.example`); D4 = token in the QR when a password
+is set; D5 = **skipped** (see below).
+
+Backend (26 new tests): `services/pairing.py` (32-byte urlsafe, 600 s TTL, single use,
+5 live max, in memory), `POST /api/auth/pair-token` (auth-protected, 409 when auth is off),
+`POST /api/auth/pair` (public, shares the login throttle), socket `profile_changed` relay
+(id only, `broadcast=True, include_self=False`), `ssl_run_kwargs()` passing `ssl_context` to
+`socketio.run` when `USE_SSL`.
+Deviation: Flask-SocketIO's test client cannot connect under the pinned Flask (read-only
+`RequestContext.session`), so the relay tests call the handler with `emit` captured.
+
+Frontend:
+- `services/connection.ts` + `ConnectionBanner.vue` (overlay, safe-area top, no layout shift): silent for the first 2 s of a
+  drop, "Reconnecting..." after 2 s, "Can't reach VDock at <host> - is the PC awake?" + Retry (44 px) after 15 s. A
+  deliberate `io client disconnect` is not an outage.
+- `api/socket.ts`: reports state, `ensureConnected()`, `emitProfileChanged()`, `connect()` is idempotent, and listeners now
+  live for the client's lifetime (previously a replaced socket silently lost them).
+- `services/connectionResume.ts`: `visibilitychange -> visible` with a dead socket dials at once; every connect after the first
+  runs `refreshVdock({ keepPosition: true })` unless editing. `setProfileKeepingPosition()` restores scene and page
+  (`setProfile` resets them to 0, which would have bounced a woken phone to the first scene).
+- `services/profileSync.ts`: `saveProfile()` success emits `profile_changed`; receivers showing that profile re-fetch once
+  (500 ms debounce, bursts collapse), keep scene/page, or toast "Profile changed on another device" when editing.
+- Pairing: `services/pairing.ts`, `exchangePairToken()`, Connect page QR = `<lanUrl>/?pair=<token>` when `require_auth`, refresh
+  every 9 min, cleared on unmount, warning "don't share screenshots". **Real bug found live:** exchanging in `App.vue`
+  `onMounted` lost the token, because components mounted earlier fired API calls without it and their late 401s hit
+  `markUnauthorized()`, which clears the token. The exchange now runs in `main.ts` before `app.mount`.
+- Install guidance: `utils/installCopy.ts` (one source: iOS/Android steps, HTTP note, the DL-067 callout string, the Connect step),
+  `InstallSheet.vue`, phone ⋮ "Add to Home Screen" (hidden when standalone; the menu is now six items), Connect step 4.
+- `USE_SSL`: `ssl_run_kwargs()`; `useServerConfig` `lanUrl`/`mcpEndpoint` use `https` when `use_ssl` (dev server stays http).
+- PWA: manifest moved to `frontend/pwa.manifest.ts`, `pwa-manifest.test.ts` pins standalone, matching colours, icon pixels
+  (PNG IHDR) vs `sizes`, apple-touch-icon, `viewport-fit=cover`, and the built `manifest.webmanifest` when `dist` exists.
+
+Phase 3 leftovers:
+- (a) ButtonEditor: save/close buttons 44 px and checkbox rows 44 px tall on phone/tablet (`html:is(.device-phone,
+  .device-tablet)`), `QuickTemplates` collapse chevron 44 px. Settings has no device class on `<html>` (only the dashboard
+  mirrors it), so a `@media (pointer: coarse) and (min-width: 700px) and (min-height: 700px)` block in `settings.css` lifts
+  reset buttons, credit links, dock dismiss/inbox and the bell to 44 px; the 600 px panel is excluded. Range inputs are measured
+  by their row (allowlisted). Measured live at 744x1133, 820x1180 and 1133x744: no horizontal scroll, 0 undersized targets in
+  every Settings section; ButtonEditor at 820x1180: 0 undersized (the checkbox is covered by its 536x44 label).
+- (b) FAB vs agent dock with a simulated `generic` permission session: no overlap at 744x1133, 768x1024, 820x1180, 834x1194,
+  800x1280, 1024x1366 (portrait) and 1133x744, 1024x768, 1280x800 (landscape). 1180x820, 1194x834, 1366x1024 share the same CSS and were
+  not measured separately. Session ended afterwards.
+- (c) Keep-awake over plain HTTP: no video/NoSleep asset. The ⋮ toggle shows "Needs the installed app or HTTPS (USE_SSL)" when
+  `!window.isSecureContext`.
+
+D5 (`playwright-core` audit script): **skipped.** The plan's script covers every device x surface, a committed geometry
+baseline and screenshot export; that is a tool of its own, not a small one, and live checks with the Cursor browser plus the
+unit contracts covered the same ground. Revisit if DL-146 Phase 4 wants scripted README shots.
+
+Live (Cursor browser, built bundle; `:5000` read-only, nothing saved or pressed; emulation cleared afterwards). "First-time
+phone user connects via QR and presses a key", as far as possible without a phone: a throwaway backend on `:5055` (temp
+`DATA_DIR` holding a copy of one profile, `REQUIRE_AUTH`, random secret; real `backend/.env` untouched; killed and deleted
+afterwards) minted a pair token as a signed-in desktop; a 390x844 touch phone opened `/?pair=<token>` and got the deck with
+no lock screen, no rotate gate and no `?pair` in the address; a synthetic pointer press on Mute dispatched
+`volume_mute` to `/api/actions/execute`, which a page-level interceptor answered locally (nothing reached the PC). Because
+that page's socket dials `:5000` (CORS-refused for the other origin) the offline banner showed too, which doubled as its live
+check. Screenshot: `design-log/refs/dl147-after-phone-paired-390x844.jpg` (44 KB). Not measured: wall-clock under 60 s.
+
+Not verified: a real phone scanning a real QR (camera, Wi-Fi, iOS Safari); real Wake Lock / installed-app behaviour over
+HTTPS (no local CA/cert was created); the `profile_changed` relay between two live browsers (unit-tested only; handler
+tested with `emit` captured); wake-from-sleep resume on a device; 1180x820 / 1194x834 / 1366x1024 dock overlap;
+the README screenshot set (`phone-portrait-deck`, `phone-approval-remote`, `tablet-*-deck`, `connect-pairing`) was not produced
+(needs D5-style tooling or a pass in DL-146 Phase 4); the Connect page QR itself was not screenshotted.
+Security note: the pairing token sits in a URL (phone history, LAN sniffing over plain HTTP equals the password's exposure
+today); it is single-use, 10-minute, stripped from the address bar at once, never logged, and lost on restart.

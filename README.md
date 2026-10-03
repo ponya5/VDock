@@ -11,34 +11,15 @@ https://github.com/user-attachments/assets/0c438874-2f27-4973-8bab-998fb0ae19a8
 **▶ [Download the 1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.2.0-6ea8ff)](https://github.com/ponya5/VDock2/releases/latest)
+[![Version](https://img.shields.io/badge/Version-2.3.0-6ea8ff)](https://github.com/ponya5/VDock2/releases/latest)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#quick-start)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-[Quick start](#quick-start) · [Dashboard](#a-dashboard-you-design) · [Settings](#settings-for-every-detail) · [Mobile](#control-it-from-your-phone) · [Screensaver](#the-screensaver) · [Use cases](#real-use-cases) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
+[Quick start](#quick-start) · [Dashboard](#a-dashboard-you-design) · [Settings](#settings-for-every-detail) · [Agents](#built-for-ai-coding-agents) · [Phone & tablet](#phone-and-tablet-as-the-touch-screen) · [Screensaver](#the-screensaver) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
 
 </div>
-
----
-
-## Contents
-
-- [What is VDock?](#what-is-vdock)
-- [A dashboard you design](#a-dashboard-you-design)
-- [Settings for every detail](#settings-for-every-detail)
-- [Control it from your phone](#control-it-from-your-phone)
-- [The screensaver](#the-screensaver)
-- [Why VDock](#why-vdock)
-- [Real use cases](#real-use-cases)
-- [Quick start](#quick-start)
-- [Features](#features)
-- [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
-- [Development](#development)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
@@ -79,41 +60,71 @@ Start from any of the **36 app templates** or import a scene pack someone shared
 
 ---
 
-## Settings for every detail
+## Built for AI coding agents
 
-<img src="docs/assets/screens/settings-buttons.png" alt="VDock Settings, Appearance → Buttons: touch mode presets, resolved touch targets, button size and transparency sliders, the key design picker, and a live preview with an in-context grid" width="820" />
+<img src="docs/assets/screens/mission-control.jpg" alt="VDock Mission Control with a simulated session: one Claude Code session needing approval with Approve, Deny and Open buttons, and a second one working" width="820" />
 
-Everything is adjustable, and nothing is guesswork — a **live preview** renders a real key with your current size, labels, touch mode, design and background, and an **in-context grid** shows a whole page before you apply anything.
+**Mission Control** lists every agent session — which one needs you, which is working — and lets you approve, deny or jump into it. When an agent stops to ask, a **branded alert** (Claude, Cursor, Copilot, Devin…) rises over the deck and the screensaver.
 
-- **Appearance** — touch mode presets, key size/transparency/design, animations, press sound, dashboard font, docked sidebar, background, and the [screensaver](#the-screensaver)
-- **Templates** — one-tap scenes for ChatGPT, Claude, Gemini, Claude Code, Copilot, Cursor, Figma, n8n and more
-- **Server** — connection details, ports, how Settings opens
-- **Integrations** — detected apps, auto scene switching, the Claude Code attention-alert hook
-- **Connect a device** — LAN access and the QR code for your phone, [see below](#control-it-from-your-phone)
-- **Logs** — tail backend and frontend logs, export them as a zip
+<img src="docs/assets/screens/claude-alert.jpg" alt="VDock showing a branded Claude Code alert: 'Claude Code needs you', the permission request, the project name and a Got it button over the Media scene" width="820" />
 
-<img src="docs/assets/screens/app-templates.png" alt="VDock Settings → Templates: AI Assistants and AI Coding template cards, each with an Add Scene button and a preview of its actions" width="820" />
+New in 2.3, each a button you can add from the action picker:
 
-**Find a setting** jumps straight to the right page and control, **Reset section** puts one page back to defaults without touching the rest, and changes **save as you make them** — no Save button to forget.
+- **Agent Prompt** — send a preset (Continue, Write tests…) or your own text to the ready session
+- **Review Changes** — the files the agent changed this turn; tap one for its diff
+- **Run Tests** — detects your repo's test command and shows pass / fail
+- **Agent Usage** — today's estimated spend and tokens, as a chip
+- **Git Branch**, **Dev Servers**, **Docker** — live status faces with a tap menu (pull/push/stash, open/restart/stop, start/stop/logs)
+- **Mic Mute** — a real Windows microphone mute with a LIVE / MUTED face
+- **Dictate to Agent** — hold to speak via Windows voice typing, release, review, then submit yourself
+
+Keystroke actions only fire when the target app is focused.
 
 ---
 
-## Control it from your phone
+## Settings for every detail
 
-<div align="center">
-<img src="docs/assets/screens/mobile-devices.jpg" alt="Two phones side by side, one showing the Media scene with volume controls and a slider, the other showing the Claude Code scene with Submit, Continue and Interrupt" width="760" />
-<br /><em>Media on one phone, Claude Code on another — the same VDock, scanned off the same QR code.</em>
-</div>
+<img src="docs/assets/screens/settings-overview.jpg" alt="VDock Settings, Overview: a Needs attention list (LAN without a deck password, GitHub token not set, 3 of 4 agents hooked) and four quick switches" width="820" />
 
-Any phone or tablet on your Wi-Fi becomes a second deck. No app to install, no account — it's the same VDock, served from your PC, as a **control surface only** (no edit mode, no settings — you can't rearrange your deck from a small screen).
+Settings opens on **Overview**: what's set up, what needs you, and the switches you reach for most. Five sections sit underneath:
 
-- **A layout built for touch.** A slim scene rail, page steppers, a prominent fullscreen button, and a landscape-only deck that asks you to rotate.
-- **A Claude Code console.** A status card shows ready / working / waiting-for-permission, **Submit / Continue / Interrupt** fire into the live terminal, a session picker targets one of several open terminals, and your scene's shortcuts sit underneath.
-- **A pocket screensaver** — clock and world clocks, sized for a small screen.
+- **Appearance** — key size, transparency and design, backgrounds, fonts, docked sidebar, the [screensaver](#the-screensaver)
+- **Agents & automation** — agent alerts and hooks, auto scene switching, triggers, the MCP server
+- **Integrations** — **Accounts & keys** and one-tap app templates (ChatGPT, Claude, Cursor, Figma, n8n…)
+- **Devices & network** — Connect a device, deck password, ports and host
+- **System** — logs (exportable), startup, About
 
-<img src="docs/assets/screens/settings-connect-device.png" alt="VDock Settings → Connect a device: three setup steps, the Allow LAN access switch, the deck address with a Copy button, and a QR code" width="820" />
+<img src="docs/assets/screens/settings-accounts.jpg" alt="VDock Settings, Accounts & keys: Anthropic API key, GitHub token and WeatherAPI key all marked Not set with Copy line and Get a key buttons, and GitHub CLI marked Found" width="820" />
 
-**Connect in three steps:** put the phone on the **same Wi-Fi**, turn on **Settings → Connect a device → Allow LAN access** and relaunch VDock once, then **scan the QR code** (or type the address next to it). LAN access is off by default, the QR encodes nothing but a local address, and on Windows you'll need to allow the firewall prompt for `python.exe` the first time.
+**Accounts & keys** shows which keys and CLIs are configured and what each unlocks. Keys are never shown, typed into the app, or sent to other devices — you copy the line and paste it into the `.env` file. **Find a setting** jumps to any control, **Reset section** restores one page, and changes **save as you make them**.
+
+---
+
+## Phone and tablet as the touch screen
+
+<table>
+<tr>
+<td width="32%"><img src="docs/assets/screens/phone-portrait.jpg" alt="VDock on a phone in portrait: a single-column deck with volume keys and slider" /></td>
+<td width="68%"><img src="docs/assets/screens/tablet-portrait.jpg" alt="VDock on an 820 by 1180 tablet in portrait: a larger deck grid that fits the screen" /></td>
+</tr>
+<tr>
+<td align="center"><sub>Phone, portrait</sub></td>
+<td align="center"><sub>Tablet, portrait (820×1180)</sub></td>
+</tr>
+</table>
+
+Any phone or tablet on your Wi-Fi becomes a deck. No app store, no account — it's the same VDock, served from your PC.
+
+- **Phone = a remote.** Portrait layout, safe-area aware, with a Claude Code console and a **phone approval remote**: Approve / Deny a waiting agent from the couch.
+- **Tablet = a full deck.** Portrait and landscape grids that fit the screen, with [edit mode](docs/assets/screens/tablet-edit.jpg) (rearrange keys on the tablet itself), and the screen stays awake while the deck is open.
+- **Stays connected.** A reconnect banner appears only if the PC is really unreachable, the deck resumes on the right scene when the phone wakes, and edits on one device show up on the others.
+- **Install as an app.** Add it to the Home Screen for a full-screen deck with no browser bars.
+
+<img src="docs/assets/screens/connect-page.jpg" alt="VDock Settings, Connect a device: setup steps, Allow LAN access switch, password prompt and the deck address (masked in this screenshot)" width="820" />
+
+**Connect in three steps:** same **Wi-Fi**; **Settings → Devices & network → Connect a device**, turn on **Allow LAN access** and relaunch once; **scan the QR code**. With a deck password set, the QR carries a single-use pairing token (10 minutes), so the phone signs in by scanning.
+
+> **Security:** LAN access is off by default. Anyone on your Wi-Fi who can reach the deck can press your keys and answer your agents, so **set a deck password before turning on LAN access** (Connect page, same screen). Allow the Windows firewall prompt for `python.exe` the first time. See [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -133,34 +144,17 @@ Toggle each widget and open its **Options** for feeds, tickers or cities; **Cust
 
 ## Why VDock
 
-|  | VDock | Elgato Virtual SD | Touch Portal | WebDeck |
-|---|---|---|---|---|
-| **Price** | Free, MIT | Free **only if** you own Elgato hardware | Free tier 4×2/2 pages; Pro $13.99 | Free, GPLv3 |
-| **Host OS** | Windows · macOS · Linux | Windows · macOS | Windows · macOS | **Windows only** |
-| **AI agent actions** | **Claude Code (40), Copilot, Cursor, Devin, VS Code, JetBrains** | — | — | — |
-| **Agent-waiting alerts** | **Yes** | — | — | — |
-| **Ambient dashboard when idle** | **Yes** | — | — | — |
-| **Plugin marketplace** | Templates + scene packs | Large | **Largest** | Small |
-
-**In one line:** free, agent-native, ambient, and yours.
+Free and MIT (Elgato's virtual deck needs their hardware; Touch Portal's free tier is capped), runs on **Windows, macOS and Linux**, and is the only deck with **agent-native actions and agent-waiting alerts** — Claude Code, Copilot, Cursor, Devin, VS Code and JetBrains — plus an ambient dashboard when idle. Plugin-style extras come as templates and scene packs.
 
 ---
 
 ## Real use cases
 
-**1. Driving an AI coding agent without leaving the keyboard.** Tap **Review** and `/code-review` lands in your live Claude Code session — not a new one. The green dot on the scene tab confirms VDock can see the process, and an **agent attention alert** raises a pulsing amber card over everything (including the screensaver) the moment Claude stops to ask you something.
-
-<img src="docs/assets/screens/claude-code-scene.png" alt="VDock's Claude Code scene: Open Claude, Review /code-review, Commit /commit, claude.ai, Explain, Write Tests, Fix Tests, Continue" width="820" />
-
-**2. A second screen that earns its desk space.** Idle, it's an ambient dashboard — clock, weather, headlines, markets. [More on the screensaver.](#the-screensaver)
-
-**3. Calls and recording.** Mute, camera, push-to-talk (fire on press, a different action on release), OBS scene switching, and a **volume slider you drag** rather than a button you tap eleven times.
-
-**4. Anything with an HTTP endpoint.** One `http_request` action covers Home Assistant, n8n, Zapier, Discord webhooks, your own CI — and can show a value from the response on the button face.
-
-**5. A phone as a spare deck.** Scan the QR code and it's a second deck — mute from across the room, or drive Claude Code from the couch. [How it works.](#control-it-from-your-phone)
-
-**6. A kiosk or workshop panel.** Tablet touch mode, 44px minimum targets, and a first-run tour mean you can hand a panel to someone who has never seen it.
+- **Driving an AI agent from the deck.** Tap **Review** and `/code-review` lands in your live Claude Code session — not a new one. A green dot on the scene tab confirms VDock sees the process, and an alert rises the moment the agent waits for you.
+- **A second screen that earns its desk space.** Idle, it's an [ambient dashboard](#the-screensaver).
+- **Calls and recording.** Mute (a real mic mute), camera, push-to-talk (one action on press, another on release), OBS scene switching, and a volume slider you drag.
+- **Anything with an HTTP endpoint.** One `http_request` action covers Home Assistant, n8n, Zapier and webhooks, and can show a response value on the key.
+- **A kiosk or workshop panel.** Touch presets, 44px minimum targets and a first-run tour.
 
 <details>
 <summary><strong>Using a touchscreen as a second monitor (Windows)</strong> — fixing touch landing on the wrong screen</summary>
@@ -180,7 +174,7 @@ Windows will often route every tap to your *primary* display instead of a spare 
 
 **Easiest — install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock2/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once — Windows SmartScreen → **More info → Run anyway**; macOS → right-click → **Open**.
 
-**Or from source** — needs [Python 3.9+](https://www.python.org/downloads/) (tick "Add Python to PATH" on Windows) and [Node.js 18+](https://nodejs.org/):
+**Or from source** — needs [Python 3.9+](https://www.python.org/downloads/) (tick "Add Python to PATH" on Windows) and [Node.js 20+](https://nodejs.org/):
 
 ```bash
 git clone https://github.com/ponya5/VDock2.git
@@ -210,24 +204,18 @@ Setup installs dependencies and puts a **VDock icon on your desktop**.
 
 **Integrations:** **Claude Code** (prompts, slash commands, session resume/rewind/compact, approve/deny, transcript — using your existing login), **GitHub** (`gh`-powered PRs/issues/checks plus live badges), **Cursor · Copilot · VS Code · JetBrains · Visual Studio · Devin** (102 more commands), **OBS** (scenes, sources, streaming), and **HTTP/webhooks** (any REST endpoint, response value on the button). Keystroke actions only fire when the target editor is actually focused — deliberate, so keys never land in the wrong window.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/screens/key-designs.png" alt="The Key Design picker in Settings: ten live swatches — Classic, Glass, Glow Glass, Gem, Neon Rim, Watermark, Deck Key, Status Key, Full Art and Folder" /></td>
-<td width="50%"><img src="docs/assets/screens/glass-keys.png" alt="The Media scene with translucent glass keys and a volume slider over a red-and-blue animated background" /></td>
-</tr>
-<tr>
-<td align="center"><sub>Pick a key design from live swatches</sub></td>
-<td align="center"><sub>Translucent keys over an animated background</sub></td>
-</tr>
-</table>
-
 ---
 
 ## Configuration
 
-Almost everything you'd change lives in **Settings** — searchable, autosaving. The rest: server config in `backend/data/config.json` (created on first run, gitignored), secrets in `backend/.env` (copy from `backend/.env.example`), and ports via `setup.bat --ports` / `./setup.sh` option 4.
+Almost everything lives in **Settings** — searchable, autosaving. Server config is `backend/data/config.json` (created on first run, gitignored); ports via `setup.bat --ports` / `./setup.sh` option 4. Environment settings go in `.env` files copied from the committed templates — never commit the real ones:
 
-Secrets never reach the frontend — the action list exposes only *whether* an integration is configured, and secrets are stripped from command output before it reaches a notification or a log.
+| File | Template | What goes there |
+|---|---|---|
+| `backend/.env` (installed app: `<data dir>/.env`) | [`backend/.env.example`](backend/.env.example) | `SECRET_KEY` (generated on first run), `HOST`/`PORT`, `ALLOW_LAN`, `REQUIRE_AUTH`/`AUTH_PASSWORD`, `USE_SSL`, `DATA_DIR`, rate limits, and integration keys `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `WEATHERAPI_KEY` |
+| `frontend/.env` | [`frontend/.env.example`](frontend/.env.example) | `VITE_PORT`, `VITE_BACKEND_PORT`, `VITE_WS_URL` (dev server only) |
+
+Secrets never reach the frontend — Settings shows only *whether* a key is set, and they're stripped from command output before any notification or log. Startup refuses unsafe combinations (debug mode on the network, SSL without certificates, an example password).
 
 ---
 
@@ -240,7 +228,7 @@ Secrets never reach the frontend — the action list exposes only *whether* an i
 - **macOS blocks the launcher** — right-click `VDock.command` → **Open**, first time only
 - **Claude / GitHub buttons greyed out** — hover for the reason, usually the CLI isn't installed or `gh auth login` hasn't run
 - **Keystroke actions do nothing** — they only fire when the target editor is focused; deliberate
-- **Phone can't reach VDock** — **Settings → Connect a device**: allow LAN access, relaunch, allow the Windows firewall prompt for `python.exe`, check both devices are on the same Wi-Fi
+- **Phone can't reach VDock** — **Settings → Devices & network → Connect a device**: allow LAN access, relaunch, allow the Windows firewall prompt for `python.exe`, check both devices are on the same Wi-Fi
 - **Touch lands on the wrong monitor** — see [Using a touchscreen as a second monitor](#real-use-cases), a Windows display-mapping issue, not a VDock bug
 - **UI looks like an old build** — it self-heals on reload; if not, hard-refresh once
 - **Something else** — **Settings → Logs**, tail or export the backend/frontend logs with your issue
@@ -264,7 +252,7 @@ npm run dev
 ```
 
 ```bash
-# Tests
+# Tests — or run everything CI runs: scripts/check.ps1 (Windows) / scripts/check.sh
 cd backend && pip install -r requirements-dev.txt && pytest
 cd frontend && npm test
 ```
@@ -273,16 +261,7 @@ cd frontend && npm test
 
 Every change is written up in **[`design-log/`](design-log/)** — one numbered entry with the problem, the design, and how it was verified. [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) covers adding an action type or writing an integration pack.
 
-```
-VDock/
-├── setup.bat / setup.sh      ← interactive installer
-├── launch.bat / launch.sh    ← daily launcher
-├── backend/                  ← Flask API, actions, integration packs
-├── frontend/                 ← Vue 3 + TypeScript UI
-│   └── electron/             ← desktop shell
-├── design-log/               ← numbered design decisions
-└── docs/                     ← guides and assets
-```
+Layout: `backend/` (Flask API, actions, integration packs) · `frontend/` (Vue UI, `electron/` shell) · `scripts/` · `design-log/` · `docs/`. `frontend/dist` is a local build output (gitignored) that Flask serves — run `npm run build` after UI changes.
 
 ---
 

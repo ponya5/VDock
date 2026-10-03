@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { pwaManifest } from './pwa.manifest.ts'
 
 /**
  * Mirrors the backend's own `ALLOW_LAN` gate (`backend/config.py`) so the
@@ -35,38 +36,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['apple-touch-icon.png', 'favicon-16x16.png', 'favicon-32x32.png'],
-        manifest: {
-          name: 'VDock',
-          short_name: 'VDock',
-          description: 'Virtual Stream Deck - Control your computer with customizable buttons',
-          theme_color: '#182235',
-          background_color: '#182235',
-          display: 'standalone',
-          start_url: '/',
-          scope: '/',
-          // Android (Samsung Internet / Chrome) needs a 192 + 512 "any" icon
-          // and a separate full-bleed "maskable" one for adaptive launchers.
-          icons: [
-            {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: '/pwa-maskable-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable'
-            }
-          ]
-        },
+        manifest: pwaManifest,
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           // The app bundle (~2.8MB) legitimately exceeds workbox's 2MiB

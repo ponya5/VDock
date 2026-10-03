@@ -8,6 +8,7 @@
             <li><b>Same Wi-Fi.</b> Connect the phone or tablet to the same network as this PC.</li>
             <li><b>Allow LAN access.</b> Turn it on below and relaunch VDock once — this makes the deck reachable on your network.</li>
             <li><b>Scan the code.</b> Point the device camera at the QR, or type the deck address into its browser.</li>
+            <li><b>Optional:</b> {{ CONNECT_INSTALL_STEP }}</li>
           </ol>
           <div class="row">
             <div class="row-text">
@@ -72,6 +73,7 @@
               <div class="qr-code-col">
                 <canvas ref="qrCanvas" class="qr-canvas" />
                 <p class="muted qr-note">The code encodes the address above. It changes when the backend port or your LAN address changes.</p>
+                <p v-if="pairing" class="muted qr-note" data-testid="pair-warning">This code signs a device in — don't share screenshots of it.</p>
               </div>
               <div class="qr-preview-col">
                 <img
@@ -107,6 +109,8 @@ import { useServerConfig } from '@/composables/useServerConfig'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { copyText } from '@/utils/copyText'
 import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
+import { PAIR_REFRESH_MS, buildPairUrl, requestPairToken } from '@/services/pairing'
+import { CONNECT_INSTALL_STEP } from '@/utils/installCopy'
 
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
@@ -117,10 +121,10 @@ const qrCanvas = ref<HTMLCanvasElement | null>(null)
 
 async function renderQr() {
   await nextTick()
-  if (!qrCanvas.value || !lanUrl.value) return
+  if (!qrCanvas.value || !qrValue.value) return
   try {
     const QRCode = (await import('qrcode')).default
-    await QRCode.toCanvas(qrCanvas.value, lanUrl.value, {
+    await QRCode.toCanvas(qrCanvas.value, qrValue.value, {
       width: 180,
       margin: 1,
       color: { dark: '#0d0b26', light: '#ffffff' },
@@ -128,7 +132,27 @@ async function renderQr() {
   } catch { /* QR is best-effort; the URL text remains */ }
 }
 
-watch([lanUrl, () => serverConfig.value?.lan_reachable], renderQr, { immediate: false })
+// With a deck password the QR carries a single-use pairing token so the phone
+// signs in by scanning (DL-147). The shown/copied address stays the plain URL.
+const pairToken = ref<string | null>(null)
+const pairing = computed(() => !!serverConfig.value?.require_auth)
+const qrValue = computed(() =>
+  lanUrl.value && pairing.value && pairToken.value ? buildPairUrl(lanUrl.value, pairToken.value) : lanUrl.value,
+)
+
+async function refreshPairToken() {
+  pairToken.value = pairing.value ? await requestPairToken() : null
+}
+
+let pairTimer: ReturnType<typeof setInterval> | null = null
+watch(pairing, (on) => {
+  if (pairTimer !== null) clearInterval(pairTimer)
+  pairTimer = null
+  void refreshPairToken()
+  if (on) pairTimer = setInterval(refreshPairToken, PAIR_REFRESH_MS)
+}, { immediate: true })
+
+watch([qrValue, () => serverConfig.value?.lan_reachable], renderQr, { immediate: false })
 
 // Whether anything actually answers on the LAN address+port the QR
 // encodes. In dev that's the Vite dev server, whose bind is decided at
@@ -200,6 +224,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   if (lanProbeTimer !== null) clearInterval(lanProbeTimer)
+  if (pairTimer !== null) clearInterval(pairTimer)
 })
 
 // DL-057: present the QR immediately — refresh the LAN URL, then draw.

@@ -112,6 +112,21 @@ export interface LoginResult {
   error?: string
 }
 
+/** Trade a QR pairing token for a login (DL-147). True when this device is now signed in. */
+export async function exchangePairToken(pairToken: string): Promise<boolean> {
+  try {
+    const res = await axios.post('/api/auth/pair', { token: pairToken }, { timeout: 10000 })
+    const issued = res.data?.token
+    if (!issued) return false
+    setAuthToken(issued)
+    authState.required = true
+    authState.unlocked = true
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function login(password: string): Promise<LoginResult> {
   try {
     const res = await axios.post('/api/auth/login', { password }, { timeout: 10000 })

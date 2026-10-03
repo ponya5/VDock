@@ -91,8 +91,8 @@ function navigate(source: string) {
    the chips must survive the banner being dismissed. */
 .agent-waiting-dock {
   position: fixed;
-  right: clamp(10px, 2vw, 22px);
-  bottom: clamp(10px, 2.4vh, 22px);
+  right: max(clamp(10px, 2vw, 22px), env(safe-area-inset-right, 0px));
+  bottom: max(clamp(10px, 2.4vh, 22px), env(safe-area-inset-bottom, 0px));
   z-index: 29000;
   display: flex;
   flex-direction: column;
@@ -102,15 +102,15 @@ function navigate(source: string) {
 
 /* The header-reveal FAB (DashboardView) sits in this same corner while the
    header is hidden — lift the dock above it (same size/offset math as the FAB). */
-:global(html.reveal-fab-visible) .agent-waiting-dock {
+html.reveal-fab-visible .agent-waiting-dock {
   bottom: calc(
-    var(--spacing-touch-md, var(--spacing-md, 16px))
+    max(var(--spacing-touch-md, var(--spacing-md, 16px)), env(safe-area-inset-bottom, 0px))
     + max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)))
     + 12px
   );
 }
 
-:global(html.reveal-fab-footer) .agent-waiting-dock {
+html.reveal-fab-footer .agent-waiting-dock {
   bottom: calc(
     max(44px, calc(56px * var(--touch-multiplier, 1))) + 10px
     + max(68px, calc(68px * min(var(--touch-multiplier, 1), 1.4)))
@@ -223,6 +223,10 @@ function navigate(source: string) {
 }
 
 .dock-dismiss:hover { background: rgba(var(--agent-rgb, 245, 165, 36), 0.4); }
+
+/* DL-147: 44 px touch floor on phones only — panel/desktop sizes stay. */
+html:is(.device-phone, .device-tablet) .dock-dismiss { width: 44px; height: 44px; }
+html:is(.device-phone, .device-tablet) .dock-inbox { min-height: 44px; }
 
 .dock-pop-enter-active,
 .dock-pop-leave-active {

@@ -485,9 +485,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
     lastProfileSaveError.value = null
     try {
-            const response = await apiClient.put(`/profiles/${currentProfile.value.id}`, currentProfile.value)
+            const profileId = currentProfile.value.id
+            const response = await apiClient.put(`/profiles/${profileId}`, currentProfile.value)
             if (!response.data.success) {
               lastProfileSaveError.value = response.data.error || 'The server reported the save as failed.'
+            } else {
+              socketClient.emitProfileChanged(profileId)
             }
             return response.data.success
     } catch (error: any) {

@@ -4,6 +4,11 @@ Everything below is committed on `research_upgrade1`, built
 into `frontend/dist`, and running live on the backend at
 `http://127.0.0.1:5000`. **541 frontend + 1111 backend tests pass.**
 
+> **Updated for 2.3.0 (DL-146):** the app is now at 2.3.0 with 947 frontend and 1544 backend tests.
+> Settings is reorganised (Overview, Appearance, Agents & automation, Integrations, Devices & network, System),
+> so older "Settings → Server / Connect a device / Integrations" paths below now live under those sections.
+> `backend/test-scripts/` was removed from the repo (DL-146). Real-device checks are in the last section.
+
 Fresh start tip: the backend may still be the dev-spawned process. If
 anything looks stale, restart it — `cd backend && venv\Scripts\python.exe app.py`.
 
@@ -47,7 +52,7 @@ anything looks stale, restart it — `cd backend && venv\Scripts\python.exe app.
 - Settings → **Integrations** → top sub-tabs: Apps & scenes / Agent
   alerts / Triggers / MCP server.
 - MCP panel → **Help & test** → **Run self-test** → should print
-  `Connected — vdock 2.2.0, 11 tools`.
+  `Connected — vdock 2.3.0, 11 tools`.
 - Cursor/Claude config snippets are in that modal (copy buttons).
 
 ## 6. Cursor launcher + scene (orchestrated-test result)
@@ -101,6 +106,21 @@ anything looks stale, restart it — `cd backend && venv\Scripts\python.exe app.
   on the real panel it's fine.
 - `backend/test-scripts/` holds the playwright capture/e2e scripts the
   test agents used — kept for reruns.
+
+## Phone & tablet checklist (real devices, DL-145 / DL-147)
+
+Automated tests and emulation cannot cover these. Do them once on real hardware and note any that fail.
+Set a deck password first (Settings → Devices & network → Connect a device).
+
+- [ ] **Approve / Deny** a live Claude Code permission prompt from the phone's approval remote; confirm the answer lands in the right terminal.
+- [ ] **Hold-to-talk** on the phone: hold, speak, release; the text appears and you submit it yourself.
+- [ ] **Add to Home Screen**: the icon looks right, the deck opens full-screen with no browser bars (iOS Safari / Android Chrome).
+- [ ] **QR pairing**: scan the Connect-page QR with a password set; time how long until the deck is usable. A reused or 10-minute-old code must be rejected.
+- [ ] **Wake lock**: leave the tablet deck open for several minutes; the screen should not dim. It should dim again after leaving the deck.
+- [ ] **Reconnect**: lock the phone for a minute, wake it; the deck returns to the same scene without a manual refresh.
+- [ ] **Docker running state**: with Docker Desktop running containers, the Docker key shows the running count; stop/start and logs work from its menu.
+- [ ] **Win+H dictation**: Dictate to Agent types into the agent window (allow online speech recognition once if Windows asks).
+- [ ] **Mic mute on a call**: the Mic Mute key mutes the real microphone in Teams/Zoom/Meet and the LIVE / MUTED face matches.
 
 ## If something's off
 

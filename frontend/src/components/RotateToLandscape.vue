@@ -20,18 +20,26 @@
 import { computed, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useMobileViewport } from '@/utils/mobileViewport'
+import { useDeviceClass } from '@/composables/useDeviceClass'
+import { useDevicePrefs } from '@/services/devicePrefs'
 
-// The deck is landscape-only on phones: a 5-6 column grid can never be
-// comfortable in portrait. The phone detection itself is shared
+// A wide grid cannot be comfortable in portrait as authored, so touch
+// devices short on space get a rotate prompt. Phones are exempt while the
+// deck folds itself into portrait (DL-147: device pref layout "fit", the
+// default); "as designed" brings the prompt back. Surfaces with their own
+// portrait layout are exempt too: the screensaver (DL-063) and the mobile
+// agent console (DL-065). The compact-touch detection is shared
 // (useMobileViewport) so the same flag also strips config affordances.
-// Surfaces with their own portrait layout are exempt: the screensaver
-// (DL-063) and the mobile agent console (DL-065).
 const props = defineProps<{ portraitAllowed?: boolean }>()
 const { isMobileViewport, isPortrait } = useMobileViewport()
+const { layoutClass } = useDeviceClass()
+const devicePrefs = useDevicePrefs()
 const dismissed = ref(false)
 
+const deckReflows = computed(() => layoutClass.value === 'phone' && devicePrefs.layout === 'fit')
+
 const blocked = computed(() =>
-  isMobileViewport.value && isPortrait.value && !dismissed.value && !props.portraitAllowed
+  isMobileViewport.value && isPortrait.value && !deckReflows.value && !dismissed.value && !props.portraitAllowed
 )
 </script>
 
@@ -43,7 +51,11 @@ const blocked = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-xl);
+  padding:
+    max(var(--spacing-xl), env(safe-area-inset-top, 0px))
+    max(var(--spacing-xl), env(safe-area-inset-right, 0px))
+    max(var(--spacing-xl), env(safe-area-inset-bottom, 0px))
+    max(var(--spacing-xl), env(safe-area-inset-left, 0px));
   background: rgba(8, 10, 16, 0.97);
 }
 

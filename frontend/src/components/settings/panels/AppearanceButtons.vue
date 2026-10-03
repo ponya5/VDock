@@ -9,16 +9,23 @@
     <div class="panel-body">
       <div class="row" id="touch">
         <div class="row-text">
-          <span class="label">Touch mode</span>
+          <span class="label">{{ perDevice ? 'Touch mode (this device)' : 'Touch mode' }}</span>
           <p>Scales hit targets for finger input. Presets set the multiplier, minimum target and key height together.</p>
         </div>
         <div class="row-control">
-          <div class="seg" role="radiogroup" aria-label="Touch mode">
+          <div v-if="perDevice" class="seg" role="radiogroup" aria-label="Touch mode (this device)">
+            <label><input type="radio" value="auto" v-model="devicePrefs.touchMode" /><span>Auto</span><span class="sub">{{ autoMultiplier }}×</span></label>
+            <label><input type="radio" value="normal" v-model="devicePrefs.touchMode" /><span>Normal</span><span class="sub">1.0×</span></label>
+            <label><input type="radio" value="touch-friendly" v-model="devicePrefs.touchMode" /><span>Touch-friendly</span><span class="sub">1.5×</span></label>
+            <label><input type="radio" value="tablet" v-model="devicePrefs.touchMode" /><span>Tablet</span><span class="sub">2.0×</span></label>
+          </div>
+          <div v-else class="seg" role="radiogroup" aria-label="Touch mode">
             <label><input type="radio" value="normal" v-model="settings.touchMode" /><span>Normal</span><span class="sub">1.0×</span></label>
             <label><input type="radio" value="touch-friendly" v-model="settings.touchMode" /><span>Touch-friendly</span><span class="sub">1.5×</span></label>
             <label><input type="radio" value="tablet" v-model="settings.touchMode" /><span>Tablet</span><span class="sub">2.0×</span></label>
           </div>
-          <SettingResetButton label="Touch mode" :at-default="settings.touchMode === SETTINGS_DEFAULTS.touchMode" @reset="settings.touchMode = SETTINGS_DEFAULTS.touchMode" />
+          <SettingResetButton v-if="perDevice" label="Touch mode (this device)" :at-default="devicePrefs.touchMode === 'auto'" @reset="devicePrefs.touchMode = 'auto'" />
+          <SettingResetButton v-else label="Touch mode" :at-default="settings.touchMode === SETTINGS_DEFAULTS.touchMode" @reset="settings.touchMode = SETTINGS_DEFAULTS.touchMode" />
         </div>
       </div>
       <div class="row">
@@ -289,6 +296,8 @@
 import { computed, ref } from 'vue'
 import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useDeviceClass } from '@/composables/useDeviceClass'
+import { useDevicePrefs } from '@/services/devicePrefs'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import DeckButton from '@/components/DeckButton.vue'
 import ButtonDesignPicker from '@/components/ButtonDesignPicker.vue'
@@ -300,6 +309,12 @@ import { sliderFill } from '@/utils/sliderFill'
 import { useBackgroundPreview } from '@/composables/useBackgroundPreview'
 
 const settingsStore = useSettingsStore()
+// DL-147: phones and tablets scale from a device-local pref; the shared
+// setting stays the desktop/panel control.
+const { deviceClass } = useDeviceClass()
+const devicePrefs = useDevicePrefs()
+const perDevice = computed(() => deviceClass.value === 'phone' || deviceClass.value === 'tablet')
+const autoMultiplier = computed(() => (deviceClass.value === 'tablet' ? '1.5' : '1.0'))
 const dashboardStore = useDashboardStore()
 const settings = computed(() => settingsStore)
 const { previewBackgroundClass, previewBackgroundStyle } = useBackgroundPreview()

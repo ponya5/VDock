@@ -393,4 +393,12 @@ onUnmounted(() => {
   border-color: transparent;
 }
 .compact .slider-preset { height: 16px; font-size: calc(var(--slider-text, 13px) * 0.55); }
+
+/* DL-147: phones get a >=44 px tap area without growing the chip. */
+html:is(.device-phone, .device-tablet) .slider-preset { position: relative; }
+html:is(.device-phone, .device-tablet) .slider-preset::before {
+  content: '';
+  position: absolute;
+  inset: -14px -2px;
+}
 </style>

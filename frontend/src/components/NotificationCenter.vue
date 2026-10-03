@@ -290,6 +290,9 @@ onUnmounted(() => {
   color: var(--color-primary);
 }
 
+/* DL-147: 44 px touch floor on phones only. */
+html:is(.device-phone, .device-tablet) .notification-bell { min-width: 44px; min-height: 44px; }
+
 .badge {
   position: absolute;
   top: 2px;
@@ -660,7 +663,7 @@ onUnmounted(() => {
 
 .toast-container {
   position: fixed;
-  top: var(--spacing-lg);
+  top: max(var(--spacing-lg), env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 10000;

@@ -303,6 +303,10 @@ onUnmounted(() => {
   color: var(--color-text);
 }
 
+/* DL-147: 44 px touch floor on phones only. */
+html:is(.device-phone, .device-tablet) .toast-close { min-width: 44px; min-height: 44px; }
+html:is(.device-phone, .device-tablet) .details-toggle { min-height: 44px; }
+
 .toast-message {
   margin: 0;
   font-size: clamp(0.70rem, 2vw + 0.44rem, 1.05rem);

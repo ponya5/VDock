@@ -20,6 +20,8 @@ vi.mock('@/api/socket', () => ({
 vi.mock('@/api/client', () => ({
   default: { get: (...a: unknown[]) => apiGet(...a), post: (...a: unknown[]) => apiPost(...a), delete: vi.fn() },
 }))
+const vibrateMock = vi.fn()
+vi.mock('@/utils/haptics', () => ({ vibrate: (...a: unknown[]) => vibrateMock(...a) }))
 vi.mock('@/stores/notifications', () => ({ useNotificationsStore: () => toast }))
 vi.mock('@/stores/settings', () => ({
   useSettingsStore: () => ({ agentAlertsEnabled: true, agentWaitingDockEnabled: true }),
@@ -90,6 +92,7 @@ beforeEach(() => {
   apiPost.mockReset().mockResolvedValue({ data: { success: true } })
   toast.success.mockReset()
   toast.error.mockReset()
+  vibrateMock.mockReset()
   closeMissionControl()
 })
 
@@ -180,6 +183,26 @@ describe('AgentMissionControl', () => {
       source: 'claude', session_id: 'p', decision: 'deny',
     })
     expect(toast.success).toHaveBeenCalledWith('Denied', 'Claude Code - web')
+  })
+
+  it('ticks a 15 ms haptic after a successful approve or deny (DL-147)', async () => {
+    const wrapper = await mountOpen()
+    await wrapper.find('[data-testid="mc-approve"]').trigger('click')
+    await flushPromises()
+    expect(vibrateMock).toHaveBeenCalledTimes(1)
+    expect(vibrateMock).toHaveBeenCalledWith(15)
+
+    await wrapper.find('[data-testid="mc-deny"]').trigger('click')
+    await flushPromises()
+    expect(vibrateMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not vibrate when the answer is refused (DL-147)', async () => {
+    apiPost.mockRejectedValueOnce({ response: { data: { error: 'stale' } } })
+    const wrapper = await mountOpen()
+    await wrapper.find('[data-testid="mc-approve"]').trigger('click')
+    await flushPromises()
+    expect(vibrateMock).not.toHaveBeenCalled()
   })
 
   it('surfaces the server reason when a stale answer is refused', async () => {

@@ -554,7 +554,45 @@ _2026-10-03. Not committed._
 - Shared helpers: `useSetupStatus` (integrations + hook counts), `useServerConfig.setAllowLan`, `utils/copyText` (extracted from Connect).
 - Search: "token"/"github" -> Accounts & keys; added Overview, Quick switches, Edit keys, Command-line tools entries.
 
-**Tests:** frontend 812 -> 819 (`settings-nav` +3 incl. token/github search + attention row navigation, new `deck-password-form` 4); `vue-tsc` clean. Backend: see final results below.
+**Tests:** frontend 812 -> **819** (`settings-nav` +3 incl. token/github search + attention row navigation, new `deck-password-form` 4); backend 1516 -> **1518** (`test_open_env_route.py`); `vue-tsc` clean; `npm run build` OK; `scripts/check.ps1` 4/4 PASS.
+
+**Touch targets (shared CSS, `settings.css`):** switch hit area is now the full `--target` (was target - 6 = 38px on phones); a `(pointer: coarse)` block gives `--target: 44px`, `.btn.sm`, sub-tabs and rail items 44px at any width (tablet landscape and the 7" panel were stuck at 28-40px because the 44px rules only applied below 880px).
+
+**Live verification** (built bundle on :5000 after a backend restart for the new route; cursor-ide-browser, CDP emulation incl. touch, reset afterwards; nothing toggled, `backend/.env` untouched):
+- 390x844, 768x1024, 744x1133, 834x1194 (portrait), 1133x744 (tablet landscape, touch), 800x480 and 1024x600: no horizontal scroll (`scrollWidth == innerWidth`, no element past the right edge) and no target < 44px on Overview, Accounts & keys and Connect (with the password prompt). 820x1180 not run separately (between 768 and 834, same breakpoint).
+- Overview shows this machine's three real problems (LAN without password, GitHub token not set, 3 of 4 agents hooked); each row navigates to the right page. "Edit keys" opened the dashboard in edit mode and cleaned the URL to `/`. The link is absent on compact-touch viewports (800x480), matching the store's edit-mode gate.
+- Accounts & keys: Anthropic / GitHub / WeatherAPI "Not set", gh and Claude CLI "Found"; copy-line and Get-a-key present; no input accepts a key. "Open .env" appears only when the page is served from localhost.
+- Screenshots: `dl146-after-accounts-390x844.png`, `-accounts-1024x600.png`, `-overview-800x480.png`, `-connect-password-1133x744.png`.
+
+**Click counts from the dashboard (Settings opens on Overview):**
+| Task | Before | After |
+|---|---|---|
+| Connect a phone | Settings -> Connect (3 with the switch), no password prompt | Settings -> Devices & network -> Allow LAN (3); password offered on the same page (+ relaunch); also 2 via Overview quick switch |
+| Add GitHub token | impossible in-app | Settings -> "GitHub token not set: Add it" -> Copy line / Open .env (4 incl. opening Settings; 3 after Settings is open) |
+| Auto scene switching | 3 | Settings -> Overview switch (2) |
+| Agent alert behaviour | 4 | Settings -> Agents & automation (lands on Agent alerts) -> control (3) |
+| Change a key's action | 5 | Settings -> Edit keys -> key edit -> pick -> Save (5 incl. opening Settings; 4 once there) |
+Search: "token" and "github" -> Accounts & keys; "phone" -> Connect; "password" -> Security; "port" -> Advanced.
+
+**Deviations / not done**
+- `DeckPasswordForm` did not exist; it was created by extracting Security's inline form (plan said "reuse").
+- "Ports/host/SSL under Advanced": done as a page named **Advanced** in Devices & network (not a collapse inside Connect). SSL fields are not in the Ports panel today and were not added.
+- `/api/config/open-env` is new backend surface (needed for "Open .env"); localhost-only.
+- Empty-state/consistency pass limited to the new pages (all-set row, "Not found" chips); existing panels' empty states (Running apps, Recent actions, Logs) were not unified.
+- Tour is still skipped on touch panels / phones (3b note; DL-147).
+- Not verified: "Open .env" actually launching an editor (route tested with a stub; not clicked to avoid opening a window on the user's `.env`); password prompt submit on the real server (would turn auth on); a physical phone/panel.
 
 ### Phase 4 - README refresh + screenshots
-_Not started._
+_Implemented 2026-10-03. Not committed (per instruction)._
+
+**README** (`README.md`, 287 lines, was 308): version badge 2.3.0; "Contents" list and the comparison table/use-case list condensed; new sections "Built for AI coding agents" (Mission Control, branded alert, the DL-145 actions) and "Phone and tablet as the touch screen" (DL-147: phone approval remote, tablet layouts + edit mode, keep-awake, reconnect, QR pairing, install as app) with a LAN-needs-a-deck-password note; Settings section rewritten for Overview / Appearance / Agents & automation / Integrations (Accounts & keys) / Devices & network / System; Configuration now has an env table pointing at `backend/.env.example` and `frontend/.env.example` (names only); Node 20+; stale repo tree removed. Docker and deploy scripts were already gone from the README (verified: no mentions). Project folder name, GitHub URLs and clone commands unchanged.
+
+**Screenshots** (`docs/assets/screens/`, all JPEG, 42-126 KB, captured from the built bundle on :5000 via cursor-ide-browser): `settings-overview.jpg`, `settings-accounts.jpg`, `mission-control.jpg`, `claude-alert.jpg`, `connect-page.jpg`, `phone-portrait.jpg` (390x844 emulated), `tablet-portrait.jpg` (820x1180), `tablet-edit.jpg` (820x1180, entered via `/?edit=1`, nothing saved). The Mission Control / alert / phone shots use fake sessions `readme-demo-1/2` POSTed to `/api/agent-events`; both were ended afterwards. Approve / Deny / Got-it-on-a-real-session were never used (Got it only dismissed the fake alert). On Connect the LAN IP was masked in the DOM to `192.168.x.x` and the QR canvas blurred before capture. Overview and Accounts show no secrets, tokens or paths. Device emulation was cleared afterwards. Screenshots were saved via CDP `Page.captureScreenshot` because the screenshot tool does not write files to disk.
+
+**Other:** `docs/testing/MORNING-TEST-GUIDE.md` updated to 2.3.0 with a banner and a "Phone & tablet checklist" of real-device checks. `.gitignore` already covers `.env`/`backend/.env`/`frontend/.env`, `venv/`, `node_modules/`, `frontend/dist/`, `*.log`, `backend/data` runtime files and backups; no entries added. **Build output policy:** `frontend/dist/` is gitignored (never tracked); Flask serves it, so run `cd frontend && npm run build` after UI changes (CI and releases build it themselves).
+
+**Verification (final):** `vue-tsc` clean; vitest 947/947 (121 files); `npm run build` OK; pytest 1544 passed; `scripts/check.ps1` 4/4 PASS; `GET /api/health` -> `{"status":"ok","version":"2.3.0"}`.
+
+**Not verified:** the phone/tablet shots are Chromium emulation, not real devices (the emulated page showed the "Can't reach VDock" banner, an artefact of this embedded browser's socket, hidden in the DOM before capture - the banner itself is genuine UI); I could not inspect the images pixel-by-pixel, only through descriptions, so crop/layout of `phone-portrait.jpg` and `tablet-portrait.jpg` deserve a glance; new CI jobs have never run on GitHub; packaged installer build; the real-device checklist in the morning guide; README `screens/` files from earlier releases (e.g. `settings-buttons.png`) remain on disk but are no longer referenced.
+
+**DL-146 overall:** Phases 1, 2, 3 (a/b/c) and 4 implemented. Open user actions: `cd frontend\electron; npm ci` after closing the desktop app (patched lockfile), commit/push, set a deck password.

@@ -18,7 +18,7 @@
       :show-tooltips="showTooltips"
       :compact="compact"
       :button-size="effectiveButtonSize"
-      :grid-index="button.position.row * renderedPage.grid_config.cols + button.position.col"
+      :grid-index="button.position.row * deckPage.grid_config.cols + button.position.col"
       :class="cellClasses[`${button.position.row}-${button.position.col}`]"
       :data-button-id="button.id"
       @click="handleButtonClick"
@@ -90,8 +90,8 @@
       :active="true"
       :style="dashboardStore.currentScene.overlay_style"
       :mode="dashboardStore.currentScene.overlay_mode || 'keys'"
-      :rows="renderedPage.grid_config.rows"
-      :cols="renderedPage.grid_config.cols"
+      :rows="deckPage.grid_config.rows"
+      :cols="deckPage.grid_config.cols"
       :buttons="visibleButtons"
     />
   </div>
@@ -110,6 +110,9 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { vibrate } from '@/utils/haptics'
 import { useMobileViewport } from '@/utils/mobileViewport'
+import { useDeviceClass, type DeviceClass } from '@/composables/useDeviceClass'
+import { useDevicePrefs } from '@/services/devicePrefs'
+import { reflowPage } from '@/utils/gridReflow'
 
 interface Props {
   page: Page
@@ -204,18 +207,35 @@ const { isMobileViewport } = useMobileViewport()
 const GRID_PAD = 8
 const GRID_GAP = 8
 
+// DL-147: a phone or tablet held in portrait shows the landscape-authored page
+// folded into fewer columns (display only — edit mode and the "as designed"
+// device pref keep the authored grid, and every edit/drag path below reads
+// `renderedPage`, never this). Tablets keep a larger cell floor.
+const REFLOW_MIN_CELL: Partial<Record<DeviceClass, number>> = { phone: 72, tablet: 96 }
+const { layoutClass } = useDeviceClass()
+const devicePrefs = useDevicePrefs()
+const reflow = computed(() => reflowPage(renderedPage.value, {
+  width: hostSize.value.w,
+  height: hostSize.value.h,
+  minCell: REFLOW_MIN_CELL[layoutClass.value] ?? 0,
+  enabled: layoutClass.value in REFLOW_MIN_CELL && !props.isEditMode && devicePrefs.layout === 'fit',
+}))
+const deckPage = computed(() => reflow.value.page)
+
 const cellMetrics = computed(() => {
-  const { rows, cols } = renderedPage.value.grid_config
+  const { rows, cols } = deckPage.value.grid_config
   const { w, h } = hostSize.value
   if (!w || !h) return null
   const cellW = w / cols
   const cellH = h / rows
   const fitW = (w - GRID_PAD * 2 - GRID_GAP * (cols - 1)) / cols
-  const fitH = (h - GRID_PAD * 2 - GRID_GAP * (rows - 1)) / rows
+  const fitH = reflow.value.scroll === 'y'
+    ? reflow.value.cellPx
+    : (h - GRID_PAD * 2 - GRID_GAP * (rows - 1)) / rows
   const cellPx = Math.max(36, Math.floor(Math.min(fitW, fitH)))
   const aspect = cellH / cellW
-  const compact = !isMobileViewport.value && (aspect > 1.3 || aspect < 0.7)
-  const fit = isMobileViewport.value || compact
+  const compact = !isMobileViewport.value && !reflow.value.reflowed && (aspect > 1.3 || aspect < 0.7)
+  const fit = isMobileViewport.value || compact || reflow.value.reflowed
   return { cellW, cellH, cellPx, compact, fit }
 })
 
@@ -232,7 +252,7 @@ const effectiveButtonSize = computed(() => {
 })
 
 const gridStyle = computed(() => {
-  const { rows, cols } = renderedPage.value.grid_config
+  const { rows, cols } = deckPage.value.grid_config
   const m = cellMetrics.value
 
   if (m?.compact) {
@@ -244,6 +264,25 @@ const gridStyle = computed(() => {
       alignContent: 'center',
       justifyContent: 'center',
       overflow: 'auto',
+      width: '100%',
+      height: '100%',
+      padding: `${GRID_PAD}px`,
+      transform: `rotateX(${tiltX.value}deg) rotateY(${tiltY.value}deg)`,
+      transformOrigin: 'center'
+    }
+  }
+
+  // Reflowed deck with more rows than fit: fixed-height rows that scroll
+  // vertically (never sideways).
+  if (reflow.value.scroll === 'y') {
+    return {
+      display: 'grid',
+      gridTemplateRows: `repeat(${rows}, ${reflow.value.cellPx}px)`,
+      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+      gap: `${GRID_GAP}px`,
+      alignContent: 'start',
+      overflowX: 'hidden',
+      overflowY: 'auto',
       width: '100%',
       height: '100%',
       padding: `${GRID_PAD}px`,
@@ -287,10 +326,13 @@ const gridStyle = computed(() => {
 })
 
 const visibleButtons = computed(() => {
-  return renderedPage.value.buttons.filter(btn => btn.enabled)
+  return deckPage.value.buttons.filter(btn => btn.enabled)
 })
 
 const emptySlots = computed(() => {
+  // A folded portrait deck has no authored empty cells: authored coordinates
+  // would auto-place as stray tracks and quick-add at the wrong position.
+  if (reflow.value.reflowed) return []
   const { rows, cols } = renderedPage.value.grid_config
   const occupiedPositions = new Set()
 
@@ -871,18 +913,25 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   transition: transform 150ms var(--ease-out, ease-out), background 150ms var(--ease-out, ease-out);
 }
 
-.slider-resize-chip.widen { transform: translateX(50%) translateY(-17px); }
-.slider-resize-chip.shrink { transform: translateX(50%) translateY(17px); background: rgba(30, 41, 59, 0.92); }
+.slider-resize-chip.widen { transform: translateX(50%) translateY(calc(-1 * var(--chip-offset, 17px))); }
+.slider-resize-chip.shrink { transform: translateX(50%) translateY(var(--chip-offset, 17px)); background: rgba(30, 41, 59, 0.92); }
 .slider-resize-chip.widen.solo,
 .slider-resize-chip.shrink.solo { transform: translateX(50%); }
 
-.slider-resize-chip.widen:hover { transform: translateX(50%) translateY(-17px) scale(1.15); }
-.slider-resize-chip.shrink:hover { transform: translateX(50%) translateY(17px) scale(1.15); background: rgba(51, 65, 85, 0.95); }
+.slider-resize-chip.widen:hover { transform: translateX(50%) translateY(calc(-1 * var(--chip-offset, 17px))) scale(1.15); }
+.slider-resize-chip.shrink:hover { transform: translateX(50%) translateY(var(--chip-offset, 17px)) scale(1.15); background: rgba(51, 65, 85, 0.95); }
 .slider-resize-chip.widen.solo:hover,
 .slider-resize-chip.shrink.solo:hover { transform: translateX(50%) scale(1.15); }
 
-.slider-resize-chip.widen:active { transform: translateX(50%) translateY(-17px) scale(0.95); }
-.slider-resize-chip.shrink:active { transform: translateX(50%) translateY(17px) scale(0.95); }
+.slider-resize-chip.widen:active { transform: translateX(50%) translateY(calc(-1 * var(--chip-offset, 17px))) scale(0.95); }
+.slider-resize-chip.shrink:active { transform: translateX(50%) translateY(var(--chip-offset, 17px)) scale(0.95); }
+
+/* DL-147: finger-sized chips on tablets, spaced so the pair does not overlap. */
+html.device-tablet .slider-resize-chip {
+  --chip-offset: 24px;
+  width: 44px;
+  height: 44px;
+}
 .slider-resize-chip.widen.solo:active,
 .slider-resize-chip.shrink.solo:active { transform: translateX(50%) scale(0.95); }
 
