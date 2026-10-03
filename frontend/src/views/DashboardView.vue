@@ -375,7 +375,9 @@ const tour = useTutorial()
 const screensaverLayoutEdit = ref(false)
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 
-const IDLE_EVENTS = ['pointermove', 'pointerdown', 'keydown'] as const
+// Touch/scroll events matter on phones: a finger drag fires pointercancel
+// (not pointermove) once the browser takes over for scrolling.
+const IDLE_EVENTS = ['pointermove', 'pointerdown', 'keydown', 'touchstart', 'touchmove', 'wheel'] as const
 
 function resetIdleTimer() {
   if (idleTimer) clearTimeout(idleTimer)
@@ -387,6 +389,12 @@ function resetIdleTimer() {
     if (!tour.state.active) screensaverVisible.value = true
   }, timeoutMs)
 }
+
+// Settings arrive after mount on a fresh phone load (and can change live):
+// re-arm so the timer never keeps a stale/default timeout.
+watch(() => settingsStore.screensaverTimeout, () => {
+  if (!screensaverVisible.value) resetIdleTimer()
+})
 
 function dismissScreensaver() {
   screensaverVisible.value = false
@@ -1205,6 +1213,12 @@ onMounted(async () => {
   // follow-up.
   void loadProfileMaps()
 
+  // Idle timer for screensaver. Armed BEFORE the awaits below: if settings
+  // or profile loading throws/hangs (flaky phone connection), the saver must
+  // still start counting.
+  IDLE_EVENTS.forEach(ev => document.addEventListener(ev, resetIdleTimer, { passive: true }))
+  resetIdleTimer()
+
   // Load the profile every device should land on. The server-persisted
   // `activeProfileId` (set by `setProfile` on every device, DL-061
   // follow-up) is checked first so a phone connecting for the first time
@@ -1243,10 +1257,6 @@ onMounted(async () => {
   // Keyboard shortcut listener
   document.addEventListener('keydown', handleKeyDown)
   document.addEventListener('focusin', handleGlobalFocus)
-
-  // Idle timer for screensaver
-  IDLE_EVENTS.forEach(ev => document.addEventListener(ev, resetIdleTimer, { passive: true }))
-  resetIdleTimer()
 
   // Picks up settings/profile changes made in a separate Settings tab as
   // soon as that tab is closed, without waiting for a manual refresh.
