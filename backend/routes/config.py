@@ -285,6 +285,24 @@ def set_integration_secret(secret_id):
     return jsonify({'id': spec.env_var, 'configured': secret_registry.is_configured(spec)})
 
 
+@config_bp.route('/api/config/integrations/<secret_id>/test', methods=['POST'])
+@require_auth
+def test_integration_secret(secret_id):
+    """Check that a saved key works, with one minimal call to its provider.
+
+    Answers {ok, status, message[, account]}. The key is read from the running
+    process and is never returned or echoed. This PC only, like saving a key.
+    """
+    from services import key_check, secrets as secret_registry
+
+    if not _is_local_request():
+        return jsonify({'success': False, 'error': 'Keys can only be tested from the PC VDock runs on.'}), 403
+    spec = next((s for s in secret_registry.ALL_SECRETS if s.env_var == secret_id), None)
+    if spec is None:
+        return jsonify({'success': False, 'error': 'Unknown key.'}), 404
+    return jsonify(key_check.check(spec))
+
+
 @config_bp.route('/api/config/open-env', methods=['POST'])
 @require_auth
 def open_env():

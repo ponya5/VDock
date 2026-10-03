@@ -66,6 +66,7 @@ FULL_SETTINGS_PAYLOAD = {
     'agentWaitingGlowEnabled': True,
     'agentWaitingGlowStyle': 'pulse',
     'agentWaitingDockEnabled': True,
+    'missionControlEnabled': False,
     'agentAutoFocusScene': True,
     'appIntegrations': [],
     'autoSceneSwitching': False,

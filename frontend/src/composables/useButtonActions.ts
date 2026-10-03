@@ -8,7 +8,7 @@ import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
-import { openMissionControl } from '@/services/missionControl'
+import { isMissionControlEnabled, openMissionControl } from '@/services/missionControl'
 import { openLiveMenu } from '@/services/liveActionMenu'
 import { useDeviceClass } from '@/composables/useDeviceClass'
 
@@ -107,6 +107,13 @@ export function useButtonActions() {
         })
         return
       } else if (action === 'open_mission_control') {
+        if (!isMissionControlEnabled()) {
+          showActionResult({
+            success: false,
+            message: 'Mission Control is turned off (Settings → Agents & automation → Agent alerts)'
+          })
+          return
+        }
         openMissionControl()
         return
       } else if (action === 'toggle_header') {

@@ -18,7 +18,7 @@ const sessionState = {
 }
 const settingsState = {
   agentWaitingGlowEnabled: ref<boolean | undefined>(true),
-  agentWaitingGlowStyle: ref<'flash' | 'pulse' | 'orbit'>('flash'),
+  agentWaitingGlowStyle: ref<'flash' | 'pulse' | 'orbit' | 'aurora' | 'sonar' | 'laser'>('flash'),
   animationsEnabled: ref(true),
 }
 const dashboardState = {
@@ -246,6 +246,41 @@ describe('AgentWaitingGlow', () => {
     expect(wrapper.find('.agent-waiting-glow').exists()).toBe(false)
     expect(wrapper.find('[data-testid="snoozed-chip"]').exists()).toBe(false)
     expect(wrapper.text()).not.toMatch(/resume|undo/i)
+  })
+
+  it.each(['aurora', 'sonar', 'laser'] as const)('%s draws an effect layer above a steady frame', (style) => {
+    settingsState.agentWaitingGlowStyle.value = style
+    const wrapper = mountGlow()
+    const fx = wrapper.find('.agent-waiting-fx')
+    expect(fx.exists()).toBe(true)
+    expect(fx.classes()).toContain(`fx-${style}`)
+    expect(wrapper.find('.agent-waiting-glow').classes()).toContain(`style-${style}`)
+    expect(wrapper.find('.agent-waiting-orbit').exists()).toBe(false)
+    expect(fx.findAll('span').length).toBe(style === 'sonar' ? 3 : 0)
+  })
+
+  it('classic styles do not draw the effect layer', () => {
+    for (const style of ['flash', 'pulse', 'orbit'] as const) {
+      settingsState.agentWaitingGlowStyle.value = style
+      expect(mountGlow().find('.agent-waiting-fx').exists()).toBe(false)
+    }
+  })
+
+  it('draws no effect layer when animations are off (steady frame only)', () => {
+    settingsState.agentWaitingGlowStyle.value = 'aurora'
+    settingsState.animationsEnabled.value = false
+    expect(mountGlow().find('.agent-waiting-fx').exists()).toBe(false)
+  })
+
+  it('the settings panel lists every style and its preview class never hides the box', () => {
+    const panel = readFileSync(resolve(__dirname, '../components/settings/panels/AgentAlertsPanel.vue'), 'utf8')
+    for (const value of ['flash', 'pulse', 'orbit', 'aurora', 'sonar', 'laser']) {
+      expect(panel).toContain(`<option value="${value}">`)
+    }
+    // Comet's value is 'orbit'; its preview must not reuse the hidden .pv-orbit class on the container.
+    expect(panel).toContain("style === 'orbit' ? 'comet' : style")
+    expect(panel).toContain('.alert-preview.pv-comet .pv-orbit {')
+    expect(panel).not.toContain('.alert-preview.pv-orbit .pv-orbit')
   })
 
   it('offers a snooze chip naming the waiting agent', () => {

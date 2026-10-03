@@ -8,6 +8,7 @@
         :aria-label="dockAriaLabel"
       >
         <button
+          v-if="missionControlOn"
           type="button"
           class="dock-inbox"
           title="Open Mission Control - every agent session and pending approval"
@@ -73,6 +74,8 @@ const settingsStore = useSettingsStore()
 const enabled = computed(() =>
   settingsStore.agentAlertsEnabled !== false &&
   settingsStore.agentWaitingDockEnabled !== false)
+
+const missionControlOn = computed(() => settingsStore.missionControlEnabled !== false)
 
 const dockAriaLabel = computed(() => {
   const count = alerts.alerts.value.length

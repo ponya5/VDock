@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import apiClient from '@/api/client'
+import { useSettingsStore } from '@/stores/settings'
 
 /**
  * Agent Mission Control + approval inbox (DL-144).
@@ -72,7 +73,17 @@ export type MissionDecision = 'approve' | 'deny'
 /** Shared open flag: the modal, the deck action and the dock chip all use it. */
 export const missionControlOpen = ref(false)
 
+/** Settings → Agent alerts → Mission Control. On unless explicitly switched off. */
+export function isMissionControlEnabled(): boolean {
+  try {
+    return useSettingsStore().missionControlEnabled !== false
+  } catch {
+    return true // no active store (edge mounts) - never lock the feature out
+  }
+}
+
 export function openMissionControl(): void {
+  if (!isMissionControlEnabled()) return
   missionControlOpen.value = true
 }
 
@@ -81,6 +92,10 @@ export function closeMissionControl(): void {
 }
 
 export function toggleMissionControl(): void {
+  if (!isMissionControlEnabled()) {
+    missionControlOpen.value = false
+    return
+  }
   missionControlOpen.value = !missionControlOpen.value
 }
 
