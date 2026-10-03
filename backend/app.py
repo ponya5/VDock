@@ -437,7 +437,11 @@ def handle_profile_changed(data):
 
 # This event reaches every connected client, so it is an allowlist, not a
 # passthrough — a generic relay would be a remote-command channel.
-ALLOWED_UI_COMMANDS = {'show_screensaver', 'screensaver_layout_edit', 'toggle_quick_deck'}
+ALLOWED_UI_COMMANDS = {
+    'show_screensaver', 'screensaver_layout_edit', 'toggle_quick_deck',
+    # Shared idle: every deck mirrors the others' screensaver state.
+    'screensaver_start', 'screensaver_wake', 'screensaver_activity',
+}
 
 
 @socketio.on('ui_command')
