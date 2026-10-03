@@ -25,7 +25,7 @@
         <img v-if="brand.logo" :src="brand.logo" alt="" class="snooze-logo" data-testid="snooze-logo" />
         <FontAwesomeIcon v-else :icon="['fas', 'robot']" class="snooze-icon" />
         <span class="snooze-label">{{ waitingLabel }} is waiting for input</span>
-        <button type="button" class="snooze-btn" @click="snooze">Snooze 3m</button>
+        <button type="button" class="snooze-btn" @click="snooze">Dismiss 3m</button>
       </div>
     </Transition>
     <!-- Snoozed: the waiting chip is gone, so give the user a way to end the
@@ -33,8 +33,8 @@
     <Transition name="snooze-pop">
       <div v-if="isSnoozed" class="agent-snoozed" :style="snoozedVars" data-testid="snoozed-chip">
         <FontAwesomeIcon :icon="['fas', 'bell-slash']" class="snooze-icon" />
-        <span class="snooze-label">{{ snoozedLabel }} snoozed · {{ snoozeLeftText }} left</span>
-        <button type="button" class="snooze-btn" data-testid="resume-btn" @click="resume">Resume alerts</button>
+        <span class="snooze-label">{{ snoozedLabel }} alert dismissed · {{ snoozeLeftText }} left</span>
+        <button type="button" class="snooze-btn" data-testid="resume-btn" @click="resume">Undo dismiss</button>
       </div>
     </Transition>
   </Teleport>

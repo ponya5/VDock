@@ -236,7 +236,7 @@ describe('AgentWaitingGlow', () => {
 
     const chip = wrapper.find('[data-testid="snoozed-chip"]')
     expect(chip.exists()).toBe(true)
-    expect(chip.text()).toContain('Claude Code snoozed')
+    expect(chip.text()).toContain('Claude Code alert dismissed')
     expect(chip.text()).toContain('3m left') // 150 s rounds up to 3m
     expect(wrapper.find('.agent-waiting-glow').exists()).toBe(false)
 
