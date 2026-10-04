@@ -71,6 +71,7 @@ function startBackend() {
 
     backendProcess = spawn(venvPython, [appPath], {
       cwd: backendPath,
+      env: { ...process.env, VDOCK_ELECTRON: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: false,
       windowsHide: true
@@ -94,7 +95,7 @@ function startBackend() {
 
     backendProcess = spawn(backendExe, [], {
       cwd: backendPath,
-      env: { ...process.env, DATA_DIR: dataDir },
+      env: { ...process.env, DATA_DIR: dataDir, VDOCK_ELECTRON: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: false,
       windowsHide: true
@@ -111,6 +112,12 @@ function startBackend() {
   
   backendProcess.on('close', (code) => {
     console.log(`Backend process exited with code ${code}`)
+    if (code === 75) {
+      // Exit 75 = the updater is replacing the app; quit instead of restarting.
+      isQuitting = true
+      app.quit()
+      return
+    }
     if (!isQuitting) {
       // Restart backend if it crashes
       setTimeout(() => {

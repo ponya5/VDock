@@ -22,6 +22,7 @@ POLLED_BLUEPRINTS = {
     'logs': 'frontend error posts can burst',
     'triggers': 'localhost webhook + settings CRUD',
     'mcp': 'MCP clients poll rapidly',
+    'update': 'update banner polls status',
 }
 
 

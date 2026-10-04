@@ -49,6 +49,23 @@
         <div class="panel-body">
           <dl class="kv-list">
             <div class="kv"><dt>Version</dt><dd>{{ appVersion }}</dd></div>
+            <div class="kv"><dt>Latest release</dt><dd data-testid="about-latest">{{ update.status?.latest ?? '—' }}</dd></div>
+            <div class="kv">
+              <dt>Updates</dt>
+              <dd class="upd-actions">
+                <button type="button" class="btn sm" :disabled="update.checking || update.busy" data-testid="about-check" @click="update.refresh(true)">
+                  {{ update.checking ? 'Checking…' : 'Check now' }}
+                </button>
+                <template v-if="update.status?.available">
+                  <button v-if="update.status.canAutoInstall && !isPhone && !update.forbidden" type="button" class="btn primary sm" :disabled="update.busy" data-testid="about-update" @click="update.install()">Update now</button>
+                  <span v-else-if="update.status.canAutoInstall" class="muted">Update from your PC</span>
+                  <button v-else type="button" class="btn primary sm" data-testid="about-download" @click="openLink(update.status.downloadUrl)">Download</button>
+                </template>
+              </dd>
+            </div>
+            <div v-if="update.status" class="kv"><dt>Last checked</dt><dd>{{ lastChecked }}</dd></div>
+            <div v-if="update.busy" class="kv"><dt>Status</dt><dd>{{ update.status?.stateMessage || update.state }}</dd></div>
+            <div v-if="update.status?.error || update.installError" class="kv"><dt>Update error</dt><dd class="upd-error" data-testid="about-error">{{ update.installError || update.status?.error }}</dd></div>
             <div class="kv"><dt>Licence</dt><dd>MIT — ponya5</dd></div>
             <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock" target="_blank" rel="noopener">VDock on GitHub</a></dd></div>
           </dl>
@@ -69,11 +86,25 @@
 import { useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useTutorial } from '@/services/tutorial'
+import { computed, onMounted } from 'vue'
+import { useUpdateStore } from '@/stores/update'
+import { useDeviceClass } from '@/composables/useDeviceClass'
+import { openLink } from '@/utils/openLink'
 import { version as appVersion } from '../../../../package.json'
 
 const emit = defineEmits<{ (e: 'request-feature'): void }>()
 
 const router = useRouter()
+const update = useUpdateStore()
+const { deviceClass } = useDeviceClass()
+const isPhone = computed(() => deviceClass.value === 'phone')
+const lastChecked = computed(() => {
+  const t = update.status?.checkedAt
+  if (!t) return 'never'
+  const d = typeof t === 'number' ? new Date(t < 1e12 ? t * 1000 : t) : new Date(t)
+  return isNaN(d.getTime()) ? 'never' : d.toLocaleString()
+})
+onMounted(() => update.start())
 
 const aboutFeatures = [
   { icon: ['fas', 'table-cells-large'], label: 'Customizable touch button grid', desc: 'Scenes, pages, sliders and folders on a drag-and-drop deck.' },
@@ -97,6 +128,8 @@ function launchTutorial() {
 </script>
 
 <style scoped>
+.upd-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.upd-error { color: #ffb4a8; }
 .nav-ver {
   margin-left: auto;
   padding: 2px 7px;
