@@ -8,6 +8,7 @@
 // Ported from reactbits.dev GradientWaves (ogl/WebGL).
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Mesh, Program, Renderer, Triangle } from 'ogl'
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const props = withDefaults(
   defineProps<{
@@ -366,6 +367,7 @@ onMounted(() => {
     const width = container.clientWidth || 1
     const height = container.clientHeight || 1
     renderer!.setSize(width, height)
+    stretchOglCanvasToContainer(gl.canvas)
     program.uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height]
   }
 

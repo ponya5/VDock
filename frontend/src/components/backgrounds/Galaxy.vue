@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const vertexShader = `
 attribute vec2 uv;
@@ -267,6 +268,7 @@ function mountGalaxy(rootEl, canvasEl, hooks, {
     function resize() {
       const scale = 1;
       renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale);
+      stretchOglCanvasToContainer(gl.canvas);
       if (program) {
         program.uniforms.uResolution.value = new Color(
           gl.canvas.width,

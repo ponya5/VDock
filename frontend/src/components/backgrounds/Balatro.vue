@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 
 function hexToVec4(hex) {
@@ -173,6 +174,7 @@ function mountBalatro(rootEl, canvasEl, hooks, {
 
     function resize() {
       renderer.setSize(container.offsetWidth, container.offsetHeight);
+      stretchOglCanvasToContainer(gl.canvas);
       if (program) {
         program.uniforms.iResolution.value = [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height];
       }

@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const props = defineProps({
   onError: { type: Function, default: undefined }
@@ -137,6 +138,7 @@ function mountLiquidChrome(rootEl, canvasEl, hooks, {
     function resize() {
       const scale = 1;
       renderer.setSize(container.offsetWidth * scale, container.offsetHeight * scale);
+      stretchOglCanvasToContainer(gl.canvas);
       const resUniform = program.uniforms.uResolution.value;
       resUniform[0] = gl.canvas.width;
       resUniform[1] = gl.canvas.height;

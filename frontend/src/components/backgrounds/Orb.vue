@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Mesh, Program, Renderer, Triangle, Vec3 } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 function hslToRgb(h, s, l) {
   let r, g, b;
 
@@ -306,8 +307,7 @@ function mountOrb(rootEl, canvasEl, hooks, {
       const width = container.clientWidth;
       const height = container.clientHeight;
       renderer.setSize(width * dpr, height * dpr);
-      gl.canvas.style.width = width + 'px';
-      gl.canvas.style.height = height + 'px';
+      stretchOglCanvasToContainer(gl.canvas);
       program.uniforms.iResolution.value.set(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height);
     }
     window.addEventListener('resize', resize);

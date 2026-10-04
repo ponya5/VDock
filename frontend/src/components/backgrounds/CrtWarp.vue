@@ -10,6 +10,7 @@
 // three.js dependency.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Mesh, Program, Renderer, Triangle } from 'ogl'
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const props = withDefaults(
   defineProps<{
@@ -237,6 +238,7 @@ onMounted(() => {
     const w = container.clientWidth || 1
     const h = container.clientHeight || 1
     renderer!.setSize(w, h)
+    stretchOglCanvasToContainer(gl.canvas)
     program.uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height]
   }
   setSize()

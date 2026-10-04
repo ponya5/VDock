@@ -92,6 +92,7 @@
       <div v-if="previewBgComponent" class="preview-bg-clip">
         <div class="preview-bg-viewport">
           <BackgroundHost
+            embedded
             :component="previewBgComponent"
             :key="settingsStore.background"
             @error="onPreviewBgError"

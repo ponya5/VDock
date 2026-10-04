@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const hexToRgb = hex => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -234,10 +235,7 @@ function mountPlasma(rootEl, canvasEl, hooks, {
       const width = Math.max(1, Math.floor(rect.width * renderScale));
       const height = Math.max(1, Math.floor(rect.height * renderScale));
       renderer.setSize(width, height);
-
-      // renderer.setSize also sets canvas.style.width/height to match the (scaled-down) drawing buffer - override that so the canvas still stretches to fill its container via CSS while the buffer stays small.
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
+      stretchOglCanvasToContainer(canvas);
 
       const res = program.uniforms.iResolution.value;
       res[0] = gl.drawingBufferWidth;

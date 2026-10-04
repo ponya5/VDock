@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const props = defineProps({
   onError: { type: Function, default: undefined }
@@ -223,6 +224,7 @@ void main() {
     const resize = () => {
       const { clientWidth: w, clientHeight: h } = containerRef.current;
       renderer.setSize(w, h);
+      stretchOglCanvasToContainer(gl.canvas);
       uniforms.iResolution.value = [w, h];
     };
 

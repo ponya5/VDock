@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const vertexShader = `
 attribute vec2 position;
@@ -364,6 +365,7 @@ function mountFaultyTerminal(rootEl, canvasEl, hooks, {
     function resize() {
       if (!ctn || !renderer) return;
       renderer.setSize(ctn.offsetWidth, ctn.offsetHeight);
+      stretchOglCanvasToContainer(gl.canvas);
       program.uniforms.iResolution.value = new Color(
         gl.canvas.width,
         gl.canvas.height,

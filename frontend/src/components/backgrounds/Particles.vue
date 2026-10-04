@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Camera, Geometry, Program, Mesh } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 
 const defaultColors = ['#ffffff', '#ffffff', '#ffffff'];
@@ -164,6 +165,7 @@ function mountParticles(rootEl, canvasEl, hooks, {
       const width = container.clientWidth;
       const height = container.clientHeight;
       renderer.setSize(width, height);
+      stretchOglCanvasToContainer(gl.canvas);
       camera.perspective({ aspect: gl.canvas.width / gl.canvas.height });
     };
     window.addEventListener('resize', resize, false);
