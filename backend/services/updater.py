@@ -480,7 +480,9 @@ def restart_self(root: Path) -> None:
     """Under Electron exit 0 (it restarts us); else relaunch via the launcher.
 
     The detached relauncher sleeps first so this process has released the
-    port by the time the new one starts.
+    port by the time the new one starts. VDOCK_UPDATE_RELAUNCH tells the
+    launcher to restart only the backend: the window that started the update
+    is still open and reloads itself.
     """
     if _env('VDOCK_ELECTRON') == '1':
         schedule_exit(0)
@@ -491,11 +493,12 @@ def restart_self(root: Path) -> None:
         script = folder / 'relaunch.cmd'
         script.write_text('timeout /t 5 /nobreak >nul\r\n'
                           f'cd /d "{root}"\r\n'
+                          'set "VDOCK_UPDATE_RELAUNCH=1"\r\n'
                           f'call "{root / "launch.bat"}"\r\n',
                           encoding='utf-8', newline='')
         _start_cmd_script(script, cwd=root)
     else:
-        args = ['sh', '-c', f'sleep 5; exec sh "{root / "launch.sh"}"']
+        args = ['sh', '-c', f'sleep 5; VDOCK_UPDATE_RELAUNCH=1 exec bash "{root / "launch.sh"}"']
         _spawn_detached(args, start_new_session=True, close_fds=True, cwd=str(root),
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     schedule_exit(0)

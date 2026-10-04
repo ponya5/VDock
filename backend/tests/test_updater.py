@@ -415,9 +415,14 @@ def test_source_without_electron_spawns_relaunch(monkeypatch, tmp_path):
     args = spawned[0][0]
     if updater.sys.platform == 'win32':
         assert isinstance(args, str) and args.endswith('relaunch.cmd"')
-        assert 'launch.bat' in (tmp_path / 'relaunch.cmd').read_text(encoding='utf-8')
+        script = (tmp_path / 'relaunch.cmd').read_text(encoding='utf-8')
+        assert 'launch.bat' in script
+        # The open window reloads itself; the launcher must not open another.
+        assert 'set "VDOCK_UPDATE_RELAUNCH=1"' in script
+        assert script.index('VDOCK_UPDATE_RELAUNCH') < script.index('launch.bat')
     else:
         assert 'launch.sh' in ' '.join(args)
+        assert 'VDOCK_UPDATE_RELAUNCH=1' in ' '.join(args)
     assert exits == [0]
 
 
