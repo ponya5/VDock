@@ -6,7 +6,7 @@
 
 **VDock sits next to your editor and keeps your AI agents, your repo and your day moving. It tells you the moment Claude Code or Cursor needs you, lets you approve, prompt, review, test and ship from one tap — on a touch panel, a tablet, your phone or a browser tab. Free, open source, and 100% local.**
 
-https://github.com/user-attachments/assets/f0581bc1-ba10-483f-bff6-919f4080b45e
+[Vdock.mp4](docs/assets/vdock-hero.mp4)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.3.0-6ea8ff)](https://github.com/ponya5/VDock/releases/latest)
