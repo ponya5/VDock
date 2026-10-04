@@ -974,9 +974,30 @@
   background: radial-gradient(120% 90% at 50% 0%, #17294a 0%, #0c1526 60%, #0a111f 100%);
 }
 :where(.settings-app) .preview-stage-bg:not(.settings-isolate *) { background-size: cover; background-position: center; position: relative; }
-/* scaled-viewport host for real component backgrounds (DL-059) */
-:where(.settings-app) .preview-bg-clip:not(.settings-isolate *) { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; z-index: 0; }
-:where(.settings-app) .preview-bg-viewport:not(.settings-isolate *) { width: 100vw; height: 100vh; transform-origin: top left; }
+/* Component backgrounds fill the preview pane at its real size (DL-059).
+   Scaling a 100vw×100vh stage broke WebGL/OGL previews: getBoundingClientRect()
+   returned the post-transform size, so canvases rendered in a tiny top-left patch. */
+:where(.settings-app) .preview-bg-clip:not(.settings-isolate *) {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  z-index: 0;
+  transform: translateZ(0);
+}
+:where(.settings-app) .preview-bg-viewport:not(.settings-isolate *) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+:where(.settings-app) .preview-bg-clip :deep(div),
+:where(.settings-app) .preview-bg-clip :deep(canvas) {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
 :where(.settings-app) .preview-bg-note:not(.settings-isolate *) { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: var(--color-text-secondary, #94a3b8); text-align: center; padding: 0.5rem; pointer-events: none; }
 :where(.settings-app) .preview-stage-bg .mock-grid:not(.settings-isolate *) { position: relative; z-index: 1; }
 :where(.settings-app) .preview-stage-grid:not(.settings-isolate *) { min-height: 150px; }

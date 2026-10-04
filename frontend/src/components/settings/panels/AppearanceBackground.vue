@@ -88,13 +88,9 @@
 <div class="rail">
   <div class="preview">
     <div class="preview-head"><FontAwesomeIcon :icon="['fas', 'eye']" /> Preview</div>
-    <div ref="bgPreviewStage" class="preview-stage preview-stage-bg preview-stage-bg-tall" :class="previewBackgroundClass" :style="previewBackgroundStyle">
-      <!-- Component-kind backgrounds are position:fixed 100vw×100vh —
-           a transformed wrapper becomes their containing block, so a
-           viewport-sized inner stage scaled down renders the real
-           effect inside the rail instead of a checkerboard. -->
+    <div class="preview-stage preview-stage-bg preview-stage-bg-tall" :class="previewBackgroundClass" :style="previewBackgroundStyle">
       <div v-if="previewBgComponent" class="preview-bg-clip">
-        <div class="preview-bg-viewport" :style="{ transform: `scale(${bgPreviewScale})` }">
+        <div class="preview-bg-viewport">
           <BackgroundHost
             :component="previewBgComponent"
             :key="settingsStore.background"
@@ -114,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -156,27 +152,6 @@ function onPreviewBgError(err: unknown) {
 // A failed component leaves a bare checkerboard that reads as a corrupted
 // render — label it so the stage explains itself.
 const previewBgUnavailable = computed(() => bgPreviewFailed.value === settingsStore.background)
-
-// The inner stage is 100vw×100vh; scale = stage width / real viewport width.
-const bgPreviewStage = ref<HTMLElement | null>(null)
-const bgPreviewScale = ref(0.2)
-let bgPreviewObserver: ResizeObserver | undefined
-watch(bgPreviewStage, (el, _old, onCleanup) => {
-  bgPreviewObserver?.disconnect()
-  if (!el) return
-  const update = () => {
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    if (vw > 0 && vh > 0 && el.clientWidth > 0 && el.clientHeight > 0) {
-      // cover, not contain — the stage clips whatever doesn't fit
-      bgPreviewScale.value = Math.max(el.clientWidth / vw, el.clientHeight / vh)
-    }
-  }
-  update()
-  bgPreviewObserver = new ResizeObserver(update)
-  bgPreviewObserver.observe(el)
-  onCleanup(() => bgPreviewObserver?.disconnect())
-})
 
 const backgroundFileInput = ref<HTMLInputElement | null>(null)
 const uploadingBackground = ref(false)
