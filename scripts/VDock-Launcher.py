@@ -661,8 +661,33 @@ def setup_hint():
     return "./setup.sh"
 
 
+def consume_update_relaunch_flag() -> bool:
+    """True when the in-app updater relaunched us (DL-150); clears the marker.
+
+    Cleared before the backend is spawned so it never leaks into a later launch.
+    """
+    return os.environ.pop("VDOCK_UPDATE_RELAUNCH", "") == "1"
+
+
+def open_ui(update_relaunch: bool):
+    """Open Electron (or the browser). Returns electron_ok, or None if skipped.
+
+    After an in-app update the window that started it is still open and
+    reloads itself once the backend is back, so opening another would leave
+    the user with two VDock windows.
+    """
+    if update_relaunch:
+        return None
+    electron_ok = launch_electron()
+    if not electron_ok:
+        browser_thread = threading.Thread(target=open_browser, daemon=True)
+        browser_thread.start()
+    return electron_ok
+
+
 def main():
     """Main launcher function."""
+    update_relaunch = consume_update_relaunch_flag()
     print("\n" + "=" * 50)
     print("  VDock Virtual Stream Deck Launcher")
     print("=" * 50 + "\n")
@@ -710,10 +735,10 @@ def main():
             print("[WARN] Frontend did not respond in time. Check log:")
             print(f"       {FRONTEND_LOG}")
 
-    electron_ok = launch_electron()
-    if not electron_ok:
-        browser_thread = threading.Thread(target=open_browser, daemon=True)
-        browser_thread.start()
+    electron_ok = open_ui(update_relaunch)
+    if electron_ok is None:
+        print("\n[OK] VDock restarted after an update; the open window will reload.")
+        return True
 
     # Display startup information
     print("\n" + "=" * 50)
