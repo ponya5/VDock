@@ -10,8 +10,8 @@ const source = settingsSource()
 const allAnchors = SECTIONS.flatMap((s) => s.pages.flatMap((p) => p.anchors))
 
 describe('registry shape', () => {
-  it('has at most six sections and lists only those with pages', () => {
-    expect(SECTIONS.length).toBeLessThanOrEqual(6)
+  it('has at most seven sections and lists only those with pages', () => {
+    expect(SECTIONS.length).toBeLessThanOrEqual(7)
     expect(NAV_SECTIONS.every((s) => s.pages.length > 0)).toBe(true)
     expect(findSection(LANDING)).toBeDefined()
   })

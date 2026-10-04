@@ -63,10 +63,10 @@ afterEach(async () => {
 })
 
 describe('Settings shell navigation', () => {
-  it('lists the six sections plus the guide link', async () => {
+  it('lists the seven sections plus the guide link', async () => {
     const w = await openSettings('/settings')
     const names = w.findAll('.nav-rail-item').map((el) => el.text())
-    expect(names).toEqual(['Overview', 'Appearance', 'Agents & automation', 'Integrations', 'Devices & network', 'System', 'Guide'])
+    expect(names).toEqual(['Overview', 'Appearance', 'Agents & automation', 'Integrations', 'Devices & network', 'System', 'About', 'Guide'])
   })
 
   it('opens Devices > Connect for the legacy ?tab=connect link', async () => {

@@ -440,6 +440,12 @@
 
 :where(.settings-app) .nav-scroll:not(.settings-isolate *) { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
 :where(.settings-app) .nav-group + .nav-group:not(.settings-isolate *) { margin-top: 2px; }
+/* About + Guide sit apart from the settings sections, separated by a divider. */
+:where(.settings-app) .nav-group.nav-group-help-start:not(.settings-isolate *) {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
 
 :where(.settings-app) .nav-item:not(.settings-isolate *) {
   display: flex;
@@ -1140,6 +1146,7 @@
   :where(.settings-app) .nav-scroll:not(.settings-isolate *) { display: flex; flex: none; gap: 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
   :where(.settings-app) .nav-scroll:not(.settings-isolate *)::-webkit-scrollbar { display: none; }
   :where(.settings-app) .nav-group + .nav-group:not(.settings-isolate *) { margin-top: 0; }
+  :where(.settings-app) .nav-group.nav-group-help-start:not(.settings-isolate *) { margin-top: 0; padding-top: 0; border-top: 0; }
   :where(.settings-app) .nav-item:not(.settings-isolate *) { width: auto; white-space: nowrap; min-height: 44px; }
   :where(.settings-app) .nav-item-ext:not(.settings-isolate *) { margin-left: 0; }
   :where(.settings-app) .topbar:not(.settings-isolate *) { flex-wrap: wrap; align-items: flex-start; }

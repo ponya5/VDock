@@ -2,7 +2,7 @@
 // anchors, search entries and legacy deep-link ids. SettingsView, the search box
 // and the deep-link resolver all read from here; panels never know where they live.
 
-export type SectionId = 'overview' | 'appearance' | 'agents' | 'integrations' | 'devices' | 'system'
+export type SectionId = 'overview' | 'appearance' | 'agents' | 'integrations' | 'devices' | 'system' | 'about'
 type Icon = [string, string]
 
 export interface SettingsPage {
@@ -91,7 +91,12 @@ export const SECTIONS: SettingsSection[] = [
     pages: [
       { id: 'logs', name: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.', panels: ['LogsPanel'], anchors: [], autosaves: true },
       { id: 'startup', name: 'Startup', title: 'Startup', blurb: 'Launcher behaviour, settings navigation and recent actions.', panels: ['StartupPanel', 'RecentActionsPanel'], anchors: ['startup', 'recent-actions'] },
-      { id: 'about', name: 'About', title: 'About VDock', blurb: 'Version, help and project links.', panels: ['AboutPanel'], anchors: ['features', 'build'], tour: 'nav-about', autosaves: true },
+    ],
+  },
+  {
+    id: 'about', name: 'About', icon: ['fas', 'circle-info'], tour: 'nav-about',
+    pages: [
+      { id: 'about', name: 'About', title: 'About VDock', blurb: 'Version, help and project links.', panels: ['AboutPanel'], anchors: ['features', 'build'], autosaves: true },
     ],
   },
 ]
@@ -136,7 +141,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Startup', keywords: 'launcher terminal close debug startup', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'up-right-from-square'] },
   { label: 'Recent Actions', keywords: 'recent actions history picker clear', section: 'system', page: 'startup', anchor: 'recent-actions', icon: ['fas', 'clock-rotate-left'] },
-  { label: 'About VDock', keywords: 'version about info build tutorial', section: 'system', page: 'about', icon: ['fas', 'circle-info'] },
+  { label: 'About VDock', keywords: 'version about info build tutorial', section: 'about', page: 'about', icon: ['fas', 'circle-info'] },
   { label: 'User Guide', keywords: 'help guide tutorial how to documentation swipe gestures troubleshooting', section: 'guide', icon: ['fas', 'circle-question'] },
 ]
 
@@ -148,7 +153,7 @@ export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> 
   integration: { section: 'agents' },
   connect: { section: 'devices', page: 'connect' },
   logs: { section: 'system', page: 'logs' },
-  about: { section: 'system', page: 'about' },
+  about: { section: 'about', page: 'about' },
 }
 
 /** Pre-registry `?sub=` ids that changed name; the rest (`buttons`, `alerts`, ...) kept theirs. */
