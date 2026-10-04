@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Camera, Transform, Program, Mesh, Geometry } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 
 function hexToRgb(hex) {
@@ -239,6 +240,7 @@ function mountPlasmaWave(rootEl, canvasEl, hooks, props) {
       if (!ctn) return;
       const { width, height } = ctn.getBoundingClientRect();
       renderer.setSize(width, height);
+      stretchOglCanvasToContainer(gl.canvas);
       uniformResolution[0] = width * renderer.dpr;
       uniformResolution[1] = height * renderer.dpr;
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);

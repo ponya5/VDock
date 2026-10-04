@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Triangle, Color } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 
 const vertexShader = `
@@ -211,6 +212,7 @@ function mountThreads(rootEl, canvasEl, hooks, { color = [1, 1, 1], amplitude = 
       const dpr = longestSide > MAX_RENDER_DIM ? (baseDpr * MAX_RENDER_DIM) / longestSide : baseDpr;
       renderer.dpr = dpr;
       renderer.setSize(clientWidth, clientHeight);
+      stretchOglCanvasToContainer(gl.canvas);
       program.uniforms.iResolution.value.r = gl.canvas.width;
       program.uniforms.iResolution.value.g = gl.canvas.height;
       program.uniforms.iResolution.value.b = gl.canvas.width / gl.canvas.height;

@@ -9,6 +9,7 @@
 // effects). Plain JS script: upstream code is untyped and untouched on purpose.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import { stretchOglCanvasToContainer } from '@/utils/oglCanvasLayout'
 
 const MAX_COLORS = 8;
 const hexToRGB = hex => {
@@ -298,6 +299,7 @@ void main() {
     const resize = () => {
       const rect = container.getBoundingClientRect();
       renderer.setSize(rect.width, rect.height);
+      stretchOglCanvasToContainer(gl.canvas);
       uniforms.iResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight, 1];
 
       if (blindMinWidth && blindMinWidth > 0) {

@@ -78,8 +78,15 @@ onMounted(() => {
 
   const mouse = { x: 0.5, y: 0.5 }
 
-  const resize = () => { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight }
+  const resize = () => {
+    const width = Math.max(1, canvas.clientWidth)
+    const height = Math.max(1, canvas.clientHeight)
+    canvas.width = width
+    canvas.height = height
+  }
   resize()
+  const layoutObserver = new ResizeObserver(resize)
+  layoutObserver.observe(canvas)
   window.addEventListener('resize', resize, { passive: true })
 
   const gl = canvas.getContext('webgl')
@@ -152,6 +159,7 @@ onMounted(() => {
 
   cleanup = () => {
     cancelAnimationFrame(rafId); rafId = 0
+    layoutObserver.disconnect()
     window.removeEventListener('resize', resize)
     canvas.removeEventListener('mousemove', onMove)
     document.removeEventListener('visibilitychange', onVis)
