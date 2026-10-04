@@ -65,6 +65,8 @@ from routes.feedback import feedback_bp
 from routes.now_playing import now_playing_bp
 from routes.geo import geo_bp
 from routes.triggers import triggers_bp
+from routes.update import update_bp
+from services import updater as updater_service
 from routes.mcp import mcp_bp, set_emitter as set_mcp_emitter, \
     set_executor as set_mcp_executor
 from routes.actions import set_emitter as set_actions_emitter
@@ -196,6 +198,7 @@ app.register_blueprint(now_playing_bp)
 app.register_blueprint(geo_bp, url_prefix='/api')
 app.register_blueprint(triggers_bp)
 app.register_blueprint(mcp_bp)
+app.register_blueprint(update_bp)
 
 # Exempt critical endpoints from rate limiting
 limiter.exempt(profiles_bp)  # Profile saves are critical
@@ -244,6 +247,8 @@ limiter.exempt(triggers_bp)
 # MCP clients may poll tools/call rapidly; the endpoint is localhost-only
 # (or Bearer-authenticated) already.
 limiter.exempt(mcp_bp)
+# Update status is polled (banner every 6 h, every 2 s while installing).
+limiter.exempt(update_bp)
 
 
 # ============================================================================
@@ -557,6 +562,8 @@ if __name__ == '__main__':
     audio_spectrum.start()
     # Headless automation: time/app/agent/webhook triggers.
     triggers_service.start()
+    # First GitHub release check ~10 s after boot (DL-150).
+    updater_service.start(socketio.start_background_task)
 
     socketio.run(
         app,

@@ -61,6 +61,7 @@
     </aside>
 
     <main ref="mainEl" class="main">
+      <UpdateBanner />
       <header class="topbar">
         <div class="topbar-text">
           <p class="crumb">{{ topbarMeta.crumb }}</p>
@@ -210,6 +211,7 @@ import AppearanceLayout from '@/components/settings/panels/AppearanceLayout.vue'
 import AppearanceButtons from '@/components/settings/panels/AppearanceButtons.vue'
 import LogsPanel from '@/components/settings/panels/LogsPanel.vue'
 import TemplatesPanel from '@/components/settings/panels/TemplatesPanel.vue'
+import UpdateBanner from '@/components/UpdateBanner.vue'
 import McpInfoModal from '@/components/settings/McpInfoModal.vue'
 import { loadAppPaths } from '@/api/appPaths'
 const router = useRouter()

@@ -9,6 +9,7 @@
     ]"
     :style="dashboardBackgroundStyle"
   >
+    <UpdateBanner />
     <!-- Dedicated slim chrome on phones: scene rail + page steppers only.
          While the header is revealed on mobile (DL-137: the reveal FAB is
          no longer desktop-only — the 7" touch panel is a mobile viewport),
@@ -317,6 +318,7 @@ import { loadInitialProfile } from '@/services/initialProfile'
 import { useSwipe } from '@/composables/useGestures'
 import { sceneSwipe } from '@/services/sceneSwipe'
 import type { ScreensaverLayout } from '@/utils/screensaverLayout'
+import UpdateBanner from '@/components/UpdateBanner.vue'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
