@@ -22,8 +22,8 @@
               <button type="button" class="btn" @click="emit('request-feature')">
                 <FontAwesomeIcon :icon="['fas', 'lightbulb']" /> Request a feature
               </button>
-              <a class="btn" href="https://github.com/ponya5/VDock2/issues" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'bug']" /> Report an issue</a>
-              <a class="btn" href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'star']" /> Star the repo</a>
+              <a class="btn" href="https://github.com/ponya5/VDock/issues" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'bug']" /> Report an issue</a>
+              <a class="btn" href="https://github.com/ponya5/VDock" target="_blank" rel="noopener"><FontAwesomeIcon :icon="['fas', 'star']" /> Star the repo</a>
             </div>
           </div>
         </div>
@@ -50,7 +50,7 @@
           <dl class="kv-list">
             <div class="kv"><dt>Version</dt><dd>{{ appVersion }}</dd></div>
             <div class="kv"><dt>Licence</dt><dd>MIT — ponya5</dd></div>
-            <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock2" target="_blank" rel="noopener">VDock on GitHub</a></dd></div>
+            <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock" target="_blank" rel="noopener">VDock on GitHub</a></dd></div>
           </dl>
         </div>
       </section>

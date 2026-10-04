@@ -11,13 +11,13 @@ https://github.com/user-attachments/assets/f0581bc1-ba10-483f-bff6-919f4080b45e
 **▶ [Launch video](docs/assets/vdock-launch.mp4)** · **▶ [1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.3.0-6ea8ff)](https://github.com/ponya5/VDock2/releases/latest)
+[![Version](https://img.shields.io/badge/Version-2.3.0-6ea8ff)](https://github.com/ponya5/VDock/releases/latest)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#quick-start)
 [![Vue 3](https://img.shields.io/badge/Frontend-Vue%203%20%2B%20TypeScript-42b883)](frontend/)
 [![Flask](https://img.shields.io/badge/Backend-Python%20Flask-black)](backend/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-[Quick start](#quick-start) · [A day with VDock](#a-day-with-your-wingman) · [Agents](#built-for-ai-coding-agents) · [Any screen](#phone-and-tablet-as-the-touch-screen) · [Safe by design](#safe-by-design--it-runs-on-your-machine) · [Screensaver](#the-screensaver) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock2/issues)
+[Quick start](#quick-start) · [A day with VDock](#a-day-with-your-wingman) · [Agents](#built-for-ai-coding-agents) · [Any screen](#phone-and-tablet-as-the-touch-screen) · [Safe by design](#safe-by-design--it-runs-on-your-machine) · [Screensaver](#the-screensaver) · [Docs](docs/) · [Issues](https://github.com/ponya5/VDock/issues)
 
 </div>
 
@@ -186,13 +186,13 @@ Windows will often route every tap to your *primary* display instead of a spare 
 
 ### 1. Get VDock
 
-**Easiest — install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock2/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once — Windows SmartScreen → **More info → Run anyway**; macOS → right-click → **Open**.
+**Easiest — install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once — Windows SmartScreen → **More info → Run anyway**; macOS → right-click → **Open**.
 
 **Or from source** — needs [Python 3.9+](https://www.python.org/downloads/) (tick "Add Python to PATH" on Windows) and [Node.js 20+](https://nodejs.org/):
 
 ```bash
-git clone https://github.com/ponya5/VDock2.git
-cd VDock2
+git clone https://github.com/ponya5/VDock.git
+cd VDock
 ```
 
 - **Windows:** double-click **`setup.bat`** → choose **[1] Full setup**
@@ -283,7 +283,7 @@ Layout: `backend/` (Flask API, actions, integration packs) · `frontend/` (Vue U
 
 Issues and pull requests are welcome — fork, branch, PR. Good first contributions: a new integration pack, an app template, a background, or a bug fix. Full guide: [CONTRIBUTING.md](docs/CONTRIBUTING.md); by participating you agree to the [Code of Conduct](docs/CODE_OF_CONDUCT.md).
 
-If you're reporting a bug, **Settings → Logs → Export** gives you a zip worth attaching. Security issues: report privately per [SECURITY.md](SECURITY.md) — a [GitHub security advisory](https://github.com/ponya5/VDock2/security/advisories) or ponya81@gmail.com — rather than a public issue.
+If you're reporting a bug, **Settings → Logs → Export** gives you a zip worth attaching. Security issues: report privately per [SECURITY.md](SECURITY.md) — a [GitHub security advisory](https://github.com/ponya5/VDock/security/advisories) or ponya81@gmail.com — rather than a public issue.
 
 ---
 

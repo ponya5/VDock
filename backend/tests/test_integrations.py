@@ -245,11 +245,11 @@ def test_repo_slug_parses_https_and_ssh_remotes(github, mocker, tmp_path):
     mocker.patch('integrations.github_pack.context.resolve_cwd',
                  return_value=str(tmp_path))
 
-    for url in ('https://github.com/ponya5/VDock2.git',
-                'git@github.com:ponya5/VDock2.git',
-                'https://github.com/ponya5/VDock2'):
+    for url in ('https://github.com/ponya5/VDock.git',
+                'git@github.com:ponya5/VDock.git',
+                'https://github.com/ponya5/VDock'):
         mocker.patch('integrations.github_pack.sr.run', return_value=ok(url))
-        assert github._repo_slug({}) == 'ponya5/VDock2', url
+        assert github._repo_slug({}) == 'ponya5/VDock', url
 
 
 # --- Copilot / Cursor keystroke packs ----------------------------------------

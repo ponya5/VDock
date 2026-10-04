@@ -46,8 +46,8 @@ Examples of behavior that contributes to creating a positive environment include
 1. **Fork the Repository**
    ```bash
    # Fork on GitHub, then clone your fork
-   git clone https://github.com/your-username/VDock2.git
-   cd VDock2
+   git clone https://github.com/your-username/VDock.git
+   cd VDock
    ```
 
 2. **Set Up Development Environment**
@@ -424,7 +424,7 @@ Thank you for contributing to VDock! Your contributions help make VDock better f
 
 ---
 
-**Questions?** Feel free to ask in [GitHub Discussions](https://github.com/ponya5/VDock2/discussions) or open an issue.
+**Questions?** Feel free to ask in [GitHub Discussions](https://github.com/ponya5/VDock/discussions) or open an issue.
 
 **Last Updated**: 2024-01-01  
 **Version**: 1.0.0

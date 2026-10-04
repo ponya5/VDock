@@ -4,9 +4,9 @@
 
 If you discover a security vulnerability in VDock, please report it privately rather than opening a public issue:
 
-- Open a [GitHub Security Advisory](https://github.com/ponya5/VDock2/security/advisories/new) (preferred), **or**
+- Open a [GitHub Security Advisory](https://github.com/ponya5/VDock/security/advisories/new) (preferred), **or**
 - Email **ponya81@gmail.com** if you can't or don't want to use GitHub, **or**
-- Report it through [GitHub Issues](https://github.com/ponya5/VDock2/issues) only if it is not sensitive.
+- Report it through [GitHub Issues](https://github.com/ponya5/VDock/issues) only if it is not sensitive.
 
 Please include:
 
