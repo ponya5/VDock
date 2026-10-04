@@ -11,6 +11,8 @@ const api = vi.hoisted(() => ({
   getHealthVersion: vi.fn(),
 }))
 vi.mock('@/api/update', () => api)
+const reload = vi.hoisted(() => ({ reloadPage: vi.fn() }))
+vi.mock('@/utils/reloadPage', () => reload)
 
 import { useUpdateStore } from '@/stores/update'
 import UpdateBanner from '@/components/UpdateBanner.vue'
@@ -142,18 +144,40 @@ describe('update store', () => {
 
   it('reloads once /health reports a new version after restarting', async () => {
     vi.useFakeTimers()
-    const reload = vi.fn()
-    vi.stubGlobal('location', { ...window.location, reload })
     api.getUpdateStatus.mockResolvedValue({ ...base, state: 'restarting' })
     api.getHealthVersion.mockResolvedValueOnce('2.3.0').mockResolvedValue('2.4.0')
     const store = useUpdateStore()
     await store.refresh()
     await vi.advanceTimersByTimeAsync(2000)
-    expect(reload).not.toHaveBeenCalled()
+    expect(reload.reloadPage).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(2000)
-    expect(reload).toHaveBeenCalled()
+    expect(reload.reloadPage).toHaveBeenCalled()
     store.stop()
-    vi.unstubAllGlobals()
     vi.useRealTimers()
+  })
+})
+
+describe('after an update', () => {
+  it('reloads when the backend comes back on a new version, even if restarting was never seen', async () => {
+    setActivePinia(createPinia())
+    const store = useUpdateStore()
+    api.getUpdateStatus.mockResolvedValueOnce({ ...base, current: '2.3.1', state: 'installing', stateMessage: 'Building frontend' })
+    await store.refresh()
+    expect(reload.reloadPage).not.toHaveBeenCalled()
+
+    // Backend restarted between polls: the next answer is already the new version.
+    api.getUpdateStatus.mockResolvedValueOnce({ ...base, current: '2.4.0', available: false, state: 'idle' })
+    await store.refresh()
+    expect(reload.reloadPage).toHaveBeenCalledTimes(1)
+    store.stop()
+  })
+
+  it('does not reload while the version is unchanged', async () => {
+    setActivePinia(createPinia())
+    const store = useUpdateStore()
+    api.getUpdateStatus.mockResolvedValue(base)
+    await store.refresh()
+    await store.refresh()
+    expect(reload.reloadPage).not.toHaveBeenCalled()
   })
 })
