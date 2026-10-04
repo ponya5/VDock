@@ -1,4 +1,4 @@
-// DL-150 - update store + banner: visibility, dismissal per version,
+// DL-150 - update store + banner: visibility, per-launch dismissal,
 // Update now vs Download, and the 403 "update from your PC" hint.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -57,7 +57,6 @@ describe('UpdateBanner', () => {
     const w = await mountBanner()
     await w.find('[data-testid="update-later"]').trigger('click')
     expect(w.find('[data-testid="update-banner"]').exists()).toBe(false)
-    expect(localStorage.getItem('vdock.update.dismissedVersion')).toBe('2.4.0')
 
     api.getUpdateStatus.mockResolvedValue({ ...base, latest: '2.5.0' })
     await useUpdateStore().refresh()
@@ -65,11 +64,22 @@ describe('UpdateBanner', () => {
     expect(w.text()).toContain('VDock 2.5.0 is available')
   })
 
-  it('stays hidden on a fresh load when that version was dismissed', async () => {
-    localStorage.setItem('vdock.update.dismissedVersion', '2.4.0')
-    setActivePinia(createPinia())
+  it('prompts again on the next launch after Later', async () => {
+    const first = await mountBanner()
+    await first.find('[data-testid="update-later"]').trigger('click')
+    expect(first.find('[data-testid="update-banner"]').exists()).toBe(false)
+    first.unmount()
+    useUpdateStore().stop()
+
+    setActivePinia(createPinia()) // fresh launch
     const w = await mountBanner()
-    expect(w.find('[data-testid="update-banner"]').exists()).toBe(false)
+    expect(w.text()).toContain('VDock 2.4.0 is available')
+  })
+
+  it('ignores a dismissal persisted by older builds', async () => {
+    localStorage.setItem('vdock.update.dismissedVersion', '2.4.0')
+    const w = await mountBanner()
+    expect(w.text()).toContain('VDock 2.4.0 is available')
   })
 
   it('offers Update now when canAutoInstall', async () => {
