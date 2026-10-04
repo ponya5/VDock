@@ -6,7 +6,7 @@
   "author": "ponya5",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ponya5/VDock2.git",
+    "url": "https://github.com/ponya5/VDock.git",
     "directory": "frontend/electron"
   },
   "main": "main.js",

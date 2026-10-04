@@ -143,7 +143,7 @@ def fetch_feed(url: str, use_cache: bool = True) -> List[Headline]:
         response = requests.get(
             url,
             timeout=FETCH_TIMEOUT,
-            headers={'User-Agent': 'VDock/2.0 (+https://github.com/ponya5/VDock2)'},
+            headers={'User-Agent': 'VDock/2.0 (+https://github.com/ponya5/VDock)'},
             stream=True,
         )
         response.raise_for_status()
