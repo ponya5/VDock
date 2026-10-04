@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getHealthVersion, getUpdateStatus, installUpdate, type UpdateStatus } from '@/api/update'
+import { reloadPage } from '@/utils/reloadPage'
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 const POLL_MS = 2000
@@ -18,6 +19,7 @@ export const useUpdateStore = defineStore('update', () => {
   let checkTimer: ReturnType<typeof setInterval> | null = null
   let pollTimer: ReturnType<typeof setTimeout> | null = null
   let healthTimer: ReturnType<typeof setTimeout> | null = null
+  let loadedVersion = ''
 
   const state = computed(() => status.value?.state ?? 'idle')
   const busy = computed(() => ACTIVE.includes(state.value))
@@ -36,6 +38,14 @@ export const useUpdateStore = defineStore('update', () => {
       // Offline / old backend: keep the previous status, stay quiet.
     } finally {
       checking.value = false
+    }
+    // The backend can restart between two polls, so 'restarting' may never be
+    // seen. A different version than the one this page loaded with means the
+    // bundle we are running is stale.
+    const current = status.value?.current
+    if (current) {
+      if (!loadedVersion) loadedVersion = current
+      else if (current !== loadedVersion) { stop(); reloadPage(); return }
     }
     syncPolling()
   }
@@ -58,7 +68,7 @@ export const useUpdateStore = defineStore('update', () => {
         const v = await getHealthVersion()
         if (wasDown || (v && before && v !== before)) {
           healthTimer = null
-          location.reload()
+          reloadPage()
           return
         }
       } catch {
