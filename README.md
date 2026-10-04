@@ -154,7 +154,18 @@ Toggle each widget and open its **Options** for feeds, tickers or cities. **Cust
 
 ## Security and privacy
 
-VDock can type into your terminal, so it is built to be conservative:
+VDock can press keys and type into your terminal, so trust matters. The main reason it is safe to use is that **everything runs on your own machine**.
+
+### Why running locally matters
+
+- **Your data never leaves your PC.** There is no VDock cloud, so there is no server of ours that could be breached, and no copy of your prompts, repo details or session activity stored anywhere else.
+- **No account, no telemetry.** Nothing to sign up for, nothing to leak, and no analytics reporting how you work.
+- **A small attack surface.** With no relay service, the only thing to secure is the app on your PC. LAN access is off by default, so out of the box nothing is reachable from outside the machine.
+- **You control the network boundary.** If you want to use a phone or tablet, you choose to enable LAN access, and traffic stays on your own Wi-Fi. You can leave it off and use VDock on the PC alone.
+- **It keeps working offline.** The deck, agent alerts and repo actions do not depend on an internet connection or on a vendor staying in business. Only the optional screensaver feeds need the network.
+- **Nothing to trust blindly.** The code is open source (MIT), so you can read exactly what it does and what it sends.
+
+### What this looks like in practice
 
 - **100% local.** The server runs on your PC; your phone or tablet talks to it over your own Wi-Fi. No cloud relay, no account, no telemetry or analytics.
 - **Agents report in, locally.** Claude Code, Cursor and the other agents use their official hooks to post state to VDock's localhost-only endpoint. Install or remove each hook from Settings; only VDock's own entry is touched.
