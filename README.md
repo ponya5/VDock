@@ -8,8 +8,6 @@
 
 https://github.com/user-attachments/assets/f0581bc1-ba10-483f-bff6-919f4080b45e
 
-**▶ [Launch video](docs/assets/vdock-launch.mp4)** · **▶ [1080p tour](docs/assets/vdock-readme.mp4)** · **▶ [Claude Code deep-dive](docs/assets/vdock2-intro.mp4)** — no sound
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.3.0-6ea8ff)](https://github.com/ponya5/VDock/releases/latest)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#quick-start)
