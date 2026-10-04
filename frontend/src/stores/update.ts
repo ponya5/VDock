@@ -2,18 +2,14 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getHealthVersion, getUpdateStatus, installUpdate, type UpdateStatus } from '@/api/update'
 
-const DISMISS_KEY = 'vdock.update.dismissedVersion'
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 const POLL_MS = 2000
 const ACTIVE = ['downloading', 'installing', 'restarting']
 
-function readDismissed(): string {
-  try { return localStorage.getItem(DISMISS_KEY) || '' } catch { return '' }
-}
-
 export const useUpdateStore = defineStore('update', () => {
   const status = ref<UpdateStatus | null>(null)
-  const dismissedVersion = ref(readDismissed())
+  // In memory only: "Later" hides the prompt until the next launch.
+  const dismissedVersion = ref('')
   const checking = ref(false)
   const forbidden = ref(false)
   const installError = ref<string | null>(null)
@@ -89,7 +85,6 @@ export const useUpdateStore = defineStore('update', () => {
     const v = status.value?.latest
     if (!v) return
     dismissedVersion.value = v
-    try { localStorage.setItem(DISMISS_KEY, v) } catch { /* private mode */ }
   }
 
   function start() {
