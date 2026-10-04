@@ -85,6 +85,7 @@ def test_no_absolute_user_paths_in_code():
 KNOWN_LARGE = {
     'docs/assets/screens/dashboard-live.gif',
     'docs/assets/vdock-readme.gif',
+    'docs/assets/vdock-hero.mp4',
     'docs/assets/vdock-readme.mp4',
     'docs/assets/vdock2-intro.gif',
     'docs/assets/vdock2-intro.mp4',
