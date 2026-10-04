@@ -85,7 +85,7 @@ const emit = defineEmits<{ navigate: [target: SettingsRoute] }>()
 
 const settingsStore = useSettingsStore()
 const { serverConfig, setAllowLan } = useServerConfig()
-const { githubTokenMissing, hooksMissing, hooksInstalled, hooksTotal, loaded, refresh } = useSetupStatus()
+const { githubTokenMissing, loaded, refresh } = useSetupStatus()
 const { isCompactTouch } = useDeviceClass()
 const autoScenes = useAutoSceneSwitching()
 
@@ -109,15 +109,6 @@ const attention = computed<AttentionItem[]>(() => {
       detail: 'Live PR and CI buttons are off.',
       action: 'Add it',
       target: { section: 'integrations', page: 'accounts', anchor: 'accounts' },
-    })
-  }
-  if (hooksMissing.value) {
-    items.push({
-      id: 'agent-hooks',
-      title: `${hooksInstalled.value} of ${hooksTotal.value} agents hooked`,
-      detail: 'Hooked agents can alert you when they wait.',
-      action: 'Install',
-      target: { section: 'agents', page: 'alerts', anchor: 'agent-alerts' },
     })
   }
   return items

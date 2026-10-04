@@ -32,7 +32,7 @@
         </div>
       </div>
       <nav class="nav-scroll" aria-label="Settings sections">
-        <div v-for="s in NAV_SECTIONS" :key="s.id" class="nav-group">
+        <div v-for="s in NAV_SECTIONS" :key="s.id" class="nav-group" :class="{ 'nav-group-help-start': s.id === 'about' }">
           <button
             type="button"
             class="nav-item nav-rail-item"
