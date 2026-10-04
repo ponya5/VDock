@@ -53,7 +53,7 @@ Coding with AI agents changed the job. You start a session, the agent works, and
 | **Agent at work** | **Mission Control** lists every session: working, waiting, done. A green dot on the scene tab confirms VDock sees the live process. |
 | **Agent waits** | A full-screen alert (Claude, Cursor, Copilot, Devin, etc.) appears over the deck and the screensaver. **Approve / Deny** from the deck or your phone. |
 | **Keep it moving** | **Agent Prompt** presets, **Dictate to Agent** (hold, speak, review, submit) and slash-command keys, sent to the session that's ready. |
-| **Review** | **Review Changes** lists what the agent touched this turn; tap a file for its diff. **Run Tests** detects your test command and shows pass / fail. |
+| **Review** | **Review Changes** lists what the agent touched this turn. Tap a file for its diff. **Run Tests** detects your test command and shows pass / fail. |
 | **Ship** | Commit, push, open a PR and watch **CI checks** turn green with `gh`-powered buttons and live badges. |
 | **Meetings** | A real Windows **mic mute** with a LIVE / MUTED face, camera, push-to-talk and a volume slider. |
 | **Away from desk** | Your phone becomes an approval remote. When idle, the panel turns into an ambient dashboard: clock, weather, headlines, markets, or a music visualizer. |
@@ -91,7 +91,7 @@ Start from any of the **36 app templates** or import a scene pack someone shared
 New in 2.3, each a button you can add from the action picker:
 
 - **Agent Prompt**: send a preset (Continue, Write tests, etc.) or your own text to the ready session
-- **Review Changes**: the files the agent changed this turn; tap one for its diff
+- **Review Changes**: the files the agent changed this turn, with a diff one tap away
 - **Run Tests**: detects your repo's test command and shows pass / fail
 - **Agent Usage**: today's estimated spend and tokens, as a chip
 - **Git Branch**, **Dev Servers**, **Docker**: live status faces with a tap menu (pull/push/stash, open/restart/stop, start/stop/logs)
@@ -109,7 +109,7 @@ Keystroke actions only fire when the target app is focused.
 Settings opens on **Overview**: what's set up, what needs attention, and the switches you reach for most. Five sections sit underneath:
 
 - **Appearance**: key size, transparency and design, backgrounds, fonts, docked sidebar, the [screensaver](#the-screensaver)
-- **Agents & automation**: agent alerts and hooks (install or remove each agent's hook; only VDock's own entry is touched), auto scene switching, triggers, the MCP server
+- **Agents & automation**: agent alerts and hooks (install or remove each agent's hook, and only VDock's own entry is touched), auto scene switching, triggers, the MCP server
 - **Integrations**: **Accounts & keys** and one-tap app templates (ChatGPT, Claude, Cursor, Figma, n8n, etc.)
 - **Devices & network**: Connect a device, deck password, ports and host
 - **System**: logs (exportable), startup, About
@@ -136,7 +136,7 @@ Settings opens on **Overview**: what's set up, what needs attention, and the swi
 
 <img src="docs/assets/screens/connect-page.jpg" alt="VDock Settings, Connect a device: setup steps, Allow LAN access switch, password prompt and the deck address (masked in this screenshot)" width="820" />
 
-**Connect in three steps:** get both devices on the same **Wi-Fi**; go to **Settings > Devices & network > Connect a device**, turn on **Allow LAN access** and relaunch once; then **scan the QR code**. With a deck password set, the QR carries a single-use pairing token (valid for 10 minutes), so the phone signs in by scanning.
+**Connect in three steps:** get both devices on the same **Wi-Fi**, go to **Settings > Devices & network > Connect a device** and turn on **Allow LAN access** (relaunch once), then **scan the QR code**. With a deck password set, the QR carries a single-use pairing token (valid for 10 minutes), so the phone signs in by scanning.
 
 > **Security:** LAN access is off by default. Anyone on your Wi-Fi who can reach the deck can press your keys and answer your agents, so **set a deck password before turning on LAN access** (Connect page, same screen). Allow the Windows firewall prompt for `python.exe` the first time. See [SECURITY.md](SECURITY.md).
 
@@ -171,8 +171,8 @@ VDock can press keys and type into your terminal, so trust matters. The main rea
 
 ### What this looks like in practice
 
-- **100% local.** The server runs on your PC; your phone or tablet talks to it over your own Wi-Fi. No cloud relay, no account, no telemetry or analytics.
-- **Agents report in, locally.** Claude Code, Cursor and the other agents use their official hooks to post state to VDock's localhost-only endpoint. Install or remove each hook from Settings; only VDock's own entry is touched.
+- **100% local.** The server runs on your PC and your phone or tablet talks to it over your own Wi-Fi. No cloud relay, no account, no telemetry or analytics.
+- **Agents report in, locally.** Claude Code, Cursor and the other agents use their official hooks to post state to VDock's localhost-only endpoint. Install or remove each hook from Settings. Only VDock's own entry is touched.
 - **Your keys stay on the PC.** API keys and tokens live in a local `.env`, are accepted only from the PC itself, are never shown again or sent to other devices, and are stripped from logs and notifications.
 - **Locked down by default.** LAN access is off until you turn it on. When you set a deck password, the QR code carries a single-use, 10-minute pairing token. Keystroke actions only fire when the target app is focused.
 - **Open source, MIT.** Startup refuses unsafe combinations (debug on the network, SSL without certificates, an example password). See [SECURITY.md](SECURITY.md).
@@ -183,7 +183,7 @@ The only outbound calls are the ones you switch on: weather, headlines and quote
 
 ## Why VDock
 
-VDock is free and MIT-licensed (Elgato's virtual deck needs their hardware; Touch Portal's free tier is capped), runs on **Windows, macOS and Linux**, and works on **any screen**: touch panel, tablet, phone or browser. It adds **agent-native actions and agent-waiting alerts** for Claude Code, Cursor, Copilot, Codex, Devin, VS Code and JetBrains. Beyond development it covers calls and recording (mic mute, camera, push-to-talk, OBS), anything with an HTTP endpoint (Home Assistant, n8n, Zapier, webhooks), and kiosk or workshop panels.
+VDock is free and MIT-licensed (Elgato's virtual deck needs their hardware, and Touch Portal's free tier is capped), runs on **Windows, macOS and Linux**, and works on **any screen**: touch panel, tablet, phone or browser. It adds **agent-native actions and agent-waiting alerts** for Claude Code, Cursor, Copilot, Codex, Devin, VS Code and JetBrains. Beyond development it covers calls and recording (mic mute, camera, push-to-talk, OBS), anything with an HTTP endpoint (Home Assistant, n8n, Zapier, webhooks), and kiosk or workshop panels.
 
 <details>
 <summary><strong>Using a touchscreen as a second monitor (Windows)</strong>: fixing touch landing on the wrong screen</summary>
@@ -191,7 +191,7 @@ VDock is free and MIT-licensed (Elgato's virtual deck needs their hardware; Touc
 Windows will often route every tap to your *primary* display instead of a spare touchscreen monitor. Fix it in two steps:
 
 1. Open **Tablet PC Settings** (Start menu search), go to **Display** > **Setup**, then tap the touchscreen monitor when prompted.
-2. If that doesn't stick, run Windows' built-in digitizer-to-monitor mapping tool from a Command Prompt: `multidigimon -touch` (`MultiDigiMon.exe` ships with Windows in `System32`; run as Administrator if it appears to do nothing).
+2. If that doesn't stick, run Windows' built-in digitizer-to-monitor mapping tool from a Command Prompt: `multidigimon -touch` (`MultiDigiMon.exe` ships with Windows in `System32`). Run as Administrator if it appears to do nothing.
 
 </details>
 
@@ -201,7 +201,7 @@ Windows will often route every tap to your *primary* display instead of a spare 
 
 ### 1. Get VDock
 
-**Easiest: install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once: on Windows SmartScreen choose **More info > Run anyway**; on macOS right-click and choose **Open**.
+**Easiest: install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once. On Windows SmartScreen choose **More info > Run anyway**. On macOS right-click and choose **Open**.
 
 **Or from source.** You need [Python 3.9+](https://www.python.org/downloads/) (tick "Add Python to PATH" on Windows) and [Node.js 20+](https://nodejs.org/):
 
@@ -237,7 +237,7 @@ Setup installs dependencies and puts a **VDock icon on your desktop**.
 
 ## Configuration
 
-Almost everything lives in **Settings**, which is searchable and autosaves. Server config is `backend/data/config.json` (created on first run, gitignored); ports are set via `setup.bat --ports` / `./setup.sh` option 4. Environment settings go in `.env` files copied from the committed templates. Never commit the real ones:
+Almost everything lives in **Settings**, which is searchable and autosaves. Server config is `backend/data/config.json` (created on first run, gitignored). Ports are set via `setup.bat --ports` / `./setup.sh` option 4. Environment settings go in `.env` files copied from the committed templates. Never commit the real ones:
 
 | File | Template | What goes there |
 |---|---|---|
@@ -256,10 +256,10 @@ Secrets never reach the frontend. Settings shows only *whether* a key is set, an
 - **Desktop window doesn't open:** open **http://localhost:3000** in a browser
 - **macOS blocks the launcher:** right-click `VDock.command` and choose **Open**, first time only
 - **Claude / GitHub buttons greyed out:** hover for the reason, usually the CLI isn't installed or `gh auth login` hasn't run
-- **Keystroke actions do nothing:** they only fire when the target editor is focused; this is deliberate
+- **Keystroke actions do nothing:** they only fire when the target editor is focused. This is deliberate
 - **Phone can't reach VDock:** go to **Settings > Devices & network > Connect a device**, allow LAN access, relaunch, allow the Windows firewall prompt for `python.exe`, and check both devices are on the same Wi-Fi
 - **Touch lands on the wrong monitor:** see [Using a touchscreen as a second monitor](#why-vdock). It's a Windows display-mapping issue, not a VDock bug
-- **UI looks like an old build:** it self-heals on reload; if not, hard-refresh once
+- **UI looks like an old build:** it self-heals on reload, and if not, hard-refresh once
 - **Something else:** go to **Settings > Logs**, then tail or export the backend/frontend logs and include them with your issue
 
 ---
@@ -286,11 +286,11 @@ cd backend && pip install -r requirements-dev.txt && pytest
 cd frontend && npm test
 ```
 
-**Architecture:** Vue 3 + TypeScript front end, Python Flask + Socket.IO back end, Electron shell for the desktop build. Actions live in a catalog the frontend reads at runtime; integrations are self-detecting plugin packs under `backend/integrations/`.
+**Architecture:** Vue 3 + TypeScript front end, Python Flask + Socket.IO back end, Electron shell for the desktop build. Actions live in a catalog the frontend reads at runtime, and integrations are self-detecting plugin packs under `backend/integrations/`.
 
 [`docs/development/DEVELOPER_GUIDE.md`](docs/development/DEVELOPER_GUIDE.md) covers adding an action type or writing an integration pack.
 
-Layout: `backend/` (Flask API, actions, integration packs), `frontend/` (Vue UI, `electron/` shell), `scripts/`, `docs/`. `frontend/dist` is a local build output (gitignored) that Flask serves; run `npm run build` after UI changes.
+Layout: `backend/` (Flask API, actions, integration packs), `frontend/` (Vue UI, `electron/` shell), `scripts/`, `docs/`. `frontend/dist` is a local build output (gitignored) that Flask serves. Run `npm run build` after UI changes.
 
 ---
 
