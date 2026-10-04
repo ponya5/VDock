@@ -140,7 +140,9 @@ class ApiClient {
           // The auto-switch poller 404s whenever there's no foreground
           // window (locked screen, desktop focused) — that's not an error.
           config?.url?.includes('/app-monitor/active-app') ||
-          config?.url?.includes('/app-monitor/current-app')
+          config?.url?.includes('/app-monitor/current-app') ||
+          // Removed feature — stale cached bundles may still probe this once.
+          config?.url?.includes('/system/autostart')
         ) {
           console.warn('Resource not found (expected):', config?.url)
           return

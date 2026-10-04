@@ -62,8 +62,8 @@ export interface BackgroundOption {
 
 export const DEFAULT_BACKGROUND_ID = 'default'
 /** The dashboard's out-of-the-box look (DL-106 + follow-up): new installs
-    greet with Balatro; existing users keep their saved choice. */
-export const FACTORY_BACKGROUND_ID = 'balatro'
+    greet with Iridescence; existing users keep their saved choice. */
+export const FACTORY_BACKGROUND_ID = 'iridescence'
 /** The screensaver's out-of-the-box look (DL-003 follow-up): new installs
     greet with Prismatic Burst; existing users keep their saved choice. */
 export const DEFAULT_SCREENSAVER_BACKGROUND_ID = 'prismatic-burst'

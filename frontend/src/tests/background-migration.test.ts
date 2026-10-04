@@ -52,9 +52,9 @@ describe('migrateBackground', () => {
 })
 
 describe('factory default (DL-106)', () => {
-  test('a fresh install seeds Balatro; the "default" sentinel stays the migration fallback', () => {
+  test('a fresh install seeds Iridescence; the "default" sentinel stays the migration fallback', () => {
     setActivePinia(createPinia())
-    expect(useSettingsStore().background).toBe('balatro')
+    expect(useSettingsStore().background).toBe('iridescence')
     // Existing users whose stored file lacks a background key keep the
     // classic gradient — the new default is out-of-box only.
     expect(migrateBackground({})).toBe('default')
