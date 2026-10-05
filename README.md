@@ -217,7 +217,7 @@ Setup installs dependencies and puts a **VDock icon on your desktop**.
 
 **Optional tools.** None are required. They unlock extra actions, and the related buttons stay greyed out (with the reason shown) until installed: [Claude Code](https://claude.com/product/claude-code) for 40 Claude actions, [GitHub CLI](https://cli.github.com) for PRs, issues and CI, and Git for repo-aware actions.
 
-**Uninstall:** for the installed app, remove it like any other app (your profiles are kept). For a source checkout, run `uninstall.bat` / `./uninstall.sh`, then delete the folder.
+**Uninstall:** for the installed app, remove it like any other app (your profiles are kept). For a source checkout, run `uninstall.bat` / `./uninstall.sh`. It asks whether to keep your profiles and settings or remove everything, then removes dependencies, the built frontend, caches, agent hooks and shortcuts. Run `setup.bat` / `./setup.sh` afterwards for a fresh install (setup always rebuilds the frontend), or delete the folder to remove VDock for good.
 
 ---
 

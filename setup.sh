@@ -66,21 +66,15 @@ install_dependencies() {
   pip install -r "$ROOT/backend/requirements.txt" --quiet --disable-pip-version-check || return 1
   ok "Backend dependencies installed"
 
+  # Always run: npm install is a no-op when node_modules already matches the
+  # lockfile, and picks up packages added by a git pull when it doesn't.
   echo "  [5/8] Frontend dependencies..."
-  if [[ ! -d "$ROOT/frontend/node_modules" ]]; then
-    ( cd "$ROOT/frontend" && npm install --no-fund --no-audit ) || return 1
-    ok "Frontend node_modules installed"
-  else
-    ok "frontend/node_modules already present"
-  fi
+  ( cd "$ROOT/frontend" && npm install --no-fund --no-audit ) || { err "npm install failed in frontend"; return 1; }
+  ok "Frontend dependencies installed"
 
   echo "  [6/8] Electron dependencies..."
-  if [[ ! -d "$ROOT/frontend/electron/node_modules" ]]; then
-    ( cd "$ROOT/frontend/electron" && npm install --no-fund --no-audit ) || return 1
-    ok "Electron node_modules installed"
-  else
-    ok "frontend/electron/node_modules already present"
-  fi
+  ( cd "$ROOT/frontend/electron" && npm install --no-fund --no-audit ) || { err "npm install failed in frontend/electron"; return 1; }
+  ok "Electron dependencies installed"
 
   echo "  [7/8] Data directories..."
   for data_dir in \
@@ -205,6 +199,17 @@ configure_ports() {
   BACKEND_PORT="$backend_port"
 }
 
+# VDock serves frontend/dist, which git does not track - without this step a
+# pull or reinstall keeps showing the previously built UI. Runs after
+# configure_ports because the ports in frontend/.env are baked into the bundle.
+build_frontend() {
+  echo ""
+  echo "  Building the frontend..."
+  export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+  ( cd "$ROOT/frontend" && npm run build ) || { err "Frontend build failed. See the output above."; return 1; }
+  ok "Frontend built (frontend/dist)"
+}
+
 create_desktop_launcher() {
   echo ""
   echo "  Creating desktop launcher..."
@@ -283,9 +288,10 @@ show_menu() {
   echo "  ========================================================"
   echo ""
   echo "    [1] Full setup (recommended)"
-  echo "        Install deps + create desktop launcher"
+  echo "        Install deps, build the frontend, desktop launcher"
   echo ""
   echo "    [2] Install dependencies only"
+  echo "        Deps + frontend build, no desktop launcher"
   echo ""
   echo "    [3] Create desktop launcher only"
   echo ""
@@ -301,6 +307,7 @@ show_menu() {
 run_full_setup() {
   install_dependencies || return 1
   configure_ports "${1:-}"
+  build_frontend || return 1
   create_desktop_launcher
   echo ""
   echo "  =========================================="
@@ -326,7 +333,7 @@ run_full_setup() {
 handle_cli_flag() {
   case "${1:-}" in
     --full) run_full_setup silent; exit $? ;;
-    --deps) install_dependencies; exit $? ;;
+    --deps) install_dependencies && build_frontend; exit $? ;;
     --shortcut) create_desktop_launcher; exit $? ;;
     --ports) configure_ports; exit $? ;;
     --launch) launch_vdock; exit $? ;;
@@ -345,7 +352,7 @@ while true; do
       read -r -p "  Press Enter to continue..." _
       ;;
     2)
-      install_dependencies || echo ""
+      { install_dependencies && build_frontend; } || echo ""
       read -r -p "  Press Enter to continue..." _
       ;;
     3)
