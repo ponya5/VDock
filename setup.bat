@@ -14,12 +14,16 @@ if /i "%~1"=="--full" (
     call :install_dependencies
     if errorlevel 1 exit /b 1
     call :configure_ports silent
+    call :build_frontend
+    if errorlevel 1 exit /b 1
     call :create_desktop_shortcut
     goto :setup_complete_cli
 )
 if /i "%~1"=="--deps" (
     call :install_dependencies
-    exit /b %errorlevel%
+    if errorlevel 1 exit /b 1
+    call :build_frontend
+    exit /b !errorlevel!
 )
 if /i "%~1"=="--shortcut" (
     call :create_desktop_shortcut
@@ -43,10 +47,10 @@ echo     VDock Setup
 echo   ========================================================
 echo.
 echo     [1] Full setup (recommended)
-echo         Install Python + Node deps, Electron, desktop shortcut
+echo         Install deps, build the frontend, desktop shortcut
 echo.
 echo     [2] Install dependencies only
-echo         Skip desktop shortcut creation
+echo         Deps + frontend build, no desktop shortcut
 echo.
 echo     [3] Create desktop shortcut only
 echo         Adds a VDock icon to your Desktop
@@ -76,11 +80,15 @@ goto :main_menu
 call :install_dependencies
 if errorlevel 1 goto :fail
 call :configure_ports
+call :build_frontend
+if errorlevel 1 goto :fail
 call :create_desktop_shortcut
 goto :setup_complete
 
 :run_deps
 call :install_dependencies
+if errorlevel 1 goto :fail
+call :build_frontend
 if errorlevel 1 goto :fail
 echo.
 echo   Dependencies installed. Run setup again to create a shortcut.
@@ -158,32 +166,28 @@ if errorlevel 1 (
 echo   [OK]    Backend dependencies installed
 
 echo   [5/8] Frontend dependencies...
-if not exist "%ROOT%\frontend\node_modules" (
-    pushd "%ROOT%\frontend"
-    call npm install --no-fund --no-audit
-    if not exist "%ROOT%\frontend\node_modules" (
-        popd
-        exit /b 1
-    )
+REM Always run: npm install is a no-op when node_modules already matches the
+REM lockfile, and picks up packages added by a git pull when it doesn't.
+pushd "%ROOT%\frontend"
+call npm install --no-fund --no-audit
+if errorlevel 1 (
     popd
-    echo   [OK]    Frontend node_modules installed
-) else (
-    echo   [OK]    frontend\node_modules already present
+    echo   [ERROR] npm install failed in frontend. Check your connection and try again.
+    exit /b 1
 )
+popd
+echo   [OK]    Frontend dependencies installed
 
 echo   [6/8] Electron dependencies...
-if not exist "%ROOT%\frontend\electron\node_modules" (
-    pushd "%ROOT%\frontend\electron"
-    call npm install --no-fund --no-audit
-    if not exist "%ROOT%\frontend\electron\node_modules" (
-        popd
-        exit /b 1
-    )
+pushd "%ROOT%\frontend\electron"
+call npm install --no-fund --no-audit
+if errorlevel 1 (
     popd
-    echo   [OK]    Electron node_modules installed
-) else (
-    echo   [OK]    frontend\electron\node_modules already present
+    echo   [ERROR] npm install failed in frontend\electron.
+    exit /b 1
 )
+popd
+echo   [OK]    Electron dependencies installed
 
 echo   [7/8] Data directories...
 for %%d in (
@@ -238,6 +242,25 @@ if not defined FOUND_ANY (
     echo           No integration CLIs found. VDock still works fully;
     echo           the Claude and GitHub buttons will show why they are unavailable.
 )
+exit /b 0
+
+:build_frontend
+echo.
+echo   Building the frontend...
+REM VDock serves frontend\dist, which git does not track - without this
+REM step a pull or reinstall keeps showing the previously built UI. Runs
+REM after :configure_ports because the ports in frontend\.env are baked
+REM into the bundle.
+set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
+pushd "%ROOT%\frontend"
+call npm run build
+if errorlevel 1 (
+    popd
+    echo   [ERROR] Frontend build failed. See the output above.
+    exit /b 1
+)
+popd
+echo   [OK]    Frontend built ^(frontend\dist^)
 exit /b 0
 
 :create_desktop_shortcut

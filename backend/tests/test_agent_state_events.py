@@ -867,3 +867,28 @@ def test_install_and_uninstall_hook_are_localhost_only(client, agent_home):
                            environ_overrides={'REMOTE_ADDR': '192.168.1.50'})
         assert resp.status_code == 403
     assert agent_hooks.hook_status('claude')['installed'] is False
+
+
+def test_remove_agent_hooks_script_clears_every_agent(agent_home, capsys):
+    from scripts import remove_agent_hooks
+    for agent in agent_hooks.SUPPORTED_AGENTS:
+        agent_hooks.install_hook(agent)
+        assert agent_hooks.hook_status(agent)['installed'] is True
+
+    assert remove_agent_hooks.main() == 0
+
+    for agent in agent_hooks.SUPPORTED_AGENTS:
+        assert agent_hooks.hook_status(agent)['installed'] is False
+    assert capsys.readouterr().out.count('[OK]') == len(agent_hooks.SUPPORTED_AGENTS)
+
+
+def test_remove_agent_hooks_script_survives_a_broken_settings_file(agent_home, capsys):
+    from scripts import remove_agent_hooks
+    broken = agent_home / '.claude' / 'settings.json'
+    broken.parent.mkdir()
+    broken.write_text('{not json', encoding='utf-8')
+
+    assert remove_agent_hooks.main() == 0
+    out = capsys.readouterr().out
+    assert '[WARN]  claude' in out
+    assert broken.read_text(encoding='utf-8') == '{not json'
