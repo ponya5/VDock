@@ -9,20 +9,28 @@ one module changes and nothing else does.
 each app's keymap is written once, with its blast radius already recorded,
 rather than being revisited later.
 """
+import platform
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-#: Process names for the editors these keymaps target.
-VSCODE_EXES = ('code.exe', 'codium.exe')
-CURSOR_EXES = ('cursor.exe',)
-ANTIGRAVITY_EXES = ('antigravity.exe',)
+#: Process names for the editors these keymaps target. The ``.app`` entries are
+#: macOS bundle names (what the macOS app monitor reports, lowercased).
+VSCODE_EXES = (
+    'code.exe', 'codium.exe',
+    'visual studio code.app', 'visual studio code - insiders.app', 'vscodium.app',
+)
+CURSOR_EXES = ('cursor.exe', 'cursor.app')
+ANTIGRAVITY_EXES = ('antigravity.exe', 'antigravity.app')
 JETBRAINS_EXES = (
     'idea64.exe', 'pycharm64.exe', 'webstorm64.exe', 'phpstorm64.exe',
     'rider64.exe', 'clion64.exe', 'goland64.exe', 'datagrip64.exe',
     'rubymine64.exe',
+    'intellij idea.app', 'intellij idea ce.app', 'pycharm.app',
+    'pycharm ce.app', 'webstorm.app', 'phpstorm.app', 'rider.app',
+    'clion.app', 'goland.app', 'datagrip.app', 'rubymine.app',
 )
 VISUAL_STUDIO_EXES = ('devenv.exe',)
-DEVIN_EXES = ('devin.exe',)
+DEVIN_EXES = ('devin.exe', 'devin.app')
 
 #: Processes that can own a terminal window hosting a CLI agent.
 #: VS Code / Cursor are deliberately absent -- a keystroke meant for an
@@ -31,7 +39,14 @@ TERMINAL_EXES = (
     'windowsterminal.exe', 'wt.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe',
     'conhost.exe', 'mintty.exe', 'wezterm-gui.exe', 'alacritty.exe',
     'tabby.exe',
+    'terminal.app', 'iterm.app', 'iterm2.app', 'ghostty.app', 'wezterm.app',
+    'alacritty.app', 'warp.app', 'kitty.app', 'hyper.app', 'tabby.app',
 )
+
+#: Editors whose Windows ``ctrl`` shortcuts are ``cmd`` on macOS (the VS Code
+#: family shares one keybinding scheme). JetBrains ships a separate macOS
+#: keymap and Visual Studio has no macOS build, so neither is remapped.
+MAC_CMD_REMAPPED_EXES = frozenset(CURSOR_EXES + VSCODE_EXES + ANTIGRAVITY_EXES)
 
 #: How much damage a mistargeted keystroke could do.
 #: 'safe'        -- toggles a view; harmless anywhere.
@@ -86,6 +101,22 @@ class Command:
     #: Higher sorts earlier when auto-populating a deck.
     priority: int = 5
 
+    def native_keys(self, keys: Tuple[str, ...]) -> Tuple[str, ...]:
+        """``keys`` as this platform's editor expects them.
+
+        On macOS the VS Code family uses Cmd where Windows uses Ctrl. Terminal
+        targets keep Ctrl (Ctrl+C is a real interrupt there). A backtick chord
+        (toggle terminal) stays Ctrl on macOS, and Alt chords differ per
+        shortcut, so both are left as written.
+        """
+        if platform.system() != 'Darwin':
+            return keys
+        if not set(self.target_exes) & MAC_CMD_REMAPPED_EXES:
+            return keys
+        if '`' in keys or 'alt' in keys:
+            return keys
+        return tuple('cmd' if key == 'ctrl' else key for key in keys)
+
     def to_macro_steps(self, text_override: Optional[str] = None) -> List[Dict[str, Any]]:
         """Build the macro step list MacroAction executes."""
         steps: List[Dict[str, Any]] = []
@@ -96,10 +127,10 @@ class Command:
             for press in range(max(1, self.repeat)):
                 if press:
                     steps.append({'type': 'delay', 'delay': 150})
-                steps.append({'type': 'hotkey', 'keys': list(self.keys)})
+                steps.append({'type': 'hotkey', 'keys': list(self.native_keys(self.keys))})
             for stroke in self.after_keys:
                 steps.append({'type': 'delay', 'delay': 150})
-                steps.append({'type': 'hotkey', 'keys': list(stroke)})
+                steps.append({'type': 'hotkey', 'keys': list(self.native_keys(stroke))})
 
         text = text_override if text_override is not None else self.types_text
         if text:

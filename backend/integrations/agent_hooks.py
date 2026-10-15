@@ -19,6 +19,7 @@ Rules shared by all installers:
 import json
 import logging
 import os
+import platform
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,10 +81,22 @@ def hook_script_path() -> Path:
     return Path(__file__).resolve().parent.parent / 'scripts' / 'vdock_agent_hook.py'
 
 
+def hook_interpreter() -> str:
+    """Python command that exists on a stock install of this OS.
+
+    Windows installs provide ``python``; macOS (and most Linux distros) only
+    ship ``python3`` -- a ``python`` hook there fails with "command not found"
+    and the agent silently never reports.
+    """
+    return 'python' if platform.system() == 'Windows' else 'python3'
+
+
 def hook_command(source: str, event: str = '') -> str:
     # Forward slashes work on Windows Python too and avoid JSON escaping pain.
     script = hook_script_path().as_posix()
-    command = f'python "{script}" --port {Config.PORT} --source {source}'
+    command = (
+        f'{hook_interpreter()} "{script}" --port {Config.PORT} --source {source}'
+    )
     # Antigravity's stdin payload doesn't carry the event name, so the
     # command pins it instead of relying on hook_event_name.
     return f'{command} --event {event}' if event else command
@@ -130,6 +143,40 @@ def _write_with_backup(path: Path, settings: Dict[str, Any]) -> None:
 
 def _is_vdock_hook(hook: Any) -> bool:
     return isinstance(hook, dict) and HOOK_MARKER in str(hook.get('command', ''))
+
+
+_HOOK_SOURCE_PATTERN = re.compile(r'--source\s+(\S+)(?:\s+--event\s+(\S+))?')
+
+
+def _current_command_for(existing_command: str) -> str:
+    """``existing_command`` rebuilt with today's interpreter, script and port."""
+    match = _HOOK_SOURCE_PATTERN.search(existing_command)
+    if match is None:
+        return existing_command
+    return hook_command(match.group(1), match.group(2) or '')
+
+
+def _refresh_stale_commands(node: Any) -> int:
+    """Rewrite VDock hook commands that no longer match what we'd install now.
+
+    An installed command bakes in the interpreter name and backend port, so it
+    goes stale when the port is auto-moved (macOS: 5000 -> 5001) or the hook
+    was written by a version that used ``python``. Returns how many changed.
+    """
+    refreshed = 0
+    if isinstance(node, dict):
+        command = node.get('command')
+        if isinstance(command, str) and HOOK_MARKER in command:
+            current = _current_command_for(command)
+            if current != command:
+                node['command'] = current
+                refreshed += 1
+        for child in node.values():
+            refreshed += _refresh_stale_commands(child)
+    elif isinstance(node, list):
+        for child in node:
+            refreshed += _refresh_stale_commands(child)
+    return refreshed
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +397,7 @@ def codex_config_path() -> Path:
 def _codex_notify_line() -> str:
     script = hook_script_path().as_posix()
     # JSON strings are valid TOML basic strings.
-    argv = ['python', script, '--port', str(Config.PORT), '--source', 'codex']
+    argv = [hook_interpreter(), script, '--port', str(Config.PORT), '--source', 'codex']
     return f'notify = {json.dumps(argv)}'
 
 
@@ -367,10 +414,29 @@ def _codex_installed_events(text: str) -> List[str]:
     return []
 
 
+def _refresh_codex_notify(path: Path, text: str) -> HookInstallResult:
+    """Point an installed codex notify line at today's interpreter and port."""
+    top_level_length = len(_codex_top_level(text))
+    fresh_line = _codex_notify_line()
+    rewritten = []
+    for line in text[:top_level_length].splitlines(keepends=True):
+        if _TOML_NOTIFY_RE.match(line) and HOOK_MARKER in line:
+            line_ending = line[len(line.rstrip('\r\n')):]
+            line = fresh_line + line_ending
+        rewritten.append(line)
+    updated = ''.join(rewritten) + text[top_level_length:]
+    if updated == text:
+        return HookInstallResult(True, True, path, ())
+    path.with_suffix('.vdock-backup.toml').write_bytes(text.encode('utf-8'))
+    _atomic_write(path, updated.encode('utf-8'))
+    logger.info('Refreshed VDock codex hook in %s', path)
+    return HookInstallResult(True, False, path, ())
+
+
 def _install_codex(path: Path) -> HookInstallResult:
     text = path.read_text(encoding='utf-8') if path.exists() else ''
     if _codex_installed_events(text):
-        return HookInstallResult(True, True, path, ())
+        return _refresh_codex_notify(path, text)
     if _TOML_NOTIFY_RE.search(_codex_top_level(text)):
         # Codex takes a single notify command; never replace the user's.
         raise HookSettingsError(
@@ -488,12 +554,35 @@ def install_hook(agent: str) -> HookInstallResult:
     target = _target(agent)
     path = target.path()
     settings = _load_json(path)
+    refreshed = _refresh_stale_commands(settings)
     added = target.add_events(settings)
-    if not added:
+    if not added and not refreshed:
         return HookInstallResult(True, True, path, ())
     _write_with_backup(path, settings)
-    logger.info('Installed VDock %s hook into %s (%s)', agent, path, ', '.join(added))
+    logger.info(
+        'Installed VDock %s hook into %s (added: %s, refreshed commands: %d)',
+        agent, path, ', '.join(added) or 'none', refreshed,
+    )
     return HookInstallResult(True, False, path, tuple(added))
+
+
+def refresh_installed_hooks() -> List[str]:
+    """Repair stale commands of hooks the user already installed.
+
+    Never installs anything new: an agent without a VDock hook is skipped.
+    Returns the agents that were rewritten.
+    """
+    repaired: List[str] = []
+    for agent in SUPPORTED_AGENTS:
+        try:
+            status = hook_status(agent)
+            if not (status.get('installed') or status.get('partial')):
+                continue
+            if not install_hook(agent).already:
+                repaired.append(agent)
+        except (HookSettingsError, OSError) as error:
+            logger.warning('Could not refresh the %s hook: %s', agent, error)
+    return repaired
 
 
 def uninstall_hook(agent: str) -> HookUninstallResult:

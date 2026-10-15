@@ -41,7 +41,10 @@ _INVOCABLE_EXTS = ('.exe', '.cmd', '.bat', '.com', '.js', '.mjs', '.cjs',
 #: helpers like ``chrome-native-host.exe`` whose name never mentions claude,
 #: so the path check must not require the marker in the process name.
 _DESKTOP_APP_DIRS = ('anthropicclaude', 'windowsapps', r'packages\claude_',
-                     'chromenativehost')
+                     'chromenativehost',
+                     # macOS GUI app bundles (/Applications/Claude.app/...,
+                     # Devin.app, helpers). A CLI session is never inside one.
+                     '.app/contents/')
 
 #: IDE binaries that share a marker's name but are never sessions, matched as
 #: an exe-path suffix. The Devin IDE's process tree all runs

@@ -55,7 +55,32 @@ export const useNotificationsStore = defineStore('notifications', () => {
   })
   
   // Actions
+  /**
+   * Errors and warnings stay on screen until dismissed, so pressing a failing
+   * button repeatedly would stack identical toasts. An identical unread one
+   * is reused instead.
+   */
+  function findIdenticalUnreadAlert(
+    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+  ): Notification | undefined {
+    const isAlert = notification.type === 'error' || notification.type === 'warning'
+    if (!isAlert) return undefined
+
+    return notifications.value.find(existing =>
+      !existing.read &&
+      existing.type === notification.type &&
+      existing.title === notification.title &&
+      existing.message === notification.message
+    )
+  }
+
   function addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) {
+    const identicalAlert = findIdenticalUnreadAlert(notification)
+    if (identicalAlert) {
+      identicalAlert.timestamp = new Date()
+      return identicalAlert.id
+    }
+
     const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     const newNotification: Notification = {

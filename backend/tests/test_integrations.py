@@ -23,6 +23,9 @@ from integrations.github_pack import Plugin as GitHubPlugin  # noqa: E402
 from utils.subprocess_runner import CommandResult  # noqa: E402
 
 
+pytestmark = pytest.mark.usefixtures('windows_keymaps')
+
+
 def ok(stdout=''):
     return CommandResult(ok=True, exit_code=0, stdout=stdout, stderr='',
                          argv=['fake'])
@@ -324,7 +327,7 @@ def test_focus_first_raises_the_target_window(mocker):
 
     assert result['success'] is True
     focus.assert_called_once()
-    assert set(focus.call_args[0][0]) == {'cursor.exe'}
+    assert 'cursor.exe' in set(focus.call_args[0][0])
 
 
 def test_command_is_refused_when_no_target_window_exists(mocker):

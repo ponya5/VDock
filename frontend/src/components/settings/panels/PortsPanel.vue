@@ -1,54 +1,50 @@
 <template>
-  <div class="content">
-    <div class="col">
-      <section class="panel" id="connection">
-        <div class="panel-head"><h2>Ports &amp; host</h2><span class="hint">Ports are written to backend/.env and frontend/.env and take effect on the next launch.</span></div>
-        <div class="panel-body">
-          <div class="row">
-            <div class="row-text">
-              <span class="label">Host</span>
-              <p>The interface the server binds to.</p>
-            </div>
-            <div class="row-control">
-              <code class="kv-code">{{ serverConfig?.host ?? '127.0.0.1' }}</code>
-            </div>
-          </div>
-          <div class="row">
-            <div class="row-text">
-              <span class="label">Ports</span>
-              <p>Frontend is the port you open in the browser; backend is the API the frontend proxies to.</p>
-            </div>
-            <div class="row-control">
-              <label class="sr-only" for="fp">Frontend port</label>
-              <input id="fp" v-model.number="serverPorts.frontend" type="number" class="input w-110" min="1024" max="65535" placeholder="3000" />
-              <span class="muted">→</span>
-              <label class="sr-only" for="bp">Backend port</label>
-              <input id="bp" v-model.number="serverPorts.backend" type="number" class="input w-110" min="1024" max="65535" placeholder="5000" />
-              <button type="button" class="btn sm" :disabled="portsBusy" @click="checkPorts">
-                <FontAwesomeIcon :icon="['fas', 'plug']" /> Check
-              </button>
-              <button type="button" class="btn primary sm" :disabled="portsBusy" @click="savePorts">
-                <FontAwesomeIcon :icon="['fas', 'save']" /> Save ports
-              </button>
-            </div>
-          </div>
-          <div v-if="portErrors.frontend || portErrors.backend || portsStatus" class="row row-status-row">
-            <div class="row-text">
-              <p v-if="portErrors.frontend" class="status-msg status-error">Frontend: {{ portErrors.frontend }}</p>
-              <p v-if="portErrors.backend" class="status-msg status-error">Backend: {{ portErrors.backend }}</p>
-              <p v-if="portsStatus" class="status-msg" :class="portsStatus.success ? 'status-success' : 'status-error'">{{ portsStatus.message }}</p>
-            </div>
-          </div>
-          <div class="row">
-            <div class="row-text">
-              <span class="label">Applying port changes</span>
-              <p>Needs a restart of VDock via <code class="kv-code">launch.bat</code>.</p>
-            </div>
-          </div>
+  <section class="panel" id="connection">
+    <div class="panel-head"><h2>Advanced: ports &amp; host</h2><span class="hint">Most setups never need this. Ports are written to backend/.env and frontend/.env and take effect on the next launch.</span></div>
+    <div class="panel-body">
+      <div class="row">
+        <div class="row-text">
+          <span class="label">Host</span>
+          <p>The interface the server binds to.</p>
         </div>
-      </section>
+        <div class="row-control">
+          <code class="kv-code">{{ serverConfig?.host ?? '127.0.0.1' }}</code>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-text">
+          <span class="label">Ports</span>
+          <p>Frontend is the port you open in the browser; backend is the API the frontend proxies to.</p>
+        </div>
+        <div class="row-control">
+          <label class="sr-only" for="fp">Frontend port</label>
+          <input id="fp" v-model.number="serverPorts.frontend" type="number" class="input w-110" min="1024" max="65535" placeholder="3000" />
+          <span class="muted">→</span>
+          <label class="sr-only" for="bp">Backend port</label>
+          <input id="bp" v-model.number="serverPorts.backend" type="number" class="input w-110" min="1024" max="65535" placeholder="5000" />
+          <button type="button" class="btn sm" :disabled="portsBusy" @click="checkPorts">
+            <FontAwesomeIcon :icon="['fas', 'plug']" /> Check
+          </button>
+          <button type="button" class="btn primary sm" :disabled="portsBusy" @click="savePorts">
+            <FontAwesomeIcon :icon="['fas', 'save']" /> Save ports
+          </button>
+        </div>
+      </div>
+      <div v-if="portErrors.frontend || portErrors.backend || portsStatus" class="row row-status-row">
+        <div class="row-text">
+          <p v-if="portErrors.frontend" class="status-msg status-error">Frontend: {{ portErrors.frontend }}</p>
+          <p v-if="portErrors.backend" class="status-msg status-error">Backend: {{ portErrors.backend }}</p>
+          <p v-if="portsStatus" class="status-msg" :class="portsStatus.success ? 'status-success' : 'status-error'">{{ portsStatus.message }}</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-text">
+          <span class="label">Applying port changes</span>
+          <p>Close and reopen VDock — the VDock app, <code class="kv-code">launch.bat</code> on Windows, or <code class="kv-code">launch.sh</code> on macOS.</p>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">

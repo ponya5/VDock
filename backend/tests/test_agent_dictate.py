@@ -6,6 +6,9 @@ from integrations import agent_state, editor_base
 from services import agent_dictate
 
 
+pytestmark = pytest.mark.usefixtures('windows_keymaps')
+
+
 @pytest.fixture(autouse=True)
 def clean(mocker):
     agent_state.reset()

@@ -276,7 +276,7 @@ const PANELS: Record<string, Component> = {
 // Panels that are bare sections (no content column of their own).
 const STACKED_PANELS = new Set([
   'SceneSwitchingPanel', 'AgentAlertsPanel', 'NotificationsPanel', 'TriggersPanel', 'McpPanel',
-  'StartupPanel', 'RecentActionsPanel',
+  'StartupPanel', 'RecentActionsPanel', 'SecurityPanel', 'PortsPanel',
 ])
 const pageIsStacked = computed(() => activePage.value.panels.every((name) => STACKED_PANELS.has(name)))
 

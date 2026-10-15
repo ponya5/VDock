@@ -229,6 +229,15 @@ remove_user_data() {
         done
         shopt -u dotglob nullglob
     fi
+    # Older checkouts kept runtime state next to the code instead of in
+    # backend/data (and the repo itself once tracked it). Left behind, it would
+    # be picked up again and the next launch would not be a first launch.
+    local legacy_file
+    for legacy_file in config.json user_settings.json triggers.json; do
+        rm -f "$ROOT/backend/$legacy_file"
+    done
+    rm -f "$ROOT"/backend/profiles/*.json
+    rm -rf "$ROOT/backend/uploads" "$ROOT/backend/backups"
     echo "  [OK]    Deleted profiles, settings, uploads and integration keys"
 }
 

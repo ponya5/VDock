@@ -94,6 +94,16 @@ backend/data/feedback/*
 !backend/data/themes/.gitkeep
 !backend/data/feedback/.gitkeep
 
+# Runtime state that older installs wrote straight into backend/ (an empty
+# DATA_DIR= resolved to the working directory). Per-machine settings such as
+# Allow LAN and tutorialCompleted must never ship to other users.
+backend/config.json
+backend/user_settings.json
+backend/triggers.json
+backend/profiles/*.json
+backend/uploads/
+backend/backups/
+
 # SSL certificates
 *.pem
 *.key

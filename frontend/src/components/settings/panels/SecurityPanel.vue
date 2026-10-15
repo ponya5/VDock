@@ -1,43 +1,39 @@
 <template>
-  <div class="content">
-    <div class="col">
-      <section class="panel" id="security">
-        <div class="panel-head"><h2>Security</h2><span class="hint">The deck password every device unlocks with.</span></div>
-        <div class="panel-body">
-          <div class="row">
-            <div class="row-text">
-              <span class="label">Authentication</span>
-              <p>{{ serverConfig?.require_auth ? 'On. Every device unlocks with the deck password.' : 'Off. Anyone on your network who can reach the deck address can control this deck.' }}</p>
-            </div>
-            <div class="row-control">
-              <label class="switch"><span class="sr-only">Require authentication</span><input type="checkbox" :checked="serverConfig?.require_auth ?? false" @change="toggleAuth" /><span class="track"></span></label>
-            </div>
-          </div>
-          <div v-if="authSetupOpen" class="row">
-            <div class="row-text">
-              <span class="label">Choose a deck password</span>
-              <p>Needed once per device — the panel, your phone, your browser. 4–128 characters.</p>
-            </div>
-            <div class="row-control">
-              <DeckPasswordForm @done="authSetupOpen = false" @cancel="cancelAuthSetup" />
-            </div>
-          </div>
-          <div v-if="serverConfig?.require_auth" class="row">
-            <div class="row-text">
-              <span class="label">Deck password</span>
-              <p>{{ authChangeOpen ? 'Already-unlocked devices stay unlocked — the new password applies to the next unlock.' : 'Change the password devices use to unlock.' }}</p>
-            </div>
-            <div class="row-control">
-              <DeckPasswordForm v-if="authChangeOpen" mode="change" @done="authChangeOpen = false" @cancel="authChangeOpen = false" />
-              <button v-else type="button" class="btn sm" @click="authChangeOpen = true">
-                <FontAwesomeIcon :icon="['fas', 'key']" /> Change password
-              </button>
-            </div>
-          </div>
+  <section class="panel" id="security">
+    <div class="panel-head"><h2>Security</h2><span class="hint">The deck password every device unlocks with.</span></div>
+    <div class="panel-body">
+      <div class="row">
+        <div class="row-text">
+          <span class="label">Authentication</span>
+          <p>{{ serverConfig?.require_auth ? 'On. Every device unlocks with the deck password.' : 'Off. Anyone on your network who can reach the deck address can control this deck.' }}</p>
         </div>
-      </section>
+        <div class="row-control">
+          <label class="switch"><span class="sr-only">Require authentication</span><input type="checkbox" :checked="serverConfig?.require_auth ?? false" @change="toggleAuth" /><span class="track"></span></label>
+        </div>
+      </div>
+      <div v-if="authSetupOpen" class="row">
+        <div class="row-text">
+          <span class="label">Choose a deck password</span>
+          <p>Needed once per device — the panel, your phone, your browser. 4–128 characters.</p>
+        </div>
+        <div class="row-control">
+          <DeckPasswordForm @done="authSetupOpen = false" @cancel="cancelAuthSetup" />
+        </div>
+      </div>
+      <div v-if="serverConfig?.require_auth" class="row">
+        <div class="row-text">
+          <span class="label">Deck password</span>
+          <p>{{ authChangeOpen ? 'Already-unlocked devices stay unlocked — the new password applies to the next unlock.' : 'Change the password devices use to unlock.' }}</p>
+        </div>
+        <div class="row-control">
+          <DeckPasswordForm v-if="authChangeOpen" mode="change" @done="authChangeOpen = false" @cancel="authChangeOpen = false" />
+          <button v-else type="button" class="btn sm" @click="authChangeOpen = true">
+            <FontAwesomeIcon :icon="['fas', 'key']" /> Change password
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">

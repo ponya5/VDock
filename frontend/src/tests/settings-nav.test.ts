@@ -87,7 +87,7 @@ describe('Settings shell navigation', () => {
     await w.find('.nav-result').trigger('click')
     await flushPromises()
     expect(activeSection(w)).toBe('Devices & network')
-    expect(activePage(w)).toBe('Security')
+    expect(activePage(w)).toBe('Security & advanced')
   })
 
   it('scrolls to the panel named by ?anchor=', async () => {

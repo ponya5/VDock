@@ -67,11 +67,23 @@ describe('resolveRoute', () => {
         expect(findPage(findSection(route.section)!, route.page)).toBeDefined()
       }
     }
-    expect(resolveRoute({ tab: 'server' })).toEqual({ section: 'devices', page: 'ports' })
+    expect(resolveRoute({ tab: 'server' })).toEqual({ section: 'devices', page: 'security' })
     expect(resolveRoute({ tab: 'connect' })).toEqual({ section: 'devices', page: 'connect' })
     expect(resolveRoute({ tab: 'integration', sub: 'alerts' })).toEqual({ section: 'agents', page: 'alerts' })
     expect(resolveRoute({ tab: 'integration', sub: 'apps' })).toEqual({ section: 'agents', page: 'scenes' })
     expect(resolveRoute({ tab: 'appearance', sub: 'layout' })).toEqual({ section: 'appearance', page: 'layout' })
+  })
+
+  it('sends the retired Advanced "ports" page to the merged Security & advanced page', () => {
+    expect(resolveRoute({ section: 'devices', page: 'ports' })).toEqual({ section: 'devices', page: 'security' })
+    expect(resolveRoute({ section: 'devices', page: 'ports', anchor: 'connection' }))
+      .toEqual({ section: 'devices', page: 'security', anchor: 'connection' })
+  })
+
+  it('keeps Devices & network to two pages: connect, and security with advanced', () => {
+    const devices = findSection('devices')!
+    expect(devices.pages.map((page) => page.id)).toEqual(['connect', 'security'])
+    expect(findPage(devices, 'security')!.panels).toEqual(['SecurityPanel', 'PortsPanel'])
   })
 
   it('falls back to the landing section for unknown input', () => {
@@ -93,7 +105,7 @@ describe('searchSettings', () => {
   it('finds the control for each task word', () => {
     expect(first('phone')).toMatchObject({ section: 'devices', page: 'connect' })
     expect(first('password')).toMatchObject({ section: 'devices', page: 'security' })
-    expect(first('port')).toMatchObject({ section: 'devices', page: 'ports' })
+    expect(first('port')).toMatchObject({ section: 'devices', page: 'security' })
     expect(first('scene')).toMatchObject({ section: 'agents', page: 'scenes' })
     expect(first('alert')).toMatchObject({ section: 'agents', page: 'alerts' })
   })

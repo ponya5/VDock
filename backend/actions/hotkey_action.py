@@ -1,4 +1,5 @@
 """Hotkey sending action."""
+import platform
 import time
 from typing import Dict, Any
 from .base_action import BaseAction, ActionResult
@@ -145,6 +146,11 @@ class HotkeyAction(BaseAction):
                 False,
                 'Invalid configuration: Keys are required'
             )
+
+        if platform.system() == 'Darwin':
+            from . import macos_controls
+            if not macos_controls.is_accessibility_trusted():
+                return ActionResult(False, macos_controls.ACCESSIBILITY_HELP)
 
         # Support both 'keys' array and 'hotkey' string formats
         if 'keys' in self.config:

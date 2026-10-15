@@ -28,7 +28,7 @@ def test_each_profile_carries_its_commands(client):
     cursor = next(p for p in body['profiles'] if p['id'] == 'cursor')
     command_ids = {c['id'] for c in cursor['commands']}
     assert 'cursor_composer' in command_ids
-    assert cursor['exes'] == ['cursor.exe']
+    assert 'cursor.exe' in cursor['exes']
 
 
 def test_commands_expose_risk_so_the_editor_can_gate_them(client):
