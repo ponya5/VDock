@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, screen, shell, dialog } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { spawn } = require('child_process')
 // Detect development mode by checking if backend exists relative to electron
 // directory. In a repo checkout that dir always exists, so the launcher passes
@@ -18,6 +19,25 @@ let backendProcess = null
 
 // .ico only renders on Windows; Tray/BrowserWindow need PNG elsewhere.
 const iconFile = process.platform === 'win32' ? 'vdock-icon.ico' : 'vdock-icon.png'
+
+// Run from a source checkout, the window belongs to the stock Electron
+// binary, so the OS would show Electron's atom icon. Packaged builds carry
+// their own icon and have no ../public next to main.js, so this is a no-op there.
+const APP_USER_MODEL_ID = 'com.vdock.app'
+
+function applyVdockIdentity() {
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(APP_USER_MODEL_ID)
+    return
+  }
+
+  if (process.platform !== 'darwin' || !app.dock) return
+
+  const dockIconPath = path.join(__dirname, '../public', 'vdock-icon.png')
+  if (!fs.existsSync(dockIconPath)) return
+
+  app.dock.setIcon(dockIconPath)
+}
 
 function findSmallestDisplay() {
   const displays = screen.getAllDisplays()
@@ -519,6 +539,8 @@ app.whenReady().then(async () => {
   console.log('========================================')
   console.log('Electron app ready - initializing VDock')
   console.log('========================================')
+
+  applyVdockIdentity()
 
   if (process.env.VDOCK_SKIP_BACKEND_SPAWN === '1') {
     console.log('[OK] Backend already started by launcher — skipping spawn')
