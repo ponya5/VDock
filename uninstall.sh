@@ -156,6 +156,12 @@ remove_launcher() {
             found=1
         fi
     done
+    local macos_app="$HOME/Applications/VDock.app"
+    if [ -d "$macos_app" ]; then
+        rm -rf "$macos_app"
+        echo "  [OK]    Removed $macos_app"
+        found=1
+    fi
     [ "$found" -eq 0 ] && echo "  [ --]   No desktop launcher found"
     return 0
 }
