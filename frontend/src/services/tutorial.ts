@@ -117,6 +117,14 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     placement: 'right',
   },
   {
+    route: '/settings',
+    activate: '[data-tour="nav-server"]',
+    target: '[data-tour="allow-lan"]',
+    title: 'Use your phone or tablet',
+    text: 'Phone and tablet access is OFF by default, so nothing else on your network can reach your deck. Until you turn on "Allow LAN access" here and relaunch VDock, your phone cannot open VDock. Set a deck password too — then scan the QR code.',
+    placement: 'bottom',
+  },
+  {
     route: '/',
     title: 'You\'re all set',
     text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Guide is in the Settings sidebar — re-run this tour anytime from Settings → System → About.',

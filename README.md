@@ -215,6 +215,8 @@ Setup shows a short menu where **Enter picks the recommended full setup**. It ch
 
 **Open VDock from Launchpad / Spotlight (macOS), the Start menu (Windows) or the desktop icon** (or run `launch.bat` / `./launch.sh`). It opens in its own window after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
 
+**Phone or tablet.** Mobile access is **off by default** (so nothing else on your Wi-Fi can reach your deck). To use VDock on a phone, open **Settings → Devices & network**, turn on **Allow LAN access**, relaunch VDock and scan the QR code. Without that, the phone cannot connect.
+
 **Optional tools.** None are required. They unlock extra actions, and the related buttons stay greyed out (with the reason shown) until installed: [Claude Code](https://claude.com/product/claude-code) for 40 Claude actions, [GitHub CLI](https://cli.github.com) for PRs, issues and CI, and Git for repo-aware actions.
 
 **Uninstall:** for the installed app, remove it like any other app (your profiles are kept). For a source checkout, run `uninstall.bat` / `./uninstall.sh`. It asks whether to keep your profiles and settings or remove everything, then removes dependencies, the built frontend, caches, agent hooks and shortcuts. Run `setup.bat` / `./setup.sh` afterwards for a fresh install (setup always rebuilds the frontend), or delete the folder to remove VDock for good.
@@ -254,7 +256,8 @@ Secrets never reach the frontend. Settings shows only *whether* a key is set, an
 - **macOS blocks the launcher:** right-click `VDock.app` (in `~/Applications`) and choose **Open**, first time only
 - **VDock.app says it could not start:** details are in `backend/data/vdock-app-launch.log`; if you moved the VDock folder, run `./setup.sh --shortcut` again
 - **Claude / GitHub buttons greyed out:** hover for the reason, usually the CLI isn't installed or `gh auth login` hasn't run
-- **Keystroke actions do nothing:** they only fire when the target editor is focused. This is deliberate
+- **Keystroke actions do nothing:** they only fire when the target editor is focused. This is deliberate. On macOS the button reports it when the permission below is missing
+- **macOS permissions:** macOS asks once per feature, and VDock tells you which one is missing instead of silently failing. In **System Settings > Privacy & Security**, allow the app that starts VDock (`VDock`, or Terminal if you launch from a shell) under **Accessibility** (hotkey, window and agent buttons), **Automation** (Play, Next and Previous drive Spotify and Music) and **Screen & System Audio Recording** (screenshots), then relaunch VDock. Brightness buttons need `brew install brightness`
 - **Phone can't reach VDock:** go to **Settings > Devices & network > Connect a device**, allow LAN access, relaunch, allow the Windows firewall prompt for `python.exe`, and check both devices are on the same Wi-Fi
 - **Touch lands on the wrong monitor:** see [Using a touchscreen as a second monitor](#why-vdock). It's a Windows display-mapping issue, not a VDock bug
 - **UI looks like an old build:** it self-heals on reload, and if not, hard-refresh once

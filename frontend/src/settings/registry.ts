@@ -82,8 +82,7 @@ export const SECTIONS: SettingsSection[] = [
     id: 'devices', name: 'Devices & network', icon: ['fas', 'mobile-screen-button'], tour: 'nav-server',
     pages: [
       { id: 'connect', name: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.', panels: ['ConnectPanel'], anchors: [], tour: 'nav-connect', autosaves: true },
-      { id: 'security', name: 'Security', title: 'Security', blurb: 'Require a deck password on every device.', panels: ['SecurityPanel'], anchors: ['security'], autosaves: true },
-      { id: 'ports', name: 'Advanced', title: 'Ports & host', blurb: 'Ports and the interface the server binds to. Most setups never need this.', panels: ['PortsPanel'], anchors: ['connection'], autosaves: true },
+      { id: 'security', name: 'Security & advanced', title: 'Security & advanced', blurb: 'The deck password, plus ports and host for advanced setups.', panels: ['SecurityPanel', 'PortsPanel'], anchors: ['security', 'connection'], autosaves: true },
     ],
   },
   {
@@ -120,7 +119,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Edit Keys', keywords: 'edit keys buttons change action dashboard edit mode', section: 'overview', page: 'overview', anchor: 'edit-keys', icon: ['fas', 'pen-to-square'] },
   { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck allow lan deck address', section: 'devices', page: 'connect', icon: ['fas', 'mobile-screen-button'] },
   { label: 'Deck Password', keywords: 'password authentication auth login lock secure require unlock', section: 'devices', page: 'security', anchor: 'security', icon: ['fas', 'lock'] },
-  { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'ports', anchor: 'connection', icon: ['fas', 'server'] },
+  { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'security', anchor: 'connection', icon: ['fas', 'server'] },
   { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', section: 'appearance', page: 'buttons', anchor: 'touch', icon: ['fas', 'hand-pointer'] },
   { label: 'Button Size & Transparency', keywords: 'button size labels tooltips transparency display', section: 'appearance', page: 'buttons', anchor: 'sizing', icon: ['fas', 'table-cells-large'] },
   { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all key design', section: 'appearance', page: 'buttons', anchor: 'design', icon: ['fas', 'sliders'] },
@@ -149,7 +148,7 @@ export const SEARCH: SearchEntry[] = [
 export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> = {
   appearance: { section: 'appearance' },
   templates: { section: 'integrations', page: 'templates' },
-  server: { section: 'devices', page: 'ports' },
+  server: { section: 'devices', page: 'security' },
   integration: { section: 'agents' },
   connect: { section: 'devices', page: 'connect' },
   logs: { section: 'system', page: 'logs' },
@@ -158,6 +157,9 @@ export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> 
 
 /** Pre-registry `?sub=` ids that changed name; the rest (`buttons`, `alerts`, ...) kept theirs. */
 export const LEGACY_SUBS: Record<string, string> = { apps: 'scenes' }
+
+/** Pages that were folded into another page (Advanced "ports" now lives under "security"). */
+export const LEGACY_PAGES: Record<string, string> = { ports: 'security' }
 
 /** Sections that have pages - the ones the sidebar lists. */
 export const NAV_SECTIONS: SettingsSection[] = SECTIONS.filter((s) => s.pages.length > 0)
@@ -198,7 +200,8 @@ export function resolveRoute(query: Record<string, unknown>): SettingsRoute {
     return (anchor && locateAnchor(anchor)) || fallbackRoute(findSection(LANDING)!)
   }
   const sub = str(query.sub)
-  const wanted = str(query.page) ?? (sub && (LEGACY_SUBS[sub] ?? sub)) ?? legacy?.page
+  const requested = str(query.page) ?? (sub && (LEGACY_SUBS[sub] ?? sub)) ?? legacy?.page
+  const wanted = requested && (LEGACY_PAGES[requested] ?? requested)
   const page = findPage(section, wanted) ?? section.pages[0]
   const owns = anchor && page.anchors.includes(anchor)
   return { section: section.id, page: page.id, ...(owns ? { anchor } : {}) }

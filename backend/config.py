@@ -32,6 +32,36 @@ def _default_data_dir(base_dir: Path) -> Path:
     return Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local' / 'share'))) / 'vdock'
 
 
+# Runtime state older installs wrote straight into backend/ because an empty
+# `DATA_DIR=` line in .env resolved to the working directory.
+LEGACY_STATE_FILES = ('config.json', 'user_settings.json')
+
+
+def _holds_runtime_state(directory: Path) -> bool:
+    """True when ``directory`` already contains VDock settings or profiles."""
+    if any((directory / state_file).exists() for state_file in LEGACY_STATE_FILES):
+        return True
+    return any((directory / 'profiles').glob('*.json'))
+
+
+def _resolve_data_dir(base_dir: Path) -> Path:
+    """DATA_DIR from the environment, else the default location.
+
+    An empty ``DATA_DIR=`` (what .env.example used to ship) means "unset", not
+    "the current folder". Installs that already stored their data in backend/
+    keep it there so an upgrade never makes their profiles disappear.
+    """
+    configured_dir = os.environ.get('DATA_DIR', '').strip()
+    if configured_dir:
+        return Path(configured_dir)
+
+    default_dir = _default_data_dir(base_dir)
+    is_source_run = not getattr(sys, 'frozen', False)
+    if is_source_run and _holds_runtime_state(base_dir) and not _holds_runtime_state(default_dir):
+        return base_dir
+    return default_dir
+
+
 def _probe_ip() -> Optional[str]:
     """IPv4 of the interface the default route would use.
 
@@ -358,7 +388,7 @@ class Config:
     
     # Data storage
     BASE_DIR = Path(__file__).resolve().parent
-    DATA_DIR = Path(os.environ.get('DATA_DIR', str(_default_data_dir(BASE_DIR))))
+    DATA_DIR = _resolve_data_dir(BASE_DIR)
     PROFILES_DIR = DATA_DIR / 'profiles'
     UPLOADS_DIR = DATA_DIR / 'uploads'
     PLUGINS_DIR = DATA_DIR / 'plugins'

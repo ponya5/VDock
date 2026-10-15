@@ -205,6 +205,13 @@ powershell -NoProfile -NonInteractive -Command ^
   "    } else { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }" ^
   "  }" ^
   "}"
+REM Older checkouts kept runtime state next to the code instead of in
+REM backend\data (and the repo itself once tracked it). Left behind, it would
+REM be picked up again and the next launch would not be a first launch.
+del /q "%ROOT%\backend\config.json" "%ROOT%\backend\user_settings.json" "%ROOT%\backend\triggers.json" 2>nul
+del /q "%ROOT%\backend\profiles\*.json" 2>nul
+if exist "%ROOT%\backend\uploads" rmdir /s /q "%ROOT%\backend\uploads" 2>nul
+if exist "%ROOT%\backend\backups" rmdir /s /q "%ROOT%\backend\backups" 2>nul
 echo   [OK]    Deleted profiles, settings, uploads and integration keys
 
 :done

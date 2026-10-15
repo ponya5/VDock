@@ -5,6 +5,7 @@ Supports: hotkey, delay, text, click, clipboard operations
 """
 import time
 import logging
+import platform
 import pyperclip
 from typing import Dict, Any
 from .base_action import BaseAction, ActionResult
@@ -13,6 +14,11 @@ from .command_action import CommandAction
 from utils.text_input import type_text
 
 logger = logging.getLogger(__name__)
+
+
+def _clipboard_modifier() -> str:
+    """Copy/paste chords use Cmd on macOS and Ctrl everywhere else."""
+    return 'cmd' if platform.system() == 'Darwin' else 'ctrl'
 
 
 class MacroAction(BaseAction):
@@ -170,7 +176,7 @@ class MacroAction(BaseAction):
         """Execute clipboard copy (Ctrl+C equivalent)"""
         try:
             # Simulate Ctrl+C
-            self.hotkey_action.config = {'keys': ['ctrl', 'c']}
+            self.hotkey_action.config = {'keys': [_clipboard_modifier(), 'c']}
             self.hotkey_action.execute()
             time.sleep(0.1)  # Wait for clipboard to update
 
@@ -194,7 +200,7 @@ class MacroAction(BaseAction):
         """Execute clipboard paste (Ctrl+V equivalent)"""
         try:
             # Simulate Ctrl+V
-            self.hotkey_action.config = {'keys': ['ctrl', 'v']}
+            self.hotkey_action.config = {'keys': [_clipboard_modifier(), 'v']}
             self.hotkey_action.execute()
 
             # Try to read what was pasted

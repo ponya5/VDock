@@ -15,6 +15,7 @@ what this module does on Windows.
 import logging
 import os
 import platform
+import subprocess
 import time
 from typing import List, Optional, Sequence, Tuple
 
@@ -209,6 +210,53 @@ def focus_hwnd(hwnd: int) -> bool:
         return False
 
 
+def _macos_regular_apps() -> List[Tuple[str, str]]:
+    """(identity, bundle path) of every regular running macOS app.
+
+    Identity is the lowercased bundle folder name (``cursor.app``) -- the same
+    string the macOS app monitor reports and the keymaps list in their
+    ``target_exes``.
+    """
+    from AppKit import NSWorkspace
+
+    regular_policy = 0  # NSApplicationActivationPolicyRegular
+    apps: List[Tuple[str, str]] = []
+    for running_app in NSWorkspace.sharedWorkspace().runningApplications():
+        bundle_url = running_app.bundleURL()
+        if running_app.activationPolicy() != regular_policy or bundle_url is None:
+            continue
+        bundle_path = str(bundle_url.path()).rstrip('/')
+        apps.append((os.path.basename(bundle_path).lower(), bundle_path))
+    return apps
+
+
+def _focus_app_window_macos(target_exes: Sequence[str]) -> Optional[bool]:
+    wanted = {exe.lower() for exe in target_exes}
+    try:
+        matches = [path for identity, path in _macos_regular_apps() if identity in wanted]
+    except ImportError:
+        return None
+    if not matches:
+        return False
+    # ``open -a`` always raises the app and needs no permission, unlike
+    # NSRunningApplication.activate, which recent macOS refuses for
+    # background processes.
+    completed = subprocess.run(['open', '-a', matches[0]], capture_output=True)
+    return completed.returncode == 0
+
+
+def _foreground_exe_macos() -> Optional[str]:
+    try:
+        from AppKit import NSWorkspace
+    except ImportError:
+        return None
+    frontmost = NSWorkspace.sharedWorkspace().frontmostApplication()
+    bundle_url = frontmost.bundleURL() if frontmost else None
+    if bundle_url is None:
+        return None
+    return os.path.basename(str(bundle_url.path()).rstrip('/')).lower()
+
+
 def focus_app_window(
     target_exes: Sequence[str],
     prefer_title: Optional[str] = None,
@@ -217,6 +265,8 @@ def focus_app_window(
 
     See the module docstring for the tri-state return.
     """
+    if platform.system() == 'Darwin':
+        return _focus_app_window_macos(target_exes)
     if platform.system() != 'Windows':
         return None
     hwnd = find_target_window(target_exes, prefer_title=prefer_title)
@@ -276,6 +326,8 @@ def foreground_exe_live() -> Optional[str]:
     still reports the previous app for a while. Verification right after a
     refocus must not use the cache.
     """
+    if platform.system() == 'Darwin':
+        return _foreground_exe_macos()
     if platform.system() != 'Windows':
         return None
     import win32process

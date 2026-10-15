@@ -9,7 +9,11 @@ import threading
 import time
 from types import SimpleNamespace
 from typing import Dict, Any, Optional, Tuple
+from . import macos_controls
 from .base_action import BaseAction, ActionResult
+from .volume_steps import (
+    WINDOWS_DEFAULT_VOLUME_STEP_PERCENT, nircmd_step_units, parse_volume_step,
+)
 
 # Platform detection
 _SYSTEM = platform.system()
@@ -612,7 +616,7 @@ class CrossPlatformAction(BaseAction):
             else:
                 return self._run_command('shutdown /s /t 0')
         elif _SYSTEM == 'Darwin':  # macOS
-            return self._run_command('sudo shutdown -h now')
+            return macos_controls.power_via_system_events('shut down')
         elif _SYSTEM == 'Linux':
             return self._run_command('sudo shutdown now')
         else:
@@ -626,7 +630,7 @@ class CrossPlatformAction(BaseAction):
             else:
                 return self._run_command('shutdown /r /t 0')
         elif _SYSTEM == 'Darwin':  # macOS
-            return self._run_command('sudo shutdown -r now')
+            return macos_controls.power_via_system_events('restart')
         elif _SYSTEM == 'Linux':
             return self._run_command('sudo shutdown -r now')
         else:
@@ -651,7 +655,7 @@ class CrossPlatformAction(BaseAction):
         if _SYSTEM == 'Windows':
             return self._run_command('rundll32.exe user32.dll,LockWorkStation')
         elif _SYSTEM == 'Darwin':  # macOS
-            return self._run_command('/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend')
+            return macos_controls.lock_screen()
         elif _SYSTEM == 'Linux':
             # Try xdg-screensaver first
             result = self._run_command('xdg-screensaver lock')
@@ -663,43 +667,50 @@ class CrossPlatformAction(BaseAction):
             return ActionResult(False, f'Lock screen not supported on {_SYSTEM}')
 
     # Volume Control Actions
+    def _volume_step_percent(self) -> int:
+        default_percent = (
+            WINDOWS_DEFAULT_VOLUME_STEP_PERCENT if _SYSTEM == 'Windows'
+            else parse_volume_step(None)
+        )
+        return parse_volume_step(self.config.get('step'), default_percent)
+
     def _volume_up(self) -> ActionResult:
         """Increase system volume."""
-        step = self.config.get('step', 2000)  # Default step for NirCmd
-        
+        step_percent = self._volume_step_percent()
+
         if _SYSTEM == 'Windows':
             if self._check_nircmd():
-                return self._run_command(f'nircmd.exe changesysvolume {step}')
+                return self._run_command(
+                    f'nircmd.exe changesysvolume {nircmd_step_units(self.config.get('step'))}')
             else:
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_VOLUME_UP)
         elif _SYSTEM == 'Darwin':  # macOS
-            volume_step = self.config.get('step', 10)
-            script = f'set volume output volume (output volume of (get volume settings) + {volume_step})'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.change_output_volume(
+                step_percent
+            )
         elif _SYSTEM == 'Linux':
-            volume_step = self.config.get('step', 10)
-            return self._run_command(f'amixer set Master {volume_step}%+')
+            return self._run_command(f'amixer set Master {step_percent}%+')
         else:
             return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
 
     def _volume_down(self) -> ActionResult:
         """Decrease system volume."""
-        step = self.config.get('step', 2000)  # Default step for NirCmd
-        
+        step_percent = self._volume_step_percent()
+
         if _SYSTEM == 'Windows':
             if self._check_nircmd():
-                return self._run_command(f'nircmd.exe changesysvolume -{step}')
+                return self._run_command(
+                    f'nircmd.exe changesysvolume -{nircmd_step_units(self.config.get('step'))}')
             else:
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_VOLUME_DOWN)
         elif _SYSTEM == 'Darwin':  # macOS
-            volume_step = self.config.get('step', 10)
-            script = f'set volume output volume (output volume of (get volume settings) - {volume_step})'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.change_output_volume(
+                -step_percent
+            )
         elif _SYSTEM == 'Linux':
-            volume_step = self.config.get('step', 10)
-            return self._run_command(f'amixer set Master {volume_step}%-')
+            return self._run_command(f'amixer set Master {step_percent}%-')
         else:
             return ActionResult(False, f'Volume control not supported on {_SYSTEM}')
 
@@ -712,8 +723,7 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_VOLUME_MUTE)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'set volume with output muted'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.set_output_muted(True)
         elif _SYSTEM == 'Linux':
             return self._run_command('amixer set Master mute')
         else:
@@ -728,8 +738,7 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes (mute is toggle)
                 return self._send_windows_key(VK_VOLUME_MUTE)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'set volume without output muted'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.set_output_muted(False)
         elif _SYSTEM == 'Linux':
             return self._run_command('amixer set Master unmute')
         else:
@@ -1061,8 +1070,7 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_MEDIA_PLAY_PAUSE)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'tell application "Music" to playpause'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.control_media('play_pause')
         elif _SYSTEM == 'Linux':
             # Check if playerctl is available
             try:
@@ -1098,8 +1106,7 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_MEDIA_NEXT_TRACK)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'tell application "Music" to next track'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.control_media('next')
         elif _SYSTEM == 'Linux':
             # Check if playerctl is available
             try:
@@ -1135,8 +1142,7 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_MEDIA_PREV_TRACK)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'tell application "Music" to previous track'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.control_media('previous')
         elif _SYSTEM == 'Linux':
             # Check if playerctl is available
             try:
@@ -1188,8 +1194,7 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_MEDIA_STOP)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'tell application "Music" to stop'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.control_media('stop')
         elif _SYSTEM == 'Linux':
             # Check if playerctl is available
             try:
@@ -1319,7 +1324,7 @@ class CrossPlatformAction(BaseAction):
                 ps_script = f"Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $Screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bitmap = New-Object System.Drawing.Bitmap $Screen.Width, $Screen.Height; $graphics = [System.Drawing.Graphics]::FromImage($bitmap); $graphics.CopyFromScreen($Screen.Left, $Screen.Top, 0, 0, $Screen.Size); $bitmap.Save('{output_path}'); $graphics.Dispose(); $bitmap.Dispose()"
                 return self._run_command(f'powershell -Command "{ps_script}"')
         elif _SYSTEM == 'Darwin':  # macOS
-            return self._run_command(f'screencapture -x "{output_path}"')
+            return macos_controls.take_screenshot(output_path)
         elif _SYSTEM == 'Linux':
             # Try gnome-screenshot first
             result = self._run_command(f'gnome-screenshot -f "{output_path}"')
@@ -1350,8 +1355,7 @@ class CrossPlatformAction(BaseAction):
         if _SYSTEM == 'Windows':
             return self._set_windows_mic_mute(True)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'set volume input volume 0'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.set_microphone_muted(True)
         elif _SYSTEM == 'Linux':
             return self._run_command('amixer set Capture nocap')
         else:
@@ -1362,8 +1366,7 @@ class CrossPlatformAction(BaseAction):
         if _SYSTEM == 'Windows':
             return self._set_windows_mic_mute(False)
         elif _SYSTEM == 'Darwin':  # macOS
-            script = 'set volume input volume 50'
-            return self._run_command(f'osascript -e "{script}"')
+            return macos_controls.set_microphone_muted(False)
         elif _SYSTEM == 'Linux':
             return self._run_command('amixer set Capture cap')
         else:

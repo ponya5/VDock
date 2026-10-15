@@ -477,6 +477,10 @@ echo     - Or run launch.bat from this folder
 echo.
 echo   VDock opens at: http://localhost:!BACKEND_PORT!
 echo.
+echo   Phone or tablet: mobile access is OFF by default, so your phone can't
+echo   open VDock yet. To use it: Settings ^> Devices ^& network ^> turn on
+echo   "Allow LAN access", relaunch VDock, then scan the QR code.
+echo.
 set "LAUNCH="
 set /p "LAUNCH=  Start VDock now? [Y/n]: "
 call :is_yes_answer "!LAUNCH!"
@@ -490,6 +494,10 @@ echo     Setup complete!
 echo   ==========================================
 echo.
 echo   VDock opens at: http://localhost:!BACKEND_PORT!
+echo.
+echo   Phone or tablet: mobile access is OFF by default, so your phone can't
+echo   open VDock yet. To use it: Settings ^> Devices ^& network ^> turn on
+echo   "Allow LAN access", relaunch VDock, then scan the QR code.
 echo.
 set "LAUNCH="
 set /p "LAUNCH=  Start VDock now? [Y/n]: "

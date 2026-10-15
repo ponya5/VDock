@@ -44,6 +44,13 @@ EDITOR_EXECUTABLES = {
     'devenv.exe': 'Visual Studio',
     'windowsterminal.exe': 'Windows Terminal',
     'wt.exe': 'Windows Terminal',
+    'cursor.app': 'Cursor',
+    'antigravity.app': 'Antigravity',
+    'visual studio code.app': 'VS Code',
+    'vscodium.app': 'VSCodium',
+    'intellij idea.app': 'IntelliJ IDEA',
+    'pycharm.app': 'PyCharm',
+    'webstorm.app': 'WebStorm',
 }
 
 # "file.py - my-project - Cursor" / "my-project - Cursor"

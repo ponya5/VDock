@@ -9,6 +9,9 @@ import pytest
 from integrations import keymaps
 
 
+pytestmark = pytest.mark.usefixtures('windows_keymaps')
+
+
 def test_public_names_are_all_re_exported():
     for name in ('Command', 'COPILOT_COMMANDS', 'CURSOR_COMMANDS',
                  'CLAUDE_CODE_COMMANDS', 'ALL_COMMANDS', 'COMMANDS_BY_ID',

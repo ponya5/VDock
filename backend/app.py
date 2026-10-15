@@ -554,6 +554,14 @@ if __name__ == '__main__':
         logger.warning("Running in DEBUG mode - not suitable for production!")
         logger.info("To disable this warning, set DEBUG=False in your .env file")
 
+    # An installed agent hook bakes in the interpreter and backend port; repair
+    # ones gone stale (python vs python3 on macOS, a moved port). Never installs
+    # a hook the user did not ask for.
+    from integrations import agent_hooks
+    repaired_hooks = agent_hooks.refresh_installed_hooks()
+    if repaired_hooks:
+        logger.info(f"Refreshed agent hooks: {', '.join(repaired_hooks)}")
+
     # Follows OS-side volume changes and pushes them to every client. Started
     # here rather than at module level so test imports never spawn the loop.
     volume_monitor.start()

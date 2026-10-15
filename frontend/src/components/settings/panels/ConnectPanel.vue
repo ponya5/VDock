@@ -4,16 +4,24 @@
       <section class="panel">
         <div class="panel-head"><h2>Connect a device</h2><span class="hint">Any phone or tablet on your Wi-Fi can be a second deck — no app to install.</span></div>
         <div class="panel-body">
+          <div v-if="!lanEnabled" class="note warn lan-off-banner" role="status" data-testid="lan-off-banner">
+            <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+            <div>
+              <b>Mobile connection is off.</b> Your phone or tablet can't open VDock until you
+              turn on <b>Allow LAN access</b> below and relaunch VDock. It starts off so nothing
+              else on your network can reach your deck unless you choose to.
+            </div>
+          </div>
           <ol class="connect-steps">
             <li><b>Same Wi-Fi.</b> Connect the phone or tablet to the same network as this PC.</li>
             <li><b>Allow LAN access.</b> Turn it on below and relaunch VDock once — this makes the deck reachable on your network.</li>
             <li><b>Scan the code.</b> Point the device camera at the QR, or type the deck address into its browser.</li>
             <li><b>Optional:</b> {{ CONNECT_INSTALL_STEP }}</li>
           </ol>
-          <div class="row">
+          <div class="row" data-tour="allow-lan">
             <div class="row-text">
               <span class="label">Allow LAN access</span>
-              <p>Binds the server to your network so other devices can reach it. Applies on the next launch.</p>
+              <p>Off by default. Turn it on to use VDock on a phone or tablet — without it, no other device can connect. Applies on the next launch.</p>
             </div>
             <div class="row-control">
               <label class="switch"><span class="sr-only">Allow LAN access</span><input type="checkbox" :checked="serverConfig?.allow_lan ?? false" @change="toggleAllowLan" /><span class="track"></span></label>
@@ -115,6 +123,7 @@ import { CONNECT_INSTALL_STEP } from '@/utils/installCopy'
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 const { serverConfig, lanUrl, setAllowLan } = useServerConfig()
+const lanEnabled = computed(() => serverConfig.value?.allow_lan ?? false)
 
 // --- Connect a device (QR) ----------------------------------------------------
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
@@ -240,6 +249,7 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
   color: #e7cd9a;
 }
 .note.warn svg { color: var(--warn); }
+.lan-off-banner { margin-bottom: 10px; }
 .connect-steps {
   margin: 0 0 6px;
   padding: 12px 14px 12px 30px;

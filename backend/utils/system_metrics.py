@@ -13,7 +13,20 @@ logger = logging.getLogger(__name__)
 
 class SystemMetrics:
     """Collect and format system metrics"""
-    
+
+    @staticmethod
+    def _read_cpu_frequency():
+        """psutil's cpu_freq(), or None when the platform cannot report it.
+
+        On Apple Silicon psutil raises ("'voltage-states1-sram' property not
+        found"), which must not take the whole CPU metric down with it.
+        """
+        try:
+            return psutil.cpu_freq()
+        except Exception as error:
+            logger.debug(f"CPU frequency unavailable: {error}")
+            return None
+
     @staticmethod
     def get_cpu_metrics() -> Dict[str, Any]:
         """Get CPU usage and information"""
@@ -21,7 +34,7 @@ class SystemMetrics:
             cpu_percent = psutil.cpu_percent(interval=1)
             cpu_count = psutil.cpu_count(logical=False)
             cpu_count_logical = psutil.cpu_count(logical=True)
-            cpu_freq = psutil.cpu_freq()
+            cpu_freq = SystemMetrics._read_cpu_frequency()
             
             per_cpu = psutil.cpu_percent(interval=1, percpu=True)
             

@@ -12,6 +12,7 @@ test to clean up after itself.
 import os
 import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -66,3 +67,29 @@ def real_env_file_is_never_written():
         else:
             _REAL_ENV.write_bytes(before)
         pytest.fail('A test modified the real backend/.env; point it at tmp_path / monkeypatch env_file.')
+
+
+@pytest.fixture(autouse=True)
+def assume_macos_accessibility_granted():
+    """Hotkey tests use a fake keyboard; don't let the host Mac's real
+    Accessibility permission decide whether they pass.
+
+    Deliberately not built on ``monkeypatch``: requesting it from an autouse
+    fixture changes teardown order and breaks real_env_file_is_never_written.
+    """
+    with mock.patch(
+        'actions.macos_controls.is_accessibility_trusted', return_value=True
+    ):
+        yield
+
+
+@pytest.fixture
+def windows_keymaps():
+    """Evaluate keymaps as on Windows, for tests that assert Ctrl chords.
+
+    macOS runs remap VS Code-family shortcuts to Cmd; those are covered in
+    test_macos_agent_interactions.py.
+    """
+    windows_platform = mock.Mock(system=lambda: 'Windows')
+    with mock.patch('integrations.keymaps.base.platform', windows_platform):
+        yield
