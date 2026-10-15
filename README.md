@@ -209,11 +209,11 @@ cd VDock
 - **Windows:** double-click **`setup.bat`** and choose **[1] Full setup**
 - **macOS / Linux:** `./setup.sh` (downloaded a ZIP instead of cloning? use `bash setup.sh`)
 
-On a fresh checkout setup runs by itself with no questions asked: it checks Python and Node (on a Mac with Homebrew it offers to install anything missing), installs dependencies, picks free ports and puts a **VDock icon on your desktop**.
+On a fresh checkout setup runs by itself with no questions asked: it checks Python and Node (on a Mac with Homebrew it offers to install anything missing), installs dependencies, picks free ports and adds **VDock to your apps** (`~/Applications/VDock.app` on macOS, so Launchpad and Spotlight find it; a desktop icon on Windows and Linux).
 
 ### 2. Launch it
 
-**Double-click the VDock icon on your desktop** (or run `launch.bat` / `./launch.sh`). It opens in its own window after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
+**Open VDock from Launchpad / Spotlight (macOS) or the desktop icon** (or run `launch.bat` / `./launch.sh`). It opens in its own window after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
 
 **Optional tools.** None are required. They unlock extra actions, and the related buttons stay greyed out (with the reason shown) until installed: [Claude Code](https://claude.com/product/claude-code) for 40 Claude actions, [GitHub CLI](https://cli.github.com) for PRs, issues and CI, and Git for repo-aware actions.
 
@@ -251,7 +251,8 @@ Secrets never reach the frontend. Settings shows only *whether* a key is set, an
 - **Blank white window on macOS:** AirPlay Receiver uses port 5000. `setup.sh` now picks a free port (usually 5001) automatically; on an older install run `./setup.sh --ports`, then `cd frontend && npm run build`
 - **Setup failed on npm:** delete `frontend/node_modules`, run setup option **2** again
 - **Desktop window doesn't open:** open **http://localhost:3000** in a browser
-- **macOS blocks the launcher:** right-click `VDock.command` and choose **Open**, first time only
+- **macOS blocks the launcher:** right-click `VDock.app` (in `~/Applications`) and choose **Open**, first time only
+- **VDock.app says it could not start:** details are in `backend/data/vdock-app-launch.log`; if you moved the VDock folder, run `./setup.sh --shortcut` again
 - **Claude / GitHub buttons greyed out:** hover for the reason, usually the CLI isn't installed or `gh auth login` hasn't run
 - **Keystroke actions do nothing:** they only fire when the target editor is focused. This is deliberate
 - **Phone can't reach VDock:** go to **Settings > Devices & network > Connect a device**, allow LAN access, relaunch, allow the Windows firewall prompt for `python.exe`, and check both devices are on the same Wi-Fi

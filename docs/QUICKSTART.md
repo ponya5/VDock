@@ -22,7 +22,7 @@ chmod +x setup.sh launch.sh
 ./setup.sh
 ```
 
-Then launch with `./launch.sh` (or double-click Desktop **VDock.command**).
+Then launch with `./launch.sh` (or open **VDock** from Launchpad / Spotlight).
 
 Both installers will:
 1. Check prerequisites
