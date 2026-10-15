@@ -112,6 +112,22 @@ ensure_prerequisites() {
   fi
 }
 
+# npm is moving to block dependency install scripts by default, and Electron
+# downloads its runtime in one. Without the runtime the VDock window cannot
+# open, so run the download ourselves whenever npm did not.
+ensure_electron_binary() {
+  local electron_package_dir="$ROOT/frontend/electron/node_modules/electron"
+  if [[ -f "$electron_package_dir/path.txt" ]]; then
+    return 0
+  fi
+
+  echo "           Downloading the Electron runtime..."
+  if ! ( cd "$electron_package_dir" && node install.js ); then
+    err "Electron download failed. Check your connection and run ./setup.sh again."
+    return 1
+  fi
+}
+
 install_dependencies() {
   echo ""
   echo "  =========================================="
@@ -145,11 +161,12 @@ install_dependencies() {
   # Always run: npm install is a no-op when node_modules already matches the
   # lockfile, and picks up packages added by a git pull when it doesn't.
   echo "  [4/7] Frontend dependencies..."
-  ( cd "$ROOT/frontend" && npm install --no-fund --no-audit ) || { err "npm install failed in frontend"; return 1; }
+  ( cd "$ROOT/frontend" && npm install --no-fund --no-audit --loglevel=error ) || { err "npm install failed in frontend"; return 1; }
   ok "Frontend dependencies installed"
 
   echo "  [5/7] Electron dependencies..."
-  ( cd "$ROOT/frontend/electron" && npm install --no-fund --no-audit ) || { err "npm install failed in frontend/electron"; return 1; }
+  ( cd "$ROOT/frontend/electron" && npm install --no-fund --no-audit --loglevel=error ) || { err "npm install failed in frontend/electron"; return 1; }
+  ensure_electron_binary || return 1
   ok "Electron dependencies installed"
 
   echo "  [6/7] Data directories..."
@@ -182,17 +199,17 @@ install_dependencies() {
   if command -v claude >/dev/null 2>&1; then
     ok "Claude Code CLI detected - Claude actions enabled"; found_any=1
   else
-    echo "  [ --]  Claude Code CLI not found - https://claude.com/product/claude-code"
+    echo "  [ --]   Claude Code CLI not found - https://claude.com/product/claude-code"
   fi
   if command -v gh >/dev/null 2>&1; then
     ok "GitHub CLI detected - GitHub actions enabled"; found_any=1
   else
-    echo "  [ --]  GitHub CLI not found - https://cli.github.com"
+    echo "  [ --]   GitHub CLI not found - https://cli.github.com"
   fi
   if command -v git >/dev/null 2>&1; then
     ok "Git detected - repository-aware actions enabled"
   else
-    echo "  [ --]  Git not found - repo detection falls back to a default folder"
+    echo "  [ --]   Git not found - repo detection falls back to a default folder"
   fi
   if [ -z "$found_any" ]; then
     echo "         No integration CLIs found. VDock still works fully;"

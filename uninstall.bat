@@ -125,7 +125,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo   [4/6] Removing desktop shortcut...
+echo   [4/6] Removing shortcuts...
 if not defined DESKTOP_DIR (
     for /f "usebackq delims=" %%d in (`powershell -NoProfile -NonInteractive -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP_DIR=%%d"
 )
@@ -135,6 +135,15 @@ if exist "%DESKTOP_DIR%\VDock.lnk" (
     echo   [OK]    Removed %DESKTOP_DIR%\VDock.lnk
 ) else (
     echo   [ --]   No desktop shortcut found
+)
+
+REM The Start menu entry setup.bat creates (per-user Programs folder).
+for /f "usebackq delims=" %%d in (`powershell -NoProfile -NonInteractive -Command "[Environment]::GetFolderPath('Programs')"`) do set "START_MENU_DIR=%%d"
+if defined START_MENU_DIR if exist "%START_MENU_DIR%\VDock.lnk" (
+    del "%START_MENU_DIR%\VDock.lnk" >nul 2>&1
+    echo   [OK]    Removed %START_MENU_DIR%\VDock.lnk
+) else (
+    echo   [ --]   No Start menu shortcut found
 )
 
 echo.
