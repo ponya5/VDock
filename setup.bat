@@ -38,8 +38,6 @@ if /i "%~1"=="--launch" (
     exit /b %errorlevel%
 )
 
-if not exist "%ROOT%\backend\venv\Scripts\activate.bat" goto :first_time_setup
-
 :main_menu
 cls
 title VDock Setup
@@ -65,7 +63,8 @@ echo.
 echo     [6] Exit
 echo.
 set "MENU_CHOICE="
-set /p "MENU_CHOICE=  Choose an option [1-6]: "
+set /p "MENU_CHOICE=  Choose an option [1-6] (Enter = 1): "
+if "%MENU_CHOICE%"=="" set "MENU_CHOICE=1"
 
 if "%MENU_CHOICE%"=="1" goto :run_full
 if "%MENU_CHOICE%"=="2" goto :run_deps
@@ -77,12 +76,6 @@ echo.
 echo   Invalid choice. Press any key to try again...
 pause >nul
 goto :main_menu
-
-:first_time_setup
-echo.
-echo   Welcome to VDock! Setting everything up for you...
-set "FIRST_RUN=1"
-goto :run_full
 
 :run_full
 echo.
@@ -272,7 +265,8 @@ if errorlevel 1 goto :prereq_manual_help
 echo   [WARN]  Missing:!MISSING_LABELS!
 set "INSTALL_ANSWER="
 set /p "INSTALL_ANSWER=  Install it now with winget? [Y/n]: "
-if /i "!INSTALL_ANSWER!"=="N" goto :prereq_manual_help
+call :is_yes_answer "!INSTALL_ANSWER!"
+if errorlevel 1 goto :prereq_manual_help
 
 for %%p in (!MISSING_PACKAGES!) do (
     winget install -e --id %%p --accept-package-agreements --accept-source-agreements
@@ -294,6 +288,14 @@ echo           Node.js: https://nodejs.org/
 echo           Or run:  winget install Python.Python.3.12
 echo                    winget install OpenJS.NodeJS.LTS
 echo           Then close this window and run setup.bat again.
+exit /b 1
+
+:is_yes_answer
+REM Prompts are [Y/n]: Enter means yes, and only an explicit yes counts as
+REM yes. Anything else ^(n, no, a typo^) must never start an install or launch.
+if "%~1"=="" exit /b 0
+if /i "%~1"=="Y" exit /b 0
+if /i "%~1"=="YES" exit /b 0
 exit /b 1
 
 :check_python
@@ -477,8 +479,8 @@ echo   VDock opens at: http://localhost:!BACKEND_PORT!
 echo.
 set "LAUNCH="
 set /p "LAUNCH=  Start VDock now? [Y/n]: "
-if /i not "!LAUNCH!"=="N" call :launch_vdock
-if defined FIRST_RUN exit /b 0
+call :is_yes_answer "!LAUNCH!"
+if not errorlevel 1 call :launch_vdock
 goto :pause_and_menu
 
 :setup_complete_cli
@@ -491,7 +493,8 @@ echo   VDock opens at: http://localhost:!BACKEND_PORT!
 echo.
 set "LAUNCH="
 set /p "LAUNCH=  Start VDock now? [Y/n]: "
-if /i not "!LAUNCH!"=="N" call :launch_vdock
+call :is_yes_answer "!LAUNCH!"
+if not errorlevel 1 call :launch_vdock
 exit /b 0
 
 :pause_and_menu
@@ -506,10 +509,6 @@ echo     Setup failed. Fix the error above.
 echo   ==========================================
 echo.
 pause
-if defined FIRST_RUN (
-    set "FIRST_RUN="
-    goto :main_menu
-)
 exit /b 1
 
 :exit_ok

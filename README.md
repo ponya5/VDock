@@ -209,7 +209,7 @@ cd VDock
 - **Windows:** double-click **`setup.bat`**
 - **macOS / Linux:** `./setup.sh` (downloaded a ZIP instead of cloning? use `bash setup.sh`)
 
-On a fresh checkout setup runs by itself with no menu: it checks Python and Node (and offers to install anything missing: Homebrew on macOS, winget on Windows), installs dependencies, picks free ports and adds **VDock to your apps**: `~/Applications/VDock.app` on macOS (Launchpad, Spotlight), a Start menu entry plus desktop icon on Windows, and a desktop icon on Linux.
+Setup shows a short menu where **Enter picks the recommended full setup**. It checks Python and Node (and offers to install anything missing: Homebrew on macOS, winget on Windows), installs dependencies, picks free ports and adds **VDock to your apps**: `~/Applications/VDock.app` on macOS (Launchpad, Spotlight), a Start menu entry plus desktop icon on Windows, and a desktop icon on Linux.
 
 ### 2. Launch it
 
