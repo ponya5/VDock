@@ -30,6 +30,13 @@ is_macos() {
   [[ "$(uname -s)" == "Darwin" ]]
 }
 
+# Prompts are "[Y/n]": Enter means yes, and only an explicit yes counts as
+# yes. Anything else ("n", "no", a typo) must never start an install/launch.
+is_yes_answer() {
+  local answer="$1"
+  [[ -z "$answer" || "$answer" =~ ^[Yy]([Ee][Ss])?$ ]]
+}
+
 # python3 can be macOS's /usr/bin stub, which pops an "install developer
 # tools" dialog (or fails) until the Command Line Tools exist - skip it then.
 is_usable_python() {
@@ -84,7 +91,7 @@ install_with_homebrew() {
   warn "Missing: ${formulas[*]}"
   local answer
   read -r -p "  Install it now with Homebrew (brew install ${formulas[*]})? [Y/n]: " answer || return 1
-  if [[ "$answer" =~ ^[Nn]$ ]]; then
+  if ! is_yes_answer "$answer"; then
     return 1
   fi
 
@@ -477,7 +484,7 @@ launch_vdock() {
 }
 
 show_menu() {
-  clear
+  clear 2>/dev/null || true
   echo ""
   echo "  ========================================================"
   echo "    VDock Setup"
@@ -523,26 +530,10 @@ run_full_setup() {
   echo ""
   echo "  VDock opens at: http://localhost:${BACKEND_PORT:-5000}"
   echo ""
-  read -r -p "  Start VDock now? [Y/n]: " start_now || start_now="N"
-  if [[ ! "$start_now" =~ ^[Nn]$ ]]; then
+  read -r -p "  Start VDock now? [Y/n]: " start_now || start_now="n"
+  if is_yes_answer "$start_now"; then
     launch_vdock
   fi
-}
-
-# A fresh clone has no venv yet: skip the menu and just do the right thing.
-run_first_time_setup_if_needed() {
-  if [[ -f "$ROOT/backend/venv/bin/activate" ]]; then
-    return 0
-  fi
-
-  echo ""
-  echo "  Welcome to VDock! Setting everything up for you..."
-  if run_full_setup; then
-    exit 0
-  fi
-
-  echo ""
-  read -r -p "  Setup did not finish. Press Enter to open the setup menu..." _ || exit 1
 }
 
 handle_cli_flag() {
@@ -556,11 +547,11 @@ handle_cli_flag() {
 }
 
 handle_cli_flag "${1:-}"
-run_first_time_setup_if_needed
 
 while true; do
   show_menu
-  read -r -p "  Choose an option [1-6]: " menu_choice || menu_choice="6"
+  read -r -p "  Choose an option [1-6] (Enter = 1): " menu_choice || menu_choice="6"
+  menu_choice="${menu_choice:-1}"
 
   case "$menu_choice" in
     1)
