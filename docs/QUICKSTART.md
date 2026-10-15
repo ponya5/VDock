@@ -13,7 +13,7 @@ Get VDock up and running in minutes!
 setup.bat
 ```
 
-Then launch with `launch.bat` (or the Desktop **VDock** shortcut).
+Then launch with `launch.bat` (or open **VDock** from the Start menu / desktop shortcut).
 
 ## Automated Setup (macOS)
 

@@ -206,14 +206,14 @@ git clone https://github.com/ponya5/VDock.git
 cd VDock
 ```
 
-- **Windows:** double-click **`setup.bat`** and choose **[1] Full setup**
+- **Windows:** double-click **`setup.bat`**
 - **macOS / Linux:** `./setup.sh` (downloaded a ZIP instead of cloning? use `bash setup.sh`)
 
-On a fresh checkout setup runs by itself with no questions asked: it checks Python and Node (on a Mac with Homebrew it offers to install anything missing), installs dependencies, picks free ports and adds **VDock to your apps** (`~/Applications/VDock.app` on macOS, so Launchpad and Spotlight find it; a desktop icon on Windows and Linux).
+On a fresh checkout setup runs by itself with no menu: it checks Python and Node (and offers to install anything missing: Homebrew on macOS, winget on Windows), installs dependencies, picks free ports and adds **VDock to your apps**: `~/Applications/VDock.app` on macOS (Launchpad, Spotlight), a Start menu entry plus desktop icon on Windows, and a desktop icon on Linux.
 
 ### 2. Launch it
 
-**Open VDock from Launchpad / Spotlight (macOS) or the desktop icon** (or run `launch.bat` / `./launch.sh`). It opens in its own window after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
+**Open VDock from Launchpad / Spotlight (macOS), the Start menu (Windows) or the desktop icon** (or run `launch.bat` / `./launch.sh`). It opens in its own window after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
 
 **Optional tools.** None are required. They unlock extra actions, and the related buttons stay greyed out (with the reason shown) until installed: [Claude Code](https://claude.com/product/claude-code) for 40 Claude actions, [GitHub CLI](https://cli.github.com) for PRs, issues and CI, and Git for repo-aware actions.
 
@@ -247,7 +247,7 @@ Secrets never reach the frontend. Settings shows only *whether* a key is set, an
 ## Troubleshooting
 
 - **Python/Node not found:** reinstall with PATH enabled, restart the terminal
-- **Port 3000 or 5000 in use:** change ports in setup, or close the other process
+- **Port 3000 or 5000 in use:** setup now skips busy ports on its own; to pick one yourself run `setup.bat --ports` / `./setup.sh --ports`
 - **Blank white window on macOS:** AirPlay Receiver uses port 5000. `setup.sh` now picks a free port (usually 5001) automatically; on an older install run `./setup.sh --ports`, then `cd frontend && npm run build`
 - **Setup failed on npm:** delete `frontend/node_modules`, run setup option **2** again
 - **Desktop window doesn't open:** open **http://localhost:3000** in a browser

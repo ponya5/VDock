@@ -38,6 +38,8 @@ if /i "%~1"=="--launch" (
     exit /b %errorlevel%
 )
 
+if not exist "%ROOT%\backend\venv\Scripts\activate.bat" goto :first_time_setup
+
 :main_menu
 cls
 title VDock Setup
@@ -47,13 +49,13 @@ echo     VDock Setup
 echo   ========================================================
 echo.
 echo     [1] Full setup (recommended)
-echo         Install deps, build the frontend, desktop shortcut
+echo         Install deps, build the frontend, Start menu + desktop shortcut
 echo.
 echo     [2] Install dependencies only
 echo         Deps + frontend build, no desktop shortcut
 echo.
-echo     [3] Create desktop shortcut only
-echo         Adds a VDock icon to your Desktop
+echo     [3] Create shortcuts only
+echo         Adds VDock to the Start menu and your Desktop
 echo.
 echo     [4] Configure ports
 echo         Change which localhost ports VDock uses
@@ -76,10 +78,20 @@ echo   Invalid choice. Press any key to try again...
 pause >nul
 goto :main_menu
 
+:first_time_setup
+echo.
+echo   Welcome to VDock! Setting everything up for you...
+set "FIRST_RUN=1"
+goto :run_full
+
 :run_full
+echo.
+echo   This takes a few minutes the first time ^(downloads Python and
+echo   Node packages^). Ports are chosen automatically; change them any
+echo   time with: setup.bat --ports
 call :install_dependencies
 if errorlevel 1 goto :fail
-call :configure_ports
+call :configure_ports silent
 call :build_frontend
 if errorlevel 1 goto :fail
 call :create_desktop_shortcut
@@ -113,39 +125,14 @@ echo     Installing VDock dependencies
 echo   ==========================================
 echo.
 
-echo   [1/8] Checking Python...
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo   [ERROR] Python not found.
-    echo           Install Python 3.9+ from https://www.python.org/downloads/
-    echo           Tick "Add Python to PATH" during installation.
-    exit /b 1
-)
+echo   [1/7] Checking Python and Node.js...
+call :ensure_prerequisites
+if errorlevel 1 exit /b 1
 for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo   [OK]    %%v
-
-for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set "PYVER=%%v"
-for /f "tokens=1,2 delims=." %%a in ("!PYVER!") do (
-    set "PYMAJ=%%a"
-    set "PYMIN=%%b"
-)
-if !PYMAJ! LSS 3 exit /b 1
-if !PYMAJ! EQU 3 if !PYMIN! LSS 9 (
-    echo   [ERROR] Python 3.9+ required. Found !PYVER!
-    exit /b 1
-)
-
-echo   [2/8] Checking Node.js...
-set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo   [ERROR] Node.js not found. Install Node.js 18+ from https://nodejs.org/
-    exit /b 1
-)
 for /f "tokens=*" %%v in ('node --version 2^>^&1') do echo   [OK]    Node.js %%v
 for /f "tokens=*" %%v in ('npm --version 2^>^&1') do echo   [OK]    npm %%v
 
-echo   [3/8] Python virtual environment...
+echo   [2/7] Python virtual environment...
 if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
     echo           Creating venv...
     python -m venv "%ROOT%\backend\venv"
@@ -155,7 +142,7 @@ if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
     echo   [OK]    Virtual environment already exists
 )
 
-echo   [4/8] Backend dependencies...
+echo   [3/7] Backend dependencies...
 call "%ROOT%\backend\venv\Scripts\activate.bat"
 python -m pip install --upgrade pip --quiet --disable-pip-version-check >nul 2>&1
 pip install -r "%ROOT%\backend\requirements.txt" --quiet --disable-pip-version-check
@@ -165,11 +152,11 @@ if errorlevel 1 (
 )
 echo   [OK]    Backend dependencies installed
 
-echo   [5/8] Frontend dependencies...
+echo   [4/7] Frontend dependencies...
 REM Always run: npm install is a no-op when node_modules already matches the
 REM lockfile, and picks up packages added by a git pull when it doesn't.
 pushd "%ROOT%\frontend"
-call npm install --no-fund --no-audit
+call npm install --no-fund --no-audit --loglevel=error
 if errorlevel 1 (
     popd
     echo   [ERROR] npm install failed in frontend. Check your connection and try again.
@@ -178,18 +165,33 @@ if errorlevel 1 (
 popd
 echo   [OK]    Frontend dependencies installed
 
-echo   [6/8] Electron dependencies...
+echo   [5/7] Electron dependencies...
 pushd "%ROOT%\frontend\electron"
-call npm install --no-fund --no-audit
+call npm install --no-fund --no-audit --loglevel=error
 if errorlevel 1 (
     popd
     echo   [ERROR] npm install failed in frontend\electron.
     exit /b 1
 )
 popd
+
+REM npm is moving to block dependency install scripts by default, and Electron
+REM downloads its runtime in one. Without the runtime the VDock window cannot
+REM open, so run the download ourselves whenever npm did not.
+if not exist "%ROOT%\frontend\electron\node_modules\electron\path.txt" (
+    echo           Downloading the Electron runtime...
+    pushd "%ROOT%\frontend\electron\node_modules\electron"
+    node install.js
+    if errorlevel 1 (
+        popd
+        echo   [ERROR] Electron download failed. Check your connection and run setup.bat again.
+        exit /b 1
+    )
+    popd
+)
 echo   [OK]    Electron dependencies installed
 
-echo   [7/8] Data directories...
+echo   [6/7] Data directories...
 for %%d in (
     "%ROOT%\backend\data"
     "%ROOT%\backend\data\profiles"
@@ -204,7 +206,7 @@ for %%d in (
 )
 echo   [OK]    Data directories ready
 
-echo   [8/8] Integrations...
+echo   [7/7] Integrations...
 if not exist "%ROOT%\backend\.env" (
     if exist "%ROOT%\backend\.env.example" (
         copy /y "%ROOT%\backend\.env.example" "%ROOT%\backend\.env" >nul 2>&1
@@ -244,6 +246,74 @@ if not defined FOUND_ANY (
 )
 exit /b 0
 
+:ensure_prerequisites
+REM Python 3.9+ (with venv) and Node 20+ must be on PATH. When something is
+REM missing, offer to install it with winget (built into Windows 10/11).
+set "MIN_NODE_MAJOR=20"
+set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
+set "MISSING_PACKAGES="
+set "MISSING_LABELS="
+
+call :check_python
+if errorlevel 1 (
+    set "MISSING_PACKAGES=!MISSING_PACKAGES! Python.Python.3.12"
+    set "MISSING_LABELS=!MISSING_LABELS! Python"
+)
+call :check_node
+if errorlevel 1 (
+    set "MISSING_PACKAGES=!MISSING_PACKAGES! OpenJS.NodeJS.LTS"
+    set "MISSING_LABELS=!MISSING_LABELS! Node.js"
+)
+if not defined MISSING_PACKAGES exit /b 0
+
+where winget >nul 2>&1
+if errorlevel 1 goto :prereq_manual_help
+
+echo   [WARN]  Missing:!MISSING_LABELS!
+set "INSTALL_ANSWER="
+set /p "INSTALL_ANSWER=  Install it now with winget? [Y/n]: "
+if /i "!INSTALL_ANSWER!"=="N" goto :prereq_manual_help
+
+for %%p in (!MISSING_PACKAGES!) do (
+    winget install -e --id %%p --accept-package-agreements --accept-source-agreements
+    if errorlevel 1 goto :prereq_manual_help
+)
+
+call :refresh_path
+call :check_python
+if errorlevel 1 goto :prereq_manual_help
+call :check_node
+if errorlevel 1 goto :prereq_manual_help
+exit /b 0
+
+:prereq_manual_help
+echo.
+echo   [ERROR] Python 3.9+ and Node.js %MIN_NODE_MAJOR%+ are required.
+echo           Python:  https://www.python.org/downloads/ ^(tick "Add Python to PATH"^)
+echo           Node.js: https://nodejs.org/
+echo           Or run:  winget install Python.Python.3.12
+echo                    winget install OpenJS.NodeJS.LTS
+echo           Then close this window and run setup.bat again.
+exit /b 1
+
+:check_python
+python -c "import sys, venv, ensurepip; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
+exit /b %errorlevel%
+
+:check_node
+set "NODE_MAJOR="
+for /f "usebackq delims=" %%v in (`node -p "process.versions.node.split('.')[0]" 2^>nul`) do set "NODE_MAJOR=%%v"
+if not defined NODE_MAJOR exit /b 1
+if !NODE_MAJOR! LSS %MIN_NODE_MAJOR% exit /b 1
+where npm >nul 2>&1
+exit /b %errorlevel%
+
+:refresh_path
+REM A fresh winget install updates the registry PATH, not this window's.
+for /f "usebackq delims=" %%p in (`powershell -NoProfile -NonInteractive -Command "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"`) do set "PATH=%%p"
+set "PATH=%ProgramFiles%\nodejs;%PATH%"
+exit /b 0
+
 :build_frontend
 echo.
 echo   Building the frontend...
@@ -265,29 +335,39 @@ exit /b 0
 
 :create_desktop_shortcut
 echo.
-echo   Creating desktop shortcut...
+echo   Creating VDock shortcuts ^(Start menu and Desktop^)...
 set "LAUNCHER=%ROOT%\launch.bat"
 set "ICON=%ROOT%\frontend\public\vdock-icon.ico"
-for /f "usebackq delims=" %%d in (`powershell -NoProfile -NonInteractive -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP_DIR=%%d"
-if not defined DESKTOP_DIR set "DESKTOP_DIR=%USERPROFILE%\Desktop"
-set "SHORTCUT=%DESKTOP_DIR%\VDock.lnk"
+set "CREATED_SHORTCUTS_FILE=%TEMP%\vdock-shortcuts.txt"
 
+REM 'Programs' is the per-user Start menu, so VDock shows up in Start search
+REM and the All apps list without admin rights.
 powershell -NoProfile -NonInteractive -Command ^
   "$ws = New-Object -ComObject WScript.Shell;" ^
-  "$sc = $ws.CreateShortcut('%SHORTCUT%');" ^
-  "$sc.TargetPath = '%LAUNCHER%';" ^
-  "$sc.Arguments = '--in-console';" ^
-  "$sc.WorkingDirectory = '%ROOT%';" ^
-  "if (Test-Path '%ICON%') { $sc.IconLocation = '%ICON%' };" ^
-  "$sc.Description = 'VDock Virtual Stream Deck';" ^
-  "$sc.WindowStyle = 1;" ^
-  "$sc.Save()" >nul 2>&1
+  "foreach ($folderName in 'Programs','Desktop') {" ^
+  "  $shortcutPath = Join-Path ([Environment]::GetFolderPath($folderName)) 'VDock.lnk';" ^
+  "  $sc = $ws.CreateShortcut($shortcutPath);" ^
+  "  $sc.TargetPath = '%LAUNCHER%';" ^
+  "  $sc.Arguments = '--in-console';" ^
+  "  $sc.WorkingDirectory = '%ROOT%';" ^
+  "  if (Test-Path '%ICON%') { $sc.IconLocation = '%ICON%' };" ^
+  "  $sc.Description = 'VDock Virtual Stream Deck';" ^
+  "  $sc.WindowStyle = 1;" ^
+  "  $sc.Save();" ^
+  "  Write-Output $shortcutPath" ^
+  "}" > "%CREATED_SHORTCUTS_FILE%" 2>nul
 
-if exist "%SHORTCUT%" (
-    echo   [OK]    Desktop shortcut created: %SHORTCUT%
-) else (
-    echo   [WARN]  Could not create desktop shortcut
+set "CREATED_ANY="
+if exist "%CREATED_SHORTCUTS_FILE%" (
+    for /f "usebackq delims=" %%s in ("%CREATED_SHORTCUTS_FILE%") do (
+        if exist "%%s" (
+            echo   [OK]    Shortcut created: %%s
+            set "CREATED_ANY=1"
+        )
+    )
+    del "%CREATED_SHORTCUTS_FILE%" 2>nul
 )
+if not defined CREATED_ANY echo   [WARN]  Could not create shortcuts
 exit /b 0
 
 :configure_ports
@@ -304,6 +384,17 @@ if exist "%ROOT%\frontend\.env" (
 set "CUR_BACKEND_PORT=5000"
 if exist "%ROOT%\backend\.env" (
     for /f "tokens=2 delims==" %%p in ('findstr /b /i "PORT=" "%ROOT%\backend\.env" 2^>nul') do set "CUR_BACKEND_PORT=%%p"
+)
+
+REM Another app may already own the backend port (AirPlay on macOS, dev
+REM servers, ...). Never default to a port something else listens on; a
+REM running VDock backend is fine to keep.
+set "FREE_BACKEND_PORT="
+for /f "usebackq delims=" %%p in (`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%ROOT%\scripts\find-free-port.ps1" -Port %CUR_BACKEND_PORT% 2^>nul`) do set "FREE_BACKEND_PORT=%%p"
+if defined FREE_BACKEND_PORT if not "!FREE_BACKEND_PORT!"=="!CUR_BACKEND_PORT!" (
+    echo   [WARN]  Port !CUR_BACKEND_PORT! is used by another app.
+    echo   [WARN]  Defaulting the backend to port !FREE_BACKEND_PORT! instead.
+    set "CUR_BACKEND_PORT=!FREE_BACKEND_PORT!"
 )
 
 if /i "%~1"=="silent" (
@@ -379,15 +470,15 @@ echo     Setup complete!
 echo   ==========================================
 echo.
 echo   Launch VDock:
-echo     - Double-click VDock on your Desktop
+echo     - Open VDock from the Start menu ^(search "VDock"^) or your Desktop
 echo     - Or run launch.bat from this folder
 echo.
-echo   URLs once running:
-echo     Frontend: http://localhost:!FRONTEND_PORT!
-echo     Backend:  http://localhost:!BACKEND_PORT!
+echo   VDock opens at: http://localhost:!BACKEND_PORT!
 echo.
-set /p "LAUNCH=  Start VDock now? [Y/N]: "
-if /i "!LAUNCH!"=="Y" call :launch_vdock
+set "LAUNCH="
+set /p "LAUNCH=  Start VDock now? [Y/n]: "
+if /i not "!LAUNCH!"=="N" call :launch_vdock
+if defined FIRST_RUN exit /b 0
 goto :pause_and_menu
 
 :setup_complete_cli
@@ -396,12 +487,11 @@ echo   ==========================================
 echo     Setup complete!
 echo   ==========================================
 echo.
-echo   URLs once running:
-echo     Frontend: http://localhost:!FRONTEND_PORT!
-echo     Backend:  http://localhost:!BACKEND_PORT!
+echo   VDock opens at: http://localhost:!BACKEND_PORT!
 echo.
-set /p "LAUNCH=  Start VDock now? [Y/N]: "
-if /i "!LAUNCH!"=="Y" call :launch_vdock
+set "LAUNCH="
+set /p "LAUNCH=  Start VDock now? [Y/n]: "
+if /i not "!LAUNCH!"=="N" call :launch_vdock
 exit /b 0
 
 :pause_and_menu
@@ -416,6 +506,10 @@ echo     Setup failed. Fix the error above.
 echo   ==========================================
 echo.
 pause
+if defined FIRST_RUN (
+    set "FIRST_RUN="
+    goto :main_menu
+)
 exit /b 1
 
 :exit_ok
