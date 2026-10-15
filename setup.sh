@@ -18,6 +18,100 @@ ok()   { echo -e "  ${GREEN}[OK]${NC}    $*"; }
 warn() { echo -e "  ${YELLOW}[WARN]${NC}  $*"; }
 err()  { echo -e "  ${RED}[ERROR]${NC} $*"; }
 
+MIN_PYTHON_VERSION_TUPLE="(3, 9)"
+MIN_NODE_MAJOR_VERSION=20
+PYTHON_BIN=""
+
+# Homebrew's Node/Python first: Apple Silicon and Intel Macs both keep them
+# outside the default PATH that Terminal/Finder launches give us.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+is_macos() {
+  [[ "$(uname -s)" == "Darwin" ]]
+}
+
+# python3 can be macOS's /usr/bin stub, which pops an "install developer
+# tools" dialog (or fails) until the Command Line Tools exist - skip it then.
+is_usable_python() {
+  local candidate="$1"
+  local candidate_path
+  candidate_path="$(command -v "$candidate" 2>/dev/null)" || return 1
+
+  if is_macos && [[ "$candidate_path" == "/usr/bin/python3" ]] && ! xcode-select -p >/dev/null 2>&1; then
+    return 1
+  fi
+
+  "$candidate" -c "import sys, venv, ensurepip; sys.exit(0 if sys.version_info >= $MIN_PYTHON_VERSION_TUPLE else 1)" >/dev/null 2>&1
+}
+
+find_python() {
+  local candidate
+  for candidate in python3 python3.13 python3.12 python3.11 python3.10 python3.9; do
+    if is_usable_python "$candidate"; then
+      PYTHON_BIN="$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+is_node_usable() {
+  command -v node >/dev/null 2>&1 || return 1
+  command -v npm >/dev/null 2>&1 || return 1
+
+  local node_major_version
+  node_major_version="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null)" || return 1
+  [[ "$node_major_version" -ge "$MIN_NODE_MAJOR_VERSION" ]]
+}
+
+print_manual_install_help() {
+  err "Python 3.9+ and Node.js ${MIN_NODE_MAJOR_VERSION}+ are required."
+  echo "         Python:  https://www.python.org/downloads/"
+  echo "         Node.js: https://nodejs.org/"
+  if is_macos; then
+    echo "         Or with Homebrew (https://brew.sh):  brew install python node"
+  fi
+  echo "         Then run ./setup.sh again."
+}
+
+install_with_homebrew() {
+  local formulas=("$@")
+
+  if ! is_macos || ! command -v brew >/dev/null 2>&1; then
+    return 1
+  fi
+
+  warn "Missing: ${formulas[*]}"
+  local answer
+  read -r -p "  Install it now with Homebrew (brew install ${formulas[*]})? [Y/n]: " answer || return 1
+  if [[ "$answer" =~ ^[Nn]$ ]]; then
+    return 1
+  fi
+
+  brew install "${formulas[@]}" || return 1
+  hash -r
+}
+
+ensure_prerequisites() {
+  local missing_formulas=()
+  find_python || missing_formulas+=(python)
+  is_node_usable || missing_formulas+=(node)
+
+  if [[ ${#missing_formulas[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  if ! install_with_homebrew "${missing_formulas[@]}"; then
+    print_manual_install_help
+    return 1
+  fi
+
+  if ! find_python || ! is_node_usable; then
+    print_manual_install_help
+    return 1
+  fi
+}
+
 install_dependencies() {
   echo ""
   echo "  =========================================="
@@ -25,41 +119,23 @@ install_dependencies() {
   echo "  =========================================="
   echo ""
 
-  echo "  [1/8] Checking Python..."
-  if ! command -v python3 >/dev/null 2>&1; then
-    err "Python 3 not found. Install 3.9+ from https://www.python.org/downloads/"
-    return 1
-  fi
-  ok "$(python3 --version 2>&1)"
-
-  local py_major py_minor
-  py_major="$(python3 -c 'import sys; print(sys.version_info.major)')"
-  py_minor="$(python3 -c 'import sys; print(sys.version_info.minor)')"
-  if [[ "$py_major" -lt 3 ]] || { [[ "$py_major" -eq 3 ]] && [[ "$py_minor" -lt 9 ]]; }; then
-    err "Python 3.9+ required."
-    return 1
-  fi
-
-  echo "  [2/8] Checking Node.js..."
-  export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-  if ! command -v node >/dev/null 2>&1; then
-    err "Node.js not found. Install 18+ from https://nodejs.org/"
-    return 1
-  fi
+  echo "  [1/7] Checking Python and Node.js..."
+  ensure_prerequisites || return 1
+  ok "$("$PYTHON_BIN" --version 2>&1)"
   ok "Node.js $(node --version)"
   ok "npm $(npm --version)"
 
-  echo "  [3/8] Python virtual environment..."
+  echo "  [2/7] Python virtual environment..."
   local venv_activate="$ROOT/backend/venv/bin/activate"
   if [[ ! -f "$venv_activate" ]]; then
     echo "           Creating venv..."
-    python3 -m venv "$ROOT/backend/venv" || return 1
+    "$PYTHON_BIN" -m venv "$ROOT/backend/venv" || return 1
     ok "Virtual environment created"
   else
     ok "Virtual environment already exists"
   fi
 
-  echo "  [4/8] Backend dependencies..."
+  echo "  [3/7] Backend dependencies..."
   # shellcheck disable=SC1090
   source "$venv_activate"
   python -m pip install --upgrade pip --quiet --disable-pip-version-check >/dev/null 2>&1 || warn "pip upgrade failed (non-fatal)"
@@ -68,15 +144,15 @@ install_dependencies() {
 
   # Always run: npm install is a no-op when node_modules already matches the
   # lockfile, and picks up packages added by a git pull when it doesn't.
-  echo "  [5/8] Frontend dependencies..."
+  echo "  [4/7] Frontend dependencies..."
   ( cd "$ROOT/frontend" && npm install --no-fund --no-audit ) || { err "npm install failed in frontend"; return 1; }
   ok "Frontend dependencies installed"
 
-  echo "  [6/8] Electron dependencies..."
+  echo "  [5/7] Electron dependencies..."
   ( cd "$ROOT/frontend/electron" && npm install --no-fund --no-audit ) || { err "npm install failed in frontend/electron"; return 1; }
   ok "Electron dependencies installed"
 
-  echo "  [7/8] Data directories..."
+  echo "  [6/7] Data directories..."
   for data_dir in \
     "$ROOT/backend/data" \
     "$ROOT/backend/data/profiles" \
@@ -91,7 +167,7 @@ install_dependencies() {
   done
   ok "Data directories ready"
 
-  echo "  [8/8] Integrations..."
+  echo "  [7/7] Integrations..."
   if [ ! -f "$ROOT/backend/.env" ] && [ -f "$ROOT/backend/.env.example" ]; then
     cp "$ROOT/backend/.env.example" "$ROOT/backend/.env"
     ok "Created backend/.env from the example"
@@ -127,6 +203,22 @@ install_dependencies() {
   return 0
 }
 
+port_has_listener() {
+  lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+}
+
+port_serves_vdock() {
+  curl -s -m 2 "http://127.0.0.1:$1/api/health" 2>/dev/null | grep -q '"uptime_s"'
+}
+
+find_free_port() {
+  local candidate_port="$1"
+  while port_has_listener "$candidate_port"; do
+    candidate_port=$((candidate_port + 1))
+  done
+  echo "$candidate_port"
+}
+
 configure_ports() {
   echo ""
   echo "  =========================================="
@@ -145,6 +237,17 @@ configure_ports() {
     local found
     found="$(grep -m1 '^PORT=' "$ROOT/backend/.env" 2>/dev/null | cut -d= -f2)" || true
     [[ -n "$found" ]] && cur_backend_port="$found"
+  fi
+
+  # macOS AirPlay Receiver (and other apps) squat on 5000 and answer 403 to
+  # everything, which leaves VDock's window blank. Never default to a port
+  # another app already owns - a running VDock backend is fine to keep.
+  if port_has_listener "$cur_backend_port" && ! port_serves_vdock "$cur_backend_port"; then
+    local free_backend_port
+    free_backend_port="$(find_free_port "$((cur_backend_port + 1))")"
+    warn "Port $cur_backend_port is used by another app (on macOS: AirPlay Receiver)."
+    warn "Defaulting the backend to port $free_backend_port instead."
+    cur_backend_port="$free_backend_port"
   fi
 
   local frontend_port="$cur_frontend_port"
@@ -225,7 +328,7 @@ create_desktop_launcher() {
     cat > "$command_path" << EOF
 #!/bin/bash
 cd "$ROOT"
-exec ./launch.sh
+exec bash ./launch.sh
 EOF
     chmod +x "$command_path"
     if [[ -f "$command_path" ]]; then
@@ -246,7 +349,7 @@ EOF
   cat > "$shell_launcher" << EOF
 #!/usr/bin/env bash
 cd "$ROOT"
-exec ./launch.sh
+exec bash ./launch.sh
 EOF
   chmod +x "$shell_launcher"
 
@@ -277,7 +380,7 @@ launch_vdock() {
   fi
   echo ""
   echo "  Starting VDock..."
-  exec "$ROOT/launch.sh"
+  exec bash "$ROOT/launch.sh"
 }
 
 show_menu() {
@@ -305,8 +408,13 @@ show_menu() {
 }
 
 run_full_setup() {
+  echo ""
+  echo "  This takes a few minutes the first time (downloads Python and"
+  echo "  Node packages). Ports are chosen automatically; change them any"
+  echo "  time with: ./setup.sh --ports"
+
   install_dependencies || return 1
-  configure_ports "${1:-}"
+  configure_ports silent
   build_frontend || return 1
   create_desktop_launcher
   echo ""
@@ -320,14 +428,28 @@ run_full_setup() {
   fi
   echo "    - Or run: ./launch.sh"
   echo ""
-  echo "  URLs once running:"
-  echo "    Frontend: http://localhost:${FRONTEND_PORT:-3000}"
-  echo "    Backend:  http://localhost:${BACKEND_PORT:-5000}"
+  echo "  VDock opens at: http://localhost:${BACKEND_PORT:-5000}"
   echo ""
-  read -r -p "  Start VDock now? [Y/N]: " start_now || start_now="N"
-  if [[ "$start_now" =~ ^[Yy]$ ]]; then
+  read -r -p "  Start VDock now? [Y/n]: " start_now || start_now="N"
+  if [[ ! "$start_now" =~ ^[Nn]$ ]]; then
     launch_vdock
   fi
+}
+
+# A fresh clone has no venv yet: skip the menu and just do the right thing.
+run_first_time_setup_if_needed() {
+  if [[ -f "$ROOT/backend/venv/bin/activate" ]]; then
+    return 0
+  fi
+
+  echo ""
+  echo "  Welcome to VDock! Setting everything up for you..."
+  if run_full_setup; then
+    exit 0
+  fi
+
+  echo ""
+  read -r -p "  Setup did not finish. Press Enter to open the setup menu..." _ || exit 1
 }
 
 handle_cli_flag() {
@@ -341,6 +463,7 @@ handle_cli_flag() {
 }
 
 handle_cli_flag "${1:-}"
+run_first_time_setup_if_needed
 
 while true; do
   show_menu

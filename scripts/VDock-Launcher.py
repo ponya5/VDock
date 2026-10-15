@@ -260,6 +260,34 @@ def wait_for_url(url: str, timeout_seconds: int = 45, interval_seconds: float = 
     return False
 
 
+def port_serves_vdock_backend(port: int = DEFAULT_BACKEND_PORT) -> bool:
+    """True only when the listener on the port is a VDock backend.
+
+    Other apps answer on the same port too - e.g. macOS AirPlay Receiver holds
+    5000 and replies 403 to everything. /api/health is unauthenticated and
+    carries `uptime_s`, so it tells VDock apart from any foreign HTTP server.
+    """
+    health_url = f"http://127.0.0.1:{port}/api/health"
+    try:
+        with urllib.request.urlopen(health_url, timeout=2) as response:
+            health_payload = json.load(response)
+    except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError, OSError):
+        return False
+    return isinstance(health_payload, dict) and "uptime_s" in health_payload
+
+
+def report_port_conflict(port: int) -> None:
+    """Explain that a foreign app owns the backend port (and was left alone)."""
+    print(f"[ERROR] Port {port} is in use by another application, not VDock.")
+    if sys.platform == "darwin":
+        print("        On macOS this is usually AirPlay Receiver (Control Center).")
+        print("        Turn it off in System Settings > General > AirDrop & Handoff,")
+        print("        or pick a different port:")
+    else:
+        print("        Stop that application, or pick a different port:")
+    print(f"          {setup_hint()} --ports")
+
+
 def backend_supports_user_settings(port: int = DEFAULT_BACKEND_PORT) -> bool:
     """Return True when the running backend exposes the user-settings API."""
     user_settings_url = f"http://127.0.0.1:{port}/api/user-settings"
@@ -427,6 +455,9 @@ def ensure_fresh_backend(venv_path: Path, port: int = DEFAULT_BACKEND_PORT) -> b
     needs_restart = listener_count == 0
 
     if listener_count > 0:
+        if not port_serves_vdock_backend(port):
+            report_port_conflict(port)
+            return False
         if listener_count > 1:
             print(f"[WARN] Found {listener_count} backend processes on port {port}. Restarting...")
             needs_restart = True
@@ -717,6 +748,7 @@ def main():
     print("Starting services...\n")
 
     if not ensure_fresh_backend(venv):
+        wait_for_launcher_close("Press Enter to exit...")
         return False
 
     # Production: the backend serves frontend/dist — no Vite dev server
