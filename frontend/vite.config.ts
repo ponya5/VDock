@@ -94,6 +94,13 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
+    build: {
+      // The bundle is served from localhost (Flask/Electron) and precached by
+      // the PWA service worker, so a single ~2.8MB chunk costs nothing over a
+      // network. Raise the limit so full setup doesn't print a spurious
+      // "chunks are larger than 500 kB" warning.
+      chunkSizeWarningLimit: 3500
+    },
     test: {
       environment: 'jsdom',
       globals: true
