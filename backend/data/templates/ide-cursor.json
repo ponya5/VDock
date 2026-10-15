@@ -5,6 +5,7 @@
   "icon": "fa-code",
   "color": "#000000",
   "category": "development",
+  "mac_modifier": "cmd",
   "version": "1.0",
   "author": "VDock Team",
   "pages": [

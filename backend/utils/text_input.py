@@ -72,6 +72,9 @@ def _unicode_events(character: str) -> List[KeyEvent]:
 
 def type_text(text: str, interval_seconds: float = DEFAULT_INTERVAL_SECONDS) -> None:
     """Type ``text`` into the focused window exactly as written."""
+    if platform.system() == 'Darwin':
+        _type_text_macos(text, interval_seconds)
+        return
     if platform.system() != 'Windows':
         import pyautogui
         pyautogui.typewrite(text, interval=interval_seconds)
@@ -79,6 +82,39 @@ def type_text(text: str, interval_seconds: float = DEFAULT_INTERVAL_SECONDS) -> 
 
     for keystroke_group in plan_keystrokes(text):
         _send_key_events(keystroke_group)
+        if interval_seconds:
+            time.sleep(interval_seconds)
+
+
+MACOS_KEYCODE_BY_CHARACTER = {'\n': 36, '\t': 48}  # Return, Tab
+
+
+def _type_text_macos(text: str, interval_seconds: float) -> None:
+    """Inject each character as a Unicode keystroke (any layout, any script).
+
+    Needs the Accessibility permission; without it macOS drops posted events
+    silently, so refuse up front rather than report a typed success.
+    """
+    from actions import macos_controls
+    if not macos_controls.is_accessibility_trusted():
+        raise TextInputError(macos_controls.ACCESSIBILITY_HELP)
+
+    import Quartz
+
+    def post(keycode: int, character: str, is_down: bool) -> None:
+        event = Quartz.CGEventCreateKeyboardEvent(None, keycode, is_down)
+        if character:
+            units = len(character.encode('utf-16-le')) // 2
+            Quartz.CGEventKeyboardSetUnicodeString(event, units, character)
+        Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
+
+    for character in text.replace('\r\n', '\n'):
+        if character in IGNORED_CHARACTERS:
+            continue
+        keycode = MACOS_KEYCODE_BY_CHARACTER.get(character)
+        shown = '' if keycode is not None else character
+        post(keycode or 0, shown, True)
+        post(keycode or 0, shown, False)
         if interval_seconds:
             time.sleep(interval_seconds)
 

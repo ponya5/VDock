@@ -98,6 +98,17 @@ def active_app():
         }), 404
 
 
+def _bundle_identity(exe_path):
+    """``cursor.app`` for ``.../Cursor.app/Contents/MacOS/Cursor``, else None.
+
+    The outermost bundle, so helper apps nested inside count as their parent.
+    """
+    for part in str(exe_path or '').replace('\\', '/').split('/'):
+        if part.lower().endswith('.app'):
+            return part.lower()
+    return None
+
+
 @app_monitor_bp.route('/detected-profiles', methods=['GET'])
 @require_auth
 def detected_profiles():
@@ -118,11 +129,17 @@ def detected_profiles():
     logger = logging.getLogger('vdock')
     try:
         names = set()
-        for proc in psutil.process_iter(['name']):
+        for proc in psutil.process_iter(['name', 'exe']):
             try:
                 name = (proc.info.get('name') or '').lower()
                 if name:
                     names.add(name)
+                # macOS process names are bare ("Cursor"); profiles list the
+                # bundle identity ("cursor.app") the foreground monitor
+                # reports, so add the owning bundle too.
+                bundle = _bundle_identity(proc.info.get('exe'))
+                if bundle:
+                    names.add(bundle)
             except (psutil.NoSuchProcess, psutil.AccessDenied,
                     psutil.ZombieProcess):
                 continue

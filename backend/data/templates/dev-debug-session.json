@@ -5,6 +5,7 @@
   "icon": "fa-bug",
   "color": "#7c3aed",
   "category": "development",
+  "mac_modifier": "cmd",
   "version": "1.0",
   "author": "VDock Team",
   "pages": [

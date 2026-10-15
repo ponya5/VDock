@@ -1698,6 +1698,7 @@ import QuickTemplates from './QuickTemplates.vue'
 import type { AssetMetadata } from '@/utils/assetManager'
 import type { ButtonTemplate } from '@/data/buttonTemplates'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useHostOs, nativeKeys } from '@/composables/useHostOs'
 import apiClient from '@/api/client'
 
 interface Props {
@@ -1979,11 +1980,15 @@ const functionKeys = ref([
   'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12'
 ])
 
-const modifierKeys = ref([
+// The "super" key is Cmd on a Mac host and Windows elsewhere (DL-006).
+const { isMac: hostIsMac, hostOs } = useHostOs()
+const modifierKeys = computed(() => [
   { value: 'ctrl', label: 'Ctrl', icon: ['fas', 'keyboard'] },
-  { value: 'alt', label: 'Alt', icon: ['fas', 'keyboard'] },
+  { value: 'alt', label: hostIsMac.value ? 'Option' : 'Alt', icon: ['fas', 'keyboard'] },
   { value: 'shift', label: 'Shift', icon: ['fas', 'keyboard'] },
-  { value: 'win', label: 'Windows', icon: ['fab', 'windows'] }
+  hostIsMac.value
+    ? { value: 'cmd', label: 'Cmd', icon: ['fas', 'keyboard'] }
+    : { value: 'win', label: 'Windows', icon: ['fab', 'windows'] }
 ])
 
 const otherKeys = ref([
@@ -2142,6 +2147,9 @@ function applyTemplate(template: ButtonTemplate) {
   // Apply action
   actionType.value = template.action.type as ActionType
   actionConfig.value = { ...template.action.config }
+  if (template.action.type === 'hotkey' && Array.isArray(actionConfig.value.keys)) {
+    actionConfig.value.keys = nativeKeys(actionConfig.value.keys, hostOs.value)
+  }
 
   // Apply icon
   editedButton.value.icon = template.icon
@@ -2166,9 +2174,9 @@ function applyTemplate(template: ButtonTemplate) {
 
   // Update hotkey string if applicable
   if (template.action.type === 'hotkey' && template.action.config.keys) {
-    hotkeyString.value = Array.isArray(template.action.config.keys)
-      ? template.action.config.keys.join(', ')
-      : template.action.config.keys
+    hotkeyString.value = Array.isArray(actionConfig.value.keys)
+      ? actionConfig.value.keys.join(', ')
+      : actionConfig.value.keys
   }
 
   notificationsStore.success(

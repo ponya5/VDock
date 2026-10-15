@@ -17,6 +17,8 @@ import urllib.error
 import urllib.request
 from typing import Optional
 
+from electron_branding import brand_electron_bundle
+
 # Keep console output readable on Windows code pages (cp1252, etc.)
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -628,6 +630,11 @@ def launch_electron():
         npm = find_npm()
         if npm:
             subprocess.run([npm, "install"], cwd=str(electron_dir), check=False)
+
+    try:
+        brand_electron_bundle(electron_dir)
+    except (OSError, subprocess.CalledProcessError) as error:
+        print(f"[WARN] Could not rename the Electron app to VDock ({error})")
 
     try:
         npx = find_npx()

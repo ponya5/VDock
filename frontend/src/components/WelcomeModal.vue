@@ -15,6 +15,11 @@
             or create your own custom layout from scratch.
           </p>
 
+          <p v-if="osLabel" class="host-os-note" data-test="host-os-note">
+            <FontAwesomeIcon :icon="['fas', 'desktop']" />
+            Set up for {{ osLabel }} — shortcuts use {{ isMac ? '⌘ Cmd' : 'Ctrl' }}.
+          </p>
+
           <div class="options-grid">
             <div
               class="option-card"
@@ -132,6 +137,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import TemplateGallery from './TemplateGallery.vue'
 import apiClient from '@/api/client'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useHostOs } from '@/composables/useHostOs'
 
 const emit = defineEmits<{
   skip: []
@@ -141,6 +147,7 @@ const emit = defineEmits<{
 
 const notificationsStore = useNotificationsStore()
 
+const { isMac, label: osLabel } = useHostOs()
 const selectedOption = ref<'template' | 'blank' | null>(null)
 const selectedTemplateId = ref<string>('template-welcome')
 const quickTemplates = ref<any[]>([])
@@ -213,6 +220,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xl);
+}
+
+.host-os-note {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin: 0 0 1rem;
 }
 
 .welcome-text {

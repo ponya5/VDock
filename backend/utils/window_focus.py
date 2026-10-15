@@ -15,6 +15,7 @@ what this module does on Windows.
 import logging
 import os
 import platform
+import re
 import subprocess
 import time
 from typing import List, Optional, Sequence, Tuple
@@ -245,7 +246,30 @@ def _focus_app_window_macos(target_exes: Sequence[str]) -> Optional[bool]:
     return completed.returncode == 0
 
 
+def _frontmost_bundle_path_lsappinfo() -> Optional[str]:
+    """Frontmost app's bundle path via ``lsappinfo`` (no permission needed).
+
+    ``NSWorkspace.frontmostApplication()`` only refreshes while an AppKit run
+    loop spins; the backend has none, so it keeps answering with whatever was
+    frontmost at first call and the "is the editor focused" guard goes wrong.
+    """
+    try:
+        front = subprocess.run(['lsappinfo', 'front'], capture_output=True,
+                               text=True, timeout=2).stdout.strip()
+        if not front.startswith('ASN:'):
+            return None
+        info = subprocess.run(['lsappinfo', 'info', '-only', 'bundlepath', front],
+                              capture_output=True, text=True, timeout=2).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    match = re.search(r'bundle path="([^"]+)"', info)
+    return match.group(1) if match else None
+
+
 def _foreground_exe_macos() -> Optional[str]:
+    path = _frontmost_bundle_path_lsappinfo()
+    if path:
+        return os.path.basename(path.rstrip('/')).lower()
     try:
         from AppKit import NSWorkspace
     except ImportError:
