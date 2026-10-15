@@ -60,7 +60,7 @@
   "appIntegrations": [],
   "autoSceneSwitching": false,
   "mcpEnabled": true,
-  "tutorialCompleted": false,
+  "tutorialCompleted": true,
   "activeProfileId": "c29383be-4cf3-44ef-a381-6a75087741e2",
   "pressSoundEnabled": true,
   "pressSoundStyle": "click",
