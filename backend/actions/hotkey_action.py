@@ -2,6 +2,7 @@
 import platform
 import time
 from typing import Dict, Any
+from utils import host_os
 from .base_action import BaseAction, ActionResult
 
 try:
@@ -122,6 +123,13 @@ class HotkeyAction(BaseAction):
         return (('keys' in self.config and isinstance(self.config['keys'], list)) or
                 ('hotkey' in self.config and isinstance(self.config['hotkey'], str)))
 
+    @staticmethod
+    def _portable(key_str: str) -> str:
+        """``mod`` is the OS-neutral primary modifier: Cmd on macOS, else Ctrl."""
+        if key_str.lower() in ('mod', 'cmdorctrl', 'ctrlorcmd'):
+            return host_os.primary_modifier()
+        return key_str
+
     def _parse_key(self, key_str: str):
         """Parse a key string to a Key or character.
 
@@ -131,6 +139,7 @@ class HotkeyAction(BaseAction):
         Returns:
             pynput Key or character
         """
+        key_str = self._portable(key_str)
         key_lower = key_str.lower()
         if key_lower in self.KEY_MAP:
             return self.KEY_MAP[key_lower]

@@ -103,8 +103,8 @@ class TestSessionDetectionOnMacos:
 
     def test_claude_cli_is_a_session(self):
         cli = {'name': 'claude',
-               'exe': '/Users/dev/.local/share/claude/versions/2.1.0/claude',
-               'cmdline': ['/Users/dev/.local/bin/claude']}
+               'exe': '/Users/you/.local/share/claude/versions/2.1.0/claude',
+               'cmdline': ['/Users/you/.local/bin/claude']}
 
         assert sessions._matches(cli, 'claude')
 
@@ -236,3 +236,34 @@ class TestHookScriptEndToEnd:
         assert completed.returncode == 0, completed.stderr
         assert received_events and received_events[0]['state'] == 'ready'
         assert received_events[0]['source'] == 'cursor'
+
+
+def test_foreground_exe_macos_prefers_lsappinfo_over_stale_nsworkspace():
+    """DL-005: NSWorkspace is stale without a run loop; lsappinfo is live."""
+    from unittest.mock import patch, MagicMock
+    from utils import window_focus
+
+    def fake_run(argv, **_kw):
+        out = ('ASN:0x0-0x970970:\n' if argv[1] == 'front' else
+               'x ASN:1: (in front)\n    bundle path="/Applications/Claude.app"\n')
+        return MagicMock(stdout=out)
+
+    with patch.object(window_focus.subprocess, 'run', side_effect=fake_run):
+        assert window_focus._foreground_exe_macos() == 'claude.app'
+
+
+def test_foreground_exe_macos_falls_back_when_lsappinfo_missing():
+    from unittest.mock import patch
+    from utils import window_focus
+    with patch.object(window_focus.subprocess, 'run', side_effect=OSError):
+        # Must not raise; falls through to NSWorkspace (or None without AppKit).
+        window_focus._foreground_exe_macos()
+
+
+def test_bundle_identity_maps_mac_exe_to_keymap_identity():
+    from routes.app_monitor import _bundle_identity
+    assert _bundle_identity('/Applications/Cursor.app/Contents/MacOS/Cursor') == 'cursor.app'
+    assert _bundle_identity('/Applications/Claude.app/Contents/Frameworks/X.app/Contents/MacOS/X') == 'claude.app'
+    assert _bundle_identity('/usr/bin/python3') is None
+    assert _bundle_identity(None) is None
+    assert _bundle_identity(r'C:\Users\you\Cursor\Cursor.exe') is None

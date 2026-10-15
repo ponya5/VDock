@@ -9,7 +9,8 @@ one module changes and nothing else does.
 each app's keymap is written once, with its blast radius already recorded,
 rather than being revisited later.
 """
-import platform
+import platform  # noqa: F401 - tests patch base.platform.system
+from utils import host_os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -109,13 +110,9 @@ class Command:
         (toggle terminal) stays Ctrl on macOS, and Alt chords differ per
         shortcut, so both are left as written.
         """
-        if platform.system() != 'Darwin':
-            return keys
         if not set(self.target_exes) & MAC_CMD_REMAPPED_EXES:
             return keys
-        if '`' in keys or 'alt' in keys:
-            return keys
-        return tuple('cmd' if key == 'ctrl' else key for key in keys)
+        return host_os.localize_keys(keys)
 
     def to_macro_steps(self, text_override: Optional[str] = None) -> List[Dict[str, Any]]:
         """Build the macro step list MacroAction executes."""
@@ -230,7 +227,7 @@ class AppProfile:
                     'id': cmd.id,
                     'label': cmd.label,
                     'description': cmd.description,
-                    'keys': list(cmd.keys),
+                    'keys': list(cmd.native_keys(cmd.keys)),
                     'icon': cmd.icon,
                     'keywords': list(cmd.keywords),
                     'category': cmd.category,

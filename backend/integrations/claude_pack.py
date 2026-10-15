@@ -355,6 +355,7 @@ class Plugin(BasePlugin):
         cwd = context.resolve_cwd(config.get('cwd'))
 
         argv: List[str]
+        fallback: Optional[List[str]] = None
         if os.name == 'nt':
             # `claude --continue` exits instantly when the directory has no
             # resumable session (or the last one ended on a deferred tool) —
@@ -366,12 +367,15 @@ class Plugin(BasePlugin):
             if config.get('resume', True):
                 argv += ['--continue', '||', CLAUDE_BINARY]
         else:
+            # macOS/Linux: needs a real terminal window (DL-005); same
+            # resume-then-fresh fallback as Windows.
             argv = [CLAUDE_BINARY]
             if config.get('resume', True):
                 argv.append('--continue')
+                fallback = [CLAUDE_BINARY]
 
         try:
-            sr.spawn(argv, cwd=cwd)
+            sr.spawn_in_terminal(argv, cwd=cwd, fallback=fallback)
         except (sr.BinaryNotFoundError, OSError) as e:
             return {'success': False, 'message': f'Could not start Claude Code: {e}'}
 
@@ -473,14 +477,28 @@ class Plugin(BasePlugin):
         from actions.cross_platform_action import CrossPlatformAction
 
         target = config.get('target') or 'web'
-        if target == 'desktop':
-            action = CrossPlatformAction({'action': 'open_app', 'app': 'Claude'})
-        else:
-            url = ('https://claude.ai/new' if target == 'new_chat'
-                   else 'https://claude.ai')
-            action = CrossPlatformAction({'action': 'open_url', 'url': url})
 
-        result = action.execute()
+        def web(url: str):
+            return CrossPlatformAction(
+                {'action': 'open_url', 'url': url}).execute()
+
+        if target == 'desktop':
+            # open_app reads `name`/`path` (it never read `app`, so this
+            # target failed on every OS). Windows' MSIX install is not
+            # launchable by name; its claude:// protocol handler is.
+            app = 'claude://' if os.name == 'nt' else 'Claude'
+            result = CrossPlatformAction(
+                {'action': 'open_app', 'name': app}).execute()
+            if not result.success:
+                # Not installed: still land the user in Claude.
+                fallback = web('https://claude.ai')
+                if fallback.success:
+                    fallback.message = (
+                        'Claude desktop app not found; opened claude.ai')
+                result = fallback
+        else:
+            result = web('https://claude.ai/new' if target == 'new_chat'
+                         else 'https://claude.ai')
         return {
             'success': result.success,
             'message': result.message,

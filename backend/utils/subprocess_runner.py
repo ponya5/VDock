@@ -23,8 +23,12 @@ The other jobs this does:
 import logging
 import os
 import re
+import shlex
 import shutil
+import stat
 import subprocess
+import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
@@ -297,6 +301,78 @@ def spawn(
         shell=False,
         creationflags=creation_flags,
     )
+
+
+_LINUX_TERMINALS = (
+    ('x-terminal-emulator', ['-e']),
+    ('gnome-terminal', ['--']),
+    ('konsole', ['-e']),
+    ('xfce4-terminal', ['-x']),
+    ('xterm', ['-e']),
+)
+
+
+def _shell_line(argv: Sequence[str]) -> str:
+    return ' '.join(shlex.quote(str(a)) for a in argv)
+
+
+def spawn_in_terminal(
+    argv: Sequence[str],
+    *,
+    cwd: Optional[str] = None,
+    fallback: Optional[Sequence[str]] = None,
+) -> None:
+    """Start an interactive command in a visible terminal window.
+
+    ``spawn`` is only enough on Windows, where ``CREATE_NEW_CONSOLE`` gives the
+    child a window. Elsewhere a TUI such as ``claude`` started detached has no
+    terminal and exits at once -- the button "succeeds" and nothing appears.
+
+    ``fallback`` runs if ``argv`` exits non-zero (``claude --continue`` fails
+    when the directory has nothing to resume). On Windows the caller already
+    encodes that in ``argv`` (``cmd /c a || b``), so it is ignored there.
+    """
+    argv = list(argv)
+    if not argv:
+        raise ValueError('argv must not be empty')
+    if os.name == 'nt':
+        spawn(argv, cwd=cwd)
+        return
+
+    binary = find_binary(argv[0])
+    if binary is None:
+        raise BinaryNotFoundError(f'{argv[0]!r} was not found on PATH')
+    line = _shell_line([binary, *argv[1:]])
+    if fallback:
+        line += ' || ' + _shell_line([binary, *list(fallback)[1:]]
+                                     if list(fallback)[0] == argv[0]
+                                     else fallback)
+    workdir = cwd or os.path.expanduser('~')
+
+    if sys.platform == 'darwin':
+        # A .command file opened with Terminal needs no Automation permission
+        # (AppleScript `do script` prompts for it).
+        fd, path = tempfile.mkstemp(prefix='vdock-', suffix='.command')
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write('#!/bin/sh\n'
+                    f'rm -f -- {shlex.quote(path)}\n'
+                    f'cd {shlex.quote(workdir)} || exit 1\n'
+                    f'{line}\n')
+        os.chmod(path, stat.S_IRWXU)
+        subprocess.Popen(  # noqa: S603 - fixed argv, shell=False
+            ['open', '-a', 'Terminal', path], shell=False,
+        )
+        return
+
+    for name, flag in _LINUX_TERMINALS:
+        terminal = shutil.which(name)
+        if terminal:
+            subprocess.Popen(  # noqa: S603 - argv list, shell=False
+                [terminal, *flag, 'sh', '-c', line],
+                cwd=workdir, shell=False,
+            )
+            return
+    raise OSError('No terminal emulator found to open the command in')
 
 
 def child_env() -> Dict[str, str]:

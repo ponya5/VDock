@@ -91,5 +91,6 @@ def windows_keymaps():
     test_macos_agent_interactions.py.
     """
     windows_platform = mock.Mock(system=lambda: 'Windows')
-    with mock.patch('integrations.keymaps.base.platform', windows_platform):
+    with mock.patch('integrations.keymaps.base.platform', windows_platform), \
+            mock.patch('utils.host_os.platform', windows_platform):
         yield

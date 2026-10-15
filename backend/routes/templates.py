@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 from typing import Dict, Any, List, Optional
 from auth import require_auth
+from utils.host_os import localize_template
 
 templates_bp = Blueprint('templates', __name__)
 
@@ -115,6 +116,7 @@ def get_template(template_id: str):
                 'error': 'Template not found'
             }), 404
 
+        template = localize_template(template)
         return jsonify({
             'success': True,
             'template': template
@@ -138,6 +140,8 @@ def apply_template(template_id: str):
                 'success': False,
                 'error': 'Template not found'
             }), 404
+
+        template = localize_template(template)
 
         # Generate new IDs for scene, pages, and buttons
         scene = {

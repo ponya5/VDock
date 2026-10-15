@@ -161,6 +161,10 @@ class MacroAction(BaseAction):
         y = position.get('y')
 
         try:
+            if platform.system() == 'Darwin':
+                from actions import macos_controls
+                if not macos_controls.is_accessibility_trusted():
+                    return ActionResult(False, macos_controls.ACCESSIBILITY_HELP)
             import pyautogui
             if x is not None and y is not None:
                 pyautogui.click(x, y)

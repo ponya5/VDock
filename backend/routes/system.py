@@ -8,6 +8,15 @@ from config import project_root, env_file, write_env_keys, read_env_key
 
 system_bp = Blueprint('system', __name__)
 
+
+@system_bp.route('/api/system/host', methods=['GET'])
+@require_auth
+def host_info():
+    """The OS this backend runs on; shortcuts are localised to it (DL-006)."""
+    from utils import host_os
+    return jsonify({'os': host_os.host_os(),
+                    'primary_modifier': host_os.primary_modifier()})
+
 # Loopback origins that VDock manages in CORS_ORIGINS — refreshed on port
 # changes while any other origins the user added are preserved.
 _MANAGED_ORIGIN = re.compile(
