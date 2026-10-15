@@ -207,13 +207,13 @@ cd VDock
 ```
 
 - **Windows:** double-click **`setup.bat`** and choose **[1] Full setup**
-- **macOS / Linux:** `chmod +x setup.sh launch.sh && ./setup.sh`
+- **macOS / Linux:** `./setup.sh` (downloaded a ZIP instead of cloning? use `bash setup.sh`)
 
-Setup installs dependencies and puts a **VDock icon on your desktop**.
+On a fresh checkout setup runs by itself with no questions asked: it checks Python and Node (on a Mac with Homebrew it offers to install anything missing), installs dependencies, picks free ports and puts a **VDock icon on your desktop**.
 
 ### 2. Launch it
 
-**Double-click the VDock icon on your desktop** (or run `launch.bat` / `./launch.sh`). It opens at `http://localhost:3000` after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
+**Double-click the VDock icon on your desktop** (or run `launch.bat` / `./launch.sh`). It opens in its own window after a few seconds, walks you through a short tour, and drops you into working **Media** and **Claude Code** scenes with no configuration needed.
 
 **Optional tools.** None are required. They unlock extra actions, and the related buttons stay greyed out (with the reason shown) until installed: [Claude Code](https://claude.com/product/claude-code) for 40 Claude actions, [GitHub CLI](https://cli.github.com) for PRs, issues and CI, and Git for repo-aware actions.
 
@@ -248,6 +248,7 @@ Secrets never reach the frontend. Settings shows only *whether* a key is set, an
 
 - **Python/Node not found:** reinstall with PATH enabled, restart the terminal
 - **Port 3000 or 5000 in use:** change ports in setup, or close the other process
+- **Blank white window on macOS:** AirPlay Receiver uses port 5000. `setup.sh` now picks a free port (usually 5001) automatically; on an older install run `./setup.sh --ports`, then `cd frontend && npm run build`
 - **Setup failed on npm:** delete `frontend/node_modules`, run setup option **2** again
 - **Desktop window doesn't open:** open **http://localhost:3000** in a browser
 - **macOS blocks the launcher:** right-click `VDock.command` and choose **Open**, first time only

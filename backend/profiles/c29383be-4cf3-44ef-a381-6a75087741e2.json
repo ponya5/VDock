@@ -1,0 +1,602 @@
+{
+  "id": "c29383be-4cf3-44ef-a381-6a75087741e2",
+  "name": "My VDock",
+  "description": "Media controls and Claude Code actions to get you started.",
+  "pages": [
+    {
+      "id": "e43b55b6-9fbe-477f-ac8a-870376e93bc8",
+      "name": "Page 1",
+      "buttons": [],
+      "grid_config": {
+        "rows": 3,
+        "cols": 5
+      },
+      "background": null
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-1792089144761",
+      "name": "Media",
+      "pages": [
+        {
+          "id": "page-1792089144761",
+          "name": "Page 1",
+          "buttons": [
+            {
+              "id": "btn-1792089144761-3",
+              "label": "Mute",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "volume-mute"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cross_platform",
+                "config": {
+                  "action": "volume_mute"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 0
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#95a5a6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-2",
+              "label": "Volume Down",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "volume-down"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cross_platform",
+                "config": {
+                  "action": "volume_down",
+                  "step": 10
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#e74c3c",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": {
+                "behaviour": "float"
+              },
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-1",
+              "label": "Volume Up",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "volume-up"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cross_platform",
+                "config": {
+                  "action": "volume_up",
+                  "step": 10
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 2
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#27ae60",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": {
+                "effect": {
+                  "type": "glow",
+                  "tint": "brand"
+                }
+              },
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-5",
+              "label": "Previous",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "step-backward"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cross_platform",
+                "config": {
+                  "action": "media_previous"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 0
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#8e44ad",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": {
+                "behaviour": "pulse"
+              },
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-4",
+              "label": "Play / Stop",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "play"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cross_platform",
+                "config": {
+                  "action": "media_play_stop"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 1
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#9b59b6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": {
+                "effect": {
+                  "type": "neon",
+                  "tint": "brand"
+                }
+              },
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-6",
+              "label": "Next",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "step-forward"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cross_platform",
+                "config": {
+                  "action": "media_next"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 2
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#8e44ad",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-7",
+              "label": "Now Playing",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "music"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "now_playing",
+                "config": {}
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 3
+              },
+              "size": {
+                "rows": 1,
+                "cols": 2
+              },
+              "style": {
+                "backgroundColor": "#1e3264",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            }
+          ],
+          "grid_config": {
+            "rows": 3,
+            "cols": 5
+          },
+          "background": null
+        }
+      ],
+      "isActive": true,
+      "icon": "music",
+      "color": "#3498db",
+      "buttonSize": 1,
+      "isDefault": true,
+      "transition_style": "light-bar",
+      "stagger_order": "by-column",
+      "overlay_style": "light-sweep"
+    },
+    {
+      "id": "scene-1792089144761-claude",
+      "name": "Claude Code",
+      "pages": [
+        {
+          "id": "page-1792089144761-claude",
+          "name": "Page 1",
+          "buttons": [
+            {
+              "id": "btn-1792089144761-c1",
+              "label": "Open Claude",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "window-maximize"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "claude_continue",
+                "config": {
+                  "resume": true
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 0
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#D97757",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": {
+                "effect": {
+                  "type": "glow",
+                  "tint": "brand"
+                }
+              },
+              "tooltip": "Open a Claude Code session (resumes the last one when possible)",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-c4",
+              "label": "claude.ai",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "globe"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "claude_open",
+                "config": {
+                  "target": "new_chat"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 3
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#D97757",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "Open a new chat on claude.ai",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-c2",
+              "label": "Review",
+              "secondary_label": "/code-review",
+              "icon": [
+                "fas",
+                "magnifying-glass"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cc_prompt",
+                "config": {
+                  "text": "/code-review"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#7c5cd6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-c3",
+              "label": "Commit",
+              "secondary_label": "git commit",
+              "icon": [
+                "fas",
+                "code-commit"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cc_prompt",
+                "config": {
+                  "text": "Commit the current changes with a clear, descriptive commit message."
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 0,
+                "col": 2
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#7c5cd6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-c5",
+              "label": "Explain",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "circle-question"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cc_prompt",
+                "config": {
+                  "text": "Explain what this code does:\n\n{clipboard}"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 0
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#7c5cd6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "Asks the session to explain whatever is on the clipboard",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-c6",
+              "label": "Write Tests",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "vial"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cc_prompt",
+                "config": {
+                  "text": "Write tests for this code:\n\n{clipboard}"
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 1
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#7c5cd6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "Asks the session to write tests for clipboard code",
+              "enabled": true,
+              "rules": []
+            },
+            {
+              "id": "btn-1792089144761-c7",
+              "label": "Fix Tests",
+              "secondary_label": "",
+              "icon": [
+                "fas",
+                "wrench"
+              ],
+              "icon_type": "fontawesome",
+              "media_url": null,
+              "media_type": null,
+              "action": {
+                "type": "cc_prompt",
+                "config": {
+                  "text": "The tests are failing. Find and fix the cause."
+                }
+              },
+              "shape": "rounded",
+              "position": {
+                "row": 1,
+                "col": 2
+              },
+              "size": {
+                "rows": 1,
+                "cols": 1
+              },
+              "style": {
+                "backgroundColor": "#7c5cd6",
+                "textColor": "#ffffff",
+                "iconSize": 32
+              },
+              "layers": null,
+              "tooltip": "",
+              "enabled": true,
+              "rules": []
+            }
+          ],
+          "grid_config": {
+            "rows": 2,
+            "cols": 4
+          },
+          "background": null
+        }
+      ],
+      "isActive": false,
+      "icon": "robot",
+      "color": "#D97757",
+      "appId": "claude-code",
+      "transition_style": "light-bar",
+      "stagger_order": "by-column"
+    }
+  ],
+  "dockedButtons": [],
+  "theme": "default",
+  "created_at": "2026-10-15T18:32:24.764612Z",
+  "updated_at": "2026-10-15T18:32:24.784525Z",
+  "settings": {
+    "defaultGridRows": 3,
+    "defaultGridCols": 3,
+    "buttonSize": 1.0,
+    "showLabels": true,
+    "showTooltips": true,
+    "animationsEnabled": true
+  }
+}

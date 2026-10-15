@@ -1,0 +1,105 @@
+{
+  "buttonSize": 1,
+  "buttonTransparency": 0,
+  "showLabels": true,
+  "showTooltips": true,
+  "animationsEnabled": true,
+  "editModeWiggle": false,
+  "tiltEffectEnabled": false,
+  "dockedSidebarEnabled": true,
+  "dockedSidebarWidth": 190,
+  "dockedButtonHeight": 84,
+  "background": "iridescence",
+  "uiBrightness": 100,
+  "toastLevel": "errors-only",
+  "toastLevelMigrated": false,
+  "touchMode": "normal",
+  "minimumTouchTargetSize": 44,
+  "defaultGridRows": 3,
+  "defaultGridCols": 3,
+  "openSettingsInNewTab": true,
+  "autoCloseLauncher": true,
+  "recentActions": [],
+  "weatherLocationMode": "auto",
+  "weatherManualCity": "",
+  "screensaverTimeout": 120,
+  "buttonDefaultAnimation": "none",
+  "buttonDefaultIconLoop": "swing",
+  "buttonDefaultEffect": "none",
+  "screensaverWidgets": [
+    "weather",
+    "news",
+    "market"
+  ],
+  "screensaverClockEnabled": true,
+  "screensaverWeatherSize": 100,
+  "newsApiKey": "",
+  "newsFeeds": "",
+  "sportsFeeds": "",
+  "newsRotateSeconds": 8,
+  "marketApiKey": "",
+  "marketTickers": "",
+  "worldClockTimezones": "",
+  "screensaverWidgetSize": 100,
+  "screensaverBackground": "prismatic-burst",
+  "screensaverStyle": "widgets",
+  "screensaverShuffleMinutes": 5,
+  "spectrumSkin": "winamp",
+  "spectrumShuffle": false,
+  "spectrumShuffleMinutes": 10,
+  "spectrumMediaBar": true,
+  "screensaverSpectrumWidgets": false,
+  "dashboardFont": "default",
+  "appScanningEnabled": false,
+  "agentAlertsEnabled": true,
+  "agentWaitingGlowEnabled": true,
+  "agentWaitingGlowStyle": "flash",
+  "agentWaitingDockEnabled": true,
+  "missionControlEnabled": true,
+  "agentAutoFocusScene": true,
+  "appIntegrations": [],
+  "autoSceneSwitching": false,
+  "mcpEnabled": true,
+  "tutorialCompleted": false,
+  "activeProfileId": "c29383be-4cf3-44ef-a381-6a75087741e2",
+  "pressSoundEnabled": true,
+  "pressSoundStyle": "click",
+  "screensaverLayout": {
+    "clock": {
+      "x": 50,
+      "y": 36,
+      "scale": 1
+    },
+    "weather": {
+      "x": 13,
+      "y": 9,
+      "scale": 1
+    },
+    "market": {
+      "x": 87,
+      "y": 9,
+      "scale": 1
+    },
+    "news": {
+      "x": 26,
+      "y": 78,
+      "scale": 1
+    },
+    "sports": {
+      "x": 60,
+      "y": 78,
+      "scale": 1
+    },
+    "worldclock": {
+      "x": 86,
+      "y": 76,
+      "scale": 1
+    },
+    "nowplaying": {
+      "x": 14,
+      "y": 30,
+      "scale": 1
+    }
+  },
+  "screensaverSpectrumLayout": null
+}
