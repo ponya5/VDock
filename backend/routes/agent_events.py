@@ -54,7 +54,8 @@ STATE_ENDED = 'ended'
 
 #: Sources whose agent is a process the session scan can recognise, so a
 #: hook's parent chain can be tied to one exact pid (DL-012).
-_PID_MARKER_SOURCES = frozenset({'claude', 'devin', 'antigravity', 'cursor'})
+_PID_MARKER_SOURCES = frozenset({'claude', 'devin', 'antigravity', 'cursor',
+                                 'codex'})
 
 
 def set_emitter(fn: Callable[[str, Dict[str, Any]], None]) -> None:

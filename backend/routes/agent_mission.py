@@ -36,13 +36,20 @@ agent_mission_bp = Blueprint('agent_mission', __name__)
 #: "Yes", Esc cancels - typed y/n are not its keys (DL-009, verified live).
 DECISION_COMMANDS = {
     'claude': ('cc_accept', 'cc_interrupt'),
+    # Codex's approval overlay takes single-key options (y approve / n deny,
+    # verified in codex-rs approval_overlay.rs) — a typed key is
+    # deterministic where Enter would depend on the highlighted option.
+    'codex': ('codex_approve', 'codex_deny'),
 }
 
 #: Process marker used to find a source's session window.
 _MARKER_BY_SOURCE = {
     'claude': 'claude', 'cursor': 'cursor', 'devin': 'devin',
-    'antigravity': 'antigravity',
+    'antigravity': 'antigravity', 'codex': 'codex',
 }
+
+#: Product name for decide() failure messages.
+_LABEL_BY_SOURCE = {'claude': 'Claude Code', 'codex': 'Codex'}
 
 #: Lower sorts first: blocked on you, then idle-and-prompted, then the rest.
 _STATE_RANK = {
@@ -213,7 +220,7 @@ def decide():
 
     command = COMMANDS_BY_ID[commands[0] if decision == 'approve' else commands[1]]
     result = editor_base.send(command, cwd=entry.get('cwd') or None,
-                              editor_label='Claude Code',
+                              editor_label=_LABEL_BY_SOURCE.get(source, source),
                               session_pid=entry.get('pid'))
     if not result.get('success'):
         logger.info('Mission decide failed: %s', result.get('message'))
