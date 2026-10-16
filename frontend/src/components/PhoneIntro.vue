@@ -107,7 +107,7 @@ function next() {
   height: 64px;
   border-radius: 18px;
   background: #1f6fd1;
-  font-size: 28px;
+  font-size: clamp(24px, 6vw, 28px);
 }
 .pi-title { margin: 16px 0 8px; font-size: 1.3rem; }
 .pi-text { margin: 0; color: rgba(255, 255, 255, 0.82); line-height: 1.5; }
