@@ -14,6 +14,10 @@ The Mac build is not notarized yet, so macOS blocks the first launch. It is safe
 If **Open Anyway** does not appear, run this in Terminal and open VDock again:
 `xattr -dr com.apple.quarantine /Applications/VDock.app`
 
+After the first launch on a Mac, two one-time steps:
+- **Buttons that press keys** (Approve, Continue, shortcuts): System Settings > Privacy & Security > **Accessibility**, switch **VDock** on, then reopen VDock.
+- **Phone or tablet:** it is off by default for safety. In VDock open Settings > Devices & network > Connect a device, turn on **Allow LAN access**, relaunch, and scan the QR code.
+
 ## Windows
 If SmartScreen says "Windows protected your PC", click **More info > Run anyway**.
 The Windows build has been tested by CI only, not yet by hand on a real PC.
