@@ -304,8 +304,8 @@ onUnmounted(() => {
 }
 
 /* DL-147: 44 px touch floor on phones only. */
-html:is(.device-phone, .device-tablet) .toast-close { min-width: 44px; min-height: 44px; }
-html:is(.device-phone, .device-tablet) .details-toggle { min-height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .toast-close { min-width: 44px; min-height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .details-toggle { min-height: 44px; }
 
 .toast-message {
   margin: 0;

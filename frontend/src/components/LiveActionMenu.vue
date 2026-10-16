@@ -94,7 +94,7 @@ const sublabel = computed(() =>
 .lam-title h2 { margin: 0; font-size: 1.1rem; }
 .lam-sub { color: #9fb0c9; font-size: 0.85rem; }
 .lam-close {
-  flex: none; width: 40px; height: 40px;
+  flex: none; width: 44px; height: 44px;
   border-radius: 10px; border: 1px solid #243556;
   background: #16233a; color: #cfdcee; cursor: pointer; touch-action: manipulation;
 }

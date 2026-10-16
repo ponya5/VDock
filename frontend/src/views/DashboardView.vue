@@ -854,7 +854,7 @@ watch([revealFabVisible, footerVisible], ([fab, footer]) => {
 
 // Teleported surfaces (agent dock, Mission Control, toasts) sit outside the
 // `.device-<class>` root, so the phone/tablet layout class is mirrored on <html>.
-const HTML_DEVICE_CLASSES = ['phone', 'tablet'] as const
+const HTML_DEVICE_CLASSES = ['phone', 'tablet', 'panel'] as const
 watch(layoutClass, (cls) => {
   const root = document.documentElement.classList
   for (const name of HTML_DEVICE_CLASSES) root.toggle(`device-${name}`, cls === name)
@@ -1339,7 +1339,7 @@ onUnmounted(() => {
 
   stopVdockRefreshListener?.()
   stopUiCommandListener?.()
-  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer', 'device-phone', 'device-tablet')
+  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer', 'device-phone', 'device-tablet', 'device-panel')
   // Unmounting the deck (e.g. route to Settings) must not leave the app
   // background suspended — the saver is gone with it.
   setScreensaverVisible(false)
@@ -1568,6 +1568,33 @@ onUnmounted(() => {
 
 .dashboard-view:is(.device-phone, .device-tablet) .deck-grid-host {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* DL-015: scene image wallpapers can carry a wordmark baked into the PNG
+   ("CLAUDE CODE") that reads straight through the default 40%-alpha tiles
+   on a small screen. Where an image background is actually showing, firm up
+   the default and glass tile fills — desktop keeps the airy glass look. */
+.dashboard-view:is(.device-phone, .device-tablet).dashboard-bg-custom :deep(.deck-button) {
+  --btn-bg: rgba(20, 16, 50, 0.78);
+}
+
+.dashboard-view:is(.device-phone, .device-tablet).dashboard-bg-custom :deep(.deck-button-glass) {
+  --glass-bg: rgba(20, 16, 50, 0.55);
+}
+
+/* DL-015: the 1.5x touch multiplier is tuned for small panels; on a tablet
+   it inflates the fixed header/footer chrome to ~200px of a 768px screen.
+   Cap it at 1.2x, matching the icon-row caps already used elsewhere. */
+.dashboard-view.device-tablet :deep(.deck-header) {
+  min-height: calc(64px * min(var(--touch-multiplier, 1), 1.2) + 26px);
+}
+
+.dashboard-view.device-tablet :deep(.deck-header .header-content) {
+  min-height: calc(68px * min(var(--touch-multiplier, 1), 1.2));
+}
+
+.dashboard-view.device-tablet :deep(.deck-footer) {
+  min-height: max(44px, calc(56px * min(var(--touch-multiplier, 1), 1.2)));
 }
 
 /* A tablet can mount the footer (page dots, edit controls); then the footer

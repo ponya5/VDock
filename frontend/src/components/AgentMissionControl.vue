@@ -633,6 +633,16 @@ onUnmounted(() => {
 .mc-backdrop.mc-tablet .mc-btn { min-height: 3em; padding: 0 1.1em; }
 .mc-backdrop.mc-panel .mc-close,
 .mc-backdrop.mc-tablet .mc-close { width: 3em; height: 3em; }
+/* DL-015: the secondary rows stayed at fixed px under the em-scaled sheet —
+   give them the same touch floor. */
+.mc-backdrop.mc-panel .mc-btn-ghost,
+.mc-backdrop.mc-tablet .mc-btn-ghost,
+.mc-backdrop.mc-panel .mc-file,
+.mc-backdrop.mc-tablet .mc-file,
+.mc-backdrop.mc-panel .mc-preset,
+.mc-backdrop.mc-tablet .mc-preset,
+.mc-backdrop.mc-panel .mc-changes,
+.mc-backdrop.mc-tablet .mc-changes { min-height: max(44px, 2.2em); }
 .mc-backdrop.mc-panel .mc-line,
 .mc-backdrop.mc-tablet .mc-line { -webkit-line-clamp: 3; line-clamp: 3; }
 .mc-backdrop.mc-panel .mc-row-actions,

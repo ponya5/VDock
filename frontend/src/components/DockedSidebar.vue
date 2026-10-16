@@ -551,8 +551,8 @@ function stopResize() {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);

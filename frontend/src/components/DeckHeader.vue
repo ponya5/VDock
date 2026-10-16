@@ -473,6 +473,17 @@ onUnmounted(() => {
   margin-top: 0;
 }
 
+/* DL-015: the 18px handle is a drag affordance — on touch surfaces its
+   hitbox grows to the 44px floor, reaching up into the header's padding. */
+html:is(.device-phone, .device-tablet, .device-panel) .header-collapse-handle {
+  height: 44px;
+}
+
+html:is(.device-phone, .device-tablet, .device-panel) .autohide-pill {
+  min-height: 44px;
+  padding: 5px 16px;
+}
+
 .header-collapse-handle:hover .reveal-handle,
 .header-collapse-handle:active .reveal-handle {
   background-color: var(--color-primary, #007aff);
