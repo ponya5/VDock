@@ -478,9 +478,10 @@ def _read_macos_player(name: str, script: str) -> Optional[Dict[str, Any]]:
 
 def _download_art(url: str) -> Optional[Tuple[bytes, Optional[str]]]:
     import urllib.request
+    from utils.tls import ssl_context
 
     try:
-        with urllib.request.urlopen(url, timeout=5) as response:
+        with urllib.request.urlopen(url, timeout=5, context=ssl_context()) as response:
             data = response.read(MAX_ART_BYTES + 1)
             mime = response.headers.get_content_type()
     except (OSError, ValueError) as error:
