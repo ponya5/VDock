@@ -178,6 +178,8 @@ def send(command: Command, text_override: Optional[str] = None,
         # spawned the agent (Devin, Cursor, VS Code, Windows Terminal, a
         # classic conhost console...) -- a static exe list can't know it.
         host_hwnd = _resolve_session_host(command, cwd, session_pid)
+        logger.info('send %s: session host=%r pinned=%r', command.id, host_hwnd,
+                    sessions.pinned_pid(command.session_marker) if command.session_marker else None)
         if host_hwnd is None and session_pid is not None and command.session_marker:
             return {
                 'success': False,

@@ -365,6 +365,8 @@ def test_denied_automation_falls_back_to_the_app(mac, mocker):
     mocker.patch.object(window_focus.subprocess, 'run', side_effect=run)
     mocker.patch.object(window_focus, '_wait_frontmost', return_value=True)
     mocker.patch.object(window_focus, '_raise_project_window', return_value=False)
+    # One window only: activating the app cannot land in another shell (DL-017).
+    mocker.patch.object(window_focus, '_visible_window_count', return_value=1)
     assert window_focus.focus_hwnd(20) is True
     assert calls == ['osascript', 'open']
 

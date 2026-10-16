@@ -1209,10 +1209,11 @@ def _focus_session_macos(session_pid: int) -> bool:
     global _last_focus_problem
     _last_focus_problem = None
     if not _select_tty_tab(identity, tty):
-        if identity in _TTY_TAB_SCRIPTS and (_visible_window_count(app_pid) or 0) > 1:
+        if identity in _TTY_TAB_SCRIPTS and _visible_window_count(app_pid) != 1:
             # Without the exact tab, activating the app brings forward its
             # last-used window - with several open that may be another
-            # shell. Refuse rather than guess (DL-009).
+            # shell. Refuse rather than guess (DL-009). An unknown count (0 or
+            # None) is not 'only one window' - DL-017.
             name = _macos_host_name(bundle)
             _last_focus_problem = (
                 f'Several {name} windows are open and macOS did not let VDock pick '

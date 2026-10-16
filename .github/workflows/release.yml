@@ -174,5 +174,6 @@ jobs:
           gh release upload "${{ github.ref_name }}" "${files[@]}" \
             --clobber 2>/dev/null || \
           gh release create "${{ github.ref_name }}" "${files[@]}" \
+            --notes-file "$GITHUB_WORKSPACE/.github/release-install-notes.md" \
             --generate-notes
         shell: bash

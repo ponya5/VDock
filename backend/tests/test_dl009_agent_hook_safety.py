@@ -167,3 +167,19 @@ def test_many_terminal_windows_without_tab_selection_refuses(mocker):
     assert window_focus._focus_session_macos(20) is False
     assert 'Automation' in window_focus.last_focus_problem()
     run.assert_not_called()  # never activated the app on a guess
+
+
+@pytest.mark.parametrize('count', [0, None])
+def test_unknown_window_count_without_tab_selection_refuses(mocker, count):
+    """DL-017: a window count that could not be read must not pass the guard."""
+    from utils import window_focus
+    proc = mock.Mock(terminal=lambda: '/dev/ttys003', cwd=lambda: '/repo')
+    mocker.patch.object(window_focus, '_macos_regular_app_pids', return_value={})
+    mocker.patch('psutil.Process', return_value=proc)
+    mocker.patch.object(window_focus, '_macos_host_app',
+                        return_value=(400, '/System/Applications/Utilities/Terminal.app'))
+    mocker.patch.object(window_focus, '_select_tty_tab', return_value=False)
+    mocker.patch.object(window_focus, '_visible_window_count', return_value=count)
+    run = mocker.patch.object(window_focus.subprocess, 'run')
+    assert window_focus._focus_session_macos(20) is False
+    run.assert_not_called()
