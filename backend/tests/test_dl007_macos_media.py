@@ -178,6 +178,10 @@ def test_launched_from_an_app_names_that_app(mocker, tmp_path):
     (bundle / 'Info.plist').write_bytes(plistlib.dumps({'CFBundleName': 'Cursor'}))
     exe = bundle / 'MacOS' / 'Cursor'
     exe.write_text('')
+    # _display_name locates the bundle via the '.app/' substring; Windows paths
+    # use backslashes, so normalize separators the way realpath would on macOS.
+    mocker.patch.object(macos_controls.os.path, 'realpath',
+                        lambda p: str(p).replace(os.sep, '/'))
     mocker.patch.object(macos_controls, '_responsible_pid', return_value=4242)
     mocker.patch('psutil.Process', return_value=mock.Mock(exe=lambda: str(exe)))
     client = macos_controls.accessibility_client()

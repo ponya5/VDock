@@ -84,7 +84,10 @@ def _localize_button(button: Dict[str, Any]) -> None:
         button['secondary_label'] = _localize_label(label, changed)
 
 
-_MAC_GLYPHS = {'cmd': '\u2318', 'ctrl': '\u2303', 'alt': '\u2325', 'shift': '\u21e7'}
+_MAC_GLYPHS = {
+    'cmd': '\u2318', 'ctrl': '\u2303', 'alt': '\u2325', 'shift': '\u21e7',
+    'up': '\u2191', 'down': '\u2193', 'left': '\u2190', 'right': '\u2192',
+}
 
 
 def _mac_chord_label(keys: List[str]) -> str:
@@ -96,11 +99,24 @@ def _apply_explicit_mac_keys(button: Dict[str, Any]) -> bool:
 
     JetBrains ships a separate macOS keymap (Go to File is Cmd+Shift+O, Run is
     Ctrl+R) that no Ctrl->Cmd rule can derive, so its template lists each
-    macOS chord next to the Windows one. Returns whether anything changed.
+    macOS chord next to the Windows one. A macro can do the same per whole
+    step list with ``mac_steps`` (Save All is Ctrl+K S on Windows but a single
+    Cmd+Alt+S on macOS - DL-013). Returns whether anything changed.
     """
     action = button.get('action')
     config = action.get('config') if isinstance(action, dict) else None
-    mac_keys = config.pop('mac_keys', None) if isinstance(config, dict) else None
+    if not isinstance(config, dict):
+        return False
+    mac_steps = config.pop('mac_steps', None)
+    if isinstance(mac_steps, list) and mac_steps:
+        config['steps'] = mac_steps
+        if isinstance(button.get('secondary_label'), str):
+            button['secondary_label'] = ' '.join(
+                _mac_chord_label(step['keys']) for step in mac_steps
+                if isinstance(step, dict) and step.get('type') == 'hotkey'
+                and isinstance(step.get('keys'), list))
+        return True
+    mac_keys = config.pop('mac_keys', None)
     if not (isinstance(mac_keys, list) and all(isinstance(k, str) for k in mac_keys)):
         return False
     config['keys'] = list(mac_keys)

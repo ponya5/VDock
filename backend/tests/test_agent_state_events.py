@@ -226,7 +226,7 @@ def test_codex_uninstall_removes_hooks_and_the_legacy_notify_exactly(agent_home)
     config = agent_home / '.codex' / 'config.toml'
     config.parent.mkdir()
     rest = '# my config\nmodel = "o4"\n\n[projects."x"]\ntrust = "trusted"\n'
-    config.write_text(_LEGACY_NOTIFY + rest, encoding='utf-8', newline='')
+    config.write_bytes((_LEGACY_NOTIFY + rest).encode('utf-8'))
     agent_hooks.install_hook('codex')
     result = agent_hooks.uninstall_hook('codex')
     assert result.removed is True

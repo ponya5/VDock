@@ -60,7 +60,7 @@ def test_cursor_template_on_macos_uses_cmd_and_glyph_labels():
 def test_macro_steps_inside_a_button_are_localized():
     with as_os('Darwin'):
         b = buttons(host_os.localize_template(template('template-ide-cursor')))
-    steps = json.dumps(b['Save All']['action'])
+    steps = json.dumps(b['Zen Mode']['action'])
     assert '"cmd", "k"' in steps and '"ctrl", "k"' not in steps
 
 
