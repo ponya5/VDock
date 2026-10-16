@@ -6,6 +6,7 @@ import {
   pinAgentSession,
   type AgentSessionInfo,
 } from '@/api/agentSessions'
+import { useDeviceClass } from '@/composables/useDeviceClass'
 
 /** The session marker a profile's commands carry ('claude', 'devin'), if any. */
 export function profileSessionMarker(
@@ -147,6 +148,7 @@ export function useAgentTargets(marker: Ref<string | null>): AgentTargets {
   const sessions = ref<AgentSessionInfo[]>([])
   const pinnedPid = ref<number | null>(null)
   const resolvedPid = ref<number | null>(null)
+  const { layoutClass } = useDeviceClass()
   let timer: number | undefined
 
   async function refresh(): Promise<void> {
@@ -203,7 +205,15 @@ export function useAgentTargets(marker: Ref<string | null>): AgentTargets {
 
   const targetLabel = computed(() => {
     if (!sessions.value.length) return 'No session'
-    const name = effectiveSession.value?.label || 'session'
+    let name = effectiveSession.value?.label || 'session'
+    if (layoutClass.value === 'phone') {
+      // DL-015: the chip's text column is ~90px on a 390px phone — the
+      // 'Auto · ' prefix and ' · host' suffix eat it before the project
+      // survives the ellipsis. The pinned/auto distinction still shows in
+      // the chip's accent edge, so the compact label keeps just the name.
+      name = name.replace(/ · [^·]+$/, '')
+      return name
+    }
     return pinnedPid.value !== null ? name : `Auto · ${name}`
   })
 

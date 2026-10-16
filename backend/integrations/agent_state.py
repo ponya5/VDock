@@ -50,8 +50,21 @@ _LIVENESS_DEAD_SECONDS = 60
 #: calls doesn't rescan the process table.
 _ALIVE_CACHE_SECONDS = 10
 
+#: A session's pid is only trusted as "dead" once it has been quiet this long.
+_PID_GRACE_SECONDS = 5
+
 _alive_cache: Dict[str, tuple] = {}
 _dead_since: Dict[str, float] = {}
+
+#: A session that just ended ignores events that started before its end for
+#: this long - a late PostToolUse must not resurrect it (DL-012).
+_ENDED_TTL_SECONDS = 120
+
+#: Hook clocks are the host's own; anything further ahead than this is junk
+#: and must not poison the ordering of a session's later events.
+_MAX_CLOCK_SKEW_SECONDS = 5
+
+_ended_at: Dict[tuple, tuple] = {}
 
 MAX_PROMPT_CHARS = 2000
 MAX_REPLY_CHARS = 6000
@@ -67,6 +80,30 @@ def normalise_source(raw_source: Any) -> str:
 
 def normalise_session_id(raw_session_id: Any) -> str:
     return str(raw_session_id or DEFAULT_SESSION_ID)[:100]
+
+
+def _clean_event_ts(raw_ts: Any) -> float:
+    """A usable hook start time, or 0 (unknown - ordering is not enforced)."""
+    try:
+        event_ts = float(raw_ts or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return event_ts if 0 < event_ts <= time.time() + _MAX_CLOCK_SKEW_SECONDS else 0.0
+
+
+def is_stale(source: str, session_id: str, event_ts: Any) -> bool:
+    """True when ``event_ts`` started before something already recorded for
+    this session (or before it ended) - the event overtook, or was overtaken
+    by, a newer one on its way to the backend."""
+    event_ts = _clean_event_ts(event_ts)
+    if not event_ts:
+        return False
+    with _lock:
+        ended = _ended_at.get((source, session_id))
+        if ended and time.time() - ended[1] < _ENDED_TTL_SECONDS and event_ts <= ended[0]:
+            return True
+        previous = _sessions_by_source.get(source, {}).get(session_id)
+        return bool(previous) and event_ts < previous.get('event_ts', 0)
 
 
 def _conversation(previous_entry: Dict[str, Any], prompt: str, reply: str) -> Dict[str, str]:
@@ -85,13 +122,26 @@ def _conversation(previous_entry: Dict[str, Any], prompt: str, reply: str) -> Di
 
 def record(source: str, state: str, message: str = '', cwd: str = '',
            project: str = '', session_id: str = DEFAULT_SESSION_ID,
-           prompt: str = '', reply: str = '', prompted: bool = False) -> Dict[str, Any]:
-    """Store ``state`` for one session of ``source``; returns the entry."""
+           prompt: str = '', reply: str = '', prompted: bool = False,
+           detailed: bool = False, pid: Optional[int] = None,
+           pid_started: Optional[float] = None, turn_id: str = '',
+           event_ts: Any = None, passive: bool = False) -> Dict[str, Any]:
+    """Store ``state`` for one session of ``source``; returns the entry.
+
+    ``pid`` / ``pid_started`` identify the agent process (DL-012) and stick
+    to the session once known. ``passive`` marks an event that only carries
+    text (Cursor's afterAgentResponse): inside a turn that already
+    finished it updates the reply but never reopens the turn.
+    """
     if state not in ALLOWED_STATES:
         raise ValueError(f'Unknown agent state: {state}')
     with _lock:
         sessions = _sessions_by_source.setdefault(source, {})
         previous = sessions.get(session_id, {})
+        if passive and turn_id and previous.get('turn_id') == turn_id \
+                and previous.get('state') == STATE_READY:
+            state = STATE_READY
+            message = previous.get('message', '')
         entry = {
             'source': source,
             'session_id': session_id,
@@ -106,14 +156,32 @@ def record(source: str, state: str, message: str = '', cwd: str = '',
             'prompted': bool(prompted) or bool(prompt)
                         or bool(previous.get('prompted')),
             **_conversation(previous, prompt, reply),
+            # The message names what a permission prompt is about (DL-011).
+            'detailed': bool(detailed),
+            'pid': pid or previous.get('pid'),
+            'pid_started': pid_started or previous.get('pid_started'),
+            'turn_id': turn_id or previous.get('turn_id', ''),
+            'event_ts': max(_clean_event_ts(event_ts), previous.get('event_ts', 0)),
             'ts': time.time(),
         }
         sessions[session_id] = entry
     return entry
 
 
-def end_session(source: str, session_id: str = DEFAULT_SESSION_ID) -> None:
+def session_pid(source: str, session_id: str) -> Optional[int]:
+    """The agent pid already resolved for this session, if any."""
     with _lock:
+        entry = _sessions_by_source.get(source, {}).get(session_id)
+        return entry.get('pid') if entry else None
+
+
+def end_session(source: str, session_id: str = DEFAULT_SESSION_ID,
+                event_ts: Any = None) -> None:
+    now = time.time()
+    with _lock:
+        for key in [k for k, v in _ended_at.items() if now - v[1] >= _ENDED_TTL_SECONDS]:
+            del _ended_at[key]
+        _ended_at[(source, session_id)] = (_clean_event_ts(event_ts) or now, now)
         sessions = _sessions_by_source.get(source)
         if not sessions:
             return
@@ -169,6 +237,29 @@ def _drop_dead(now: float) -> None:
             _dead_since.pop(source, None)
 
 
+def _drop_dead_processes(now: float) -> None:
+    """Drop sessions whose own agent process is gone (DL-012).
+
+    ``_drop_dead`` only notices when *every* session of a source is gone; with
+    a second terminal still running, a killed session kept its ``ready`` /
+    ``permission`` row for the whole TTL. Sessions with a resolved pid are
+    checked individually - the pid is a real process on this machine, so
+    "gone" is final (the pid + start time guard against pid reuse).
+    """
+    from . import sessions as session_scan  # late: integrations init order
+    for source in list(_sessions_by_source):
+        if source not in _LIVENESS_SOURCES:
+            continue
+        entries = _sessions_by_source[source]
+        for session_id, entry in list(entries.items()):
+            pid = entry.get('pid')
+            if pid and now - entry.get('ts', 0) >= _PID_GRACE_SECONDS \
+                    and not session_scan.process_alive(pid, entry.get('pid_started')):
+                del entries[session_id]
+        if not entries:
+            del _sessions_by_source[source]
+
+
 def _combined(sessions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     newest_first = sorted(sessions.values(), key=lambda entry: entry['ts'], reverse=True)
     waiting_on_permission = [entry for entry in newest_first if entry['state'] == STATE_PERMISSION]
@@ -181,6 +272,7 @@ def snapshot() -> Dict[str, Dict[str, Any]]:
     now = time.time()
     with _lock:
         _drop_expired(now)
+        _drop_dead_processes(now)
         _drop_dead(now)
         return {
             source: _combined(sessions)
@@ -201,6 +293,7 @@ def session_entries(source: str) -> List[Dict[str, Any]]:
     now = time.time()
     with _lock:
         _drop_expired(now)
+        _drop_dead_processes(now)
         _drop_dead(now)
         return [dict(e) for e in _sessions_by_source.get(source, {}).values()]
 
@@ -211,3 +304,4 @@ def reset() -> None:
         _sessions_by_source.clear()
         _alive_cache.clear()
         _dead_since.clear()
+        _ended_at.clear()

@@ -351,6 +351,28 @@ def set_microphone_muted(muted: bool) -> ActionResult:
     return ActionResult(True, 'Microphone muted' if muted else 'Microphone unmuted')
 
 
+def read_microphone_muted() -> Tuple[Optional[bool], Optional[str]]:
+    """(muted, error) for the Mic Mute button face. macOS has no input mute
+    flag, so muted means input level 0 - what set_microphone_muted writes."""
+    levels = _read_volume_levels()
+    if levels is None or 'input' not in levels:
+        return None, 'No microphone found'
+    return levels['input'] == 0, None
+
+
+def set_microphone_mute(muted: Optional[bool]) -> Tuple[Optional[bool], Optional[str]]:
+    """Mute (True), unmute (False) or toggle (None); returns the state read
+    back afterwards, so the button never claims a change that did not land."""
+    current, error = read_microphone_muted()
+    if current is None:
+        return None, error
+    target = (not current) if muted is None else muted
+    result = set_microphone_muted(target)
+    if not result.success:
+        return None, result.message
+    return read_microphone_muted()
+
+
 def _is_app_running(app_name: str) -> bool:
     completed = subprocess.run(
         ['pgrep', '-x', app_name], capture_output=True, text=True

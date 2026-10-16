@@ -14,6 +14,7 @@ if /i "%~1"=="--full" (
     call :install_dependencies
     if errorlevel 1 exit /b 1
     call :configure_ports silent
+    call :offer_firewall_rule
     call :build_frontend
     if errorlevel 1 exit /b 1
     call :create_desktop_shortcut
@@ -85,6 +86,7 @@ echo   time with: setup.bat --ports
 call :install_dependencies
 if errorlevel 1 goto :fail
 call :configure_ports silent
+call :offer_firewall_rule
 call :build_frontend
 if errorlevel 1 goto :fail
 call :create_desktop_shortcut
@@ -121,26 +123,41 @@ echo.
 echo   [1/7] Checking Python and Node.js...
 call :ensure_prerequisites
 if errorlevel 1 exit /b 1
-for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo   [OK]    %%v
+for /f "tokens=*" %%v in ('%PYTHON_CMD% --version 2^>^&1') do echo   [OK]    %%v ^(%PYTHON_CMD%^)
 for /f "tokens=*" %%v in ('node --version 2^>^&1') do echo   [OK]    Node.js %%v
 for /f "tokens=*" %%v in ('npm --version 2^>^&1') do echo   [OK]    npm %%v
 
 echo   [2/7] Python virtual environment...
-if not exist "%ROOT%\backend\venv\Scripts\activate.bat" (
-    echo           Creating venv...
-    python -m venv "%ROOT%\backend\venv"
-    if errorlevel 1 exit /b 1
+set "VENV_PY=%ROOT%\backend\venv\Scripts\python.exe"
+REM A venv whose Python was upgraded, moved or uninstalled (or is a version
+REM VDock does not support) is rebuilt instead of failing later (DL-010).
+if exist "!ROOT!\backend\venv" (
+    call :venv_python_ok
+    if errorlevel 1 (
+        echo   [WARN]  backend\venv can't be used: !VENV_PROBLEM!. Recreating it.
+        rmdir /s /q "!ROOT!\backend\venv"
+    )
+)
+if not exist "%VENV_PY%" (
+    echo           Creating venv with !PYTHON_CMD!...
+    %PYTHON_CMD% -m venv "!ROOT!\backend\venv"
+    if errorlevel 1 (
+        echo   [ERROR] Could not create backend\venv with !PYTHON_CMD!.
+        exit /b 1
+    )
     echo   [OK]    Virtual environment created
 ) else (
     echo   [OK]    Virtual environment already exists
 )
 
 echo   [3/7] Backend dependencies...
-call "%ROOT%\backend\venv\Scripts\activate.bat"
-python -m pip install --upgrade pip --quiet --disable-pip-version-check >nul 2>&1
-pip install -r "%ROOT%\backend\requirements.txt" --quiet --disable-pip-version-check
+set "PIP_LOG=%ROOT%\backend\data\pip-install.log"
+if not exist "%ROOT%\backend\data" mkdir "%ROOT%\backend\data" 2>nul
+"%VENV_PY%" -m pip install --upgrade pip --quiet --disable-pip-version-check >nul 2>&1
+echo           Installing packages ^(log: backend\data\pip-install.log^)...
+"%VENV_PY%" -m pip install -r "%ROOT%\backend\requirements.txt" --disable-pip-version-check > "%PIP_LOG%" 2>&1
 if errorlevel 1 (
-    echo   [ERROR] pip install failed. Check your connection and try again.
+    call :report_pip_failure
     exit /b 1
 )
 echo   [OK]    Backend dependencies installed
@@ -240,17 +257,18 @@ if not defined FOUND_ANY (
 exit /b 0
 
 :ensure_prerequisites
-REM Python 3.9+ (with venv) and Node 20+ must be on PATH. When something is
-REM missing, offer to install it with winget (built into Windows 10/11).
+REM Python 3.9-3.14 (with venv) and Node 20+ must be available. When something
+REM is missing, offer to install it with winget (built into Windows 10/11).
 set "MIN_NODE_MAJOR=20"
 set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
 set "MISSING_PACKAGES="
 set "MISSING_LABELS="
 
-call :check_python
+call :find_python
 if errorlevel 1 (
-    set "MISSING_PACKAGES=!MISSING_PACKAGES! Python.Python.3.12"
-    set "MISSING_LABELS=!MISSING_LABELS! Python"
+    call :report_unsupported_python
+    set "MISSING_PACKAGES=!MISSING_PACKAGES! Python.Python.3.13"
+    set "MISSING_LABELS=!MISSING_LABELS! Python 3.13"
 )
 call :check_node
 if errorlevel 1 (
@@ -274,7 +292,7 @@ for %%p in (!MISSING_PACKAGES!) do (
 )
 
 call :refresh_path
-call :check_python
+call :find_python
 if errorlevel 1 goto :prereq_manual_help
 call :check_node
 if errorlevel 1 goto :prereq_manual_help
@@ -282,10 +300,10 @@ exit /b 0
 
 :prereq_manual_help
 echo.
-echo   [ERROR] Python 3.9+ and Node.js %MIN_NODE_MAJOR%+ are required.
-echo           Python:  https://www.python.org/downloads/ ^(tick "Add Python to PATH"^)
+echo   [ERROR] Python 3.9-3.14 ^(3.13 recommended^) and Node.js %MIN_NODE_MAJOR%+ are required.
+echo           Python:  https://www.python.org/downloads/ ^(pick 3.13, tick "Add Python to PATH"^)
 echo           Node.js: https://nodejs.org/
-echo           Or run:  winget install Python.Python.3.12
+echo           Or run:  winget install Python.Python.3.13
 echo                    winget install OpenJS.NodeJS.LTS
 echo           Then close this window and run setup.bat again.
 exit /b 1
@@ -298,9 +316,133 @@ if /i "%~1"=="Y" exit /b 0
 if /i "%~1"=="YES" exit /b 0
 exit /b 1
 
-:check_python
-python -c "import sys, venv, ensurepip; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
-exit /b %errorlevel%
+:find_python
+REM Picks a supported Python into PYTHON_CMD (DL-010): through the py launcher
+REM 3.13, 3.12, 3.14, 3.11, 3.10; then "python" when it is 3.9-3.14; then
+REM py -3.9. Python 3.15 is too new - pywinrt and other Windows packages have
+REM no 3.15 builds yet, so pip would fail half-way.
+set "PYTHON_CMD="
+set "UNSUPPORTED_PY="
+where py >nul 2>&1
+if not errorlevel 1 (
+    for %%v in (3.13 3.12 3.14 3.11 3.10) do (
+        if not defined PYTHON_CMD (
+            py -%%v -c "import sys, venv, ensurepip" >nul 2>&1
+            if not errorlevel 1 set "PYTHON_CMD=py -%%v"
+        )
+    )
+)
+if defined PYTHON_CMD exit /b 0
+python -c "import sys, venv, ensurepip; sys.exit(0 if (3, 9) <= sys.version_info[:2] <= (3, 14) else 1)" >nul 2>&1
+if not errorlevel 1 (
+    set "PYTHON_CMD=python"
+    exit /b 0
+)
+py -3.9 -c "import sys, venv, ensurepip" >nul 2>&1
+if not errorlevel 1 (
+    set "PYTHON_CMD=py -3.9"
+    exit /b 0
+)
+REM Nothing supported. Remember what is installed for the explanation.
+for /f "tokens=2" %%v in ('python --version 2^>nul') do set "UNSUPPORTED_PY=%%v"
+if not defined UNSUPPORTED_PY (
+    for /f "tokens=2" %%v in ('py --version 2^>nul') do set "UNSUPPORTED_PY=%%v"
+)
+REM The Microsoft Store "python" alias prints a sentence, not a version.
+if defined UNSUPPORTED_PY if not "!UNSUPPORTED_PY:~0,2!"=="3." set "UNSUPPORTED_PY="
+exit /b 1
+
+:report_unsupported_python
+if not defined UNSUPPORTED_PY exit /b 0
+echo   [WARN]  Found Python !UNSUPPORTED_PY!, but VDock needs Python 3.9-3.14.
+echo           Some of its Windows packages have no builds for that version yet.
+echo           Install Python 3.13 next to it - setup then picks it automatically.
+exit /b 0
+
+:venv_python_ok
+REM OK when backend\venv's python.exe still starts its base Python and that
+REM Python is a supported version. VENV_PROBLEM says why not.
+set "VENV_PROBLEM="
+if not exist "%VENV_PY%" (
+    set "VENV_PROBLEM=its Python is missing"
+    exit /b 1
+)
+"%VENV_PY%" -c "import sys; sys.exit(0 if (3, 9) <= sys.version_info[:2] <= (3, 14) else 7)" >nul 2>&1
+set "VENV_CHECK=%errorlevel%"
+if "%VENV_CHECK%"=="0" exit /b 0
+if "%VENV_CHECK%"=="7" (
+    set "VENV_PROBLEM=it uses a Python version VDock does not support"
+) else (
+    set "VENV_PROBLEM=its Python no longer runs - it was moved, upgraded or uninstalled"
+)
+exit /b 1
+
+:report_pip_failure
+REM pip's own ERROR lines plus what they usually mean - never just "check
+REM your connection" when a package simply has no build for this Python.
+set "PIP_PY_VERSION="
+for /f "tokens=2" %%v in ('call "%VENV_PY%" --version 2^>^&1') do set "PIP_PY_VERSION=%%v"
+echo   [ERROR] Installing the backend's Python packages failed ^(Python !PIP_PY_VERSION!, %PROCESSOR_ARCHITECTURE%^).
+findstr /b /c:"ERROR:" "%PIP_LOG%"
+findstr /i /c:"No matching distribution" /c:"Could not find a version that satisfies" /c:"requires a different Python" /c:"Failed building wheel" /c:"Failed to build" /c:"subprocess-exited-with-error" "%PIP_LOG%" >nul 2>&1
+if not errorlevel 1 (
+    echo           A package has no ready-made build for Python !PIP_PY_VERSION! on this PC.
+    echo           Install Python 3.13 ^(winget install Python.Python.3.13^), then run:
+    echo             rmdir /s /q backend\venv ^&^& setup.bat
+    goto :report_pip_failure_log
+)
+findstr /i /c:"connection" /c:"timed out" /c:"getaddrinfo" /c:"SSLError" /c:"ProxyError" /c:"Could not fetch URL" "%PIP_LOG%" >nul 2>&1
+if not errorlevel 1 echo           pip could not reach the package index - check your internet connection or proxy.
+:report_pip_failure_log
+echo           Full log: %PIP_LOG%
+exit /b 0
+
+:offer_firewall_rule
+REM Phones reach VDock over Wi-Fi, and Windows Defender Firewall blocks the
+REM backend until a rule allows it (DL-010). Offered once (a "no" is
+REM remembered): Private networks only, TCP, the backend port, for the venv
+REM python.exe and the base python.exe it starts - a venv's python.exe is a
+REM launcher, the base interpreter is the process that listens. One UAC prompt.
+set "FW_RULE=VDock backend - source install"
+set "FW_DECLINED=%ROOT%\backend\data\.firewall-rule-declined"
+netsh advfirewall firewall show rule name="%FW_RULE%" >nul 2>&1
+if not errorlevel 1 (
+    echo   [OK]    Windows Firewall already lets phones reach VDock ^(private networks^)
+    exit /b 0
+)
+if exist "%FW_DECLINED%" exit /b 0
+if not defined BACKEND_PORT exit /b 0
+set "VENV_PY=%ROOT%\backend\venv\Scripts\python.exe"
+if not exist "%VENV_PY%" exit /b 0
+set "BASE_PY="
+for /f "usebackq delims=" %%p in (`call "%VENV_PY%" -c "import sys; print(getattr(sys, '_base_executable', '') or sys.executable)"`) do set "BASE_PY=%%p"
+echo.
+echo   Phones and tablets reach VDock over your Wi-Fi, which Windows Firewall
+echo   blocks until it is allowed. Setup can add a rule now: private networks
+echo   only ^(home or work Wi-Fi, never public^), port !BACKEND_PORT!. Windows asks
+echo   for approval once.
+set "FW_ANSWER="
+set /p "FW_ANSWER=  Allow phones through the firewall? [Y/n]: "
+call :is_yes_answer "!FW_ANSWER!"
+if errorlevel 1 (
+    type nul > "%FW_DECLINED%" 2>nul
+    echo   [ --]   Skipped. Windows asks the first time you turn on LAN access.
+    exit /b 0
+)
+set "FW_SCRIPT=%TEMP%\vdock-firewall-rule.cmd"
+> "%FW_SCRIPT%" echo @echo off
+>> "%FW_SCRIPT%" echo netsh advfirewall firewall delete rule name="%FW_RULE%" ^>nul 2^>^&1
+>> "%FW_SCRIPT%" echo netsh advfirewall firewall add rule name="%FW_RULE%" dir=in action=allow protocol=TCP localport=!BACKEND_PORT! profile=private program="!VENV_PY!" enable=yes
+if defined BASE_PY if /i not "!BASE_PY!"=="!VENV_PY!" >> "%FW_SCRIPT%" echo netsh advfirewall firewall add rule name="%FW_RULE%" dir=in action=allow protocol=TCP localport=!BACKEND_PORT! profile=private program="!BASE_PY!" enable=yes
+powershell -NoProfile -NonInteractive -Command "try { Start-Process -FilePath $env:FW_SCRIPT -Verb RunAs -Wait -WindowStyle Hidden } catch { exit 1 }" >nul 2>&1
+del "%FW_SCRIPT%" 2>nul
+netsh advfirewall firewall show rule name="%FW_RULE%" >nul 2>&1
+if errorlevel 1 (
+    echo   [WARN]  No firewall rule added ^(approval declined?^). Windows asks when you turn on LAN access.
+) else (
+    echo   [OK]    Windows Firewall lets phones reach VDock ^(private networks, port !BACKEND_PORT!^)
+)
+exit /b 0
 
 :check_node
 set "NODE_MAJOR="

@@ -5,7 +5,7 @@
 # Output: <distpath>/vdock-backend/vdock-backend(.exe) + _internal/
 import sys
 
-from PyInstaller.utils.hooks import collect_all, collect_submodules
+from PyInstaller.utils.hooks import collect_submodules
 
 # Read-only product content the routes resolve via __file__-relative
 # paths — bundled into _internal so the packaged app finds them where
@@ -15,6 +15,12 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 datas = [
     ('data/templates', 'data/templates'),
     ('Assets', 'Assets'),
+    # Agent hooks run `vdock-backend --vdock_agent_hook`, which executes this
+    # script from the bundle (app.py) - no Python needed on the machine.
+    ('scripts/vdock_agent_hook.py', 'scripts'),
+    # Bundled for the packaged uninstaller (DL-010); still needs an app.py
+    # dispatch (`--vdock_remove_agent_hooks`) before installer.nsh can run it.
+    ('scripts/remove_agent_hooks.py', 'scripts'),
 ]
 
 binaries = []
@@ -30,6 +36,8 @@ hiddenimports = (
         # async_mode='threading'. The driver lives in engineio —
         # python-socketio has no async_drivers package of its own.
         'engineio.async_drivers.threading',
+        # Imported only by the agent hook script, run via runpy.
+        'argparse',
     ]
 )
 
@@ -39,11 +47,6 @@ if sys.platform == 'win32':
     # comtypes hooks + pycaw's own imports; a full collect_submodules
     # would drag in the 90-module comtypes.test suite.
     hiddenimports += collect_submodules('pycaw')
-    # python-magic-bin ships libmagic DLLs as package data.
-    m_datas, m_binaries, m_hidden = collect_all('magic')
-    datas += m_datas
-    binaries += m_binaries
-    hiddenimports += m_hidden
 
 a = Analysis(
     ['app.py'],

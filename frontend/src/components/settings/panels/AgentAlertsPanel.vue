@@ -279,9 +279,11 @@ async function installAgentHook(agent: HookAgentId) {
     hookState.installed = true
     hookState.partial = false
     hookState.known = true
+    // `note` is a one-time step the agent itself demands (Codex: trust the hook with /hooks).
+    const note = typeof res.data?.note === 'string' && res.data.note ? ` ${res.data.note}` : ''
     notificationsStore.success(
       `${agentLabel} hook installed`,
-      `The deck now follows ${agentLabel}'s state. Restart running ${agentLabel} sessions to pick it up.`
+      `The deck now follows ${agentLabel}'s state. Restart running ${agentLabel} sessions to pick it up.${note}`
     )
   } catch (e: any) {
     notificationsStore.error('Hook install failed', e?.response?.data?.error || 'Backend unreachable')

@@ -54,7 +54,7 @@ async function save() {
   busy.value = true
   try {
     if (props.mode === 'enable') {
-      // Enabling locks THIS device too; the lock screen takes over.
+      // Other devices need it from now on; the computer VDock runs on stays signed in (DL-008).
       if (await setAuthEnabled(true, pw)) emit('done')
     } else if (await settingsStore.updateServerConfig({ auth_password: pw })) {
       notificationsStore.success('Password updated', 'New devices will need it at the lock screen.')

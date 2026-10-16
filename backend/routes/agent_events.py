@@ -20,7 +20,7 @@ from typing import Any, Callable, Dict, List, Optional
 from flask import Blueprint, jsonify, request
 
 from auth import require_auth
-from integrations import agent_hooks, agent_state
+from integrations import agent_hooks, agent_state, sessions
 from services import turn_baseline
 
 logger = logging.getLogger('vdock')
@@ -39,6 +39,10 @@ _emitter: Optional[Callable[[str, Dict[str, Any]], None]] = None
 #: Hook POSTs arrive on request threads, so reads/mutations take the lock.
 _alerts: Dict[str, Dict[str, Any]] = {}
 _alerts_lock = threading.Lock()
+#: Insertion order tiebreaker — wall-clock ``ts`` can tie when two hooks
+#: post in the same tick (and tests may freeze it), which made the
+#: newest-first ordering below nondeterministic.
+_alert_seq = 0
 
 # Alerts go stale — if the agent was killed mid-prompt nothing clears it.
 ALERT_TTL_SECONDS = agent_state.STATE_TTL_SECONDS
@@ -47,6 +51,11 @@ ALERT_TTL_SECONDS = agent_state.STATE_TTL_SECONDS
 LEGACY_STATE_BY_EVENT = {'waiting': agent_state.STATE_PERMISSION,
                          'clear': agent_state.STATE_READY}
 STATE_ENDED = 'ended'
+
+#: Sources whose agent is a process the session scan can recognise, so a
+#: hook's parent chain can be tied to one exact pid (DL-012).
+_PID_MARKER_SOURCES = frozenset({'claude', 'devin', 'antigravity', 'cursor',
+                                 'codex'})
 
 
 def set_emitter(fn: Callable[[str, Dict[str, Any]], None]) -> None:
@@ -83,7 +92,9 @@ def _alerts_list() -> List[Dict[str, Any]]:
         for source in [s for s, a in _alerts.items() if _is_expired(a)]:
             del _alerts[source]
         return sorted(_alerts.values(),
-                      key=lambda alert: alert.get('ts', 0), reverse=True)
+                      key=lambda alert: (alert.get('ts', 0),
+                                         alert.get('_seq', 0)),
+                      reverse=True)
 
 
 def _localhost_only() -> bool:
@@ -106,16 +117,31 @@ def _wants_attention(data: Dict[str, Any], state: Optional[str]) -> bool:
     return state == agent_state.STATE_PERMISSION
 
 
+def _agent_process(source: str, session_id: str, data: Dict[str, Any]):
+    """``(pid, create_time)`` for a session not yet tied to a process.
+
+    Resolved once per session: the walk up the hook's parents costs a few
+    ms and the agent process does not change.
+    """
+    if source not in _PID_MARKER_SOURCES or not data.get('hook_pid') \
+            or agent_state.session_pid(source, session_id):
+        return None
+    return sessions.agent_pid_from_hook(source, data.get('hook_pid'))
+
+
 def _update_alert(source: str, raise_alert: bool, message: str,
                   project: str, cwd: str) -> None:
     if raise_alert:
+        global _alert_seq
         with _alerts_lock:
+            _alert_seq += 1
             _alerts[source] = {
                 'source': source,
                 'message': message or 'Agent is waiting for input',
                 'project': project,
                 'cwd': cwd,
                 'ts': time.time(),
+                '_seq': _alert_seq,
             }
         logger.info('Agent attention: %s — %s', source, message)
     else:
@@ -152,9 +178,15 @@ def post_agent_event():
     project = str(data.get('project') or '')[:120]
     cwd = str(data.get('cwd') or '')[:300]
     session_id = agent_state.normalise_session_id(data.get('session_id'))
+    event_ts = data.get('event_ts')
+
+    # Each hook is a separate process: a late PostToolUse or afterAgentResponse
+    # can land after the Stop / SessionEnd that followed it (DL-012).
+    if agent_state.is_stale(source, session_id, event_ts):
+        return jsonify({'success': True, 'ignored': 'stale'})
 
     if state == STATE_ENDED:
-        agent_state.end_session(source, session_id)
+        agent_state.end_session(source, session_id, event_ts)
         turn_baseline.forget(source, session_id)
         _broadcast_states()
         _update_alert(source, False, '', project, cwd)
@@ -163,11 +195,29 @@ def post_agent_event():
     if state not in agent_state.ALLOWED_STATES:
         return jsonify({'success': False, 'error': 'Unknown state'}), 400
 
+    # PermissionRequest says what is being approved ("Run: git push"); the
+    # Notification that follows for the same prompt only says "...to use
+    # Bash" - keep the specific text while the session is still waiting.
+    if state == agent_state.STATE_PERMISSION and not data.get('detailed'):
+        previous = next((e for e in agent_state.session_entries(source)
+                         if e.get('session_id') == session_id), None)
+        if previous and previous.get('state') == agent_state.STATE_PERMISSION \
+                and previous.get('detailed'):
+            message = previous.get('message') or message
+            data = {**data, 'detailed': True}
+
+    process = _agent_process(source, session_id, data)
     entry = agent_state.record(source, state, message=message, cwd=cwd,
                                project=project, session_id=session_id,
                                prompt=str(data.get('prompt') or ''),
                                reply=str(data.get('reply') or ''),
-                               prompted=bool(data.get('prompted')))
+                               prompted=bool(data.get('prompted')),
+                               detailed=bool(data.get('detailed')),
+                               pid=process[0] if process else None,
+                               pid_started=process[1] if process else None,
+                               turn_id=str(data.get('turn_id') or '')[:100],
+                               event_ts=event_ts,
+                               passive=bool(data.get('passive')))
     if str(data.get('prompt') or '').strip() and cwd:
         # A new prompt starts a turn: snapshot the tree so "what changed"
         # excludes the user's own earlier edits (DL-145).
@@ -270,6 +320,7 @@ def install_hook():
         'already': result.already,
         'added_events': list(result.added_events),
         'settings_path': str(result.settings_path),
+        'note': result.note,
     })
 
 

@@ -10,6 +10,12 @@ from typing import Tuple
 from .base import AppProfile, Command, VSCODE_EXES
 from .copilot import COPILOT_COMMANDS
 
+#: VS Code's "Source Control" view is Ctrl+Shift+G on every OS - on macOS the
+#: physical Control key, not Cmd (1.141 bundle: win/linux primary 3109 =
+#: CtrlCmd+Shift+G, mac 1317 = WinCtrl+Shift+G - DL-012). The general Ctrl->Cmd
+#: rule would send Cmd+Shift+G, which is "Find Previous" on macOS.
+GIT_VIEW_MAC_KEYS = ('ctrl', 'shift', 'g')
+
 VSCODE_COMMANDS: Tuple[Command, ...] = (
     Command(
         id='vsc_palette', label='Command Palette',
@@ -55,7 +61,7 @@ VSCODE_COMMANDS: Tuple[Command, ...] = (
     Command(
         id='vsc_git_view', label='Source Control',
         description='Focus the source-control view.',
-        keys=('ctrl', 'shift', 'g'), icon='code-branch',
+        keys=('ctrl', 'shift', 'g'), mac_keys=GIT_VIEW_MAC_KEYS, icon='code-branch',
         keywords=('vscode', 'git', 'source', 'commit'),
         target_exes=VSCODE_EXES,
     ),

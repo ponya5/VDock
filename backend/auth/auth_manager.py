@@ -1,5 +1,7 @@
 """Authentication and authorization management."""
+import hashlib
 import hmac
+import ipaddress
 import jwt
 import bcrypt
 from datetime import datetime, timedelta, timezone
@@ -7,6 +9,51 @@ from functools import wraps
 from flask import request, jsonify
 from typing import Optional, Dict, Any
 from config import Config
+
+#: Host header names that can only mean "this computer" (DL-008).
+_LOOPBACK_HOST_NAMES = ('localhost', '127.0.0.1', '::1')
+
+
+def _host_name(host_header: str) -> str:
+    """'localhost:5001' -> 'localhost', '[::1]:5001' -> '::1'."""
+    host = (host_header or '').strip().lower()
+    if host.startswith('['):
+        return host[1:host.find(']')] if ']' in host else host[1:]
+    return host.rsplit(':', 1)[0] if host.count(':') == 1 else host
+
+
+def is_trusted_local_request(req=None) -> bool:
+    """True for a request made on the computer VDock runs on (DL-008).
+
+    The deck password keeps *other devices on the Wi-Fi* out; VDock's own
+    window and anything else on this PC can already drive it (agent hooks are
+    localhost-only by design), so locking them out only adds friction.
+
+    All three must hold, so neither a web page nor a proxy can borrow it:
+    the TCP peer is loopback; the Host header names a loopback host (a DNS
+    rebinding page arrives as ``Host: evil.example`` even when it resolves to
+    127.0.0.1); and nothing forwarded it (the Vite dev proxy rewrites Host to
+    127.0.0.1 for a phone's request, but adds X-Forwarded-For).
+    """
+    req = req if req is not None else request
+    try:
+        if not ipaddress.ip_address(req.remote_addr or '').is_loopback:
+            return False
+    except ValueError:
+        return False
+    if _host_name(req.headers.get('Host', '')) not in _LOOPBACK_HOST_NAMES:
+        return False
+    return not (req.headers.get('X-Forwarded-For') or req.headers.get('Forwarded'))
+
+
+def _password_fingerprint() -> Optional[str]:
+    """Short keyed digest of the deck password; tokens carry it so a password
+    change signs every device out. None when no password is set."""
+    if not Config.AUTH_PASSWORD:
+        return None
+    digest = hmac.new(str(Config.SECRET_KEY).encode('utf-8'),
+                      Config.AUTH_PASSWORD.encode('utf-8'), hashlib.sha256)
+    return digest.hexdigest()[:16]
 
 
 class AuthManager:
@@ -61,6 +108,9 @@ class AuthManager:
             'exp': datetime.now(timezone.utc) + timedelta(seconds=expires_in),
             'iat': datetime.now(timezone.utc)
         }
+        fingerprint = _password_fingerprint()
+        if fingerprint:
+            payload['pw'] = fingerprint
         
         return jwt.encode(payload, Config.SECRET_KEY, algorithm='HS256')
     
@@ -76,11 +126,15 @@ class AuthManager:
         """
         try:
             payload = jwt.decode(token, Config.SECRET_KEY, algorithms=['HS256'])
-            return payload
         except jwt.ExpiredSignatureError:
             return None
         except jwt.InvalidTokenError:
             return None
+        # Issued under another password -> that device was signed out by the
+        # change. Tokens from older builds carry no 'pw' and simply expire.
+        if 'pw' in payload and payload['pw'] != _password_fingerprint():
+            return None
+        return payload
     
     @staticmethod
     def authenticate(password: str) -> Optional[str]:
@@ -108,7 +162,7 @@ def require_auth(f):
     """Decorator to require authentication for a route."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not Config.REQUIRE_AUTH:
+        if not Config.REQUIRE_AUTH or is_trusted_local_request():
             return f(*args, **kwargs)
         
         # Get token from header

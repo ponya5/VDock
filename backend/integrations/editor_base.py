@@ -13,6 +13,7 @@ Note this file is deliberately not named ``*_pack``: PluginManager only scans
 modules matching that suffix, so shared helpers are never mistaken for packs.
 """
 import logging
+import platform
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
@@ -48,16 +49,21 @@ def foreground_exe() -> Optional[str]:
 
 
 def _resolve_session_host(command: Command,
-                          configured_cwd: Optional[str] = None
+                          configured_cwd: Optional[str] = None,
+                          session_pid: Optional[int] = None,
                           ) -> Optional[int]:
     """HWND of the window hosting this command's session, or None.
 
     ``configured_cwd`` (the button's Working directory) or the focused
     editor's project tells the resolver *which* session when several run
     at once; neither applies -> the resolver's own ranking decides.
+    ``session_pid`` (Mission Control: the session the user tapped) names the
+    exact process and never falls back to another one (DL-012).
     """
     if not command.session_marker:
         return None
+    if session_pid is not None:
+        return window_focus.host_window_for_pid(command.session_marker, session_pid)
     # A pinned deck target (DL-071) beats every other resolution signal --
     # the user explicitly picked this session in the action bar.
     pinned = sessions.pinned_pid(command.session_marker)
@@ -88,15 +94,26 @@ def _resolve_session_host(command: Command,
     )
 
 
-def _focus_failure(message: str, details: str) -> Dict[str, Any]:
-    if window_focus.interactive_desktop_blocked():
+def _locked_result() -> Dict[str, Any]:
+    if platform.system() == 'Darwin':
         return {
             'success': False,
-            'message': 'The PC is locked or its screensaver is on',
-            'details': 'Windows routes input to the lock screen / '
-                       'screensaver, so no app can receive keystrokes. '
-                       'Wake the PC and press again.',
+            'message': 'The Mac is locked',
+            'details': 'macOS sends input to the lock screen, so no app can '
+                       'receive keystrokes. Unlock the Mac and press again.',
         }
+    return {
+        'success': False,
+        'message': 'The PC is locked or its screensaver is on',
+        'details': 'Windows routes input to the lock screen / '
+                   'screensaver, so no app can receive keystrokes. '
+                   'Wake the PC and press again.',
+    }
+
+
+def _focus_failure(message: str, details: str) -> Dict[str, Any]:
+    if window_focus.interactive_desktop_blocked():
+        return _locked_result()
     return {'success': False, 'message': message, 'details': details}
 
 
@@ -104,7 +121,8 @@ def send(command: Command, text_override: Optional[str] = None,
          enforce_focus: bool = True, focus_first: bool = True,
          allow_destructive: bool = False,
          cwd: Optional[str] = None,
-         editor_label: Optional[str] = None) -> Dict[str, Any]:
+         editor_label: Optional[str] = None,
+         session_pid: Optional[int] = None) -> Dict[str, Any]:
     """Send ``command`` to the target application.
 
     Args:
@@ -122,6 +140,9 @@ def send(command: Command, text_override: Optional[str] = None,
             project.
         editor_label: Product name for failure messages ('Cursor') -- the
             not-running error points the user at that template card.
+        session_pid: The exact agent process to type into (hook-reported,
+            DL-012). Beats the pin and the cwd; a session whose window
+            cannot be found is refused, never swapped for another.
     """
     # Gate on cheap checks first so a refused press never yanks focus around.
     if command.risk == RISK_DESTRUCTIVE and not allow_destructive:
@@ -145,21 +166,46 @@ def send(command: Command, text_override: Optional[str] = None,
                 ),
             }
 
+    if enforce_focus and platform.system() == 'Darwin' \
+            and window_focus.interactive_desktop_blocked():
+        # macOS reports the app as activated even behind the lock screen, so
+        # check first; typed keys would go nowhere (DL-009).
+        return _locked_result()
+
     if enforce_focus:
         # Session hosting wins over the exe list when the command carries a
         # session marker: the host window's owner is whatever IDE or terminal
         # spawned the agent (Devin, Cursor, VS Code, Windows Terminal, a
         # classic conhost console...) -- a static exe list can't know it.
-        host_hwnd = _resolve_session_host(command, cwd)
+        host_hwnd = _resolve_session_host(command, cwd, session_pid)
+        if host_hwnd is None and session_pid is not None and command.session_marker:
+            return {
+                'success': False,
+                'message': "Could not find that session's window",
+                'details': 'The session may have ended or runs without a '
+                           'window VDock can type into. Nothing was sent, so '
+                           'no other session is affected.',
+            }
         if host_hwnd is not None:
             if focus_first:
                 if not window_focus.focus_hwnd(host_hwnd):
                     return _focus_failure(
                         'Could not focus the session window',
-                        'The window hosting the session was found but '
-                        'the system would not bring it forward.',
+                        window_focus.last_focus_problem()
+                        or 'The window hosting the session was found but '
+                           'the system would not bring it forward.',
                     )
                 time.sleep(FOCUS_SETTLE_SECONDS)
+            if window_focus.session_input_focused(host_hwnd) is False:
+                # macOS: the session runs in an editor's integrated terminal
+                # but the editor's focus is on a file or the chat (DL-009).
+                return {
+                    'success': False,
+                    'message': 'Click into the terminal running the agent first',
+                    'details': 'The agent runs in your editor\'s terminal, but the '
+                               'editor\'s focus is elsewhere - VDock did not type, '
+                               'so nothing lands in an open file.',
+                }
             fg = window_focus.foreground_hwnd()
             wrong_window = fg is not None and fg != host_hwnd
             # macOS has no foreground HWND; it can still tell whether the

@@ -94,7 +94,8 @@ def production_frontend_available() -> bool:
     Daily/production launches load `dist` from Flask — the same artifact the
     touch panel and LAN devices already get — so no npm/vite console ever
     appears and nothing says "dev server". Setting VDOCK_DEV_SERVER=1 opts
-    back into hot-reload development mode (launch.bat documents it).
+    back into hot-reload development mode (launch.bat documents it; on
+    macOS/Linux export it before ./launch.sh).
     """
     if os.environ.get("VDOCK_DEV_SERVER", "").strip().lower() in (
         "1", "true", "yes", "on",
@@ -139,12 +140,17 @@ def wait_for_launcher_close(prompt: str = "Press Enter to exit...") -> None:
 
 
 def find_python():
-    """Find a usable Python executable (prefer python3 on macOS/Linux)."""
-    candidates = []
+    """Find a usable Python executable.
+
+    launch.sh / launch.bat run this launcher on VDock's own venv Python
+    (DL-010), so the interpreter running us is the one to report; PATH
+    pythons are only a fallback for unusual direct invocations.
+    """
+    candidates = [sys.executable]
     if IS_WINDOWS:
-        candidates.extend(["python", "python3", sys.executable])
+        candidates.extend(["python", "python3"])
     else:
-        candidates.extend(["python3", "python", sys.executable])
+        candidates.extend(["python3", "python"])
 
     for candidate in candidates:
         if not candidate:
@@ -524,7 +530,7 @@ def ensure_fresh_backend(venv_path: Path, port: int = DEFAULT_BACKEND_PORT) -> b
             time.sleep(2)
         else:
             print("[WARN] Could not stop existing backend processes.")
-            print("       Close VDock and end python.exe tasks in Task Manager, then relaunch.")
+            print(f"       Close VDock and {stop_processes_hint()}, then relaunch.")
 
     if not launch_backend(venv_path):
         return False
@@ -745,6 +751,15 @@ def setup_hint():
     return "./setup.sh"
 
 
+def stop_processes_hint() -> str:
+    """How to end leftover VDock processes on this OS (DL-010)."""
+    if IS_WINDOWS:
+        return "end the python.exe / node.exe tasks in Task Manager"
+    if sys.platform == "darwin":
+        return "quit VDock's Python / node processes in Activity Monitor"
+    return "end VDock's python / node processes (System Monitor or kill)"
+
+
 def consume_update_relaunch_flag() -> bool:
     """True when the in-app updater relaunched us (DL-150); clears the marker.
 
@@ -840,8 +855,8 @@ def main():
     else:
         print("\nOpening in browser (Electron not available)")
     print("\nServices keep running after you close this launcher window.")
-    print("Logs are saved under backend\\data\\")
-    print("\nTo stop VDock, close the Electron window and end python/node tasks in Task Manager.")
+    print(f"Logs are saved under {LOG_DIR}")
+    print(f"\nTo stop VDock, close the VDock window and {stop_processes_hint()}.")
 
     if should_auto_close_launcher():
         print("\nLauncher window will close automatically.")

@@ -384,7 +384,20 @@ function dismiss() {
     padding: 8px 10px 8px 12px;
     font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.6));
     max-width: calc(100vw - 16px);
+    /* nowrap pushed Dismiss off a phone screen (DL-011): let the buttons
+       drop to a second line, full-size touch targets. */
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+    border-radius: 18px;
   }
+  .snooze-btn { min-height: 44px; }
+}
+
+/* DL-015: the 0.8x floor is 36px — under the 44px touch minimum on tablet,
+   landscape phone and panel widths that miss the 520px rule above. */
+html:is(.device-phone, .device-tablet, .device-panel) .snooze-btn {
+  min-height: 44px;
 }
 
 @media (prefers-reduced-motion: reduce) {

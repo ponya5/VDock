@@ -14,6 +14,14 @@ from actions import macos_controls
 from actions.cross_platform_action import CrossPlatformAction
 
 
+@pytest.fixture(autouse=True)
+def _no_players_running(monkeypatch):
+    """Default: nothing is playing. pgrep does not exist on Windows, so tests
+    that reach remote_spotify_playing() must not shell out for real; tests
+    that want players override this via running_players (applied later)."""
+    monkeypatch.setattr(macos_controls, '_is_app_running', lambda app_name: False)
+
+
 @pytest.fixture
 def osascript_calls(monkeypatch):
     """Record every script; 'get volume settings' answers with a fixed state."""
@@ -89,7 +97,8 @@ class TestVolume:
         assert not result.success
         assert 'no adjustable volume' in result.message
 
-    def test_action_uses_percent_step_not_nircmd_units(self, osascript_calls):
+    def test_action_uses_percent_step_not_nircmd_units(self, monkeypatch, osascript_calls):
+        monkeypatch.setattr('actions.cross_platform_action._SYSTEM', 'Darwin')
         CrossPlatformAction({'action': 'volume_up', 'step': 2000}).execute()
 
         assert 'set volume output volume 53' in _scripts(osascript_calls)

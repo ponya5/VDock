@@ -26,15 +26,17 @@ if [[ ! -f "$ROOT/backend/venv/bin/activate" ]]; then
   exit 1
 fi
 
-if command -v python3 >/dev/null 2>&1; then
-  PYTHON_BIN="python3"
-elif command -v python >/dev/null 2>&1; then
-  PYTHON_BIN="python"
-else
-  echo "  [ERROR] Python not found. Install Python 3.9+."
+# The launcher runs on VDock's own venv Python - the one setup.sh chose and
+# the backend uses - not whatever python3 is on PATH, which may be missing in
+# a Finder launch or be a newer, unsupported Python (DL-010).
+VENV_PYTHON="$ROOT/backend/venv/bin/python"
+if [[ ! -x "$VENV_PYTHON" ]] || ! "$VENV_PYTHON" -c 'import sys' >/dev/null 2>&1; then
+  echo "  [ERROR] VDock's Python environment (backend/venv) no longer works:"
+  echo "         the Python it was made with was moved, upgraded or uninstalled."
+  echo "         Run ./setup.sh again - it rebuilds the environment."
   echo ""
-  read -r -p "  Press Enter to exit..." _
+  read -r -p "  Press Enter to exit..." _ || true
   exit 1
 fi
 
-exec "$PYTHON_BIN" "$ROOT/scripts/VDock-Launcher.py"
+exec "$VENV_PYTHON" "$ROOT/scripts/VDock-Launcher.py"

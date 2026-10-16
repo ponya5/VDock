@@ -16,15 +16,21 @@
          the real DeckHeader takes this slot; its auto-hide/collapse hands
          the slot back to the mobile chrome. -->
     <MobileDeckChrome
-      v-if="isMobileViewport && !settingsStore.showHeader"
+      v-if="usesMobileChrome && !settingsStore.showHeader"
       :scenes="currentProfile?.scenes || []"
       :current-scene-index="currentSceneIndex"
       :total-pages="showsMobileAgentConsole ? 1 : currentScene?.pages.length || 1"
       :current-page-index="currentPageIndex"
+      :can-configure="deviceClass === 'tablet' || deviceClass === 'panel'"
       @set-scene="setScene"
       @previous-page="previousPage"
       @next-page="nextPage"
+      @edit="dashboardStore.toggleEditMode"
+      @open-settings="handleNavigateSettings"
     />
+
+    <!-- DL-011: first visit on a phone/tablet (the desktop tour skips them). -->
+    <PhoneIntro v-if="deviceClass === 'phone' || deviceClass === 'tablet'" />
 
     <!-- Decomposed Header component -->
     <DeckHeader
@@ -50,7 +56,7 @@
       <!-- Docked Sidebar -->
       <DockedSidebar
         v-slot:default
-        v-if="settingsStore.dockedSidebarEnabled && currentPage && !isMobileViewport"
+        v-if="settingsStore.dockedSidebarEnabled && currentPage && !isMobileViewport && !emptyStripSidebar"
         :docked-buttons="currentProfile?.dockedButtons || []"
         :grid-rows="currentPage.grid_config.rows"
         :is-edit-mode="isEditMode"
@@ -185,7 +191,7 @@
          the same gesture the header dismisses with (swipe up), reversed. -->
     <Transition name="reveal-fab">
       <button
-        v-if="!settingsStore.showHeader && !isEditMode"
+        v-if="!settingsStore.showHeader && !isEditMode && !hidesHeaderFab"
         ref="revealFabRef"
         type="button"
         class="header-reveal-fab"
@@ -284,6 +290,7 @@ import ButtonEditor from '@/components/ButtonEditor.vue'
 import SceneEditor from '@/components/SceneEditor.vue'
 import DockedSidebar from '@/components/DockedSidebar.vue'
 import DeckHeader from '@/components/DeckHeader.vue'
+import PhoneIntro from '@/components/PhoneIntro.vue'
 import DeckFooter from '@/components/DeckFooter.vue'
 import MobileDeckChrome from '@/components/MobileDeckChrome.vue'
 import ScreenSaver from '@/components/ScreenSaver.vue'
@@ -813,6 +820,13 @@ const footerVisible = computed(() =>
 // strip so the header-reveal pill never sits on buttons.
 const { isMobileViewport } = useMobileViewport()
 const { deviceClass, layoutClass, orientation, viewportWidth } = useDeviceClass()
+// DL-011: one navigation model for every touch device - tablets get the
+// phone's scene bar + menu too (the auto-hiding desktop header left them
+// with no visible way to switch scenes). Phones and tablets reach Edit /
+// Settings from that menu, so the floating "Header" button only remains
+// on the 7" panel and desktops.
+const usesMobileChrome = computed(() => isMobileViewport.value || deviceClass.value === 'tablet')
+const hidesHeaderFab = computed(() => deviceClass.value === 'phone' || deviceClass.value === 'tablet')
 const deckLayout = computed(() =>
   dashboardLayout({
     layoutClass: layoutClass.value,
@@ -821,11 +835,17 @@ const deckLayout = computed(() =>
     compactTouch: isMobileViewport.value,
   })
 )
+// A portrait tablet stacks the docked sidebar as a strip that shows only docked
+// buttons (no weather card); with none it was an empty dark band over the deck
+// - and above the menu (DL-011). Edit mode keeps it as the drop target.
+const emptyStripSidebar = computed(() =>
+  deckLayout.value.sidebar === 'strip' && !isEditMode.value
+  && !(currentProfile.value?.dockedButtons?.length))
 
 // The header-reveal FAB owns the bottom-right corner, which the agent dock
 // (Mission Control + waiting chips) also uses. Publish its presence on <html>
 // so the dock can lift clear of it instead of overlapping.
-const revealFabVisible = computed(() => !settingsStore.showHeader && !isEditMode.value)
+const revealFabVisible = computed(() => !settingsStore.showHeader && !isEditMode.value && !hidesHeaderFab.value)
 watch([revealFabVisible, footerVisible], ([fab, footer]) => {
   const root = document.documentElement.classList
   root.toggle('reveal-fab-visible', fab)
@@ -834,7 +854,7 @@ watch([revealFabVisible, footerVisible], ([fab, footer]) => {
 
 // Teleported surfaces (agent dock, Mission Control, toasts) sit outside the
 // `.device-<class>` root, so the phone/tablet layout class is mirrored on <html>.
-const HTML_DEVICE_CLASSES = ['phone', 'tablet'] as const
+const HTML_DEVICE_CLASSES = ['phone', 'tablet', 'panel'] as const
 watch(layoutClass, (cls) => {
   const root = document.documentElement.classList
   for (const name of HTML_DEVICE_CLASSES) root.toggle(`device-${name}`, cls === name)
@@ -1319,7 +1339,7 @@ onUnmounted(() => {
 
   stopVdockRefreshListener?.()
   stopUiCommandListener?.()
-  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer', 'device-phone', 'device-tablet')
+  document.documentElement.classList.remove('reveal-fab-visible', 'reveal-fab-footer', 'device-phone', 'device-tablet', 'device-panel')
   // Unmounting the deck (e.g. route to Settings) must not leave the app
   // background suspended — the saver is gone with it.
   setScreensaverVisible(false)
@@ -1550,6 +1570,33 @@ onUnmounted(() => {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* DL-015: scene image wallpapers can carry a wordmark baked into the PNG
+   ("CLAUDE CODE") that reads straight through the default 40%-alpha tiles
+   on a small screen. Where an image background is actually showing, firm up
+   the default and glass tile fills — desktop keeps the airy glass look. */
+.dashboard-view:is(.device-phone, .device-tablet).dashboard-bg-custom :deep(.deck-button) {
+  --btn-bg: rgba(20, 16, 50, 0.78);
+}
+
+.dashboard-view:is(.device-phone, .device-tablet).dashboard-bg-custom :deep(.deck-button-glass) {
+  --glass-bg: rgba(20, 16, 50, 0.55);
+}
+
+/* DL-015: the 1.5x touch multiplier is tuned for small panels; on a tablet
+   it inflates the fixed header/footer chrome to ~200px of a 768px screen.
+   Cap it at 1.2x, matching the icon-row caps already used elsewhere. */
+.dashboard-view.device-tablet :deep(.deck-header) {
+  min-height: calc(64px * min(var(--touch-multiplier, 1), 1.2) + 26px);
+}
+
+.dashboard-view.device-tablet :deep(.deck-header .header-content) {
+  min-height: calc(68px * min(var(--touch-multiplier, 1), 1.2));
+}
+
+.dashboard-view.device-tablet :deep(.deck-footer) {
+  min-height: max(44px, calc(56px * min(var(--touch-multiplier, 1), 1.2)));
+}
+
 /* A tablet can mount the footer (page dots, edit controls); then the footer
    owns the home-indicator inset instead of the deck above it. */
 .dashboard-view.device-tablet.footer-open .deck-grid-host {
@@ -1567,6 +1614,9 @@ onUnmounted(() => {
   position: relative;
   width: 100% !important;
   flex: 0 0 auto;
+  /* In flow here, so it needs no overlay z-index - 999 put it over the top
+     bar's menu (DL-011). */
+  z-index: 1;
 }
 
 .dashboard-view.device-tablet.layout-stacked :deep(.docked-sidebar.is-mobile .sidebar-grid) {

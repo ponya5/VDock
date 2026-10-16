@@ -338,5 +338,7 @@ export interface ServerConfig {
   auth_password_set?: boolean
   /** Write-only: set/change the deck password via PUT /api/config (DL-126). */
   auth_password?: string
+  /** True when running as the packaged app — firewall prompts name VDock, not Python. */
+  packaged?: boolean
 }
 

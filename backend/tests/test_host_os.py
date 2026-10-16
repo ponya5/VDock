@@ -60,7 +60,7 @@ def test_cursor_template_on_macos_uses_cmd_and_glyph_labels():
 def test_macro_steps_inside_a_button_are_localized():
     with as_os('Darwin'):
         b = buttons(host_os.localize_template(template('template-ide-cursor')))
-    steps = json.dumps(b['Save All']['action'])
+    steps = json.dumps(b['Zen Mode']['action'])
     assert '"cmd", "k"' in steps and '"ctrl", "k"' not in steps
 
 
@@ -71,10 +71,16 @@ def test_windows_and_linux_templates_are_untouched():
             assert host_os.localize_template(t) is t
 
 
-def test_jetbrains_is_never_remapped():
+def test_jetbrains_never_gets_the_generic_ctrl_to_cmd_rule():
+    """Only its explicit mac_keys apply (DL-009): a button without one -
+    Optimize Imports, Ctrl+Alt+O on both keymaps - keeps its keys."""
     with as_os('Darwin'):
         t = template('template-ide-jetbrains')
-        assert host_os.localize_template(t) is t
+        localized = host_os.localize_template(t)
+    keys = {b['label']: b['action'].get('config', {}).get('keys')
+            for p in localized['pages'] for b in p['buttons']}
+    assert keys['Optimize'] == ['ctrl', 'alt', 'o']
+    assert keys['Rename'] == ['shift', 'f6']
 
 
 def test_localize_does_not_mutate_the_source():
@@ -119,3 +125,49 @@ def test_app_profiles_api_emits_host_native_keys():
     with as_os('Windows'):
         win = cursor_keys()
     assert any('cmd' in k for k in mac) and not any('cmd' in k for k in win)
+
+
+# DL-009: JetBrains ships its own macOS keymap - explicit per-chord mac_keys.
+
+def _jetbrains_template():
+    import json
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / 'data' / 'templates' / 'ide-jetbrains.json'
+    return json.loads(path.read_text(encoding='utf-8'))
+
+
+def _button(template, label):
+    for page in template['pages']:
+        for button in page['buttons']:
+            if button.get('label') == label:
+                return button
+    raise KeyError(label)
+
+
+def test_jetbrains_template_uses_its_mac_keymap(monkeypatch):
+    monkeypatch.setattr(host_os.platform, 'system', lambda: 'Darwin')
+    localized = host_os.localize_template(_jetbrains_template())
+    run = _button(localized, 'Run')
+    assert run['action']['config']['keys'] == ['ctrl', 'r']
+    assert 'mac_keys' not in run['action']['config']
+    assert _button(localized, 'Go to File')['action']['config']['keys'] == ['cmd', 'shift', 'o']
+    # Replace was Ctrl+R - which is Run on macOS.
+    assert _button(localized, 'Replace')['action']['config']['keys'] == ['cmd', 'r']
+    assert _button(localized, 'Actions')['secondary_label'] == '⌘⇧A'
+
+
+def test_jetbrains_template_untouched_on_windows(monkeypatch):
+    monkeypatch.setattr(host_os.platform, 'system', lambda: 'Windows')
+    template = _jetbrains_template()
+    assert host_os.localize_template(template) is template
+    assert _button(template, 'Run')['action']['config']['keys'] == ['shift', 'f10']
+
+
+def test_jetbrains_keymap_mac_chords(monkeypatch):
+    from integrations.keymaps.jetbrains import JETBRAINS_COMMANDS
+    by_id = {c.id: c for c in JETBRAINS_COMMANDS}
+    monkeypatch.setattr(host_os.platform, 'system', lambda: 'Darwin')
+    assert by_id['jb_goto_file'].native_keys(by_id['jb_goto_file'].keys) == ('cmd', 'shift', 'o')
+    assert by_id['jb_run'].native_keys(by_id['jb_run'].keys) == ('ctrl', 'r')
+    monkeypatch.setattr(host_os.platform, 'system', lambda: 'Windows')
+    assert by_id['jb_goto_file'].native_keys(by_id['jb_goto_file'].keys) == ('ctrl', 'shift', 'n')

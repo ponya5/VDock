@@ -404,6 +404,8 @@ def test_title_names_project(title, project, match):
 
 def test_project_names_walk_up_to_home(monkeypatch):
     monkeypatch.setenv('HOME', '/Users/you')
+    # Windows expanduser consults USERPROFILE before HOME.
+    monkeypatch.setenv('USERPROFILE', '/Users/you')
     assert window_focus._project_names('/Users/you/code/VDock/backend') == ['backend', 'VDock', 'code']
     assert window_focus._project_names(None) == []
 

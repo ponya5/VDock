@@ -78,7 +78,6 @@
       <div
         v-if="!isFullscreen && showFullscreenCallout"
         class="mc-fullscreen-callout"
-        :class="{ 'mc-fullscreen-callout-persist': fullscreenUnsupported }"
         role="status"
       >
         {{ fullscreenUnsupported ? IOS_FULLSCREEN_CALLOUT : 'Tap for fullscreen' }}
@@ -141,10 +140,20 @@
           <span class="mc-menu-label">
             Keep screen on: {{ devicePrefs.keepAwake ? 'On' : 'Off' }}
             <small v-if="keepAwakeNeedsApp" class="mc-menu-hint" data-testid="mc-keep-awake-hint">
-              Needs the installed app or HTTPS (USE_SSL)
+              Works in fullscreen or the Home Screen app. If the screen still dims, raise Auto-Lock / Screen timeout in the phone's settings.
             </small>
           </span>
         </button>
+        <template v-if="canConfigure">
+          <button type="button" role="menuitem" class="mc-menu-item" data-testid="mc-menu-edit" @click="onMenu('edit')">
+            <FontAwesomeIcon :icon="['fas', 'pen-to-square']" />
+            <span>Edit buttons</span>
+          </button>
+          <button type="button" role="menuitem" class="mc-menu-item" data-testid="mc-menu-settings" @click="onMenu('openSettings')">
+            <FontAwesomeIcon :icon="['fas', 'gear']" />
+            <span>Settings</span>
+          </button>
+        </template>
         <button
           v-if="!isStandalone"
           type="button"
@@ -160,14 +169,18 @@
           <FontAwesomeIcon :icon="['fas', 'rotate-right']" :spin="isRefreshing" />
           <span>Refresh</span>
         </button>
-        <button type="button" role="menuitem" class="mc-menu-item mc-menu-danger" @click="onExit">
+        <!-- Only the desktop app can quit; a browser tab just showed an alert. -->
+        <button v-if="isElectron()" type="button" role="menuitem" class="mc-menu-item mc-menu-danger" @click="onExit">
           <FontAwesomeIcon :icon="['fas', 'power-off']" />
           <span>Exit VDock</span>
         </button>
       </div>
     </div>
 
-    <InstallSheet v-if="showInstall" @close="showInstall = false" />
+    <!-- Teleported: inside the top bar it sat under floating buttons (DL-011). -->
+    <Teleport to="body">
+      <InstallSheet v-if="showInstall" @close="showInstall = false" />
+    </Teleport>
 
     <!-- Exit confirmation (same flow as the desktop header). -->
     <div v-if="showExitConfirm" class="mc-confirm-overlay" @click.self="cancelExit">
@@ -201,6 +214,7 @@ import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import { useNeedsYouCount } from '@/composables/useNeedsYouCount'
 import { useDevicePrefs } from '@/services/devicePrefs'
+import { hasWakeLockApi } from '@/services/keepAwake'
 import { openMissionControl } from '@/services/missionControl'
 import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSupport'
 import { IOS_FULLSCREEN_CALLOUT } from '@/utils/installCopy'
@@ -212,6 +226,8 @@ interface Props {
   currentSceneIndex: number
   totalPages: number
   currentPageIndex: number
+  /** Tablet / 7" panel: Edit buttons + Settings live in the menu (DL-011). */
+  canConfigure?: boolean
 }
 
 const props = defineProps<Props>()
@@ -219,6 +235,8 @@ const emit = defineEmits<{
   setScene: [sceneId: string]
   previousPage: []
   nextPage: []
+  edit: []
+  openSettings: []
 }>()
 
 const appIntegrations = useAppIntegrations()
@@ -467,6 +485,7 @@ const suggestFullscreen = ref(true)
 // pulsing border is easy to miss on a phone screen someone is seeing for
 // the first time right after scanning the connect QR code.
 const showFullscreenCallout = ref(true)
+const IOS_HINT_SEEN_KEY = 'vdock.iosHomeScreenHintSeen'
 let fullscreenCalloutTimer: ReturnType<typeof setTimeout> | null = null
 
 // Already running without browser chrome (launched from an iOS Home Screen
@@ -474,10 +493,17 @@ let fullscreenCalloutTimer: ReturnType<typeof setTimeout> | null = null
 // toggle. Computed once per mount; it can't change while the page is open.
 const isStandalone = isRunningStandalone()
 
-// Screen Wake Lock only exists in a secure context, and a deck on plain
-// http://192.168.x.x is not one (HTTPS via USE_SSL, or the installed app, fixes it).
-const keepAwakeNeedsApp = !window.isSecureContext
+// Screen Wake Lock only exists in a secure context; on plain http the deck
+// falls back to a video keep-awake that some phones ignore (DL-011) - so say
+// how to make sure, in the phone's own words.
+const keepAwakeNeedsApp = !hasWakeLockApi()
 const showInstall = ref(false)
+
+function onMenu(action: 'edit' | 'openSettings') {
+  menuOpen.value = false
+  if (action === 'edit') emit('edit')
+  else emit('openSettings')
+}
 
 function onInstall() {
   menuOpen.value = false
@@ -494,7 +520,6 @@ const fullscreenButtonLabel = computed(() => {
   return isFullscreen.value ? 'Exit fullscreen' : 'Enter fullscreen'
 })
 const fullscreenButtonIcon = computed(() => {
-  if (fullscreenUnsupported) return 'arrow-up-right-from-square'
   return isFullscreen.value ? 'compress' : 'expand'
 })
 
@@ -510,12 +535,11 @@ async function onFullscreen() {
   menuOpen.value = false
   suggestFullscreen.value = false
 
-  // No successful `requestFullscreen()` will ever fire on this platform, so
-  // there's no event to dismiss the callout on its own — toggle it as the
-  // button's whole job instead of attempting (and silently failing) the
-  // same dead API call every other branch below relies on.
+  // iPhone Safari has no fullscreen API: the real answer is the Home Screen
+  // app, so the button opens those steps (DL-011) instead of toggling a hint.
   if (fullscreenUnsupported) {
-    showFullscreenCallout.value = !showFullscreenCallout.value
+    showFullscreenCallout.value = false
+    showInstall.value = true
     return
   }
 
@@ -592,6 +616,16 @@ onMounted(() => {
       .catch(() => { /* expected on most mobile browsers — button covers it */ })
   }
 
+  // iPhone: the hint shows once per device - after that the button and the
+  // menu's Add to Home Screen carry it (it used to stay up for good, DL-011).
+  if (fullscreenUnsupported) {
+    let seen = false
+    try {
+      seen = localStorage.getItem(IOS_HINT_SEEN_KEY) === '1'
+      localStorage.setItem(IOS_HINT_SEEN_KEY, '1')
+    } catch { /* private mode: show it, it still fades */ }
+    if (seen) showFullscreenCallout.value = false
+  }
   fullscreenCalloutTimer = setTimeout(() => { showFullscreenCallout.value = false }, 6000)
 })
 onUnmounted(() => {
@@ -627,7 +661,9 @@ onUnmounted(() => {
   padding: 4px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.08);
+  /* Dark glass: white labels stay readable over light wallpapers too - the
+     old 8% white backing gave inactive names ~1.6:1 contrast (DL-011). */
+  background: rgba(8, 10, 28, 0.5);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -669,7 +705,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+  color: rgba(255, 255, 255, 0.86);
   font-size: clamp(0.72rem, 0.5rem + 1.2vw, 0.95rem);
   font-weight: 600;
   white-space: nowrap;
@@ -942,6 +978,9 @@ onUnmounted(() => {
   top: calc(100% + 10px);
   right: -6px;
   z-index: 61;
+  /* Its own width: inside the 44px button wrapper WebKit shrank it into a
+     9-line tower (DL-011). */
+  width: max-content;
   max-width: min(260px, 80vw);
   padding: 6px 12px;
   border-radius: 10px;
@@ -969,13 +1008,6 @@ onUnmounted(() => {
   100% { opacity: 0; transform: translateY(-4px); }
 }
 
-/* iPhone Safari has no successful requestFullscreen() to dismiss this on —
-   it stays up until the user taps the button again, so skip the timed
-   fade the pulsing-button case relies on (DL-067 second follow-up). */
-.mc-fullscreen-callout-persist {
-  animation: none;
-  opacity: 1;
-}
 
 .mc-fullscreen-btn {
   flex: 0 0 auto;
@@ -1052,6 +1084,9 @@ onUnmounted(() => {
   top: calc(100% + 6px);
   right: 0;
   min-width: 176px;
+  /* Room for "Keep screen on: On" on one line (DL-011). */
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
   padding: 6px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);

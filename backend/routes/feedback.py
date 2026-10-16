@@ -45,8 +45,10 @@ _last_post_by_ip: dict[str, float] = {}
 
 def _throttled(ip: str) -> bool:
     now = time.monotonic()
-    last = _last_post_by_ip.get(ip, 0)
-    if now - last < _MIN_INTERVAL_S:
+    last = _last_post_by_ip.get(ip)
+    # 0 is a valid monotonic value (a runtime may epoch at process start):
+    # an absent entry, not "0 seconds ago", is the never-posted state.
+    if last is not None and now - last < _MIN_INTERVAL_S:
         return True
     _last_post_by_ip[ip] = now
     return False

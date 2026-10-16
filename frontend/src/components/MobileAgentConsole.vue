@@ -501,7 +501,7 @@ trackAgentSurfaceVisibility(
 .mac-link {
   -webkit-user-select: none;
   user-select: none;
-  min-height: 36px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 8px;

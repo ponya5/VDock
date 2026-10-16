@@ -74,12 +74,17 @@ def test_needs_you_and_counts(client):
     assert body['pending_approvals'] == 1
 
 
-def test_only_claude_can_be_decided(client):
+def test_only_agents_with_confirm_keymaps_can_be_decided(client):
     _record('cursor', 'permission', 'c')
+    _record('claude', 'permission', 'a')
+    _record('codex', 'permission', 'x')
 
-    row = client.get('/api/agent-mission').get_json()['sessions'][0]
+    by_id = {s['session_id']: s for s in
+             client.get('/api/agent-mission').get_json()['sessions']}
 
-    assert row['can_decide'] is False
+    assert by_id['c']['can_decide'] is False
+    assert by_id['a']['can_decide'] is True
+    assert by_id['x']['can_decide'] is True
 
 
 def test_long_reply_is_excerpted(client):
@@ -115,17 +120,48 @@ def test_approve_types_into_that_sessions_window(client, sent):
         'source': 'claude', 'session_id': 'b', 'decision': 'approve'})
 
     assert response.get_json()['success'] is True
-    assert sent == [('cc_approve', {'cwd': 'C:/repos/web',
-                                    'editor_label': 'Claude Code'})]
+    # Claude's permission dialog is a menu: Enter takes the highlighted Yes
+    # (DL-009, verified live) - typed y/n are not its keys.
+    assert sent == [('cc_accept', {'cwd': 'C:/repos/web',
+                                   'editor_label': 'Claude Code',
+                                   'session_pid': None})]
+    # The phone shows the outcome at once instead of a stale "needs you".
+    states = {e['session_id']: e['state'] for e in agent_state.session_entries('claude')}
+    assert states['b'] == 'working' and states['a'] == 'permission'
 
 
-def test_deny_uses_the_deny_command(client, sent):
+def test_deny_presses_esc_and_shows_ready(client, sent):
     _record('claude', 'permission', 'a')
 
     client.post('/api/agent-mission/decide', json={
         'source': 'claude', 'session_id': 'a', 'decision': 'deny'})
 
-    assert sent[0][0] == 'cc_deny'
+    assert sent[0][0] == 'cc_interrupt'
+    assert agent_state.session_entries('claude')[0]['state'] == 'ready'
+
+
+def test_codex_approve_sends_its_single_key_option(client, sent):
+    """Codex's approval overlay binds 'y'/'n' per option (codex-rs
+    approval_overlay.rs) — deterministic, unlike Enter on a highlight."""
+    _record('codex', 'permission', 'x', cwd='C:/repos/api')
+
+    response = client.post('/api/agent-mission/decide', json={
+        'source': 'codex', 'session_id': 'x', 'decision': 'approve'})
+
+    assert response.get_json()['success'] is True
+    assert sent == [('codex_approve', {'cwd': 'C:/repos/api',
+                                      'editor_label': 'Codex',
+                                      'session_pid': None})]
+
+
+def test_codex_deny_sends_n_and_shows_ready(client, sent):
+    _record('codex', 'permission', 'x')
+
+    client.post('/api/agent-mission/decide', json={
+        'source': 'codex', 'session_id': 'x', 'decision': 'deny'})
+
+    assert sent[0][0] == 'codex_deny'
+    assert agent_state.session_entries('codex')[0]['state'] == 'ready'
 
 
 @pytest.mark.parametrize('state', ['working', 'ready'])
@@ -204,9 +240,23 @@ def test_focus_unknown_session_or_window_is_404(client, monkeypatch):
 
 
 def test_focus_unsupported_source_is_400(client):
+    _record('generic', 'ready', 'x')
+
+    response = client.post('/api/agent-mission/focus', json={
+        'source': 'generic', 'session_id': 'x'})
+
+    assert response.status_code == 400
+
+
+def test_codex_focus_uses_the_codex_marker(client, monkeypatch):
     _record('codex', 'ready', 'x')
+    seen = {}
+    monkeypatch.setattr(window_focus, 'find_session_host_window',
+                        lambda marker, **kw: seen.update(marker=marker, **kw) or 4242)
+    monkeypatch.setattr(window_focus, 'focus_hwnd', lambda hwnd: True)
 
     response = client.post('/api/agent-mission/focus', json={
         'source': 'codex', 'session_id': 'x'})
 
-    assert response.status_code == 400
+    assert response.get_json()['success'] is True
+    assert seen['marker'] == 'codex'

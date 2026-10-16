@@ -290,8 +290,18 @@ onUnmounted(() => {
   color: var(--color-primary);
 }
 
-/* DL-147: 44 px touch floor on phones only. */
-html:is(.device-phone, .device-tablet) .notification-bell { min-width: 44px; min-height: 44px; }
+/* DL-147: 44 px touch floor on touch devices (DL-015 adds the panel). */
+html:is(.device-phone, .device-tablet, .device-panel) .notification-bell { min-width: 44px; min-height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .action-btn { min-width: 44px; min-height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .tab-btn { min-height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .action-btn-item { min-height: 44px; padding: 4px 14px; }
+html:is(.device-phone, .device-tablet, .device-panel) .details-toggle { min-height: 44px; padding: 4px 8px; }
+/* Touch has no hover — the per-item dismiss must be visible to be tappable. */
+html:is(.device-phone, .device-tablet, .device-panel) .item-dismiss {
+  opacity: 1;
+  min-width: 44px;
+  min-height: 44px;
+}
 
 .badge {
   position: absolute;

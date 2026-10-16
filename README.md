@@ -197,9 +197,12 @@ Windows will often route every tap to your *primary* display instead of a spare 
 
 ### 1. Get VDock
 
-**Easiest: install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed yet, so your OS warns once. On Windows SmartScreen choose **More info > Run anyway**. On macOS right-click and choose **Open**.
+**Easiest: install the app.** Download the installer for your OS from the [latest release](https://github.com/ponya5/VDock/releases/latest) (`VDock Setup x.y.z.exe` on Windows, `VDock-x.y.z-arm64.dmg` on macOS, `.AppImage`/`.deb` on Linux) and run it. The builds aren't code-signed with a paid certificate yet, so your OS warns once:
 
-**Or from source.** You need [Python 3.9+](https://www.python.org/downloads/) (tick "Add Python to PATH" on Windows) and [Node.js 20+](https://nodejs.org/):
+- **Windows:** SmartScreen shows "Windows protected your PC". Choose **More info > Run anyway**. The installer also adds a Windows Firewall rule for VDock (private networks only; Windows may ask you to approve it) so your phone can connect.
+- **macOS:** drag VDock to Applications and open it. macOS says it can't verify VDock. Click **Done**, open **System Settings > Privacy & Security**, scroll down and click **Open Anyway** next to the VDock message, then confirm. If that button doesn't appear, run `xattr -dr com.apple.quarantine /Applications/VDock.app` in Terminal and open VDock again.
+
+**Or from source.** You need [Python 3.10–3.14](https://www.python.org/downloads/) (3.13 recommended; 3.15 is too new for some dependencies; tick "Add Python to PATH" on Windows) and [Node.js 20+](https://nodejs.org/):
 
 ```bash
 git clone https://github.com/ponya5/VDock.git
@@ -209,7 +212,7 @@ cd VDock
 - **Windows:** double-click **`setup.bat`**
 - **macOS / Linux:** `./setup.sh` (downloaded a ZIP instead of cloning? use `bash setup.sh`)
 
-Setup shows a short menu where **Enter picks the recommended full setup**. It checks Python and Node (and offers to install anything missing: Homebrew on macOS, winget on Windows), installs dependencies, picks free ports and adds **VDock to your apps**: `~/Applications/VDock.app` on macOS (Launchpad, Spotlight), a Start menu entry plus desktop icon on Windows, and a desktop icon on Linux.
+Setup shows a short menu where **Enter picks the recommended full setup**. It picks a supported Python even when your default one is newer (it looks for 3.13, 3.12, ... via `py -3.13` on Windows and `python3.13`/Homebrew `python@3.13` on macOS), offers to install anything missing (Homebrew on macOS, winget on Windows), rebuilds `backend/venv` if the Python it was made with was upgraded or removed, installs dependencies, picks free ports and adds **VDock to your apps**: `~/Applications/VDock.app` on macOS (Launchpad, Spotlight), a Start menu entry plus desktop icon on Windows, and a desktop icon on Linux. On Windows it also offers, once, to add a firewall rule (private networks only) so your phone can reach VDock.
 
 ### 2. Launch it
 
@@ -219,7 +222,7 @@ Setup shows a short menu where **Enter picks the recommended full setup**. It ch
 
 **Optional tools.** None are required. They unlock extra actions, and the related buttons stay greyed out (with the reason shown) until installed: [Claude Code](https://claude.com/product/claude-code) for 40 Claude actions, [GitHub CLI](https://cli.github.com) for PRs, issues and CI, and Git for repo-aware actions.
 
-**Uninstall:** for the installed app, remove it like any other app (your profiles are kept). For a source checkout, run `uninstall.bat` / `./uninstall.sh`. It asks whether to keep your profiles and settings or remove everything, then removes dependencies, the built frontend, caches, agent hooks and shortcuts. Run `setup.bat` / `./setup.sh` afterwards for a fresh install (setup always rebuilds the frontend), or delete the folder to remove VDock for good.
+**Uninstall:** for the installed app, remove it like any other app (your profiles are kept; remove agent hooks in Settings first, the app's uninstaller doesn't yet). For a source checkout, run `uninstall.bat` / `./uninstall.sh`. It asks whether to keep your profiles and settings or remove everything, then removes dependencies, the built frontend, caches, agent hooks and shortcuts. Run `setup.bat` / `./setup.sh` afterwards for a fresh install (setup always rebuilds the frontend), or delete the folder to remove VDock for good.
 
 ---
 

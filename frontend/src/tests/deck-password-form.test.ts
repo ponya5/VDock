@@ -7,6 +7,12 @@ const updateServerConfig = vi.hoisted(() => vi.fn().mockResolvedValue(true))
 vi.mock('@/stores/settings', () => ({
   useSettingsStore: () => ({ updateServerConfig }),
 }))
+// Enabling re-probes the server (this computer stays signed in, DL-008).
+const probeAuth = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+vi.mock('@/services/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/auth')>()),
+  probeAuth,
+}))
 import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
 
 let wrapper: VueWrapper | undefined
@@ -49,6 +55,8 @@ describe('DeckPasswordForm', () => {
     await fill(wrapper, 'secret1', 'secret1')
     expect(updateServerConfig).toHaveBeenCalledWith({ require_auth: true, auth_password: 'secret1' })
     expect(wrapper.emitted('done')).toHaveLength(1)
+    // No forced lock screen: the server decides whether this device needs it.
+    expect(probeAuth).toHaveBeenCalled()
   })
 
   it('change mode only replaces the password', async () => {

@@ -1,6 +1,36 @@
 """Main Flask application for VDock backend."""
 import sys
 
+# Release builds run agent hooks through this executable (DL-009): no Python
+# has to exist on the user's machine. Dispatched before anything heavy is
+# imported - a hook fires on every tool call and must stay quick.
+if __name__ == '__main__' and sys.argv[1:2] == ['--vdock_agent_hook']:
+    import runpy
+    from pathlib import Path as _HookPath
+    _hook = _HookPath(__file__).resolve().parent / 'scripts' / 'vdock_agent_hook.py'
+    sys.argv = [str(_hook)] + sys.argv[2:]
+    try:
+        runpy.run_path(str(_hook), run_name='__main__')
+    except BaseException:  # noqa: BLE001 - a hook must never fail the agent
+        pass
+    sys.exit(0)
+
+# The packaged uninstaller (installer.nsh customUnInstall) runs
+# `vdock-backend --vdock_remove_agent_hooks` to strip the hooks the app
+# installed into Claude Code / Cursor / Codex / Antigravity — otherwise
+# they keep calling a deleted exe on every tool call. Always exits 0 so
+# uninstall never blocks on a corrupt agent config (DL-010 follow-up).
+if __name__ == '__main__' and sys.argv[1:2] == ['--vdock_remove_agent_hooks']:
+    import runpy
+    from pathlib import Path as _RmPath
+    _rm = _RmPath(__file__).resolve().parent / 'scripts' / 'remove_agent_hooks.py'
+    sys.argv = [str(_rm)]
+    try:
+        runpy.run_path(str(_rm), run_name='__main__')
+    except BaseException:  # noqa: BLE001 - uninstall must proceed anyway
+        pass
+    sys.exit(0)
+
 # `python app.py` runs this file as `__main__`. Routes that lazily
 # `from app import action_executor` would otherwise execute it a second time
 # as module `app` -- building a second, unserved SocketIO and re-pointing
@@ -340,8 +370,10 @@ def get_plugin_actions(plugin_id):
 @socketio.on('connect')
 def handle_connect(auth):
     """Handle client connection."""
-    # Check authentication if required
-    if Config.REQUIRE_AUTH:
+    # Check authentication if required. The computer VDock runs on is
+    # trusted (DL-008) - same rule as require_auth.
+    from auth import is_trusted_local_request
+    if Config.REQUIRE_AUTH and not is_trusted_local_request():
         if not auth or 'token' not in auth:
             logger.warning(
                 f"Unauthenticated connection attempt: {request.sid}"
