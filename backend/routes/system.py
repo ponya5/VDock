@@ -51,11 +51,16 @@ def os_permissions():
     from utils import host_os
 
     accessibility = None
+    accessibility_app = None
     if host_os.host_os() == 'macos':
         from actions import macos_controls
         accessibility = macos_controls.is_accessibility_trusted()
+        # The entry to switch on: macOS charges keystrokes to the app that
+        # started VDock's server, which is rarely called "VDock".
+        accessibility_app = macos_controls.accessibility_client()
     return jsonify({'success': True, 'os': host_os.host_os(),
-                    'accessibility': accessibility})
+                    'accessibility': accessibility,
+                    'accessibility_app': accessibility_app})
 
 
 @system_bp.route('/api/system/permissions/accessibility', methods=['POST'])

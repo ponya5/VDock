@@ -85,7 +85,7 @@ const emit = defineEmits<{ navigate: [target: SettingsRoute] }>()
 
 const settingsStore = useSettingsStore()
 const { serverConfig, setAllowLan } = useServerConfig()
-const { githubTokenMissing, keystrokesBlocked, loaded, refresh } = useSetupStatus()
+const { githubTokenMissing, keystrokesBlocked, accessibilityApp, loaded, refresh } = useSetupStatus()
 const { isCompactTouch } = useDeviceClass()
 const autoScenes = useAutoSceneSwitching()
 
@@ -106,7 +106,7 @@ const attention = computed<AttentionItem[]>(() => {
     items.push({
       id: 'mac-accessibility',
       title: 'macOS is blocking VDock from pressing keys',
-      detail: 'Claude Code, Cursor and shortcut buttons can\'t type until you allow VDock under Accessibility.',
+      detail: `Claude Code, Cursor and shortcut buttons can't type until you turn on "${accessibilityApp.value || 'VDock'}" under Accessibility.`,
       action: 'Fix it',
       target: { section: 'agents', page: 'alerts', anchor: 'agent-alerts' },
     })

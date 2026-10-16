@@ -644,9 +644,10 @@ def test_cc_chord_commands_emit_two_hotkey_strokes(mocker):
 
     assert result['success'] is True
     steps = macro.call_args[0][0]['steps']
-    assert [s['type'] for s in steps] == ['hotkey', 'delay', 'hotkey']
-    assert steps[0]['keys'] == ['ctrl', 'x']
-    assert steps[2]['keys'] == ['ctrl', 'k']
+    # The chord twice: Claude Code asks for it again to confirm (DL-007).
+    hotkeys = [s['keys'] for s in steps if s['type'] == 'hotkey']
+    assert hotkeys == [['ctrl', 'x'], ['ctrl', 'k'], ['ctrl', 'x'], ['ctrl', 'k']]
+    assert all(s['type'] == 'delay' for s in steps[1::2])
 
 
 def test_destructive_commands_expose_the_opt_in_field():

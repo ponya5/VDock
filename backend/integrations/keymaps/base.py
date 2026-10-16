@@ -97,6 +97,10 @@ class Command:
     #: text is split on newlines and each break sent as this chord -- in a
     #: TUI a raw newline is Enter and would submit the first line alone.
     newline_keys: Tuple[str, ...] = ()
+    #: macOS chord for ``keys`` when the app binds a different one there and
+    #: no general rule covers it (Claude Code pastes an image with Ctrl+V on
+    #: macOS, Alt+V on Windows). Windows and Linux always use ``keys``.
+    mac_keys: Optional[Tuple[str, ...]] = None
     #: Mirrors the categories the frontend shortcut list used.
     category: str = 'general'
     #: Higher sorts earlier when auto-populating a deck.
@@ -110,6 +114,9 @@ class Command:
         (toggle terminal) stays Ctrl on macOS, and Alt chords differ per
         shortcut, so both are left as written.
         """
+        if (self.mac_keys is not None and tuple(keys) == tuple(self.keys)
+                and host_os.host_os() == 'macos'):
+            return self.mac_keys
         if not set(self.target_exes) & MAC_CMD_REMAPPED_EXES:
             return keys
         return host_os.localize_keys(keys)

@@ -159,7 +159,7 @@ class HotkeyAction(BaseAction):
         if platform.system() == 'Darwin':
             from . import macos_controls
             if not macos_controls.is_accessibility_trusted():
-                return ActionResult(False, macos_controls.ACCESSIBILITY_HELP)
+                return ActionResult(False, macos_controls.accessibility_help())
 
         # Support both 'keys' array and 'hotkey' string formats
         if 'keys' in self.config:

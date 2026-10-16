@@ -480,8 +480,11 @@ def test_permissions_report_accessibility_on_macos(client, mocker):
     from utils import host_os
     mocker.patch.object(host_os, 'host_os', return_value='macos')
     mocker.patch.object(macos_controls, 'is_accessibility_trusted', return_value=False)
+    mocker.patch.object(macos_controls, 'accessibility_client',
+                        return_value={'name': 'python3.14', 'path': '/x/python3.14'})
     body = client.get('/api/system/permissions').get_json()
-    assert body == {'success': True, 'os': 'macos', 'accessibility': False}
+    assert body == {'success': True, 'os': 'macos', 'accessibility': False,
+                    'accessibility_app': {'name': 'python3.14', 'path': '/x/python3.14'}}
 
 
 def test_permissions_have_nothing_to_grant_on_windows(client, mocker):

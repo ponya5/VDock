@@ -12,7 +12,7 @@
       <div v-if="keystrokesBlocked" class="row row-warn" data-testid="mac-accessibility">
         <div class="row-text">
           <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Let VDock press keys</span>
-          <p>macOS blocks VDock's keystrokes until you allow it under Privacy &amp; Security › Accessibility — Claude Code, Cursor and shortcut buttons can't type until then. Turn on <b>VDock</b> in the list that opens, then press Check again.</p>
+          <p>macOS blocks VDock's keystrokes until you allow it under Privacy &amp; Security › Accessibility — Claude Code, Cursor and shortcut buttons can't type until then. Turn on <b>{{ accessibilityApp || 'VDock' }}</b> in the list that opens (macOS lists VDock's server under the app that started it), then press Check again.</p>
         </div>
         <div class="row-control">
           <button type="button" class="btn sm primary" :disabled="!isLocalDevice" @click="openAccessibilitySettings">
@@ -145,7 +145,7 @@ import apiClient from '@/api/client'
 
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
-const { keystrokesBlocked, refresh: refreshSetupStatus } = useSetupStatus()
+const { keystrokesBlocked, accessibilityApp, refresh: refreshSetupStatus } = useSetupStatus()
 
 // The hook files live on the PC VDock runs on; other devices can't edit them.
 const isLocalDevice = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)

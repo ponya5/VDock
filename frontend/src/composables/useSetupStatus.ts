@@ -28,6 +28,9 @@ const hooksTotal = ref(0)
 const loaded = ref(false)
 // macOS only: Accessibility not granted, so every keystroke button fails (DL-007).
 const keystrokesBlocked = ref(false)
+// The Accessibility entry macOS checks — the app that started VDock's server
+// ("python3.14", "Terminal", "Cursor"), rarely "VDock".
+const accessibilityApp = ref('')
 
 /** What is set up and what is not, for the Settings Overview and Accounts & keys. */
 export function useSetupStatus() {
@@ -49,6 +52,7 @@ export function useSetupStatus() {
     }
     if (permissions.status === 'fulfilled') {
       keystrokesBlocked.value = permissions.value.data?.accessibility === false
+      accessibilityApp.value = permissions.value.data?.accessibility_app?.name ?? ''
     }
     loaded.value = true
   }
@@ -58,5 +62,5 @@ export function useSetupStatus() {
   const githubTokenMissing = computed(() => items.value.some((i) => i.id === 'GITHUB_TOKEN' && !i.configured))
   const hooksMissing = computed(() => hooksInstalled.value !== null && hooksInstalled.value < hooksTotal.value)
 
-  return { secrets, tools, envFile, hooksInstalled, hooksTotal, loaded, githubTokenMissing, hooksMissing, keystrokesBlocked, refresh }
+  return { secrets, tools, envFile, hooksInstalled, hooksTotal, loaded, githubTokenMissing, hooksMissing, keystrokesBlocked, accessibilityApp, refresh }
 }
