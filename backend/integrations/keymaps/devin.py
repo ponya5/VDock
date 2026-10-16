@@ -62,8 +62,10 @@ DEVIN_COMMANDS: Tuple[Command, ...] = (
     ),
     Command(
         id='devin_exit', label='Quit Devin',
-        description='Exit the session (Ctrl+C twice).',
-        keys=('ctrl', 'c'), icon='power-off', repeat=2,
+        description='Exit the session (Ctrl+D; Ctrl+C first clears the draft '
+                    'or cancels the running agent).',
+        keys=('ctrl', 'c'), after_keys=(('ctrl', 'c'), ('ctrl', 'd')),
+        icon='power-off',
         keywords=('devin', 'exit', 'quit', 'close'),
         risk=RISK_DESTRUCTIVE, requires_session=True, **_DEVIN,
     ),

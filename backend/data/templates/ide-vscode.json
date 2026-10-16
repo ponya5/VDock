@@ -154,7 +154,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "h"] }
+            "config": { "keys": ["ctrl", "h"], "mac_keys": ["cmd", "alt", "f"] }
           }
         },
         {
@@ -239,6 +239,9 @@
                 { "type": "hotkey", "keys": ["ctrl", "k"] },
                 { "type": "delay", "duration": 50 },
                 { "type": "hotkey", "keys": ["s"] }
+              ],
+              "mac_steps": [
+                { "type": "hotkey", "keys": ["cmd", "alt", "s"] }
               ]
             }
           }
@@ -300,7 +303,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "alt", "down"] }
+            "config": { "keys": ["ctrl", "alt", "down"], "mac_keys": ["cmd", "alt", "down"] }
           }
         },
         {
@@ -340,7 +343,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "shift", "g"] }
+            "config": { "keys": ["ctrl", "shift", "g"], "mac_keys": ["ctrl", "shift", "g"] }
           }
         },
         {

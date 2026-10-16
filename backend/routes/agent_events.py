@@ -39,6 +39,10 @@ _emitter: Optional[Callable[[str, Dict[str, Any]], None]] = None
 #: Hook POSTs arrive on request threads, so reads/mutations take the lock.
 _alerts: Dict[str, Dict[str, Any]] = {}
 _alerts_lock = threading.Lock()
+#: Insertion order tiebreaker — wall-clock ``ts`` can tie when two hooks
+#: post in the same tick (and tests may freeze it), which made the
+#: newest-first ordering below nondeterministic.
+_alert_seq = 0
 
 # Alerts go stale — if the agent was killed mid-prompt nothing clears it.
 ALERT_TTL_SECONDS = agent_state.STATE_TTL_SECONDS
@@ -87,7 +91,9 @@ def _alerts_list() -> List[Dict[str, Any]]:
         for source in [s for s, a in _alerts.items() if _is_expired(a)]:
             del _alerts[source]
         return sorted(_alerts.values(),
-                      key=lambda alert: alert.get('ts', 0), reverse=True)
+                      key=lambda alert: (alert.get('ts', 0),
+                                         alert.get('_seq', 0)),
+                      reverse=True)
 
 
 def _localhost_only() -> bool:
@@ -125,13 +131,16 @@ def _agent_process(source: str, session_id: str, data: Dict[str, Any]):
 def _update_alert(source: str, raise_alert: bool, message: str,
                   project: str, cwd: str) -> None:
     if raise_alert:
+        global _alert_seq
         with _alerts_lock:
+            _alert_seq += 1
             _alerts[source] = {
                 'source': source,
                 'message': message or 'Agent is waiting for input',
                 'project': project,
                 'cwd': cwd,
                 'ts': time.time(),
+                '_seq': _alert_seq,
             }
         logger.info('Agent attention: %s — %s', source, message)
     else:
