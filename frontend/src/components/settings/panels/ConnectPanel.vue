@@ -266,13 +266,18 @@ const FIREWALL_HINTS: Record<string, string> = {
   macos: 'If the phone still can\u2019t open it, check System Settings \u203a Network \u203a Firewall: allow incoming connections for Python (VDock\u2019s server).',
   windows: 'If the phone still can\u2019t open it, allow Python (VDock\u2019s server) through Windows Defender Firewall on Private networks.',
 }
+const FIREWALL_HINTS_PACKAGED: Record<string, string> = {
+  macos: 'If the phone still can\u2019t open it, check System Settings \u203a Network \u203a Firewall: allow incoming connections for VDock.',
+  windows: 'If the phone still can\u2019t open it, allow VDock through Windows Defender Firewall on Private networks.',
+}
 const lanDeadHint = computed(() => {
   if (import.meta.env.DEV) {
     return 'Restart the dev server so it re-binds with LAN access on — stop and re-run npm run dev in frontend/ (relaunching VDock alone doesn\u2019t restart Vite).'
   }
   if (!lanEnabled.value) return 'Turn on Allow LAN access above.'
   if (restartRequired.value) return 'Restart VDock (above) to apply Allow LAN access.'
-  return (FIREWALL_HINTS[hostOs.value] ?? 'If the phone still can\u2019t open it, check the computer\u2019s firewall allows the port.')
+  const hints = serverConfig.value?.packaged ? FIREWALL_HINTS_PACKAGED : FIREWALL_HINTS
+  return (hints[hostOs.value] ?? 'If the phone still can\u2019t open it, check the computer\u2019s firewall allows the port.')
     + ' Guest Wi-Fi networks often block devices from reaching each other.'
 })
 

@@ -1,12 +1,15 @@
 """System configuration routes."""
 import re
 import socket
+import sys
 from flask import Blueprint, request, jsonify
 from pathlib import Path
 from auth import require_auth
 from config import project_root, env_file, write_env_keys, read_env_key
 
 system_bp = Blueprint('system', __name__)
+
+_LAUNCHER = 'launch.bat' if sys.platform == 'win32' else 'launch.sh'
 
 
 @system_bp.route('/api/system/host', methods=['GET'])
@@ -271,7 +274,10 @@ def update_ports():
         'restart_required': True,
         'url': f'http://localhost:{frontend_port}',
         'message': (
-            f'Ports saved. Restart VDock (launch.bat) to apply — it will be '
+            'Ports saved. Restart VDock to apply — it will be at '
+            f'http://localhost:{frontend_port}.'
+            if getattr(sys, 'frozen', False) else
+            f'Ports saved. Restart VDock ({_LAUNCHER}) to apply — it will be '
             f'at http://localhost:{frontend_port}.'
         ),
     })

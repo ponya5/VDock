@@ -50,7 +50,16 @@
     ${EndIf}
   ${EndIf}
 
-  ; Agent hooks (Claude Code, Cursor, ...) point at vdock-backend.exe and are
-  ; not removed here yet: the frozen backend has no remove-hooks entry point
-  ; (see DL-010). They fail silently once the exe is gone.
+  ; Agent hooks (Claude Code, Cursor, Codex, Antigravity) point at
+  ; vdock-backend.exe — remove them so a deleted exe isn't invoked on every
+  ; tool call. Runs the bundled remove_agent_hooks.py via the app's own
+  ; dispatch; always exits 0. Plain nsExec (not runas): hooks live in the
+  ; *user's* profile, so elevating would clean the admin's profile instead.
+  ; On update the new build reuses the same hooks — skip then.
+  ${IfNot} ${isUpdated}
+    ${If} ${FileExists} "${VDOCK_BACKEND_EXE}"
+      nsExec::Exec '"${VDOCK_BACKEND_EXE}" --vdock_remove_agent_hooks'
+      Pop $0
+    ${EndIf}
+  ${EndIf}
 !macroend

@@ -1,6 +1,7 @@
 """Configuration routes."""
 import re
 import secrets
+import sys
 
 from flask import Blueprint, request, jsonify
 from config import (
@@ -39,6 +40,10 @@ def get_config():
             # Whether a password exists — never the password itself. Lets the
             # UI offer "enable" vs "set a password first" (DL-126).
             'auth_password_set': bool(Config.AUTH_PASSWORD),
+            # Packaged app (PyInstaller inside VDock.app/VDock.exe) vs a
+            # source checkout — the firewall prompt names the app, not
+            # python.exe, and there is no launch.bat to restart with.
+            'packaged': bool(getattr(sys, 'frozen', False)),
         }
     })
 

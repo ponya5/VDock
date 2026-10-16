@@ -15,6 +15,22 @@ if __name__ == '__main__' and sys.argv[1:2] == ['--vdock_agent_hook']:
         pass
     sys.exit(0)
 
+# The packaged uninstaller (installer.nsh customUnInstall) runs
+# `vdock-backend --vdock_remove_agent_hooks` to strip the hooks the app
+# installed into Claude Code / Cursor / Codex / Antigravity — otherwise
+# they keep calling a deleted exe on every tool call. Always exits 0 so
+# uninstall never blocks on a corrupt agent config (DL-010 follow-up).
+if __name__ == '__main__' and sys.argv[1:2] == ['--vdock_remove_agent_hooks']:
+    import runpy
+    from pathlib import Path as _RmPath
+    _rm = _RmPath(__file__).resolve().parent / 'scripts' / 'remove_agent_hooks.py'
+    sys.argv = [str(_rm)]
+    try:
+        runpy.run_path(str(_rm), run_name='__main__')
+    except BaseException:  # noqa: BLE001 - uninstall must proceed anyway
+        pass
+    sys.exit(0)
+
 # `python app.py` runs this file as `__main__`. Routes that lazily
 # `from app import action_executor` would otherwise execute it a second time
 # as module `app` -- building a second, unserved SocketIO and re-pointing
