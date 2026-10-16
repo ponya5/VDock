@@ -157,11 +157,16 @@ def send(command: Command, text_override: Optional[str] = None,
                     return _focus_failure(
                         'Could not focus the session window',
                         'The window hosting the session was found but '
-                        'Windows would not bring it forward.',
+                        'the system would not bring it forward.',
                     )
                 time.sleep(FOCUS_SETTLE_SECONDS)
             fg = window_focus.foreground_hwnd()
-            if fg is not None and fg != host_hwnd:
+            wrong_window = fg is not None and fg != host_hwnd
+            # macOS has no foreground HWND; it can still tell whether the
+            # app hosting the session is in front.
+            if fg is None and window_focus.session_host_frontmost(host_hwnd) is False:
+                wrong_window = True
+            if wrong_window:
                 return {
                     'success': False,
                     'message': 'The session window is not focused',

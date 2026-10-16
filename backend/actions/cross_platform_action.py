@@ -723,7 +723,8 @@ class CrossPlatformAction(BaseAction):
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_VOLUME_MUTE)
         elif _SYSTEM == 'Darwin':  # macOS
-            return macos_controls.set_output_muted(True)
+            # Toggle like Windows -- a second press used to stay muted.
+            return macos_controls.toggle_output_muted()
         elif _SYSTEM == 'Linux':
             return self._run_command('amixer set Master mute')
         else:
@@ -788,10 +789,7 @@ class CrossPlatformAction(BaseAction):
                 return result
             return ActionResult(False, err or 'Volume set unavailable on Windows')
         elif _SYSTEM == 'Darwin':
-            result = self._run_command(f'osascript -e "set volume output volume {value}"')
-            if result.success:
-                result.data = {**(result.data or {}), 'value': value, 'badge': f'{value}%'}
-            return result
+            return macos_controls.set_output_volume(value)
         elif _SYSTEM == 'Linux':
             result = self._run_command(f'amixer set Master {value}%')
             if result.success:

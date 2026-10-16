@@ -330,8 +330,10 @@ export interface ServerConfig {
   lan_ip?: string | null
   /** Optional override for the QR-card host (hostname or IPv4). Null = auto lan_ip. */
   deck_host?: string | null
-  /** True when the server binds broadly enough for LAN devices to reach it. */
+  /** True when the running server binds broadly enough for LAN devices to reach it. */
   lan_reachable?: boolean
+  /** Allow LAN / HTTPS changed since the server bound its socket — restart to apply (DL-007). */
+  restart_required?: boolean
   /** A deck password exists — the password itself is never returned (DL-126). */
   auth_password_set?: boolean
   /** Write-only: set/change the deck password via PUT /api/config (DL-126). */

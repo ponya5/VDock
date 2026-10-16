@@ -40,7 +40,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="row-text"><span class="label">Allow LAN access</span><p>Lets a phone or tablet open the deck. Applies on relaunch.</p></div>
+            <div class="row-text"><span class="label">Allow LAN access</span><p>Lets a phone or tablet open the deck. Applies after a restart (Connect a device has the button).</p></div>
             <div class="row-control">
               <label class="switch"><span class="sr-only">Allow LAN access</span><input type="checkbox" :checked="serverConfig?.allow_lan ?? false" @change="toggleLan" /><span class="track"></span></label>
             </div>
@@ -85,7 +85,7 @@ const emit = defineEmits<{ navigate: [target: SettingsRoute] }>()
 
 const settingsStore = useSettingsStore()
 const { serverConfig, setAllowLan } = useServerConfig()
-const { githubTokenMissing, loaded, refresh } = useSetupStatus()
+const { githubTokenMissing, keystrokesBlocked, loaded, refresh } = useSetupStatus()
 const { isCompactTouch } = useDeviceClass()
 const autoScenes = useAutoSceneSwitching()
 
@@ -100,6 +100,15 @@ const attention = computed<AttentionItem[]>(() => {
       detail: 'LAN access is on without a deck password.',
       action: 'Set a password',
       target: { section: 'devices', page: 'connect' },
+    })
+  }
+  if (keystrokesBlocked.value) {
+    items.push({
+      id: 'mac-accessibility',
+      title: 'macOS is blocking VDock from pressing keys',
+      detail: 'Claude Code, Cursor and shortcut buttons can\'t type until you allow VDock under Accessibility.',
+      action: 'Fix it',
+      target: { section: 'agents', page: 'alerts', anchor: 'agent-alerts' },
     })
   }
   if (githubTokenMissing.value) {

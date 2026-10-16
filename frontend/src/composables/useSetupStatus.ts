@@ -26,13 +26,16 @@ const envFile = ref('')
 const hooksInstalled = ref<number | null>(null)
 const hooksTotal = ref(0)
 const loaded = ref(false)
+// macOS only: Accessibility not granted, so every keystroke button fails (DL-007).
+const keystrokesBlocked = ref(false)
 
 /** What is set up and what is not, for the Settings Overview and Accounts & keys. */
 export function useSetupStatus() {
   async function refresh() {
-    const [integrations, hooks] = await Promise.allSettled([
+    const [integrations, hooks, permissions] = await Promise.allSettled([
       apiClient.get('/config/integrations'),
       apiClient.get('/agent-events/hook-status', { agent: 'all' }),
+      apiClient.get('/system/permissions'),
     ])
     if (integrations.status === 'fulfilled') {
       const body: IntegrationsResponse = integrations.value.data
@@ -44,6 +47,9 @@ export function useSetupStatus() {
       hooksTotal.value = agents.length
       hooksInstalled.value = agents.filter((a) => a.installed).length
     }
+    if (permissions.status === 'fulfilled') {
+      keystrokesBlocked.value = permissions.value.data?.accessibility === false
+    }
     loaded.value = true
   }
 
@@ -52,5 +58,5 @@ export function useSetupStatus() {
   const githubTokenMissing = computed(() => items.value.some((i) => i.id === 'GITHUB_TOKEN' && !i.configured))
   const hooksMissing = computed(() => hooksInstalled.value !== null && hooksInstalled.value < hooksTotal.value)
 
-  return { secrets, tools, envFile, hooksInstalled, hooksTotal, loaded, githubTokenMissing, hooksMissing, refresh }
+  return { secrets, tools, envFile, hooksInstalled, hooksTotal, loaded, githubTokenMissing, hooksMissing, keystrokesBlocked, refresh }
 }

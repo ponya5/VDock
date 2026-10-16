@@ -14,7 +14,9 @@ LAUNCHER = Path(__file__).resolve().parents[2] / 'scripts' / 'VDock-Launcher.py'
 
 
 @pytest.fixture
-def launcher():
+def launcher(monkeypatch):
+    # The launcher imports its sibling scripts (electron_branding).
+    monkeypatch.syspath_prepend(str(LAUNCHER.parent))
     spec = importlib.util.spec_from_file_location('vdock_launcher_under_test', LAUNCHER)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

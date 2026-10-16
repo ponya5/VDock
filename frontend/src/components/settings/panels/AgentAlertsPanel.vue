@@ -9,6 +9,18 @@
       </span>
     </div>
     <div class="panel-body">
+      <div v-if="keystrokesBlocked" class="row row-warn" data-testid="mac-accessibility">
+        <div class="row-text">
+          <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Let VDock press keys</span>
+          <p>macOS blocks VDock's keystrokes until you allow it under Privacy &amp; Security › Accessibility — Claude Code, Cursor and shortcut buttons can't type until then. Turn on <b>VDock</b> in the list that opens, then press Check again.</p>
+        </div>
+        <div class="row-control">
+          <button type="button" class="btn sm primary" :disabled="!isLocalDevice" @click="openAccessibilitySettings">
+            <FontAwesomeIcon :icon="['fas', 'universal-access']" /> Open Accessibility settings
+          </button>
+          <button type="button" class="btn sm" @click="refreshSetupStatus">Check again</button>
+        </div>
+      </div>
       <div class="row">
         <div class="row-text">
           <span class="label">Alert me when an agent waits</span>
@@ -133,7 +145,7 @@ import apiClient from '@/api/client'
 
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
-const { refresh: refreshSetupStatus } = useSetupStatus()
+const { keystrokesBlocked, refresh: refreshSetupStatus } = useSetupStatus()
 
 // The hook files live on the PC VDock runs on; other devices can't edit them.
 const isLocalDevice = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
@@ -192,6 +204,20 @@ function hookOptionSuffix(id: HookAgentId): string {
   if (state.installed) return ' — hooked'
   if (state.partial) return ' — partial'
   return ' — not hooked'
+}
+
+// macOS Accessibility (DL-007): the backend shows macOS's own prompt, which
+// lists the app that started VDock, and opens the settings pane.
+async function openAccessibilitySettings() {
+  try {
+    const res = await apiClient.post('/system/permissions/accessibility')
+    if (res.data?.accessibility === true) {
+      notificationsStore.success('VDock can press keys')
+      await refreshSetupStatus()
+    }
+  } catch {
+    notificationsStore.error('Could not open System Settings', 'Open Privacy & Security › Accessibility yourself and turn on VDock.')
+  }
 }
 
 function toggleAgentAlerts() {
@@ -287,9 +313,11 @@ async function removeAgentHook(agent: HookAgentId) {
 }
 
 onMounted(fetchAgentHookStatus)
+onMounted(refreshSetupStatus)
 </script>
 
 <style scoped>
+.row-warn .label svg { color: var(--warn); }
 .hook-picker {
   display: flex;
   align-items: center;

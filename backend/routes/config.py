@@ -32,8 +32,10 @@ def get_config():
             'deck_host': Config.DECK_HOST or None,
             # Per-app executable overrides (DL-084) — { appKey: path }.
             'app_paths': dict(Config.APP_PATHS),
-            # Effective bind is 0.0.0.0 whenever ALLOW_LAN is on (see app.py).
-            'lan_reachable': bool(Config.ALLOW_LAN),
+            # What the running server actually bound with — the switch alone
+            # lies until a restart applies it (DL-007).
+            'lan_reachable': Config.lan_reachable(),
+            'restart_required': Config.restart_required(),
             # Whether a password exists — never the password itself. Lets the
             # UI offer "enable" vs "set a password first" (DL-126).
             'auth_password_set': bool(Config.AUTH_PASSWORD),

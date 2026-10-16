@@ -346,10 +346,50 @@ def backend_code_is_newer(port: int = DEFAULT_BACKEND_PORT, slack_seconds: float
     return newest_backend_code_mtime() > started + slack_seconds
 
 
+def backend_env_is_newer(port: int = DEFAULT_BACKEND_PORT, slack_seconds: float = 5.0) -> bool:
+    """True when backend/.env was edited after the running backend started.
+
+    .env is read once at startup; Settings tells users to "save, and relaunch
+    VDock" after editing it, which reused the old process (DL-007).
+    """
+    started = backend_started_at(port)
+    env_path = BACKEND_PATH / ".env"
+    if started is None or not env_path.exists():
+        return False
+    try:
+        return os.path.getmtime(env_path) > started + slack_seconds
+    except OSError:
+        return False
+
+
+def backend_needs_settings_restart(port: int = DEFAULT_BACKEND_PORT) -> bool:
+    """True when the running backend says a startup-only switch changed.
+
+    "Allow LAN access" (and HTTPS) only apply when the server binds its
+    socket. Reusing such a backend on relaunch kept it on 127.0.0.1 forever,
+    so a phone could never connect even though the switch said on (DL-007).
+    """
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=2) as response:
+            return json.load(response).get("restart_required") is True
+    except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError, AttributeError, OSError):
+        return False
+
+
 def backend_is_running(port: int = DEFAULT_BACKEND_PORT) -> bool:
     """Return True when something is listening on the backend port."""
     config_url = f"http://127.0.0.1:{port}/api/config"
     return wait_for_url(config_url, timeout_seconds=2, interval_seconds=0.25)
+
+
+def _lsof_listener_args(port: int) -> list:
+    """lsof query for processes LISTENING on ``port`` (macOS/Linux).
+
+    A bare ``lsof -ti :PORT`` also lists every client connected to the port
+    -- the open VDock window's network process, a browser tab -- so the
+    duplicate-backend count was wrong and the restart kill -9'd them (DL-007).
+    """
+    return ["lsof", "-nP", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"]
 
 
 def kill_process_on_port(port: int) -> bool:
@@ -383,7 +423,7 @@ def kill_process_on_port(port: int) -> bool:
     else:
         try:
             result = subprocess.run(
-                ["lsof", "-ti", f":{port}"],
+                _lsof_listener_args(port),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -417,7 +457,7 @@ def count_listeners_on_port(port: int) -> int:
     if not IS_WINDOWS:
         try:
             result = subprocess.run(
-                ["lsof", "-ti", f":{port}"],
+                _lsof_listener_args(port),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -468,6 +508,12 @@ def ensure_fresh_backend(venv_path: Path, port: int = DEFAULT_BACKEND_PORT) -> b
             needs_restart = True
         elif backend_code_is_newer(port):
             print("[WARN] Backend code changed since it started. Restarting...")
+            needs_restart = True
+        elif backend_needs_settings_restart(port):
+            print("[INFO] Network settings changed (Allow LAN / HTTPS). Restarting backend...")
+            needs_restart = True
+        elif backend_env_is_newer(port):
+            print("[INFO] backend/.env changed since the backend started. Restarting backend...")
             needs_restart = True
         else:
             print("[OK] Backend already running with current API")

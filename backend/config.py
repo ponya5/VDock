@@ -88,6 +88,21 @@ _VIRTUAL_IFACE_HINTS = (
     'openvpn', 'wintun', 'tap-', 'vpn', 'tunnel', 'docker', 'br-',
 )
 
+# macOS virtual interfaces, matched as name prefixes (``utun3``): VPN tunnels,
+# Internet Sharing / VM bridges, AirDrop and companion-link links. A
+# substring match would be wrong here -- 'bridge' must not hit Windows'
+# "Network Bridge", which bridges real adapters (DL-007).
+_VIRTUAL_IFACE_PREFIXES = (
+    'utun', 'ipsec', 'ppp', 'bridge', 'vmenet', 'feth', 'gif', 'stf',
+    'awdl', 'llw', 'anpi', 'ap1',
+)
+
+
+def _is_virtual_iface(name: str) -> bool:
+    lowered = name.lower()
+    return (any(hint in lowered for hint in _VIRTUAL_IFACE_HINTS)
+            or lowered.startswith(_VIRTUAL_IFACE_PREFIXES))
+
 
 def _iface_candidates() -> List[Tuple[str, str]]:
     """(interface name, IPv4) for every up interface — loopback and
@@ -136,7 +151,7 @@ def lan_ip() -> Optional[str]:
     """
     probe_ip = _probe_ip()
     reals = [(name, ip) for name, ip in _iface_candidates()
-             if not any(h in name.lower() for h in _VIRTUAL_IFACE_HINTS)]
+             if not _is_virtual_iface(name)]
     if probe_ip and any(ip == probe_ip for _, ip in reals):
         return probe_ip
     if reals:
@@ -373,6 +388,12 @@ class Config:
     # the QR card instead of the auto-detected NIC address (multi-NIC/VPN
     # boxes, or a friendly name like deck.local). Empty = auto.
     DECK_HOST = os.environ.get('DECK_HOST', '')
+    # What the running server actually bound with (set once in app.py
+    # __main__). ALLOW_LAN / USE_SSL can be flipped at runtime from Settings,
+    # but the socket keeps its startup bind until a restart (DL-007).
+    # None = not serving (tests, imports).
+    BOUND_LAN: Optional[bool] = None
+    BOUND_SSL: Optional[bool] = None
 
     # Per-app executable overrides (DL-084): { appKey: absolutePath } for
     # apps installed off-PATH — Cursor's default install is the motivating
@@ -475,14 +496,46 @@ class Config:
         return bool(cls.ALLOW_LAN and not (cls.REQUIRE_AUTH and cls.AUTH_PASSWORD))
 
     @classmethod
+    def bind_host(cls) -> str:
+        """Interface to listen on: loopback unless Allow LAN is on, then
+        every interface (unless the user pinned a specific HOST)."""
+        host = cls.HOST if cls.ALLOW_LAN else '127.0.0.1'
+        if cls.ALLOW_LAN and host in LOOPBACK_HOSTS:
+            host = '0.0.0.0'
+        return host
+
+    @classmethod
+    def record_bind(cls) -> None:
+        """Remember the switches the server is about to bind with."""
+        cls.BOUND_LAN = bool(cls.ALLOW_LAN)
+        cls.BOUND_SSL = bool(cls.USE_SSL)
+
+    @classmethod
+    def lan_reachable(cls) -> bool:
+        """Whether the running server listens beyond loopback right now."""
+        if cls.BOUND_LAN is None:
+            return bool(cls.ALLOW_LAN)
+        return cls.BOUND_LAN
+
+    @classmethod
+    def restart_required(cls) -> bool:
+        """True when a switch that only applies at startup changed since.
+
+        "Allow LAN" toggled on while the server is bound to 127.0.0.1 is the
+        classic case: the switch says on, the phone still cannot connect.
+        """
+        if cls.BOUND_LAN is None:
+            return False
+        return (cls.BOUND_LAN != bool(cls.ALLOW_LAN)
+                or cls.BOUND_SSL != bool(cls.USE_SSL))
+
+    @classmethod
     def report(cls) -> List[str]:
         """Human-readable startup summary. Names and booleans only -- no values."""
         from services import integration_status
 
         lan = 'LAN on' if cls.ALLOW_LAN else 'LAN off'
-        bind_host = cls.HOST if cls.ALLOW_LAN else '127.0.0.1'
-        if cls.ALLOW_LAN and bind_host in LOOPBACK_HOSTS:
-            bind_host = '0.0.0.0'
+        bind_host = cls.bind_host()
         lines = [
             f'Bind: {bind_host}:{cls.PORT} ({lan})',
             f"Auth: {'on' if cls.REQUIRE_AUTH else 'off'}",

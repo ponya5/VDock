@@ -177,7 +177,7 @@ def focus_session():
                         'error': 'Could not find that session\'s window'}), 404
     if not window_focus.focus_hwnd(hwnd):
         return jsonify({'success': False,
-                        'error': 'Windows would not bring the window forward'}), 409
+                        'error': 'The system would not bring the window forward'}), 409
     return jsonify({'success': True})
 
 

@@ -11,6 +11,11 @@ what this module does on Windows.
 * ``False`` -- supported platform, but no matching window exists;
 * ``None``  -- focusing is not implemented on this platform, so the caller
   should fall back to its old "already focused?" check.
+
+Session handles (``hwnd`` in the session functions) are opaque: a real HWND on
+Windows, the session process's pid on macOS (DL-007) -- macOS has no window
+handle a process can address without Accessibility, so the pid stands in and
+``focus_hwnd`` resolves it to the hosting app/tab at focus time.
 """
 import logging
 import os
@@ -189,6 +194,8 @@ def focus_hwnd(hwnd: int) -> bool:
     conditions, so this escalates: plain attach-and-set, then unlock the
     foreground lock with a synthetic Alt tap, then minimise/restore.
     """
+    if platform.system() == 'Darwin':
+        return _focus_session_macos(hwnd)
     import win32con
     import win32gui
 
@@ -211,6 +218,52 @@ def focus_hwnd(hwnd: int) -> bool:
         return False
 
 
+_LSAPPINFO_ENTRY = re.compile(r'^\s*\d+\) ', re.MULTILINE)
+
+
+def _lsappinfo_foreground_apps() -> Optional[List[Tuple[int, str]]]:
+    """(pid, bundle path) of every regular app, read fresh from ``lsappinfo``.
+
+    ``NSWorkspace.runningApplications()`` only refreshes while an AppKit run
+    loop spins; the backend has none, so an app launched after VDock started
+    (a Terminal opened by "Open Claude", Cursor opened later) never showed up
+    (DL-007). ``type="Foreground"`` is lsappinfo's name for a regular app.
+    None when lsappinfo cannot run.
+    """
+    try:
+        listing = subprocess.run(['lsappinfo', 'list'], capture_output=True,
+                                 text=True, timeout=3).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    apps: List[Tuple[int, str]] = []
+    for entry in _LSAPPINFO_ENTRY.split(listing)[1:]:
+        if 'type="Foreground"' not in entry:
+            continue
+        path = re.search(r'bundle path="([^"]+)"', entry)
+        pid = re.search(r'\bpid = (\d+)', entry)
+        if path and pid:
+            apps.append((int(pid.group(1)), path.group(1).rstrip('/')))
+    return apps
+
+
+def _macos_foreground_apps() -> List[Tuple[int, str]]:
+    """(pid, bundle path) of regular running apps; NSWorkspace as fallback."""
+    apps = _lsappinfo_foreground_apps()
+    if apps is not None:
+        return apps
+    from AppKit import NSWorkspace
+
+    regular_policy = 0  # NSApplicationActivationPolicyRegular
+    apps = []
+    for running_app in NSWorkspace.sharedWorkspace().runningApplications():
+        bundle_url = running_app.bundleURL()
+        if running_app.activationPolicy() != regular_policy or bundle_url is None:
+            continue
+        apps.append((int(running_app.processIdentifier()),
+                     str(bundle_url.path()).rstrip('/')))
+    return apps
+
+
 def _macos_regular_apps() -> List[Tuple[str, str]]:
     """(identity, bundle path) of every regular running macOS app.
 
@@ -218,17 +271,8 @@ def _macos_regular_apps() -> List[Tuple[str, str]]:
     string the macOS app monitor reports and the keymaps list in their
     ``target_exes``.
     """
-    from AppKit import NSWorkspace
-
-    regular_policy = 0  # NSApplicationActivationPolicyRegular
-    apps: List[Tuple[str, str]] = []
-    for running_app in NSWorkspace.sharedWorkspace().runningApplications():
-        bundle_url = running_app.bundleURL()
-        if running_app.activationPolicy() != regular_policy or bundle_url is None:
-            continue
-        bundle_path = str(bundle_url.path()).rstrip('/')
-        apps.append((os.path.basename(bundle_path).lower(), bundle_path))
-    return apps
+    return [(os.path.basename(path).lower(), path)
+            for _pid, path in _macos_foreground_apps()]
 
 
 def _focus_app_window_macos(target_exes: Sequence[str]) -> Optional[bool]:
@@ -313,8 +357,13 @@ def flash_window(hwnd: int, count: int = 4) -> bool:
 
     The session picker's "which one is this" affordance (DL-071): a human
     can't map a pid to a physical terminal, but a flashing window is
-    unambiguous. Doesn't steal focus. False off Windows or on API failure.
+    unambiguous. Doesn't steal focus. False on API failure.
+
+    macOS has no titlebar flash for another app's window, so there the
+    session's window is brought to the front instead (DL-007).
     """
+    if platform.system() == 'Darwin':
+        return _focus_session_macos(hwnd)
     if platform.system() != 'Windows':
         return False
     import ctypes
@@ -633,11 +682,12 @@ def find_session_host_window(
     session without a window (minimised host gone, headless job) falls back
     to normal ranking instead of dead-ending the press.
     """
-    if platform.system() != 'Windows':
-        return None
-
     needle = (marker or '').lower().strip()
     if not needle:
+        return None
+    if platform.system() == 'Darwin':
+        return _find_session_host_macos(needle, prefer_cwd, prefer_pid)
+    if platform.system() != 'Windows':
         return None
 
     candidates = _session_host_candidates(needle, prefer_cwd)
@@ -670,11 +720,13 @@ def list_session_hosts(marker: str) -> List[dict]:
     headless ``claude -p`` jobs and friends -- are excluded: nothing can be
     typed into them. Newest session first.
     """
-    if platform.system() != 'Windows':
-        return []
-
     needle = (marker or '').lower().strip()
     if not needle:
+        return []
+    if platform.system() == 'Darwin':
+        rows = _macos_session_hosts(needle)
+        return sorted(rows, key=lambda r: -r['create_time'])
+    if platform.system() != 'Windows':
         return []
 
     by_pid: dict = {}
@@ -712,3 +764,337 @@ def list_session_hosts(marker: str) -> List[dict]:
         row['host'] = _host_display_name(owner_by_hwnd.get(row['hwnd']))
 
     return sorted(by_pid.values(), key=lambda r: -r['create_time'])
+
+
+# --------------------------------------------------------------------------
+# macOS session hosts (DL-007)
+# --------------------------------------------------------------------------
+
+#: Friendly names for host apps whose bundle name reads badly in the picker.
+_MACOS_HOST_NAMES = {
+    'visual studio code.app': 'VS Code',
+    'visual studio code - insiders.app': 'VS Code Insiders',
+    'iterm.app': 'iTerm2',
+}
+
+#: Terminal apps that can select the exact tab running a tty. AppleScript by
+#: bundle id, so a renamed app still resolves. The tty arrives as argv --
+#: never pasted into the script text.
+_TTY_TAB_SCRIPTS = {
+    'terminal.app': """on run argv
+    set ttyName to item 1 of argv
+    tell application id "com.apple.Terminal"
+        repeat with w in windows
+            repeat with t in tabs of w
+                if tty of t is ttyName then
+                    set selected of t to true
+                    set index of w to 1
+                    activate
+                    return "ok"
+                end if
+            end repeat
+        end repeat
+    end tell
+    return "missing"
+end run""",
+    'iterm.app': """on run argv
+    set ttyName to item 1 of argv
+    tell application id "com.googlecode.iterm2"
+        repeat with w in windows
+            repeat with t in tabs of w
+                repeat with s in sessions of t
+                    if tty of s is ttyName then
+                        tell w to select
+                        tell t to select
+                        tell s to select
+                        activate
+                        return "ok"
+                    end if
+                end repeat
+            end repeat
+        end repeat
+    end tell
+    return "missing"
+end run""",
+}
+
+#: Seconds to wait for the host app to become frontmost after activation.
+_MACOS_FRONT_TIMEOUT = 1.5
+
+
+def _outer_app_bundle(path: Optional[str]) -> Optional[str]:
+    """The outermost ``.app`` bundle containing ``path``, or None.
+
+    Outermost, because helpers nest their own bundles: Cursor's integrated
+    terminal runs under ``Cursor.app/Contents/Frameworks/Cursor Helper.app``
+    -- the window belongs to ``Cursor.app``.
+    """
+    if not path:
+        return None
+    index = path.find('.app/')
+    if index >= 0:
+        return path[:index + len('.app')]
+    stripped = path.rstrip('/')
+    return stripped if stripped.endswith('.app') else None
+
+
+def _macos_regular_app_pids() -> dict:
+    """lowercased bundle path -> (pid, bundle path) of regular running apps."""
+    return {path.lower(): (pid, path) for pid, path in _macos_foreground_apps()}
+
+
+def _macos_host_app(proc, regular: dict) -> Optional[Tuple[int, str]]:
+    """(app pid, bundle path) of the GUI app hosting ``proc``, or None.
+
+    Walks the process and its ancestors until an executable lives inside a
+    running regular app: Terminal (via ``login``), iTerm2 (its daemonised
+    ``iTermServer`` still lives in ``iTerm.app``), Cursor / VS Code (pty host
+    helpers), Warp... No app list, so any terminal or editor works. A
+    session with no such ancestor (headless ``claude -p``, tmux) has no
+    window to type into.
+    """
+    import psutil
+
+    try:
+        chain = [proc] + proc.parents()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        chain = [proc]
+    for ancestor in chain:
+        try:
+            bundle = _outer_app_bundle(ancestor.exe())
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError):
+            continue
+        if bundle and bundle.lower() in regular:
+            return regular[bundle.lower()]
+    return None
+
+
+def _macos_host_name(bundle_path: str) -> str:
+    identity = os.path.basename(bundle_path).lower()
+    if identity in _MACOS_HOST_NAMES:
+        return _MACOS_HOST_NAMES[identity]
+    return os.path.basename(bundle_path)[:-len('.app')] or identity
+
+
+def _macos_session_hosts(marker: str, prefer_cwd: Optional[str] = None) -> List[dict]:
+    """One row per live ``marker`` session hosted by a GUI app.
+
+    ``hwnd`` is the session pid (see the module docstring); ``title`` is
+    built from host + project because reading another app's window titles
+    needs Accessibility.
+    """
+    import psutil
+
+    try:
+        regular = _macos_regular_app_pids()
+    except ImportError:
+        return []
+    rows: List[dict] = []
+    for pid in _session_pids(marker):
+        try:
+            proc = psutil.Process(pid)
+            host = _macos_host_app(proc, regular)
+            if host is None:
+                continue
+            create_time = float(proc.create_time())
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+        try:
+            cwd = proc.cwd()
+        except (psutil.Error, OSError):
+            cwd = None
+        app_pid, bundle = host
+        host_name = _macos_host_name(bundle)
+        project = os.path.basename(cwd.rstrip('/')) if cwd else ''
+        rows.append({
+            'pid': pid,
+            'hwnd': pid,
+            'title': f'{host_name} \u2014 {project}' if project else host_name,
+            'self_owned': False,
+            'create_time': create_time,
+            'cwd': cwd,
+            'host': host_name,
+            'tier': _cwd_tier(cwd, prefer_cwd),
+            'app_pid': app_pid,
+            'bundle': bundle,
+        })
+    return rows
+
+
+def _find_session_host_macos(
+    marker: str,
+    prefer_cwd: Optional[str],
+    prefer_pid: Optional[int],
+) -> Optional[int]:
+    """Same ranking as Windows: pin, project directory, newest session."""
+    rows = _macos_session_hosts(marker, prefer_cwd)
+    if not rows:
+        return None
+    if prefer_pid is not None:
+        for row in rows:
+            if row['pid'] == prefer_pid:
+                return row['hwnd']
+    rows.sort(key=lambda r: (r['tier'], -r['create_time']))
+    return rows[0]['hwnd']
+
+
+def _select_tty_tab(identity: str, tty: Optional[str]) -> bool:
+    """Bring the Terminal / iTerm2 tab running ``tty`` to the front.
+
+    Needs the Automation permission (macOS asks once). Denied, timed out or
+    tab gone -> False and the caller falls back to activating the app.
+    """
+    script = _TTY_TAB_SCRIPTS.get(identity)
+    if not script or not tty:
+        return False
+    try:
+        completed = subprocess.run(['osascript', '-e', script, tty],
+                                   capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    if completed.returncode != 0:
+        logger.info('Could not select the %s tab for %s: %s',
+                    identity, tty, completed.stderr.strip())
+        return False
+    return completed.stdout.strip() == 'ok'
+
+
+def _project_names(cwd: Optional[str]) -> List[str]:
+    """The cwd's folder name and its parents' (nearest first), below $HOME.
+
+    VS Code-family windows are titled after the workspace root, which may sit
+    above the directory the session was started in.
+    """
+    if not cwd:
+        return []
+    home = os.path.expanduser('~').rstrip('/')
+    names: List[str] = []
+    path = cwd.rstrip('/')
+    while path and path != home and path != '/' and len(names) < 4:
+        names.append(os.path.basename(path))
+        path = os.path.dirname(path)
+    return names
+
+
+def _title_names_project(title: str, project: str) -> bool:
+    """True when a window title has ``project`` as one of its segments.
+
+    VS Code-family titles read ``file.py \u2014 project`` (plus optional
+    suffixes); a bare substring test would let ``app`` match ``webapp``.
+    """
+    segments = re.split(r'\s+[\u2014\u2013-]\s+', title)
+    return any(segment.strip().split(' [')[0] == project for segment in segments)
+
+
+def _raise_project_window(app_pid: int, cwd: Optional[str]) -> bool:
+    """Raise the host app's window titled after the session's project.
+
+    Accessibility API -- only when this process is trusted (the same grant
+    keystrokes need). Without it the app's last-used window comes forward.
+    """
+    names = _project_names(cwd)
+    if not names:
+        return False
+    try:
+        from ApplicationServices import (
+            AXIsProcessTrusted, AXUIElementCopyAttributeValue,
+            AXUIElementCreateApplication, AXUIElementPerformAction,
+            AXUIElementSetAttributeValue, kAXMainAttribute, kAXRaiseAction,
+            kAXTitleAttribute, kAXWindowsAttribute,
+        )
+    except ImportError:
+        return False
+    try:
+        if not AXIsProcessTrusted():
+            return False
+        app = AXUIElementCreateApplication(app_pid)
+        error, windows = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute, None)
+        if error or not windows:
+            return False
+        titled = []
+        for window in windows:
+            error, title = AXUIElementCopyAttributeValue(window, kAXTitleAttribute, None)
+            titled.append((window, str(title or '') if not error else ''))
+        for name in names:
+            for window, title in titled:
+                if _title_names_project(title, name):
+                    AXUIElementSetAttributeValue(window, kAXMainAttribute, True)
+                    AXUIElementPerformAction(window, kAXRaiseAction)
+                    return True
+    except Exception as error:  # noqa: BLE001 - best effort; app activation follows
+        logger.debug('Accessibility window raise failed: %s', error)
+    return False
+
+
+def _wait_frontmost(bundle_path: str, timeout: float = _MACOS_FRONT_TIMEOUT) -> bool:
+    """True once ``bundle_path`` is the frontmost app (None-safe)."""
+    deadline = time.time() + timeout
+    wanted = bundle_path.rstrip('/').lower()
+    while True:
+        front = _frontmost_bundle_path_lsappinfo()
+        if front is None:
+            return True  # cannot read the front app -- trust the activation
+        if front.rstrip('/').lower() == wanted:
+            return True
+        if time.time() >= deadline:
+            logger.warning('macOS kept %s in front instead of %s', front, bundle_path)
+            return False
+        time.sleep(0.1)
+
+
+def session_host_frontmost(handle: int) -> Optional[bool]:
+    """Whether the app hosting session ``handle`` is frontmost (macOS).
+
+    None where it cannot be told -- Windows compares HWNDs directly via
+    ``foreground_hwnd`` instead.
+    """
+    if platform.system() != 'Darwin':
+        return None
+    import psutil
+
+    try:
+        host = _macos_host_app(psutil.Process(int(handle)), _macos_regular_app_pids())
+    except (ImportError, psutil.Error, TypeError, ValueError):
+        return None
+    front = _frontmost_bundle_path_lsappinfo()
+    if host is None or front is None:
+        return None
+    return front.rstrip('/').lower() == host[1].lower()
+
+
+def _focus_session_macos(session_pid: int) -> bool:
+    """Bring the window hosting ``session_pid`` to the front (macOS).
+
+    Terminal / iTerm2 select the session's exact tab by tty; editors raise
+    the window named after the project; then the app is activated and the
+    result verified -- the caller types into whatever is frontmost.
+    """
+    import psutil
+
+    try:
+        regular = _macos_regular_app_pids()
+        proc = psutil.Process(int(session_pid))
+        host = _macos_host_app(proc, regular)
+    except (ImportError, psutil.Error, TypeError, ValueError):
+        return False
+    if host is None:
+        return False
+    app_pid, bundle = host
+    try:
+        tty = proc.terminal()
+    except (psutil.Error, OSError):
+        tty = None
+    try:
+        cwd = proc.cwd()
+    except (psutil.Error, OSError):
+        cwd = None
+    identity = os.path.basename(bundle).lower()
+    if not _select_tty_tab(identity, tty):
+        _raise_project_window(app_pid, cwd)
+    # ``open -a`` activates without any permission (NSRunningApplication
+    # activation is refused for background processes on recent macOS).
+    try:
+        subprocess.run(['open', '-a', bundle], capture_output=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return _wait_frontmost(bundle)
