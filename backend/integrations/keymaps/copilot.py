@@ -3,11 +3,17 @@ from typing import Tuple
 
 from .base import AppProfile, Command, VSCODE_EXES
 
+#: VS Code "Open Chat": Ctrl+Alt+I on Windows/Linux, Ctrl+Cmd+I on macOS
+#: (VS Code 1.141 bundle: primary 2599, mac 2343 - DL-009). Alt chords are
+#: never remapped by the general rule, so macOS needs the explicit chord.
+COPILOT_CHAT_KEYS = ('ctrl', 'alt', 'i')
+COPILOT_CHAT_MAC_KEYS = ('ctrl', 'cmd', 'i')
+
 COPILOT_COMMANDS: Tuple[Command, ...] = (
     Command(
         id='copilot_chat', label='Copilot Chat',
         description='Open the Copilot Chat panel.',
-        keys=('ctrl', 'alt', 'i'), icon='comments',
+        keys=COPILOT_CHAT_KEYS, mac_keys=COPILOT_CHAT_MAC_KEYS, icon='comments',
         keywords=('copilot', 'chat', 'ai'), target_exes=VSCODE_EXES,
     ),
     Command(
@@ -49,28 +55,28 @@ COPILOT_COMMANDS: Tuple[Command, ...] = (
     Command(
         id='copilot_explain', label='Copilot: Explain',
         description='Ask Copilot Chat to explain the selection.',
-        keys=('ctrl', 'alt', 'i'), icon='circle-question',
+        keys=COPILOT_CHAT_KEYS, mac_keys=COPILOT_CHAT_MAC_KEYS, icon='circle-question',
         keywords=('copilot', 'explain', 'understand'),
         target_exes=VSCODE_EXES, types_text='/explain', submit=True,
     ),
     Command(
         id='copilot_fix', label='Copilot: Fix',
         description='Ask Copilot Chat to fix the selection.',
-        keys=('ctrl', 'alt', 'i'), icon='screwdriver-wrench',
+        keys=COPILOT_CHAT_KEYS, mac_keys=COPILOT_CHAT_MAC_KEYS, icon='screwdriver-wrench',
         keywords=('copilot', 'fix', 'repair', 'bug'),
         target_exes=VSCODE_EXES, types_text='/fix', submit=True,
     ),
     Command(
         id='copilot_tests', label='Copilot: Generate Tests',
         description='Ask Copilot Chat to write tests for the selection.',
-        keys=('ctrl', 'alt', 'i'), icon='vial',
+        keys=COPILOT_CHAT_KEYS, mac_keys=COPILOT_CHAT_MAC_KEYS, icon='vial',
         keywords=('copilot', 'tests', 'unit', 'coverage'),
         target_exes=VSCODE_EXES, types_text='/tests', submit=True,
     ),
     Command(
         id='copilot_doc', label='Copilot: Document',
         description='Ask Copilot Chat to document the selection.',
-        keys=('ctrl', 'alt', 'i'), icon='file-lines',
+        keys=COPILOT_CHAT_KEYS, mac_keys=COPILOT_CHAT_MAC_KEYS, icon='file-lines',
         keywords=('copilot', 'docs', 'comment', 'docstring'),
         target_exes=VSCODE_EXES, types_text='/doc', submit=True,
     ),

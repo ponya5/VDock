@@ -163,11 +163,23 @@ def post_agent_event():
     if state not in agent_state.ALLOWED_STATES:
         return jsonify({'success': False, 'error': 'Unknown state'}), 400
 
+    # PermissionRequest says what is being approved ("Run: git push"); the
+    # Notification that follows for the same prompt only says "...to use
+    # Bash" - keep the specific text while the session is still waiting.
+    if state == agent_state.STATE_PERMISSION and not data.get('detailed'):
+        previous = next((e for e in agent_state.session_entries(source)
+                         if e.get('session_id') == session_id), None)
+        if previous and previous.get('state') == agent_state.STATE_PERMISSION \
+                and previous.get('detailed'):
+            message = previous.get('message') or message
+            data = {**data, 'detailed': True}
+
     entry = agent_state.record(source, state, message=message, cwd=cwd,
                                project=project, session_id=session_id,
                                prompt=str(data.get('prompt') or ''),
                                reply=str(data.get('reply') or ''),
-                               prompted=bool(data.get('prompted')))
+                               prompted=bool(data.get('prompted')),
+                               detailed=bool(data.get('detailed')))
     if str(data.get('prompt') or '').strip() and cwd:
         # A new prompt starts a turn: snapshot the tree so "what changed"
         # excludes the user's own earlier edits (DL-145).

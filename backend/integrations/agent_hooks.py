@@ -21,6 +21,8 @@ import logging
 import os
 import platform
 import re
+import shlex
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
@@ -35,6 +37,8 @@ HOOK_MARKER = 'vdock_agent_hook'
 CLAUDE_HOOK_EVENTS: Tuple[str, ...] = (
     'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse',
     'Notification', 'Stop', 'SessionEnd',
+    # DL-009: immediate permission signal, and the API-error end of a turn.
+    'PermissionRequest', 'StopFailure',
 )
 
 #: Cursor events that are purely observational. Permission-gating events
@@ -78,7 +82,43 @@ class HookUninstallResult:
 
 
 def hook_script_path() -> Path:
+    """The hook script shipped with this VDock (source tree / frozen bundle)."""
     return Path(__file__).resolve().parent.parent / 'scripts' / 'vdock_agent_hook.py'
+
+
+#: Release builds run the hook through the frozen backend itself; app.py
+#: dispatches on this flag before importing Flask. It contains HOOK_MARKER,
+#: so ownership detection keeps working for these commands too.
+FROZEN_HOOK_FLAG = '--vdock_agent_hook'
+
+
+def stable_hook_dir() -> Path:
+    """Where the hook copy agents run lives - outside the VDock folder (DL-009).
+
+    The agent's settings file outlives the VDock folder: moved, re-cloned or
+    deleted, a hook pointing *into* it ran ``python3 <missing file>``, which
+    exits 2 - and exit 2 is how Claude Code and Cursor hooks say "block this
+    prompt". A copy under the user's home never disappears with the folder.
+    """
+    return Path.home() / '.vdock' / 'agent_hook'
+
+
+def is_frozen() -> bool:
+    return bool(getattr(sys, 'frozen', False))
+
+
+def ensure_stable_hook_script() -> Path:
+    """Copy the shipped hook script to ``stable_hook_dir()`` when it differs."""
+    target = stable_hook_dir() / 'vdock_agent_hook.py'
+    shipped = hook_script_path().read_bytes()
+    try:
+        if target.read_bytes() == shipped:
+            return target
+    except OSError:
+        pass
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write(target, shipped)
+    return target
 
 
 def hook_interpreter() -> str:
@@ -91,15 +131,48 @@ def hook_interpreter() -> str:
     return 'python' if platform.system() == 'Windows' else 'python3'
 
 
-def hook_command(source: str, event: str = '') -> str:
-    # Forward slashes work on Windows Python too and avoid JSON escaping pain.
-    script = hook_script_path().as_posix()
-    command = (
-        f'{hook_interpreter()} "{script}" --port {Config.PORT} --source {source}'
-    )
+def hook_argv(source: str, event: str = '') -> List[str]:
+    """The hook as an argument list (Codex runs it without a shell).
+
+    Release builds: the frozen backend in hook mode - no Python needed on the
+    machine (a bare ``python`` is the Microsoft Store stub on many Windows
+    PCs). Source installs: the system interpreter on the stable copy, exactly
+    the interpreter choice that already works on both OSes.
+    """
+    if is_frozen():
+        argv = [Path(sys.executable).as_posix(), FROZEN_HOOK_FLAG]
+    else:
+        # Forward slashes work on Windows Python too and avoid JSON escaping pain.
+        argv = [hook_interpreter(), (stable_hook_dir() / 'vdock_agent_hook.py').as_posix()]
+    argv += ['--port', str(Config.PORT), '--source', source]
     # Antigravity's stdin payload doesn't carry the event name, so the
     # command pins it instead of relying on hook_event_name.
-    return f'{command} --event {event}' if event else command
+    if event:
+        argv += ['--event', event]
+    return argv
+
+
+def hook_command(source: str, event: str = '') -> str:
+    argv = hook_argv(source, event)
+    if is_frozen():
+        exe = argv[0]
+        # Quote only when needed: a quoted first token is a plain string to
+        # PowerShell, while a path with spaces needs quotes everywhere.
+        head = f'"{exe}"' if ' ' in exe else exe
+        return ' '.join([head] + argv[1:])
+    return ' '.join([argv[0], f'"{argv[1]}"'] + argv[2:])
+
+
+def hook_target_missing(command: str) -> bool:
+    """True when an installed VDock hook points at a file that is gone."""
+    try:
+        parts = shlex.split(command, posix=True)
+    except ValueError:
+        return False
+    if FROZEN_HOOK_FLAG in parts:
+        return not Path(parts[0]).exists()
+    scripts = [part for part in parts if part.endswith('vdock_agent_hook.py')]
+    return bool(scripts) and not Path(scripts[0]).exists()
 
 
 def claude_settings_path() -> Path:
@@ -395,9 +468,8 @@ def codex_config_path() -> Path:
 
 
 def _codex_notify_line() -> str:
-    script = hook_script_path().as_posix()
     # JSON strings are valid TOML basic strings.
-    argv = [hook_interpreter(), script, '--port', str(Config.PORT), '--source', 'codex']
+    argv = hook_argv('codex')
     return f'notify = {json.dumps(argv)}'
 
 
@@ -518,16 +590,44 @@ def _target(agent: str) -> _AgentHookTarget:
     return target
 
 
+def _vdock_commands(node: Any) -> List[str]:
+    """Every VDock hook command string inside a settings structure."""
+    found: List[str] = []
+    if isinstance(node, dict):
+        command = node.get('command')
+        if isinstance(command, str) and HOOK_MARKER in command:
+            found.append(command)
+        for child in node.values():
+            found += _vdock_commands(child)
+    elif isinstance(node, list):
+        for child in node:
+            found += _vdock_commands(child)
+    return found
+
+
 def hook_status(agent: str) -> Dict[str, Any]:
-    """Install state for ``agent``: fully installed, partial, or absent."""
+    """Install state for ``agent``: fully installed, partial, or absent.
+
+    ``broken`` flags an installed hook whose script or executable is gone
+    (DL-009) - Settings offers Reinstall, startup repairs it.
+    """
     if agent == 'codex':
         path = codex_config_path()
         try:
             text = path.read_text(encoding='utf-8') if path.exists() else ''
         except OSError:
             text = ''
+        notify = [line for line in text.splitlines()
+                  if _TOML_NOTIFY_RE.match(line) and HOOK_MARKER in line]
+        broken = False
+        for line in notify:
+            try:
+                argv = json.loads(line.split('=', 1)[1].strip())
+                broken = broken or hook_target_missing(shlex.join(argv))
+            except (ValueError, TypeError):
+                pass
         return {'installed': bool(_codex_installed_events(text)),
-                'partial': False, 'settings_path': str(path)}
+                'partial': False, 'broken': broken, 'settings_path': str(path)}
     target = _target(agent)
     path = target.path()
     try:
@@ -539,6 +639,7 @@ def hook_status(agent: str) -> Dict[str, Any]:
     return {
         'installed': len(present) == len(target.all_events),
         'partial': 0 < len(present) < len(target.all_events),
+        'broken': any(hook_target_missing(c) for c in _vdock_commands(settings)),
         'settings_path': str(path),
     }
 
@@ -549,6 +650,8 @@ def install_hook(agent: str) -> HookInstallResult:
     Raises HookSettingsError when the existing file can't be parsed, and
     OSError when it can't be written.
     """
+    if not is_frozen():
+        ensure_stable_hook_script()
     if agent == 'codex':
         return _install_codex(codex_config_path())
     target = _target(agent)

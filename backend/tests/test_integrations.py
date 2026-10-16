@@ -538,12 +538,31 @@ def test_cc_focus_failure_names_the_lock_screen_or_screensaver(mocker):
         'integrations.editor_base.window_focus.interactive_desktop_blocked',
         return_value=True)
     mocker.patch('integrations.editor_base.time.sleep')
+    mocker.patch('integrations.editor_base.platform.system', return_value='Windows')
     macro = mocker.patch('integrations.editor_base.MacroAction')
 
     result = ClaudeCodePlugin().execute_action('cc_submit', {})
 
     assert result['success'] is False
     assert 'screensaver' in result['message']
+    macro.assert_not_called()
+
+
+def test_cc_refuses_on_a_locked_mac_before_typing(mocker):
+    """macOS 'activates' apps behind the lock screen, so the lock is checked
+    before focusing - typed keys would go nowhere (DL-009)."""
+    mocker.patch('integrations.sessions.session_alive', return_value=True)
+    mocker.patch('integrations.editor_base.platform.system', return_value='Darwin')
+    mocker.patch('integrations.editor_base.window_focus.interactive_desktop_blocked',
+                 return_value=True)
+    focus = mocker.patch('integrations.editor_base.window_focus.focus_hwnd')
+    macro = mocker.patch('integrations.editor_base.MacroAction')
+
+    result = ClaudeCodePlugin().execute_action('cc_submit', {})
+
+    assert result == {'success': False, 'message': 'The Mac is locked',
+                      'details': result['details']}
+    focus.assert_not_called()
     macro.assert_not_called()
 
 

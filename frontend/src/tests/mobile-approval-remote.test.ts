@@ -66,9 +66,9 @@ function pushStates(states: Record<string, Entry>) {
 
 const mounted: VueWrapper[] = []
 
-function mountChrome() {
+function mountChrome(extra: Record<string, unknown> = {}) {
   const wrapper = mount(MobileDeckChrome, {
-    props: { scenes: [], currentSceneIndex: 0, totalPages: 1, currentPageIndex: 0 },
+    props: { scenes: [], currentSceneIndex: 0, totalPages: 1, currentPageIndex: 0, ...extra },
     global: { stubs: { FontAwesomeIcon: true } },
     attachTo: document.body,
   })
@@ -136,10 +136,22 @@ describe('phone overflow menu', () => {
     expect(wrapper.find('.mc-menu').exists()).toBe(false)
   })
 
-  it('keeps the menu to six items (Add to Home Screen included in a browser tab)', async () => {
+  it('keeps the phone menu to five items - Exit only exists in the desktop app (DL-011)', async () => {
     const wrapper = mountChrome()
     await wrapper.find('.mc-more-btn').trigger('click')
-    expect(wrapper.findAll('.mc-menu-item')).toHaveLength(6)
+    expect(wrapper.findAll('.mc-menu-item')).toHaveLength(5)
+    expect(wrapper.text()).not.toContain('Exit VDock')
+    expect(wrapper.find('[data-testid="mc-menu-edit"]').exists()).toBe(false)
+  })
+
+  it('gives tablets Edit buttons and Settings in the menu (DL-011)', async () => {
+    const wrapper = mountChrome({ canConfigure: true })
+    await wrapper.find('.mc-more-btn').trigger('click')
+    await wrapper.find('[data-testid="mc-menu-edit"]').trigger('click')
+    expect(wrapper.emitted('edit')).toHaveLength(1)
+    await wrapper.find('.mc-more-btn').trigger('click')
+    await wrapper.find('[data-testid="mc-menu-settings"]').trigger('click')
+    expect(wrapper.emitted('openSettings')).toHaveLength(1)
   })
 
   it('switches keep-awake on this device only', async () => {

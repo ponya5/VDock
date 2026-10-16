@@ -28,6 +28,9 @@ def mic(mocker):
         return job({'mic_endpoint_op': lambda fn: (fn(endpoint), None)})
 
     mocker.patch.object(cpa, '_SYSTEM', 'Windows')
+    # The pack picks its own OS branch (macOS uses the input level, DL-008);
+    # these tests cover the Windows capture-endpoint path on every host.
+    mocker.patch.object(pack, '_SYSTEM', 'Windows')
     mocker.patch.object(cpa, '_run_on_audio_thread', side_effect=run)
     return endpoint
 
@@ -173,7 +176,9 @@ def test_microphone_mute_falls_back_to_nircmd_without_pycaw(mocker):
 # --- catalog action ---------------------------------------------------------
 
 @pytest.fixture
-def plugin():
+def plugin(mocker):
+    # Windows capture-endpoint path on every host; macOS has its own tests.
+    mocker.patch.object(pack, '_SYSTEM', 'Windows')
     return pack.Plugin()
 
 

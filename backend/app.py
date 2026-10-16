@@ -1,6 +1,20 @@
 """Main Flask application for VDock backend."""
 import sys
 
+# Release builds run agent hooks through this executable (DL-009): no Python
+# has to exist on the user's machine. Dispatched before anything heavy is
+# imported - a hook fires on every tool call and must stay quick.
+if __name__ == '__main__' and sys.argv[1:2] == ['--vdock_agent_hook']:
+    import runpy
+    from pathlib import Path as _HookPath
+    _hook = _HookPath(__file__).resolve().parent / 'scripts' / 'vdock_agent_hook.py'
+    sys.argv = [str(_hook)] + sys.argv[2:]
+    try:
+        runpy.run_path(str(_hook), run_name='__main__')
+    except BaseException:  # noqa: BLE001 - a hook must never fail the agent
+        pass
+    sys.exit(0)
+
 # `python app.py` runs this file as `__main__`. Routes that lazily
 # `from app import action_executor` would otherwise execute it a second time
 # as module `app` -- building a second, unserved SocketIO and re-pointing
@@ -340,8 +354,10 @@ def get_plugin_actions(plugin_id):
 @socketio.on('connect')
 def handle_connect(auth):
     """Handle client connection."""
-    # Check authentication if required
-    if Config.REQUIRE_AUTH:
+    # Check authentication if required. The computer VDock runs on is
+    # trusted (DL-008) - same rule as require_auth.
+    from auth import is_trusted_local_request
+    if Config.REQUIRE_AUTH and not is_trusted_local_request():
         if not auth or 'token' not in auth:
             logger.warning(
                 f"Unauthenticated connection attempt: {request.sid}"

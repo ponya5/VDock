@@ -18,13 +18,20 @@ permissions:
 
 jobs:
   backend:
-    name: Backend (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: Backend (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # The floor the README promises, and current.
-        python-version: ['3.9', '3.12']
+        # The floor the README promises, and current. Windows and macOS run
+        # their own platform branches for real: the Win32 window/focus tests
+        # skip everywhere else, so without windows-latest a Windows regression
+        # from a macOS fix could never fail CI (DL-007).
+        include:
+          - { os: ubuntu-latest, python-version: '3.9' }
+          - { os: ubuntu-latest, python-version: '3.12' }
+          - { os: windows-latest, python-version: '3.12' }
+          - { os: macos-latest, python-version: '3.12' }
 
     steps:
       - uses: actions/checkout@v4
@@ -41,11 +48,17 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Run tests
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
         working-directory: backend
         # pyautogui and pynput need a display even to import; the action tests
         # mock the keyboard, but the import happens at collection time.
         run: xvfb-run -a python -m pytest -q
+
+      - name: Run tests (Windows / macOS)
+        if: runner.os != 'Linux'
+        working-directory: backend
+        run: python -m pytest -q
 
   frontend:
     name: Frontend

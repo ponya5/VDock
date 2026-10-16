@@ -44,7 +44,10 @@ _DESKTOP_APP_DIRS = ('anthropicclaude', 'windowsapps', r'packages\claude_',
                      'chromenativehost',
                      # macOS GUI app bundles (/Applications/Claude.app/...,
                      # Devin.app, helpers). A CLI session is never inside one.
-                     '.app/contents/')
+                     '.app/contents/',
+                     # macOS system services: CursorUIViewService (the text
+                     # cursor helper) matched the 'cursor' marker (DL-009).
+                     '/system/library/', '.xpc/', '/usr/libexec/')
 
 #: IDE binaries that share a marker's name but are never sessions, matched as
 #: an exe-path suffix. The Devin IDE's process tree all runs

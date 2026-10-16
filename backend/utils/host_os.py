@@ -5,9 +5,10 @@ correct answer for "which modifier does a shortcut use". Detected live, never
 stored: it cannot go stale when profiles move between machines (DL-006).
 """
 import copy
+import json
 import platform
 import re
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 
 def host_os() -> str:
@@ -83,16 +84,47 @@ def _localize_button(button: Dict[str, Any]) -> None:
         button['secondary_label'] = _localize_label(label, changed)
 
 
+_MAC_GLYPHS = {'cmd': '\u2318', 'ctrl': '\u2303', 'alt': '\u2325', 'shift': '\u21e7'}
+
+
+def _mac_chord_label(keys: List[str]) -> str:
+    return ''.join(_MAC_GLYPHS.get(k, k.upper()) for k in keys)
+
+
+def _apply_explicit_mac_keys(button: Dict[str, Any]) -> bool:
+    """Swap in a hotkey's ``mac_keys`` (an app's own macOS keymap, DL-009).
+
+    JetBrains ships a separate macOS keymap (Go to File is Cmd+Shift+O, Run is
+    Ctrl+R) that no Ctrl->Cmd rule can derive, so its template lists each
+    macOS chord next to the Windows one. Returns whether anything changed.
+    """
+    action = button.get('action')
+    config = action.get('config') if isinstance(action, dict) else None
+    mac_keys = config.pop('mac_keys', None) if isinstance(config, dict) else None
+    if not (isinstance(mac_keys, list) and all(isinstance(k, str) for k in mac_keys)):
+        return False
+    config['keys'] = list(mac_keys)
+    if isinstance(button.get('secondary_label'), str):
+        button['secondary_label'] = _mac_chord_label(mac_keys)
+    return True
+
+
 def localize_template(template: Dict[str, Any]) -> Dict[str, Any]:
     """A copy of ``template`` with shortcuts rewritten for this OS.
 
-    Only templates that declare ``"mac_modifier": "cmd"`` are touched, and
-    only on macOS: JetBrains (separate mac keymap) and terminal decks opt out.
+    Only on macOS. A hotkey's explicit ``mac_keys`` always wins; otherwise only
+    templates that declare ``"mac_modifier": "cmd"`` get the general rule
+    (terminal decks opt out). Windows/Linux get the template untouched.
     """
-    if host_os() != 'macos' or template.get('mac_modifier') != 'cmd':
+    if host_os() != 'macos':
+        return template
+    general = template.get('mac_modifier') == 'cmd'
+    has_explicit = '"mac_keys"' in json.dumps(template)
+    if not general and not has_explicit:
         return template
     localized = copy.deepcopy(template)
     for page in localized.get('pages', []):
         for button in page.get('buttons', []):
-            _localize_button(button)
+            if not _apply_explicit_mac_keys(button) and general:
+                _localize_button(button)
     return localized

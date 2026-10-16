@@ -13,6 +13,7 @@ Note this file is deliberately not named ``*_pack``: PluginManager only scans
 modules matching that suffix, so shared helpers are never mistaken for packs.
 """
 import logging
+import platform
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
@@ -88,15 +89,26 @@ def _resolve_session_host(command: Command,
     )
 
 
-def _focus_failure(message: str, details: str) -> Dict[str, Any]:
-    if window_focus.interactive_desktop_blocked():
+def _locked_result() -> Dict[str, Any]:
+    if platform.system() == 'Darwin':
         return {
             'success': False,
-            'message': 'The PC is locked or its screensaver is on',
-            'details': 'Windows routes input to the lock screen / '
-                       'screensaver, so no app can receive keystrokes. '
-                       'Wake the PC and press again.',
+            'message': 'The Mac is locked',
+            'details': 'macOS sends input to the lock screen, so no app can '
+                       'receive keystrokes. Unlock the Mac and press again.',
         }
+    return {
+        'success': False,
+        'message': 'The PC is locked or its screensaver is on',
+        'details': 'Windows routes input to the lock screen / '
+                   'screensaver, so no app can receive keystrokes. '
+                   'Wake the PC and press again.',
+    }
+
+
+def _focus_failure(message: str, details: str) -> Dict[str, Any]:
+    if window_focus.interactive_desktop_blocked():
+        return _locked_result()
     return {'success': False, 'message': message, 'details': details}
 
 
@@ -145,6 +157,12 @@ def send(command: Command, text_override: Optional[str] = None,
                 ),
             }
 
+    if enforce_focus and platform.system() == 'Darwin' \
+            and window_focus.interactive_desktop_blocked():
+        # macOS reports the app as activated even behind the lock screen, so
+        # check first; typed keys would go nowhere (DL-009).
+        return _locked_result()
+
     if enforce_focus:
         # Session hosting wins over the exe list when the command carries a
         # session marker: the host window's owner is whatever IDE or terminal
@@ -156,10 +174,21 @@ def send(command: Command, text_override: Optional[str] = None,
                 if not window_focus.focus_hwnd(host_hwnd):
                     return _focus_failure(
                         'Could not focus the session window',
-                        'The window hosting the session was found but '
-                        'the system would not bring it forward.',
+                        window_focus.last_focus_problem()
+                        or 'The window hosting the session was found but '
+                           'the system would not bring it forward.',
                     )
                 time.sleep(FOCUS_SETTLE_SECONDS)
+            if window_focus.session_input_focused(host_hwnd) is False:
+                # macOS: the session runs in an editor's integrated terminal
+                # but the editor's focus is on a file or the chat (DL-009).
+                return {
+                    'success': False,
+                    'message': 'Click into the terminal running the agent first',
+                    'details': 'The agent runs in your editor\'s terminal, but the '
+                               'editor\'s focus is elsewhere - VDock did not type, '
+                               'so nothing lands in an open file.',
+                }
             fg = window_focus.foreground_hwnd()
             wrong_window = fg is not None and fg != host_hwnd
             # macOS has no foreground HWND; it can still tell whether the

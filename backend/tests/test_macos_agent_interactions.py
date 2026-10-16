@@ -47,7 +47,19 @@ class TestShortcutModifier:
         operating_system('Darwin')
 
         assert _hotkeys(COMMANDS_BY_ID['cursor_prompt'])[0] == ['cmd', 'shift', 'l']
-        assert _hotkeys(COMMANDS_BY_ID['cursor_followup'])[0] == ['cmd', 'shift', 'y']
+        # Cursor's own binding: isWindows ? Ctrl+Shift+Y : Cmd+Y (DL-009).
+        assert _hotkeys(COMMANDS_BY_ID['cursor_followup'])[0] == ['cmd', 'y']
+        assert _hotkeys(COMMANDS_BY_ID['cursor_cancel']) == [['cmd', 'y'], ['cmd', 'shift', 'backspace']]
+        assert _hotkeys(COMMANDS_BY_ID['cursor_reject']) == [['cmd', 'shift', 'backspace']]
+        assert _hotkeys(COMMANDS_BY_ID['copilot_chat']) == [['ctrl', 'cmd', 'i']]
+
+    def test_cursor_and_copilot_chords_on_windows(self, operating_system):
+        operating_system('Windows')
+
+        assert _hotkeys(COMMANDS_BY_ID['cursor_followup'])[0] == ['ctrl', 'shift', 'y']
+        assert _hotkeys(COMMANDS_BY_ID['cursor_cancel']) == [['ctrl', 'shift', 'y'], ['ctrl', 'shift', 'backspace']]
+        assert _hotkeys(COMMANDS_BY_ID['cursor_reject']) == [['ctrl', 'shift', 'backspace']]
+        assert _hotkeys(COMMANDS_BY_ID['copilot_chat']) == [['ctrl', 'alt', 'i']]
 
     def test_cursor_keeps_ctrl_on_windows(self, operating_system):
         operating_system('Windows')

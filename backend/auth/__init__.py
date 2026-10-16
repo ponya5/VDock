@@ -1,5 +1,4 @@
 """Authentication module for VDock."""
-from .auth_manager import AuthManager, require_auth
+from .auth_manager import AuthManager, is_trusted_local_request, require_auth
 
-__all__ = ['AuthManager', 'require_auth']
-
+__all__ = ['AuthManager', 'is_trusted_local_request', 'require_auth']
