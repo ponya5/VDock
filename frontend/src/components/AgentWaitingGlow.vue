@@ -394,6 +394,12 @@ function dismiss() {
   .snooze-btn { min-height: 44px; }
 }
 
+/* DL-015: the 0.8x floor is 36px — under the 44px touch minimum on tablet,
+   landscape phone and panel widths that miss the 520px rule above. */
+html:is(.device-phone, .device-tablet, .device-panel) .snooze-btn {
+  min-height: 44px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .agent-waiting-glow { animation: none; border-color: rgba(var(--agent-rgb), 0.85); }
   .agent-waiting-orbit { display: none; }

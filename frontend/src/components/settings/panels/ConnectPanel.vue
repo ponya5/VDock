@@ -207,7 +207,7 @@ async function renderQr() {
   try {
     const QRCode = (await import('qrcode')).default
     await QRCode.toCanvas(qrCanvas.value, qrValue.value, {
-      width: 180,
+      width: 216,
       margin: 1,
       color: { dark: '#0d0b26', light: '#ffffff' },
     })
@@ -380,8 +380,8 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
   flex: none;
 }
 .qr-canvas {
-  width: 128px;
-  height: 128px;
+  width: 156px;
+  height: 156px;
   border-radius: var(--r-md);
   background: #fff;
   padding: 6px;

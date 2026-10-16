@@ -104,7 +104,8 @@ const blocked = computed(() =>
 
 .rotate-gate-dismiss {
   margin-top: var(--spacing-md);
-  padding: 0;
+  padding: 0 12px;
+  min-height: 44px;
   background: none;
   border: none;
   font-size: clamp(0.60rem, 2vw + 0.38rem, 0.90rem);
