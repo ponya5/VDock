@@ -47,7 +47,11 @@ _DESKTOP_APP_DIRS = ('anthropicclaude', 'windowsapps', r'packages\claude_',
                      '.app/contents/',
                      # macOS system services: CursorUIViewService (the text
                      # cursor helper) matched the 'cursor' marker (DL-009).
-                     '/system/library/', '.xpc/', '/usr/libexec/')
+                     '/system/library/', '.xpc/', '/usr/libexec/',
+                     # Codex: the CLI's background app-server daemons and the
+                     # desktop app's node runtime are not terminal sessions
+                     # (DL-018).
+                     'app-server-daemon', 'artifact-sessions')
 
 #: IDE binaries that share a marker's name but are never sessions, matched as
 #: an exe-path suffix. The Devin IDE's process tree all runs
