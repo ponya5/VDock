@@ -415,7 +415,9 @@ def install_windows(info: Dict[str, Any]) -> None:
 
     _set_state(INSTALLING, 'Installing update')
     cmd_path = folder / 'run-update.cmd'
-    cmd_path.write_text(build_cmd_script(installer), encoding='utf-8', newline='')
+    # Bytes, not write_text(newline=''): that keyword needs Python 3.10, and the
+    # script's own \r\n must not be translated again on Windows.
+    cmd_path.write_bytes(build_cmd_script(installer).encode('utf-8'))
 
     _start_cmd_script(cmd_path)
 
@@ -491,11 +493,10 @@ def restart_self(root: Path) -> None:
         folder = _update_dir()
         folder.mkdir(parents=True, exist_ok=True)
         script = folder / 'relaunch.cmd'
-        script.write_text('timeout /t 5 /nobreak >nul\r\n'
-                          f'cd /d "{root}"\r\n'
-                          'set "VDOCK_UPDATE_RELAUNCH=1"\r\n'
-                          f'call "{root / "launch.bat"}"\r\n',
-                          encoding='utf-8', newline='')
+        script.write_bytes(('timeout /t 5 /nobreak >nul\r\n'
+                            f'cd /d "{root}"\r\n'
+                            'set "VDOCK_UPDATE_RELAUNCH=1"\r\n'
+                            f'call "{root / "launch.bat"}"\r\n').encode('utf-8'))
         _start_cmd_script(script, cwd=root)
     else:
         args = ['sh', '-c', f'sleep 5; VDOCK_UPDATE_RELAUNCH=1 exec bash "{root / "launch.sh"}"']

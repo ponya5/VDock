@@ -246,7 +246,7 @@ def open_diff(source: str, session_id: str, cwd: str, path: str) -> Dict[str, An
             base_copy.parent.mkdir(parents=True, exist_ok=True)
             # Re-run as bytes-safe: text capture may alter line endings, so
             # write what git printed; good enough for a read-only comparison.
-            base_copy.write_text(shown.stdout, encoding='utf-8', newline='')
+            base_copy.write_bytes(shown.stdout.encode('utf-8'))
         except OSError as error:
             return {'success': False, 'status_code': 502,
                     'message': 'Could not prepare the diff',
