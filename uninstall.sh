@@ -199,7 +199,15 @@ remove_installed_files() {
     else
         electron_profile="${XDG_CONFIG_HOME:-$HOME/.config}/vdock-electron"
     fi
-    remove_dir "app cache $electron_profile" "$electron_profile"
+    if [ -d "$electron_profile/vdock-data" ]; then
+        # The installed (packaged) app uses the same profile folder and keeps
+        # its decks and settings in vdock-data (DL-010): clear the cache
+        # around it, never the data.
+        find "$electron_profile" -mindepth 1 -maxdepth 1 ! -name vdock-data -exec rm -rf {} + 2>/dev/null || true
+        echo "  [OK]    Removed app cache $electron_profile (kept the installed app's vdock-data)"
+    else
+        remove_dir "app cache $electron_profile" "$electron_profile"
+    fi
 }
 
 remove_user_data() {
