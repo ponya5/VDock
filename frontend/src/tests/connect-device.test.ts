@@ -11,11 +11,11 @@ const view = settingsSource()
 // probes the very URL it encodes and warns instead of printing a QR for
 // a dead address.
 describe('connect-a-device LAN reachability probe', () => {
-  it('probes the encoded lanUrl with a no-cors fetch (opaque response = listening)', () => {
+  it('asks the backend to probe the encoded address (a page fetch is blocked by the CSP, DL-007)', () => {
     expect(view).toContain('async function probeLanReachability()')
-    expect(view).toContain("fetch(url, { mode: 'no-cors'")
-    expect(view).toContain('lanReachable.value = true')
-    expect(view).toContain('lanReachable.value = false')
+    expect(view).toContain("apiClient.get('/system/lan-probe', { port })")
+    expect(view).toContain("lanReachable.value = response.data?.reachable === true")
+    expect(view).not.toContain("mode: 'no-cors'")
   })
 
   it('warns when the QR target is unreachable instead of showing a dead code silently', () => {

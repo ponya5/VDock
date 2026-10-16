@@ -17,6 +17,93 @@ def host_info():
     return jsonify({'os': host_os.host_os(),
                     'primary_modifier': host_os.primary_modifier()})
 
+@system_bp.route('/api/system/restart', methods=['POST'])
+@require_auth
+def restart_backend():
+    """Restart the backend so startup-only switches apply (DL-007).
+
+    Allow LAN / HTTPS change the socket bind, which only happens at startup.
+    Same mechanism as the in-app updater: an Electron-owned backend exits and
+    Electron restarts it; a launcher-started one relaunches through
+    launch.sh / launch.bat in backend-only mode, and the open window reloads.
+    From the PC itself only - a phone must not be able to bounce the server.
+    """
+    from services import updater
+
+    if request.remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+        return jsonify({'success': False,
+                        'error': 'Restart VDock from the computer it runs on.'}), 403
+    if updater.is_busy():
+        return jsonify({'success': False,
+                        'error': 'An update is in progress.'}), 409
+    updater.restart_self(project_root())
+    return jsonify({'success': True}), 202
+
+
+@system_bp.route('/api/system/permissions', methods=['GET'])
+@require_auth
+def os_permissions():
+    """OS permissions VDock's keystroke buttons depend on (DL-007).
+
+    Only macOS gates keystrokes behind a user grant (Accessibility); Windows
+    and Linux report ``None`` (nothing to grant).
+    """
+    from utils import host_os
+
+    accessibility = None
+    if host_os.host_os() == 'macos':
+        from actions import macos_controls
+        accessibility = macos_controls.is_accessibility_trusted()
+    return jsonify({'success': True, 'os': host_os.host_os(),
+                    'accessibility': accessibility})
+
+
+@system_bp.route('/api/system/permissions/accessibility', methods=['POST'])
+@require_auth
+def request_accessibility():
+    """Show macOS's Accessibility prompt + settings pane on this Mac."""
+    from utils import host_os
+
+    if request.remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+        return jsonify({'success': False,
+                        'error': 'Grant the permission on the computer VDock runs on.'}), 403
+    if host_os.host_os() != 'macos':
+        return jsonify({'success': True, 'accessibility': None})
+    from actions import macos_controls
+    return jsonify({'success': True,
+                    'accessibility': macos_controls.request_accessibility()})
+
+
+@system_bp.route('/api/system/lan-probe', methods=['GET'])
+@require_auth
+def lan_probe():
+    """Whether the deck address the QR encodes answers on the network.
+
+    The Connect card used to fetch() that address from the page, but the CSP
+    (connect-src 'self') blocks a page on localhost from reaching the LAN IP,
+    so the built app always claimed "isn't answering" (DL-007). A TCP connect
+    from here asks the same question: is something bound on that interface?
+    Only VDock's own ports, so this is no port scanner.
+    """
+    from config import Config, lan_ip
+
+    try:
+        port = int(request.args.get('port', Config.PORT))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'port must be an integer'}), 400
+    if port not in (Config.PORT, _configured_frontend_port()):
+        return jsonify({'success': False, 'error': 'Not a VDock port'}), 400
+    host = Config.DECK_HOST or lan_ip()
+    if not host:
+        return jsonify({'success': True, 'reachable': False, 'host': None})
+    try:
+        with socket.create_connection((host, port), timeout=1.5):
+            reachable = True
+    except OSError:
+        reachable = False
+    return jsonify({'success': True, 'reachable': reachable, 'host': host})
+
+
 # Loopback origins that VDock manages in CORS_ORIGINS — refreshed on port
 # changes while any other origins the user added are preserved.
 _MANAGED_ORIGIN = re.compile(

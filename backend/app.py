@@ -477,6 +477,9 @@ def health_check():
         'version': __version__,
         'uptime_s': int(time.time() - _STARTED_AT),
         'plugins_loaded': len(plugin_manager.plugins),
+        # A startup-only switch (Allow LAN, HTTPS) changed since this process
+        # bound its socket; the launcher restarts such a backend (DL-007).
+        'restart_required': Config.restart_required(),
         'features': {
             'user_settings': True
         }
@@ -537,9 +540,8 @@ def ssl_run_kwargs() -> dict:
 if __name__ == '__main__':
     # ALLOW_LAN asked for a LAN-visible server but HOST defaults to localhost —
     # bind broadly unless the user pinned a specific interface.
-    host = Config.HOST if Config.ALLOW_LAN else '127.0.0.1'
-    if Config.ALLOW_LAN and host in ('127.0.0.1', 'localhost'):
-        host = '0.0.0.0'
+    host = Config.bind_host()
+    Config.record_bind()
     port = Config.PORT
 
     # Never sign deck tokens with a missing/published-placeholder key. Lives

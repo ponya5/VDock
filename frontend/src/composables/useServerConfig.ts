@@ -37,13 +37,14 @@ export function useServerConfig() {
     return `${scheme}://${host}:${port}/api/mcp`
   })
 
-  // The bind address is chosen at startup, so the change only lands on relaunch.
+  // The bind address is chosen at startup, so the change only lands after a
+  // restart; the reloaded config's `restart_required` drives the Restart row.
   async function setAllowLan(enabled: boolean): Promise<boolean> {
     const ok = await settingsStore.updateServerConfig({ allow_lan: enabled })
     const notifications = useNotificationsStore()
     notifications[ok ? 'success' : 'error'](
       ok ? 'LAN access ' + (enabled ? 'enabled' : 'disabled') : 'Could not save',
-      ok ? 'Relaunch VDock to apply — the bind address is chosen at startup.' : 'Server rejected the change.'
+      ok ? 'Restart VDock to apply — Settings › Connect a device has the button.' : 'Server rejected the change.'
     )
     return ok
   }

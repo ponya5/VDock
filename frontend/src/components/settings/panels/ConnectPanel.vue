@@ -8,23 +8,37 @@
             <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
             <div>
               <b>Mobile connection is off.</b> Your phone or tablet can't open VDock until you
-              turn on <b>Allow LAN access</b> below and relaunch VDock. It starts off so nothing
+              turn on <b>Allow LAN access</b> below and restart VDock. It starts off so nothing
               else on your network can reach your deck unless you choose to.
             </div>
           </div>
           <ol class="connect-steps">
-            <li><b>Same Wi-Fi.</b> Connect the phone or tablet to the same network as this PC.</li>
-            <li><b>Allow LAN access.</b> Turn it on below and relaunch VDock once — this makes the deck reachable on your network.</li>
+            <li><b>Same Wi-Fi.</b> Connect the phone or tablet to the same network as this {{ computerNoun }}.</li>
+            <li><b>Allow LAN access.</b> Turn it on below, then press <b>Restart VDock now</b> — this makes the deck reachable on your network.</li>
             <li><b>Scan the code.</b> Point the device camera at the QR, or type the deck address into its browser.</li>
             <li><b>Optional:</b> {{ CONNECT_INSTALL_STEP }}</li>
           </ol>
           <div class="row" data-tour="allow-lan">
             <div class="row-text">
               <span class="label">Allow LAN access</span>
-              <p>Off by default. Turn it on to use VDock on a phone or tablet — without it, no other device can connect. Applies on the next launch.</p>
+              <p>Off by default. Turn it on to use VDock on a phone or tablet — without it, no other device can connect. Applies after a restart.</p>
             </div>
             <div class="row-control">
               <label class="switch"><span class="sr-only">Allow LAN access</span><input type="checkbox" :checked="serverConfig?.allow_lan ?? false" @change="toggleAllowLan" /><span class="track"></span></label>
+            </div>
+          </div>
+          <div v-if="restartRequired" class="row row-warn" data-testid="restart-required">
+            <div class="row-text">
+              <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Restart needed</span>
+              <p v-if="lanEnabled">VDock is still listening only on this {{ computerNoun }}, so your phone can't connect yet. Restart it to apply <b>Allow LAN access</b> — this window reloads by itself.</p>
+              <p v-else>VDock is still reachable from your network. Restart it to apply the change — this window reloads by itself.</p>
+              <p v-if="restartError" class="restart-error">{{ restartError }}</p>
+            </div>
+            <div class="row-control">
+              <button type="button" class="btn sm primary" :disabled="restarting" @click="restart">
+                <FontAwesomeIcon :icon="['fas', restarting ? 'spinner' : 'rotate-right']" :spin="restarting" />
+                {{ restarting ? 'Restarting…' : 'Restart VDock now' }}
+              </button>
             </div>
           </div>
           <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn">
@@ -72,7 +86,6 @@
               <div>
                 <b>{{ lanUrl }}</b> isn't answering on the network yet — the code below won't
                 connect a device until it does. {{ lanDeadHint }}
-                If it still won't load after that, check the PC's firewall allows the port.
               </div>
             </div>
           </div>
@@ -98,8 +111,8 @@
             <div class="note warn qr-offline">
               <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
               <div>
-                LAN address unavailable. Enable <b>Allow LAN access</b> and relaunch —
-                until then VDock only listens on this PC.
+                LAN address unavailable. Enable <b>Allow LAN access</b> and restart VDock —
+                until then VDock only listens on this {{ computerNoun }}.
               </div>
             </div>
           </div>
@@ -119,11 +132,20 @@ import { copyText } from '@/utils/copyText'
 import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
 import { PAIR_REFRESH_MS, buildPairUrl, requestPairToken } from '@/services/pairing'
 import { CONNECT_INSTALL_STEP } from '@/utils/installCopy'
+import { useBackendRestart } from '@/composables/useBackendRestart'
+import { useHostOs } from '@/composables/useHostOs'
+import apiClient from '@/api/client'
 
 const settingsStore = useSettingsStore()
 const notificationsStore = useNotificationsStore()
 const { serverConfig, lanUrl, setAllowLan } = useServerConfig()
 const lanEnabled = computed(() => serverConfig.value?.allow_lan ?? false)
+// The switch was saved but the running server still has its startup bind
+// (DL-007) — "relaunching" used to reuse that server, so offer the restart here.
+const restartRequired = computed(() => serverConfig.value?.restart_required === true)
+const { restarting, error: restartError, restart } = useBackendRestart()
+const { hostOs } = useHostOs()
+const computerNoun = computed(() => (hostOs.value === 'macos' ? 'Mac' : 'PC'))
 
 // --- Connect a device (QR) ----------------------------------------------------
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
@@ -167,19 +189,19 @@ watch([qrValue, () => serverConfig.value?.lan_reachable], renderQr, { immediate:
 // encodes. In dev that's the Vite dev server, whose bind is decided at
 // ITS startup — enabling "Allow LAN access" afterwards leaves Vite
 // loopback-only while the card cheerfully prints a QR for a dead URL
-// (DL-069 follow-up). Probing from this page is exactly the request the
-// phone would make: an opaque no-cors response means the interface is
-// bound and the phone will connect; a rejection means nothing is
-// listening there yet.
+// (DL-069 follow-up). The backend makes the TCP connect: a fetch() from
+// this page is blocked by the CSP (connect-src 'self') whenever the page
+// itself is on localhost, which made the built app always say
+// "isn't answering" (DL-007). Probe failure = unknown, not dead.
 const lanReachable = ref<boolean | null>(null)
 async function probeLanReachability() {
-  const url = lanUrl.value
-  if (!url) { lanReachable.value = null; return }
+  if (!lanUrl.value) { lanReachable.value = null; return }
+  const port = import.meta.env.DEV ? Number(import.meta.env.VITE_PORT) || 3000 : serverConfig.value?.port
   try {
-    await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(4000) })
-    lanReachable.value = true
+    const response = await apiClient.get('/system/lan-probe', { port })
+    lanReachable.value = response.data?.reachable === true
   } catch {
-    lanReachable.value = false
+    lanReachable.value = null
   }
 }
 watch(lanUrl, probeLanReachability)
@@ -187,10 +209,21 @@ watch(lanUrl, probeLanReachability)
 // What to tell the user when the QR target is dead. In dev the broken
 // link is almost always the Vite dev server still bound to localhost —
 // it read allow_lan once at ITS startup, so it needs its own restart,
-// not just a VDock/backend relaunch.
-const lanDeadHint = import.meta.env.DEV
-  ? 'Restart the dev server so it re-binds with LAN access on — stop and re-run npm run dev in frontend/ (relaunching VDock alone doesn\u2019t restart Vite).'
-  : 'Relaunch VDock — the bind address is chosen at startup.'
+// not just a VDock/backend relaunch. A pending backend restart has its own
+// row above; past that, the firewall is the usual culprit.
+const FIREWALL_HINTS: Record<string, string> = {
+  macos: 'If the phone still can\u2019t open it, check System Settings \u203a Network \u203a Firewall: allow incoming connections for Python (VDock\u2019s server).',
+  windows: 'If the phone still can\u2019t open it, allow Python (VDock\u2019s server) through Windows Defender Firewall on Private networks.',
+}
+const lanDeadHint = computed(() => {
+  if (import.meta.env.DEV) {
+    return 'Restart the dev server so it re-binds with LAN access on — stop and re-run npm run dev in frontend/ (relaunching VDock alone doesn\u2019t restart Vite).'
+  }
+  if (!lanEnabled.value) return 'Turn on Allow LAN access above.'
+  if (restartRequired.value) return 'Restart VDock (above) to apply Allow LAN access.'
+  return (FIREWALL_HINTS[hostOs.value] ?? 'If the phone still can\u2019t open it, check the computer\u2019s firewall allows the port.')
+    + ' Guest Wi-Fi networks often block devices from reaching each other.'
+})
 
 async function toggleAllowLan(event: Event) {
   await setAllowLan((event.target as HTMLInputElement).checked)
@@ -243,6 +276,7 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
 <style scoped>
 .kv-accent { color: #9cc0ff; }
 .row-warn .label svg { color: var(--warn); }
+.restart-error { color: var(--danger, #ff6b6b); }
 .note.warn {
   border-color: #4a3a18;
   background: #261e0d;

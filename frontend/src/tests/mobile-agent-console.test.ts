@@ -14,6 +14,7 @@ const sessionState = {
   stateEntry: ref<Partial<AgentStateEntry> | undefined>(undefined),
   currentState: ref<AgentStateName>('ready'),
   isAgentPossiblyRunning: ref(true),
+  isAgentDetected: ref(true),
 }
 const sendPrompt = vi.fn()
 const runAction = vi.fn()
@@ -26,7 +27,7 @@ vi.mock('@/composables/useAgentSession', () => ({
     stateEntry: computed(() => sessionState.stateEntry.value),
     currentState: computed(() => sessionState.currentState.value),
     stateLabel: computed(() => `label-${sessionState.currentState.value}`),
-    isAgentDetected: computed(() => true),
+    isAgentDetected: computed(() => sessionState.isAgentDetected.value),
     isAgentPossiblyRunning: computed(() => sessionState.isAgentPossiblyRunning.value),
     visibleActions: computed(() => [
       { id: 'cc_submit', label: 'Submit', icon: 'paper-plane', description: '', isPrimary: true },
@@ -127,6 +128,7 @@ beforeEach(() => {
   sessionState.stateEntry.value = { prompt: 'Fix the tests', reply: 'All 12 tests pass now.', project: 'VDock2', message: '' }
   sessionState.currentState.value = 'ready'
   sessionState.isAgentPossiblyRunning.value = true
+  sessionState.isAgentDetected.value = true
   settingsState.agentWaitingGlowEnabled.value = true
   targetState.sessions.value = []
   targetState.pinnedPid.value = null
@@ -158,6 +160,22 @@ describe('MobileAgentConsole', () => {
     sessionState.stateEntry.value = { message: 'Claude needs your permission to use Bash', prompt: '', reply: '' }
     const wrapper = mountConsole()
     expect(wrapper.find('.mac-state-label').text()).toContain('permission to use Bash')
+  })
+
+  // DL-007: no hook + app scanning off left nothing "observable" but the
+  // session list itself — the card said "No open session" beside a chip
+  // naming the live session.
+  it('reads "Session running" when only the session list sees the agent', () => {
+    sessionState.stateEntry.value = undefined
+    sessionState.isAgentDetected.value = false
+    targetState.sessions.value = [{ pid: 4268, hwnd: 4268, title: 'Cursor \u2014 VDock', cwd: '/Users/you/VDock', project: 'VDock', state: null }]
+    expect(mountConsole().find('.mac-state-label').text()).toBe('Session running')
+  })
+
+  it('still says "No open session" when nothing at all sees the agent', () => {
+    sessionState.stateEntry.value = undefined
+    sessionState.isAgentDetected.value = false
+    expect(mountConsole().find('.mac-state-label').text()).toBe('No open session')
   })
 
   it('never renders a text composer — actions and shortcuts are the only controls', () => {

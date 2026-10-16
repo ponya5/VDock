@@ -48,7 +48,8 @@ APPLICATION_SERVICES_PATH = (
 ACCESSIBILITY_HELP = (
     'macOS is blocking VDock from pressing keys. Allow it under System Settings > '
     'Privacy & Security > Accessibility (add the app that starts VDock - '
-    'VDock, Terminal or your editor), then relaunch VDock.'
+    'VDock, Terminal or your editor), then relaunch VDock. Settings > Agent '
+    'alerts has a button that opens the right page.'
 )
 
 # Synthetic system key events are dropped by macOS unless the sending process
@@ -68,8 +69,13 @@ function run(argv) {
 """
 
 VOLUME_SETTINGS_PATTERN = re.compile(r'(output|input) volume:(\d+)')
+OUTPUT_MUTED_PATTERN = re.compile(r'output muted:(true|false)')
+
+COREAUDIO_PATH = '/System/Library/Frameworks/CoreAudio.framework/CoreAudio'
 
 _input_volume_before_mute: Optional[int] = None
+# Spotify Connect "mute" = its volume 0; the level to restore on unmute.
+_remote_volume_before_mute: Optional[int] = None
 
 
 def _run_osascript(
@@ -113,6 +119,33 @@ def is_accessibility_trusted() -> bool:
         return True
 
 
+ACCESSIBILITY_SETTINGS_URL = (
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
+)
+
+
+def request_accessibility() -> bool:
+    """Ask macOS for the Accessibility grant and open its settings pane.
+
+    The prompt option makes macOS add the app that started VDock to the
+    Accessibility list (switched off) and show its own "would like to control
+    this computer" dialog once, so the user only has to flip the switch. The
+    pane is opened as well because macOS shows that dialog only the first
+    time. Returns whether the process is trusted already.
+    """
+    trusted = False
+    try:
+        from ApplicationServices import (
+            AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt,
+        )
+        trusted = bool(AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True}))
+    except ImportError:
+        trusted = is_accessibility_trusted()
+    if not trusted:
+        subprocess.run(['open', ACCESSIBILITY_SETTINGS_URL], capture_output=True, timeout=10)
+    return trusted
+
+
 def _read_volume_levels() -> Optional[dict]:
     """Return {'output': int, 'input': int}, or None if unreadable.
 
@@ -128,7 +161,74 @@ def _read_volume_levels() -> Optional[dict]:
     }
 
 
+def _fourcc(code: str) -> int:
+    return int.from_bytes(code.encode('ascii'), 'big')
+
+
+def _output_device_running() -> Optional[bool]:
+    """Whether any process is playing through the default output device.
+
+    Core Audio's "running somewhere" flag, no permission needed. None when it
+    cannot be read.
+    """
+    class PropertyAddress(ctypes.Structure):
+        _fields_ = [('selector', ctypes.c_uint32), ('scope', ctypes.c_uint32),
+                    ('element', ctypes.c_uint32)]
+
+    def read_uint32(object_id: int, selector: str) -> Optional[int]:
+        address = PropertyAddress(_fourcc(selector), _fourcc('glob'), 0)
+        value = ctypes.c_uint32(0)
+        size = ctypes.c_uint32(ctypes.sizeof(value))
+        status = core_audio.AudioObjectGetPropertyData(
+            object_id, ctypes.byref(address), 0, None,
+            ctypes.byref(size), ctypes.byref(value))
+        return None if status else value.value
+
+    try:
+        core_audio = ctypes.cdll.LoadLibrary(COREAUDIO_PATH)
+    except OSError:
+        return None
+    system_object = 1  # kAudioObjectSystemObject
+    device = read_uint32(system_object, 'dOut')  # default output device
+    if not device:
+        return None
+    running = read_uint32(device, 'gone')  # IsRunningSomewhere
+    return None if running is None else bool(running)
+
+
+def remote_spotify_volume() -> Optional[int]:
+    """Spotify's volume when it plays on another device, else None.
+
+    Spotify Connect (a TV, a speaker) plays elsewhere while the Mac app
+    reports "playing" -- and the Mac's own output stays idle. The system
+    volume then changes nothing the user hears; Spotify's volume controls
+    the remote device (DL-007).
+    """
+    if not _is_app_running('Spotify') or not _is_player_playing('Spotify'):
+        return None
+    if _output_device_running() is not False:
+        return None
+    succeeded, output = _run_osascript('tell application "Spotify" to return sound volume')
+    return int(output) if succeeded and output.isdigit() else None
+
+
+def _set_spotify_volume(level: int, message: str) -> ActionResult:
+    level = max(0, min(MAX_VOLUME_PERCENT, int(level)))
+    succeeded, error = _run_osascript(
+        'on run argv\n'
+        '  tell application "Spotify" to set sound volume to (item 1 of argv as integer)\n'
+        'end run', arguments=[str(level)])
+    if not succeeded:
+        return ActionResult(False, f'Spotify volume change failed: {error}')
+    return ActionResult(True, message.format(level=level),
+                        {'value': level, 'badge': f'{level}%'})
+
+
 def change_output_volume(percent_delta: int) -> ActionResult:
+    remote = remote_spotify_volume()
+    if remote is not None:
+        return _set_spotify_volume(remote + percent_delta,
+                                   'Spotify (other device) volume {level}%')
     levels = _read_volume_levels()
     if levels is None or 'output' not in levels:
         return ActionResult(
@@ -144,7 +244,45 @@ def change_output_volume(percent_delta: int) -> ActionResult:
     return ActionResult(True, f'Volume {new_volume}%')
 
 
+def set_output_volume(value: int) -> ActionResult:
+    """Absolute volume 0-100 (the slider) -- Spotify's when it plays remotely."""
+    value = max(0, min(MAX_VOLUME_PERCENT, int(value)))
+    if remote_spotify_volume() is not None:
+        return _set_spotify_volume(value, 'Spotify (other device) volume {level}%')
+    succeeded, error = _run_osascript(f'set volume output volume {value}')
+    if not succeeded:
+        return ActionResult(False, f'Volume change failed: {error}')
+    return ActionResult(True, f'Volume set to {value}%', {'value': value, 'badge': f'{value}%'})
+
+
+def _remote_mute(muted: bool, remote_level: int) -> ActionResult:
+    global _remote_volume_before_mute
+    if muted:
+        if remote_level:
+            _remote_volume_before_mute = remote_level
+        return _set_spotify_volume(0, 'Spotify (other device) muted')
+    return _set_spotify_volume(_remote_volume_before_mute or DEFAULT_UNMUTED_INPUT_VOLUME,
+                               'Spotify (other device) volume {level}%')
+
+
+def toggle_output_muted() -> ActionResult:
+    """Mute button: toggles, like Windows (``nircmd mutesysvolume 2``)."""
+    remote = remote_spotify_volume()
+    if remote is not None:
+        return _remote_mute(remote > 0, remote)
+    succeeded, output = _run_osascript('get volume settings')
+    match = OUTPUT_MUTED_PATTERN.search(output) if succeeded else None
+    return _set_system_muted(not (match and match.group(1) == 'true'))
+
+
 def set_output_muted(muted: bool) -> ActionResult:
+    remote = remote_spotify_volume()
+    if remote is not None:
+        return _remote_mute(muted, remote)
+    return _set_system_muted(muted)
+
+
+def _set_system_muted(muted: bool) -> ActionResult:
     keyword = 'with' if muted else 'without'
     succeeded, error = _run_osascript(f'set volume {keyword} output muted')
     if not succeeded:

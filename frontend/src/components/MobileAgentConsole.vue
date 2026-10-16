@@ -213,7 +213,12 @@ const projectName = computed(() => stateEntry.value?.project ?? '')
 // isAgentPossiblyRunning: with app scanning off the label is a guess
 // anyway, and "Status unavailable" read as broken rather than "nothing
 // to drive" (mobile-only wording; the desktop bar keeps its own).
+// A live session in the target list is observable too (DL-007): without the
+// agent hook and with app scanning off, the card said "No open session"
+// right next to its own chip naming that session.
+const hasLiveSession = computed(() => targetRows.value.length > 0)
 const statusLine = computed(() => {
+  if (!stateEntry.value && hasLiveSession.value) return 'Session running'
   if (profile.value && !stateEntry.value && !isAgentDetected.value) return 'No open session'
   return stateEntry.value?.message || stateLabel.value
 })

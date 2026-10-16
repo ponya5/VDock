@@ -16,6 +16,10 @@ the empty payload. Album art is fetched once per track change and cached to
 ``DATA_DIR/now_playing_art.bin`` for ``GET /api/now-playing/art`` — the
 socket payload only carries ``has_art``.
 
+On macOS there is no system-wide equivalent a process can read without
+private frameworks, so the same payload comes from Spotify and Apple Music
+over AppleScript (DL-007) -- the players the deck's media buttons drive.
+
 A WinRT binding (``winsdk`` or Microsoft's ``winrt-*`` wheels) is optional:
 without one (or off Windows) the module still loads and the loop idles;
 :func:`available` then reports False so the REST endpoint and widget can
@@ -29,6 +33,7 @@ must drive :func:`start` via ``socketio.start_background_task``.
 """
 import asyncio
 import logging
+import subprocess
 import sys
 import threading
 import time
@@ -106,7 +111,7 @@ def start(interval: float = POLL_INTERVAL_SECONDS) -> bool:
 # ---------------------------------------------------------------------------
 
 def available() -> bool:
-    """True when SMTC can be read on this host (Windows + a WinRT binding)."""
+    """True when now-playing can be read here: Windows + a WinRT binding, or macOS."""
     return _smtc_supported()
 
 
@@ -282,8 +287,13 @@ def _sniff_mime(path: Path) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 def _smtc_supported() -> bool:
-    """Probe once, cache forever: winsdk won't appear mid-process."""
+    """Probe once, cache forever: winsdk won't appear mid-process.
+
+    macOS has its own reader (Spotify / Music, DL-007), so it is supported.
+    """
     global _available_cache
+    if _available_cache is None and sys.platform == 'darwin':
+        _available_cache = True
     if _available_cache is None:
         try:
             _import_smtc()
@@ -347,6 +357,8 @@ def _fetch_snapshot(
     This is the module seam tests replace; it raises on failure and the
     caller keeps the previous state.
     """
+    if sys.platform == 'darwin':
+        return _fetch_macos(previous_track_key)
     return _run_on_worker_loop(_fetch_async(previous_track_key))
 
 
@@ -402,6 +414,102 @@ async def _fetch_async(
     if position_s is not None:
         payload['position_s'] = position_s
     return (title, artist, album, source_app, playing), payload, art
+
+
+# ---------------------------------------------------------------------------
+# macOS reader: Spotify / Apple Music via AppleScript (DL-007)
+# ---------------------------------------------------------------------------
+
+#: (process name, AppleScript returning state|title|artist|album|duration_ms|
+#: position_s|artwork_url, fields joined by the US control char). Spotify's
+#: duration is already in ms; Music's is seconds. Only asked when the
+#: process runs, so AppleScript never launches a closed player.
+_MACOS_PLAYERS: Tuple[Tuple[str, str], ...] = (
+    ('Spotify', """set sep to character id 31
+tell application "Spotify"
+    set playerState to player state as text
+    if playerState is "stopped" then return "stopped"
+    set t to current track
+    return playerState & sep & (name of t) & sep & (artist of t) & sep & (album of t) & sep & ((duration of t) as text) & sep & ((player position) as text) & sep & (artwork url of t)
+end tell"""),
+    ('Music', """set sep to character id 31
+tell application "Music"
+    set playerState to player state as text
+    if playerState is "stopped" then return "stopped"
+    set t to current track
+    return playerState & sep & (name of t) & sep & (artist of t) & sep & (album of t) & sep & (((duration of t) * 1000) as integer as text) & sep & ((player position) as text) & sep & ""
+end tell"""),
+)
+_ART_HOSTS = ('https://i.scdn.co/',)
+
+
+def _macos_process_running(name: str) -> bool:
+    return subprocess.run(['pgrep', '-x', name], capture_output=True).returncode == 0
+
+
+def _number(text: str) -> float:
+    """AppleScript prints reals with the locale's decimal comma (131,07)."""
+    try:
+        return float(text.strip().replace(',', '.'))
+    except ValueError:
+        return 0.0
+
+
+def _read_macos_player(name: str, script: str) -> Optional[Dict[str, Any]]:
+    if not _macos_process_running(name):
+        return None
+    completed = subprocess.run(['osascript', '-e', script], capture_output=True,
+                               text=True, timeout=5)
+    if completed.returncode != 0:
+        raise RuntimeError(f'{name}: {completed.stderr.strip()}')
+    fields = completed.stdout.rstrip('\n').split('\x1f')
+    if len(fields) < 7:
+        return None  # "stopped"
+    state, title, artist, album, duration_ms, position_s, art_url = fields[:7]
+    return {
+        'playing': state == 'playing',
+        'title': title, 'artist': artist, 'album': album,
+        'source_app': name,
+        'duration_s': _number(duration_ms) / 1000.0,
+        'position_s': _number(position_s),
+        'art_url': art_url if art_url.startswith(_ART_HOSTS) else '',
+    }
+
+
+def _download_art(url: str) -> Optional[Tuple[bytes, Optional[str]]]:
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = response.read(MAX_ART_BYTES + 1)
+            mime = response.headers.get_content_type()
+    except (OSError, ValueError) as error:
+        logger.info('Could not fetch album art: %s', error)
+        return None
+    if not data or len(data) > MAX_ART_BYTES:
+        return None
+    return data, mime
+
+
+def _fetch_macos(
+    previous_track_key: Tuple[str, str, str, str],
+) -> Tuple[Tuple[Any, ...], Dict[str, Any], Any]:
+    """Spotify or Music, whichever is playing (Spotify first when both are
+    merely paused). Spotify Connect playback (a TV) is reported too."""
+    tracks = [t for t in (_read_macos_player(n, sc) for n, sc in _MACOS_PLAYERS) if t]
+    tracks.sort(key=lambda t: not t['playing'])
+    if not tracks:
+        return ('', '', '', '', False), _empty_payload(), None
+    track = tracks[0]
+    art_url = track.pop('art_url')
+    track_key = (track['title'], track['artist'], track['album'], track['source_app'])
+    art: Any = ART_UNCHANGED
+    if track_key != previous_track_key:
+        art = _download_art(art_url) if art_url else None
+    payload: Dict[str, Any] = {**track, 'has_art': bool(art_url), 'ts': time.time()}
+    if not payload['duration_s']:
+        payload.pop('duration_s')
+    return (*track_key, track['playing']), payload, art
 
 
 def _empty_payload() -> Dict[str, Any]:
