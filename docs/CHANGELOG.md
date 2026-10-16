@@ -5,6 +5,26 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] — 2026-10-16
+
+Theme: **macOS fixes** (patch on 2.4.0).
+
+### Fixed
+- **Approve/Deny (macOS)** — a keystroke button now refuses instead of typing when it cannot tell which Terminal window is the agent's (2.4.0 could type into another Terminal window)
+- **Codex sessions** — one Codex CLI window now shows as one session (background helper processes and the desktop app were counted as extra sessions)
+- **Update check on the Mac app** — the packaged macOS app could not check for updates (TLS certificate error); weather location and album art had the same fault
+- Phone intro icon scales with screen width (also fixed a flaky CI test)
+
+### Changed
+- Release pages now carry install steps: which file to download, the macOS "Open Anyway" steps, Allow LAN access and Accessibility
+- README: which app needs the macOS Accessibility permission (the installed VDock app)
+
+### Not verified at release
+- Windows hardware run of installer/setup scripts (CI-verified only); Windows one-tap update
+- macOS build is not notarized (Gatekeeper "Open Anyway" needed on first launch)
+- iPhone/Safari and real tablet (checked on a Samsung S21 only); phone screen's Codex Approve/Deny (server call verified)
+- The TLS fix inside the packaged Mac app (needs this release; 2.4.0 installs must be reinstalled by hand once)
+
 ## [2.4.0] — 2026-10-16
 
 Theme: **phone/tablet experience and macOS** (production pass on Windows + macOS).
