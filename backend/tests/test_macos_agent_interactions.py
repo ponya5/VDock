@@ -279,3 +279,21 @@ def test_bundle_identity_maps_mac_exe_to_keymap_identity():
     assert _bundle_identity('/usr/bin/python3') is None
     assert _bundle_identity(None) is None
     assert _bundle_identity(r'C:\Users\you\Cursor\Cursor.exe') is None
+
+
+def test_codex_helper_processes_are_not_sessions():
+    """DL-018: the CLI's app-server daemons and the desktop runtime are not terminal sessions."""
+    from integrations import sessions as s
+    cli = {'name': 'codex', 'exe': '/x/node_modules/@openai/codex-darwin-arm64/vendor/codex',
+           'cmdline': ['/x/node_modules/@openai/codex-darwin-arm64/vendor/codex', '-a', 'on-request']}
+    daemon = {'name': 'codex',
+              'exe': '/opt/u/.codex/packages/app-server-daemon/releases/0.163.0/bin/codex',
+              'cmdline': ['/opt/u/.codex/packages/app-server-daemon/releases/0.163.0/bin/codex',
+                          'app-server', '--listen', 'unix://']}
+    desktop = {'name': 'node',
+               'exe': '/opt/u/Library/Application Support/Codex/artifact-sessions/g1/runtime/bin/node',
+               'cmdline': ['/opt/u/Library/Application Support/Codex/artifact-sessions/g1/runtime/bin/node',
+                           '/opt/u/Library/Application Support/Codex/artifact-sessions/g1/run/codex.js']}
+    assert s._matches(cli, 'codex') is True
+    assert s._matches(daemon, 'codex') is False
+    assert s._matches(desktop, 'codex') is False
