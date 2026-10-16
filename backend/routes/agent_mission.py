@@ -172,8 +172,12 @@ def focus_session():
         return jsonify({'success': False,
                         'error': 'Session is no longer running'}), 404
 
-    hwnd = window_focus.find_session_host_window(
-        marker, prefer_cwd=entry.get('cwd') or None)
+    if entry.get('pid'):
+        # Hook-resolved process: that session's window, never a lookalike (DL-012).
+        hwnd = window_focus.host_window_for_pid(marker, entry['pid'])
+    else:
+        hwnd = window_focus.find_session_host_window(
+            marker, prefer_cwd=entry.get('cwd') or None)
     if hwnd is None:
         return jsonify({'success': False,
                         'error': 'Could not find that session\'s window'}), 404
@@ -209,7 +213,8 @@ def decide():
 
     command = COMMANDS_BY_ID[commands[0] if decision == 'approve' else commands[1]]
     result = editor_base.send(command, cwd=entry.get('cwd') or None,
-                              editor_label='Claude Code')
+                              editor_label='Claude Code',
+                              session_pid=entry.get('pid'))
     if not result.get('success'):
         logger.info('Mission decide failed: %s', result.get('message'))
         return jsonify({'success': False,

@@ -59,6 +59,8 @@ class Target:
     session_id: Optional[str]
     cwd: Optional[str]
     state: Optional[str]
+    #: Hook-resolved agent process (DL-012); None -> pick the window by cwd.
+    pid: Optional[int] = None
 
 
 def has_hooked_sessions() -> bool:
@@ -78,7 +80,8 @@ def cwd_matches(entry_cwd: str, wanted: str) -> bool:
 
 def _entry_target(entry: Dict[str, Any]) -> Target:
     return Target(source=entry['source'], session_id=entry.get('session_id'),
-                  cwd=entry.get('cwd') or None, state=entry.get('state'))
+                  cwd=entry.get('cwd') or None, state=entry.get('state'),
+                  pid=entry.get('pid'))
 
 
 def resolve_target(agent: str = 'auto', cwd: Optional[str] = None,
@@ -173,6 +176,8 @@ def _pinned_risk(target: Target) -> Optional[Dict[str, Any]]:
     different session than the window we type into. Refuse when any of them
     is blocked on an approval - typed text would answer it."""
     marker = PROMPT_SOURCES.get(target.source) and target.source
+    if target.pid is not None:
+        return None  # typed into that exact process, whatever is pinned
     if not marker or sessions.pinned_pid(marker) is None:
         return None
     entries = agent_state.session_entries(target.source)
@@ -228,7 +233,7 @@ def send_prompt(target: Target, text: str, submit: bool = True) -> Dict[str, Any
 
     result = editor_base.send(
         command, text_override=text, cwd=target.cwd,
-        editor_label=editor_label(target.source))
+        editor_label=editor_label(target.source), session_pid=target.pid)
     if not result.get('success'):
         return _failure(502, result.get('message') or 'Could not send the prompt',
                         result.get('details') or '')

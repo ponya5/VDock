@@ -23,7 +23,7 @@ Not named ``*_pack`` on purpose: PluginManager only scans that suffix.
 import logging
 import os
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import psutil
 
@@ -126,6 +126,56 @@ def iter_session_pids(marker: str) -> List[int]:
 def session_alive(marker: str) -> bool:
     """True when some live process looks like ``marker``."""
     return bool(iter_session_pids(marker))
+
+
+#: How far up from a hook's parent process to look for the agent itself.
+_MAX_ANCESTOR_HOPS = 12
+
+
+def agent_pid_from_hook(marker: str, hook_pid: Optional[int]) -> Optional[Tuple[int, float]]:
+    """``(pid, create_time)`` of the ``marker`` session that launched a hook.
+
+    A hook runs as a child (often grandchild, behind ``sh -c`` or a
+    PowerShell wrapper) of the agent. Walking up from the hook's parent and
+    taking the nearest process the session scan would also count ties a
+    reported event to one exact process - no guessing by working directory
+    when two terminals sit in the same project (DL-012). Agents with no such
+    process (an IDE's built-in agent) simply return None.
+    """
+    needle = (marker or '').lower().strip()
+    try:
+        hook_pid = int(hook_pid or 0)
+    except (TypeError, ValueError):
+        return None
+    if not needle or hook_pid <= 1:
+        return None
+    try:
+        proc = psutil.Process(hook_pid)
+        for _ in range(_MAX_ANCESTOR_HOPS):
+            info = proc.as_dict(('name', 'cmdline', 'exe'))
+            if _matches(info, needle):
+                return proc.pid, float(proc.create_time())
+            proc = proc.parent()
+            if proc is None or proc.pid <= 1:
+                return None
+    except (psutil.Error, OSError):
+        return None
+    return None
+
+
+def process_alive(pid: int, created: Optional[float] = None) -> bool:
+    """Is ``pid`` still the same live process (not a reused pid)?"""
+    try:
+        proc = psutil.Process(int(pid))
+        if proc.status() == psutil.STATUS_ZOMBIE:
+            return False
+        return created is None or abs(proc.create_time() - float(created)) < 2
+    except psutil.NoSuchProcess:
+        return False
+    except (psutil.Error, OSError, ValueError, TypeError):
+        # Can't inspect it (permissions): assume alive rather than hide a
+        # session the user may be waiting on.
+        return True
 
 
 def find_session_process(marker: str) -> Optional[int]:

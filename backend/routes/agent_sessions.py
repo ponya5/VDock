@@ -51,6 +51,8 @@ def _hook_state_by_cwd(marker: str) -> dict:
     """
     by_cwd = {}
     for entry in agent_state.session_entries(marker):
+        if entry.get('pid'):
+            continue  # joined by pid, never guessed by directory
         key = _norm_cwd(entry.get('cwd'))
         if key:
             by_cwd[key] = entry
@@ -96,15 +98,19 @@ def list_agent_sessions():
     # moved directory). Two+ of either keep the strict join (DL-071
     # follow-up 10): a wrong guess would flag the wrong terminal.
     hook_entries = agent_state.session_entries(marker)
+    by_pid = {e['pid']: e for e in hook_entries if e.get('pid')}
     lone_entry = (
         hook_entries[0]
         if len(hosts) == 1 and len(hook_entries) == 1
+        and not hook_entries[0].get('pid')
         else None
     )
 
     rows = []
     for host in hosts:
-        hook = hook_by_cwd.get(_norm_cwd(host.get('cwd'))) or lone_entry
+        # Exact: the hook told us which process it belongs to (DL-012).
+        hook = by_pid.get(host['pid']) \
+            or hook_by_cwd.get(_norm_cwd(host.get('cwd'))) or lone_entry
         cwd = host.get('cwd')
         rows.append({
             'pid': host['pid'],

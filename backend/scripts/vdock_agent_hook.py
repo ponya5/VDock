@@ -14,6 +14,10 @@ it works, Approve/Deny while a permission dialog is open.
   Notification (idle)          -> ready
   SessionEnd                   -> ended
 
+Codex (``~/.codex/hooks.json``) sends the same event names as Claude Code,
+plus ``Interrupt`` (the user stopped the turn -> ready); older installs used
+its single ``notify`` command, which still works.
+
 Usage: python vdock_agent_hook.py [--port 5000] [--source claude|cursor]
 
 Stdlib only, silent by design: a hook must never block or break the agent,
@@ -22,11 +26,18 @@ required ``{"continue": true}`` reply.
 """
 import argparse
 import json
+import os
 import sys
+import time
 import urllib.request
 from typing import Any, Dict, Optional, Tuple
 
 POST_TIMEOUT_SECONDS = 1.5
+
+#: Every hook is its own process, so two events fired a few ms apart can
+#: reach the backend in the wrong order. The start time of *this* process
+#: orders them (DL-012).
+STARTED_AT = time.time()
 
 CLAUDE_STATE_BY_EVENT = {
     'SessionStart': 'ready',
@@ -59,10 +70,20 @@ AGY_STATE_BY_EVENT = {
     'Stop': 'ready',
 }
 
-# Codex has a single hook, ``notify``, fired when a turn completes. It passes
-# the JSON payload as the last argv entry (not stdin) with ``type`` naming
-# the event; only the turn-complete event means "waiting for you".
+# Codex hooks (``~/.codex/hooks.json``, DL-012) mirror Claude Code's events and
+# pipe the payload on stdin. Compaction and subagent events say nothing
+# about the main turn. The legacy ``notify`` command (older installs) passes
+# its JSON as the last argv entry instead, with ``type`` naming the event;
+# only the turn-complete event means "waiting for you".
 CODEX_STATE_BY_EVENT = {
+    'SessionStart': 'ready',
+    'UserPromptSubmit': 'working',
+    'PreToolUse': 'working',
+    'PostToolUse': 'working',
+    'PermissionRequest': 'permission',
+    'Stop': 'ready',
+    'Interrupt': 'ready',
+    'SessionEnd': 'ended',
     'agent-turn-complete': 'ready',
 }
 
@@ -73,7 +94,7 @@ CURSOR_REPLY_BY_EVENT = {
 
 #: Payload fields carrying the conversation, per (source, event).
 PROMPT_EVENTS = {('claude', 'UserPromptSubmit'), ('cursor', 'beforeSubmitPrompt'),
-                 ('codex', 'agent-turn-complete')}
+                 ('codex', 'UserPromptSubmit'), ('codex', 'agent-turn-complete')}
 CURSOR_REPLY_EVENT = 'afterAgentResponse'
 CLAUDE_REPLY_EVENT = 'Stop'
 
@@ -117,6 +138,10 @@ def map_event(source: str, payload: Dict[str, Any]) -> Optional[str]:
     if source == 'cursor':
         return CURSOR_STATE_BY_EVENT.get(event_name)
     if source == 'antigravity':
+        # A Stop that is not "fully idle" still has background work that can
+        # re-enter the loop - the agent is not waiting for the user yet.
+        if event_name == 'Stop' and payload.get('fullyIdle') is False:
+            return 'working'
         return AGY_STATE_BY_EVENT.get(event_name)
     if source == 'codex':
         return CODEX_STATE_BY_EVENT.get(event_name)
@@ -129,7 +154,8 @@ def _session_cwd(payload: Dict[str, Any]) -> str:
     cwd = payload.get('cwd')
     if cwd:
         return str(cwd)
-    workspace_roots = payload.get('workspace_roots') or []
+    # Cursor: workspace_roots; Antigravity: workspacePaths (camelCase).
+    workspace_roots = payload.get('workspace_roots') or payload.get('workspacePaths') or []
     return str(workspace_roots[0]) if workspace_roots else ''
 
 
@@ -226,6 +252,8 @@ def permission_detail(payload: Dict[str, Any]) -> str:
         return f'Edit {name}'
     if tool == 'Write' and name:
         return f'Write {name}'
+    if tool == 'apply_patch':  # Codex: tool_input.command is the whole patch
+        return 'Edit files'
     if tool == 'WebFetch' and tool_input.get('url'):
         return 'Open ' + _short(tool_input['url'], 120)
     if tool == 'WebSearch' and tool_input.get('query'):
@@ -241,6 +269,15 @@ def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, An
         **conversation_fields(source, payload),
         'source': source,
         'state': state,
+        # Ordering + identity for the backend (DL-012): when this hook began,
+        # which turn it belongs to, and the process that launched it - the
+        # backend walks up from there to the agent's own pid.
+        'event_ts': STARTED_AT,
+        'turn_id': str(payload.get('generation_id') or payload.get('turn_id') or ''),
+        'hook_pid': os.getppid(),
+        # Cursor reports each assistant message mid-run; after the turn's
+        # `stop` it carries a reply only and must not reopen the turn.
+        'passive': event_name == CURSOR_REPLY_EVENT,
         # Every event except SessionStart/Notification implies the user
         # already prompted this session (tool calls, submits, a finished
         # turn) — Cursor and Antigravity events only exist mid-run at
@@ -252,8 +289,10 @@ def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, An
         # The later permission Notification only says "...to use Bash"; the
         # backend keeps this specific text for the same pending request.
         'detailed': bool(detail),
-        # Claude Code: session_id; Cursor: conversation_id.
-        'session_id': payload.get('session_id') or payload.get('conversation_id') or '',
+        # Claude Code / Codex: session_id; Cursor: conversation_id;
+        # Antigravity: conversationId.
+        'session_id': (payload.get('session_id') or payload.get('conversation_id')
+                       or payload.get('conversationId') or ''),
         'message': detail or payload.get('message') or DEFAULT_MESSAGES[state],
         'cwd': cwd,
         'project': cwd.replace('\\', '/').rstrip('/').rsplit('/', 1)[-1],
@@ -262,6 +301,8 @@ def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, An
 
 def _read_payload() -> Dict[str, Any]:
     try:
+        if sys.stdin is None or sys.stdin.isatty():
+            return {}  # run by hand / no piped payload: never wait on a keyboard
         raw = sys.stdin.read()
         loaded = json.loads(raw) if raw.strip() else {}
     except (json.JSONDecodeError, OSError, ValueError):
@@ -330,8 +371,9 @@ def _parse_args() -> Tuple[int, str, str, list]:
 
 def main() -> int:
     port, source, pinned_event, extra_args = _parse_args()
-    # Codex passes its payload as the last argv entry; the others use stdin.
-    payload = _codex_payload(extra_args) if source == 'codex' else _read_payload()
+    # Legacy Codex ``notify`` passes its payload as the last argv entry;
+    # Codex hooks and every other agent pipe it on stdin.
+    payload = (_codex_payload(extra_args) if source == 'codex' else {}) or _read_payload()
     if pinned_event:
         payload.setdefault('hook_event_name', pinned_event)
         payload['event'] = pinned_event
