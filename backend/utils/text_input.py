@@ -97,7 +97,7 @@ def _type_text_macos(text: str, interval_seconds: float) -> None:
     """
     from actions import macos_controls
     if not macos_controls.is_accessibility_trusted():
-        raise TextInputError(macos_controls.ACCESSIBILITY_HELP)
+        raise TextInputError(macos_controls.accessibility_help())
 
     import Quartz
 

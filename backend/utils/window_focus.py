@@ -1059,7 +1059,10 @@ def session_host_frontmost(handle: int) -> Optional[bool]:
     front = _frontmost_bundle_path_lsappinfo()
     if host is None or front is None:
         return None
-    return front.rstrip('/').lower() == host[1].lower()
+    in_front = front.rstrip('/').lower() == host[1].lower()
+    if not in_front:
+        logger.warning('Session %s lives in %s but %s is in front', handle, host[1], front)
+    return in_front
 
 
 def _focus_session_macos(session_pid: int) -> bool:

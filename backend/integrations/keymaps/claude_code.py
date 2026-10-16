@@ -273,8 +273,9 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
     ),
     Command(
         id='cc_paste_image', label='Paste Image',
-        description='Paste an image from the clipboard (Alt+V on Windows).',
-        keys=('alt', 'v'), icon='image',
+        description='Paste an image from the clipboard (Alt+V on Windows, '
+                    'Ctrl+V on macOS).',
+        keys=('alt', 'v'), mac_keys=('ctrl', 'v'), icon='image',
         keywords=('claude', 'paste', 'image', 'clipboard', 'attach'),
         risk=RISK_INPUT, requires_session=True,
         **_CLAUDE,
@@ -360,9 +361,11 @@ CLAUDE_CODE_COMMANDS: Tuple[Command, ...] = (
     # --- Destructive ---------------------------------------------------------
     Command(
         id='cc_kill_agents', label='Kill Agents',
-        description='Stop all running background subagents (Ctrl+X then '
-                    'Ctrl+K).',
-        keys=('ctrl', 'x'), after_keys=(('ctrl', 'k'),),
+        description='Stop all running background subagents (Ctrl+X Ctrl+K, '
+                    'twice - Claude Code asks for the chord again to confirm).',
+        # One chord only arms it ("ctrl+x ctrl+k again to stop background
+        # agents"); the second within 3 s confirms (DL-007, verified live).
+        keys=('ctrl', 'x'), after_keys=(('ctrl', 'k'), ('ctrl', 'x'), ('ctrl', 'k')),
         icon='circle-xmark',
         keywords=('claude', 'kill', 'agents', 'subagents', 'stop all'),
         risk=RISK_DESTRUCTIVE, requires_session=True, **_CLAUDE,

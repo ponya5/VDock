@@ -96,7 +96,7 @@ def test_macos_is_supported(monkeypatch):
 @pytest.fixture
 def osascript(mocker):
     calls = []
-    state = {'remote': None, 'muted': 'false', 'output': 40}
+    state = {'remote': False, 'muted': 'false', 'output': 40}
 
     def run(script, javascript=False, arguments=None):
         calls.append((script, arguments))
@@ -106,21 +106,22 @@ def osascript(mocker):
         return True, ''
 
     mocker.patch.object(macos_controls, '_run_osascript', side_effect=run)
-    mocker.patch.object(macos_controls, 'remote_spotify_volume',
+    mocker.patch.object(macos_controls, 'remote_spotify_playing',
                         side_effect=lambda: state['remote'])
-    macos_controls._remote_volume_before_mute = None
     return calls, state
 
 
-def test_volume_goes_to_spotify_when_it_plays_on_another_device(osascript):
+def test_slider_and_mute_are_honest_during_remote_playback(osascript):
     calls, state = osascript
-    state['remote'] = 60
-    result = macos_controls.change_output_volume(-10)
-    assert result.success and result.data['value'] == 50
-    script, arguments = calls[-1]
-    assert 'tell application "Spotify" to set sound volume' in script
-    assert arguments == ['50']
-    assert not any(c[0].startswith('set volume output') for c in calls)
+    state['remote'] = True
+    for result in (macos_controls.change_output_volume(-10),
+                   macos_controls.change_output_volume(10),
+                   macos_controls.set_output_volume(30),
+                   macos_controls.toggle_output_muted(),
+                   macos_controls.set_output_muted(True)):
+        assert result.success is False
+        assert 'another device' in result.message
+    assert calls == []  # nothing pretended to change
 
 
 def test_local_playback_keeps_system_volume(osascript):
@@ -130,13 +131,10 @@ def test_local_playback_keeps_system_volume(osascript):
     assert calls[-1][0] == 'set volume output volume 50'
 
 
-def test_slider_sets_spotify_or_system_volume(osascript):
-    calls, state = osascript
+def test_slider_sets_system_volume_locally(osascript):
+    calls, _state = osascript
     assert macos_controls.set_output_volume(30).data['value'] == 30
     assert calls[-1][0] == 'set volume output volume 30'
-    state['remote'] = 80
-    macos_controls.set_output_volume(30)
-    assert calls[-1][1] == ['30']
 
 
 def test_mute_button_toggles_like_windows(osascript):
@@ -147,28 +145,17 @@ def test_mute_button_toggles_like_windows(osascript):
     assert calls[-1][0] == 'set volume without output muted'
 
 
-def test_remote_mute_remembers_the_level(osascript):
-    calls, state = osascript
-    state['remote'] = 70
-    macos_controls.toggle_output_muted()
-    assert calls[-1][1] == ['0']
-    state['remote'] = 0
-    macos_controls.toggle_output_muted()
-    assert calls[-1][1] == ['70']
-
-
 def test_remote_detection_needs_an_idle_mac_output(mocker):
     mocker.patch.object(macos_controls, '_is_app_running', return_value=True)
     mocker.patch.object(macos_controls, '_is_player_playing', return_value=True)
-    mocker.patch.object(macos_controls, '_run_osascript', return_value=(True, '64'))
     mocker.patch.object(macos_controls, '_output_device_running', return_value=False)
-    assert macos_controls.remote_spotify_volume() == 64
+    assert macos_controls.remote_spotify_playing() is True
     # Audio is coming out of the Mac: local playback, system volume applies.
     macos_controls._output_device_running.return_value = True
-    assert macos_controls.remote_spotify_volume() is None
+    assert macos_controls.remote_spotify_playing() is False
     # Unknown output state: never guess remote.
     macos_controls._output_device_running.return_value = None
-    assert macos_controls.remote_spotify_volume() is None
+    assert macos_controls.remote_spotify_playing() is False
 
 
 def test_volume_mute_action_toggles_on_macos(mocker):
@@ -178,3 +165,51 @@ def test_volume_mute_action_toggles_on_macos(mocker):
                                  return_value=mock.Mock(success=True))
     cross_platform_action.CrossPlatformAction({'action': 'volume_mute'}).execute()
     toggle.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Accessibility: name the entry macOS actually checks
+# ---------------------------------------------------------------------------
+
+def test_launched_from_an_app_names_that_app(mocker, tmp_path):
+    bundle = tmp_path / 'Cursor.app' / 'Contents'
+    (bundle / 'MacOS').mkdir(parents=True)
+    import plistlib
+    (bundle / 'Info.plist').write_bytes(plistlib.dumps({'CFBundleName': 'Cursor'}))
+    exe = bundle / 'MacOS' / 'Cursor'
+    exe.write_text('')
+    mocker.patch.object(macos_controls, '_responsible_pid', return_value=4242)
+    mocker.patch('psutil.Process', return_value=mock.Mock(exe=lambda: str(exe)))
+    client = macos_controls.accessibility_client()
+    assert client['name'] == 'Cursor'
+    assert client['path'].endswith('Cursor.app')
+
+
+def test_launched_from_vdock_app_names_the_python_binary(mocker, tmp_path):
+    """VDock.app runs a shell script, so macOS charges the launcher's Python."""
+    python = tmp_path / 'python3.14'
+    python.write_text('')
+    mocker.patch.object(macos_controls, '_responsible_pid', return_value=None)
+    mocker.patch.object(macos_controls.sys, 'executable', str(python))
+    assert macos_controls.accessibility_client()['name'] == 'python3.14'
+    assert '"python3.14"' in macos_controls.accessibility_help()
+
+
+# ---------------------------------------------------------------------------
+# Claude Code keys that differ per OS (docs: interactive-mode shortcuts)
+# ---------------------------------------------------------------------------
+
+def _paste_image_steps():
+    from integrations.keymaps.claude_code import CLAUDE_CODE_COMMANDS
+    command = next(c for c in CLAUDE_CODE_COMMANDS if c.id == 'cc_paste_image')
+    return [s['keys'] for s in command.to_macro_steps() if s['type'] == 'hotkey']
+
+
+def test_paste_image_is_ctrl_v_on_macos(mocker):
+    from utils import host_os
+    mocker.patch.object(host_os.platform, 'system', return_value='Darwin')
+    assert _paste_image_steps() == [['ctrl', 'v']]
+
+
+def test_paste_image_stays_alt_v_on_windows(windows_keymaps):
+    assert _paste_image_steps() == [['alt', 'v']]
