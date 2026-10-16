@@ -726,6 +726,19 @@ def find_session_host_window(
     return candidates[0][1]
 
 
+def host_window_for_pid(marker: str, pid: int) -> Optional[int]:
+    """HWND hosting exactly the ``marker`` session ``pid``, else None.
+
+    Unlike ``find_session_host_window(prefer_pid=...)`` this never falls back
+    to another session: answering an approval prompt in the wrong terminal is
+    worse than refusing (DL-012).
+    """
+    for host in list_session_hosts(marker):
+        if host.get('pid') == pid:
+            return host.get('hwnd')
+    return None
+
+
 def list_session_hosts(marker: str) -> List[dict]:
     """One row per live ``marker`` session that owns a host window.
 

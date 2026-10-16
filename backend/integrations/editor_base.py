@@ -49,16 +49,21 @@ def foreground_exe() -> Optional[str]:
 
 
 def _resolve_session_host(command: Command,
-                          configured_cwd: Optional[str] = None
+                          configured_cwd: Optional[str] = None,
+                          session_pid: Optional[int] = None,
                           ) -> Optional[int]:
     """HWND of the window hosting this command's session, or None.
 
     ``configured_cwd`` (the button's Working directory) or the focused
     editor's project tells the resolver *which* session when several run
     at once; neither applies -> the resolver's own ranking decides.
+    ``session_pid`` (Mission Control: the session the user tapped) names the
+    exact process and never falls back to another one (DL-012).
     """
     if not command.session_marker:
         return None
+    if session_pid is not None:
+        return window_focus.host_window_for_pid(command.session_marker, session_pid)
     # A pinned deck target (DL-071) beats every other resolution signal --
     # the user explicitly picked this session in the action bar.
     pinned = sessions.pinned_pid(command.session_marker)
@@ -116,7 +121,8 @@ def send(command: Command, text_override: Optional[str] = None,
          enforce_focus: bool = True, focus_first: bool = True,
          allow_destructive: bool = False,
          cwd: Optional[str] = None,
-         editor_label: Optional[str] = None) -> Dict[str, Any]:
+         editor_label: Optional[str] = None,
+         session_pid: Optional[int] = None) -> Dict[str, Any]:
     """Send ``command`` to the target application.
 
     Args:
@@ -134,6 +140,9 @@ def send(command: Command, text_override: Optional[str] = None,
             project.
         editor_label: Product name for failure messages ('Cursor') -- the
             not-running error points the user at that template card.
+        session_pid: The exact agent process to type into (hook-reported,
+            DL-012). Beats the pin and the cwd; a session whose window
+            cannot be found is refused, never swapped for another.
     """
     # Gate on cheap checks first so a refused press never yanks focus around.
     if command.risk == RISK_DESTRUCTIVE and not allow_destructive:
@@ -168,7 +177,15 @@ def send(command: Command, text_override: Optional[str] = None,
         # session marker: the host window's owner is whatever IDE or terminal
         # spawned the agent (Devin, Cursor, VS Code, Windows Terminal, a
         # classic conhost console...) -- a static exe list can't know it.
-        host_hwnd = _resolve_session_host(command, cwd)
+        host_hwnd = _resolve_session_host(command, cwd, session_pid)
+        if host_hwnd is None and session_pid is not None and command.session_marker:
+            return {
+                'success': False,
+                'message': "Could not find that session's window",
+                'details': 'The session may have ended or runs without a '
+                           'window VDock can type into. Nothing was sent, so '
+                           'no other session is affected.',
+            }
         if host_hwnd is not None:
             if focus_first:
                 if not window_focus.focus_hwnd(host_hwnd):

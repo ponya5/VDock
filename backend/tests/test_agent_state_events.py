@@ -159,43 +159,80 @@ def agent_home(tmp_path, monkeypatch):
         agent_hooks.antigravity_installed_events, agent_hooks._add_antigravity_events,
         agent_hooks.AGY_HOOK_EVENTS,
     ))
+    monkeypatch.setitem(agent_hooks._TARGETS, 'codex', agent_hooks._AgentHookTarget(
+        lambda: tmp_path / '.codex' / 'hooks.json',
+        agent_hooks.codex_installed_events, agent_hooks._add_codex_events,
+        agent_hooks.CODEX_HOOK_EVENTS,
+    ))
     monkeypatch.setattr(agent_hooks, 'codex_config_path',
                         lambda: tmp_path / '.codex' / 'config.toml')
     return tmp_path
 
 
-def test_codex_install_prepends_notify_and_keeps_existing_config(agent_home):
+_LEGACY_NOTIFY = ('notify = ["python3", "/x/scripts/vdock_agent_hook.py", "--port", "5000", '
+                  '"--source", "codex"]\n')
+
+
+def test_codex_install_writes_hooks_json_and_leaves_config_toml_alone(agent_home):
     config = agent_home / '.codex' / 'config.toml'
     config.parent.mkdir()
-    config.write_text('model = "o4"\n\n[projects."x"]\ntrust = "trusted"\n', encoding='utf-8')
+    original = 'model = "o4"\n\n[projects."x"]\ntrust = "trusted"\n'
+    config.write_text(original, encoding='utf-8')
     result = agent_hooks.install_hook('codex')
-    text = config.read_text(encoding='utf-8')
+    hooks = json.loads((agent_home / '.codex' / 'hooks.json').read_text(encoding='utf-8'))
     assert result.installed and not result.already
-    assert text.startswith('notify = [')
-    assert '"--source", "codex"' in text
-    assert 'model = "o4"' in text and '[projects."x"]' in text
+    assert set(hooks['hooks']) == set(agent_hooks.CODEX_HOOK_EVENTS)
+    entry = hooks['hooks']['Stop'][0]['hooks'][0]
+    assert entry['type'] == 'command' and '--source codex' in entry['command']
+    # Codex gives SessionEnd/Interrupt hooks 1 s unless told otherwise.
+    assert hooks['hooks']['SessionEnd'][0]['hooks'][0]['timeout'] == 3
+    assert config.read_text(encoding='utf-8') == original
     assert agent_hooks.hook_status('codex')['installed'] is True
-    # Idempotent: a second install changes nothing.
-    assert agent_hooks.install_hook('codex').already is True
-    assert config.read_text(encoding='utf-8') == text
+    # Idempotent, and the trust reminder is only for a real install.
+    assert 'type /hooks' in result.note
+    again = agent_hooks.install_hook('codex')
+    assert again.already is True and again.note == ''
 
 
-def test_codex_install_never_replaces_a_foreign_notify(agent_home):
+def test_codex_install_works_next_to_a_foreign_notify(agent_home):
+    """The old notify-only install refused when another tool owned ``notify``
+    (the Codex desktop app's computer-use plugin does); hooks have no such
+    single slot."""
     config = agent_home / '.codex' / 'config.toml'
     config.parent.mkdir()
     config.write_text('notify = ["say", "done"]\n', encoding='utf-8')
-    with pytest.raises(agent_hooks.HookSettingsError):
-        agent_hooks.install_hook('codex')
+    assert agent_hooks.install_hook('codex').installed is True
     assert config.read_text(encoding='utf-8') == 'notify = ["say", "done"]\n'
-    assert agent_hooks.hook_status('codex')['installed'] is False
+    assert agent_hooks.hook_status('codex')['installed'] is True
 
 
-def test_codex_notify_in_a_table_is_not_a_top_level_notify(agent_home):
+def test_codex_pre_hooks_install_is_offered_the_upgrade_and_keeps_working(agent_home):
     config = agent_home / '.codex' / 'config.toml'
     config.parent.mkdir()
-    config.write_text('[tui]\nnotify = true\n', encoding='utf-8')
-    assert agent_hooks.install_hook('codex').installed is True
-    assert config.read_text(encoding='utf-8').endswith('[tui]\nnotify = true\n')
+    config.write_text(_LEGACY_NOTIFY + 'model = "o4"\n', encoding='utf-8')
+    status = agent_hooks.hook_status('codex')
+    assert status['installed'] is False and status['partial'] is True
+
+    agent_hooks.install_hook('codex')
+
+    assert agent_hooks.hook_status('codex')['installed'] is True
+    # The notify line stays (refreshed) so Codex keeps reporting until the
+    # user trusts the new hooks.
+    assert agent_hooks._codex_legacy_notify(config.read_text(encoding='utf-8'))
+    assert 'model = "o4"' in config.read_text(encoding='utf-8')
+
+
+def test_codex_uninstall_removes_hooks_and_the_legacy_notify_exactly(agent_home):
+    config = agent_home / '.codex' / 'config.toml'
+    config.parent.mkdir()
+    rest = '# my config\nmodel = "o4"\n\n[projects."x"]\ntrust = "trusted"\n'
+    config.write_text(_LEGACY_NOTIFY + rest, encoding='utf-8', newline='')
+    agent_hooks.install_hook('codex')
+    result = agent_hooks.uninstall_hook('codex')
+    assert result.removed is True
+    assert config.read_text(encoding='utf-8') == rest
+    status = agent_hooks.hook_status('codex')
+    assert status['installed'] is False and status['partial'] is False
 
 
 def test_codex_turn_complete_means_ready_with_reply():
@@ -346,11 +383,16 @@ _FOREIGN_JSON = {
     }},
     'antigravity': {'my-linter': {'PostToolUse': [{'matcher': 'run_command', 'hooks': [
         {'type': 'command', 'command': 'lint.sh'}]}]}},
+    'codex': {'hooks': {
+        'PreToolUse': [{'matcher': '^Bash$', 'hooks': [{'type': 'command', 'command': 'policy.sh'}]}],
+        'Stop': [{'hooks': [{'type': 'command', 'command': 'notify.sh'}]}],
+    }},
 }
 _JSON_PATHS = {
     'claude': ('.claude', 'settings.json'),
     'cursor': ('.cursor', 'hooks.json'),
     'antigravity': ('.gemini', 'config', 'hooks.json'),
+    'codex': ('.codex', 'hooks.json'),
 }
 
 
@@ -401,18 +443,6 @@ def test_uninstall_keeps_a_foreign_hook_in_the_same_claude_entry(agent_home):
     agent_hooks.uninstall_hook('claude')
     assert json.loads(path.read_text(encoding='utf-8')) == {
         'hooks': {'Stop': [{'matcher': '', 'hooks': [theirs]}]}}
-
-
-def test_codex_uninstall_restores_the_pre_install_toml_exactly(agent_home):
-    config = agent_home / '.codex' / 'config.toml'
-    config.parent.mkdir()
-    original = '# my config\nmodel = "o4"\n\n[projects."x"]\ntrust = "trusted"\n'
-    config.write_text(original, encoding='utf-8', newline='')
-    agent_hooks.install_hook('codex')
-    result = agent_hooks.uninstall_hook('codex')
-    assert result.removed is True
-    assert config.read_text(encoding='utf-8') == original
-    assert agent_hooks.hook_status('codex')['installed'] is False
 
 
 def test_codex_uninstall_leaves_a_foreign_notify(agent_home):

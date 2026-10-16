@@ -118,7 +118,8 @@ def test_approve_types_into_that_sessions_window(client, sent):
     # Claude's permission dialog is a menu: Enter takes the highlighted Yes
     # (DL-009, verified live) - typed y/n are not its keys.
     assert sent == [('cc_accept', {'cwd': 'C:/repos/web',
-                                   'editor_label': 'Claude Code'})]
+                                   'editor_label': 'Claude Code',
+                                   'session_pid': None})]
     # The phone shows the outcome at once instead of a stale "needs you".
     states = {e['session_id']: e['state'] for e in agent_state.session_entries('claude')}
     assert states['b'] == 'working' and states['a'] == 'permission'
