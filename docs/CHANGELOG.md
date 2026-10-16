@@ -5,6 +5,30 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] — 2026-10-16
+
+Theme: **phone/tablet experience and macOS** (production pass on Windows + macOS).
+
+### Added
+- **One-step phone setup** — trusted host, lasting sign-ins, QR-first Connect card (larger QR for scanning)
+- **Packaged app and installers** — Electron picks a free port (no AirPlay :5000 clash on macOS), single instance, backend restart policy, Windows firewall rule via setup.bat / NSIS
+- **Agent tracking** — Codex hooks, Antigravity payload, out-of-order event handling, exact-session (pid) targeting so two terminals in one folder stay separate; Codex remote Approve/Deny
+- **macOS** — media/volume actions, Mic Mute, Spotify now-playing, VS Code / Devin / Cursor / Copilot / JetBrains chords, focus safety
+- **Packaged uninstall removes agent hooks**; packaged-aware firewall hints
+
+### Changed
+- Mobile/tablet: 44px tap-target floor on all touch surfaces, firmer tiles over image wallpapers, compact session-chip labels, tablet header/footer capped
+- Backend runs on Python 3.9–3.14
+
+### Fixed
+- Feedback throttle blocked the first post on some runtimes
+- Cross-platform CI failures (Windows, macOS, Linux)
+- Dependency CVE bump (http-cache-semantics)
+
+### Not verified at release
+- Windows hardware run of installer/setup scripts (CI-verified only)
+- Real phone/tablet hardware (emulation only); Codex `/hooks` trust flow; Gatekeeper on a downloaded DMG (build is ad-hoc signed, not notarized)
+
 ## [2.1.0] — 2026-09-26
 
 ### Added
