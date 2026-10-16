@@ -106,6 +106,24 @@ def pair():
     return jsonify({'error': 'Invalid or expired pairing code', 'success': False}), 401
 
 
+@auth_bp.route('/api/auth/refresh', methods=['POST'])
+def refresh_token():
+    """Swap a valid sign-in for a fresh one (DL-008).
+
+    Devices call it at boot and every few hours, so a phone in regular use
+    never hits the expiry and asks for the password again.
+    """
+    header = request.headers.get('Authorization') or ''
+    parts = header.split(' ')
+    if len(parts) != 2 or parts[0] != 'Bearer' or not parts[1]:
+        return jsonify({'error': 'No token to refresh', 'success': False}), 401
+    payload = AuthManager.verify_token(parts[1])
+    if not payload:
+        return jsonify({'error': 'Invalid or expired token', 'success': False}), 401
+    token = AuthManager.generate_token({'authenticated': True})
+    return jsonify({'token': token, 'success': True})
+
+
 @auth_bp.route('/api/auth/verify', methods=['GET'])
 def verify_token():
     """Verify if the current token is valid."""

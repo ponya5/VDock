@@ -32,15 +32,24 @@ agent_mission_bp = Blueprint('agent_mission', __name__)
 
 #: source -> (approve command id, deny command id). Only agents that ship
 #: confirm keymaps can be answered remotely; others are listed + focusable.
+#: Claude Code's permission dialog is a menu: Enter picks the highlighted
+#: "Yes", Esc cancels - typed y/n are not its keys (DL-009, verified live).
 DECISION_COMMANDS = {
-    'claude': ('cc_approve', 'cc_deny'),
+    'claude': ('cc_accept', 'cc_interrupt'),
+    # Codex's approval overlay takes single-key options (y approve / n deny,
+    # verified in codex-rs approval_overlay.rs) — a typed key is
+    # deterministic where Enter would depend on the highlighted option.
+    'codex': ('codex_approve', 'codex_deny'),
 }
 
 #: Process marker used to find a source's session window.
 _MARKER_BY_SOURCE = {
     'claude': 'claude', 'cursor': 'cursor', 'devin': 'devin',
-    'antigravity': 'antigravity',
+    'antigravity': 'antigravity', 'codex': 'codex',
 }
+
+#: Product name for decide() failure messages.
+_LABEL_BY_SOURCE = {'claude': 'Claude Code', 'codex': 'Codex'}
 
 #: Lower sorts first: blocked on you, then idle-and-prompted, then the rest.
 _STATE_RANK = {
@@ -170,8 +179,12 @@ def focus_session():
         return jsonify({'success': False,
                         'error': 'Session is no longer running'}), 404
 
-    hwnd = window_focus.find_session_host_window(
-        marker, prefer_cwd=entry.get('cwd') or None)
+    if entry.get('pid'):
+        # Hook-resolved process: that session's window, never a lookalike (DL-012).
+        hwnd = window_focus.host_window_for_pid(marker, entry['pid'])
+    else:
+        hwnd = window_focus.find_session_host_window(
+            marker, prefer_cwd=entry.get('cwd') or None)
     if hwnd is None:
         return jsonify({'success': False,
                         'error': 'Could not find that session\'s window'}), 404
@@ -207,13 +220,26 @@ def decide():
 
     command = COMMANDS_BY_ID[commands[0] if decision == 'approve' else commands[1]]
     result = editor_base.send(command, cwd=entry.get('cwd') or None,
-                              editor_label='Claude Code')
+                              editor_label=_LABEL_BY_SOURCE.get(source, source),
+                              session_pid=entry.get('pid'))
     if not result.get('success'):
         logger.info('Mission decide failed: %s', result.get('message'))
         return jsonify({'success': False,
                         'error': result.get('message') or 'Could not answer the prompt',
                         'details': result.get('details')}), 502
     logger.info('Mission control: %s %s session %s', decision, source, session_id)
+    # The hooks only speak again at the next tool call (approve) or never
+    # (Esc ends the turn without a Stop event) - show the outcome now so the
+    # phone doesn't keep asking for a decision that was already made.
+    agent_state.record(
+        source,
+        agent_state.STATE_WORKING if decision == 'approve' else agent_state.STATE_READY,
+        message='' if decision == 'approve' else 'Denied from the deck',
+        cwd=entry.get('cwd') or '', project=entry.get('project') or '',
+        session_id=session_id, prompted=bool(entry.get('prompted')),
+    )
+    from routes import agent_events
+    agent_events._broadcast_states()
     return jsonify({'success': True, 'decision': decision})
 
 

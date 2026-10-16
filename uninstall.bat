@@ -116,13 +116,33 @@ if defined HOOK_PY (
 )
 
 echo.
-echo   [3/6] Removing startup entry...
+echo   [3/6] Removing startup entry and firewall rule...
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v VDock /f >nul 2>&1
 if errorlevel 1 (
     echo   [ --]   No startup entry found
 ) else (
     echo   [OK]    Removed VDock from Windows startup
 )
+
+REM The inbound rule setup.bat offers (DL-010). Deleting it needs admin
+REM rights, so Windows asks once; declining leaves a harmless rule behind.
+set "FW_RULE=VDock backend - source install"
+netsh advfirewall firewall show rule name="%FW_RULE%" >nul 2>&1
+if errorlevel 1 (
+    echo   [ --]   No firewall rule found
+    goto :firewall_done
+)
+set "FW_SCRIPT=%TEMP%\vdock-firewall-remove.cmd"
+> "%FW_SCRIPT%" echo @netsh advfirewall firewall delete rule name="%FW_RULE%" ^>nul 2^>^&1
+powershell -NoProfile -NonInteractive -Command "try { Start-Process -FilePath $env:FW_SCRIPT -Verb RunAs -Wait -WindowStyle Hidden } catch { exit 1 }" >nul 2>&1
+del "%FW_SCRIPT%" 2>nul
+netsh advfirewall firewall show rule name="%FW_RULE%" >nul 2>&1
+if errorlevel 1 (
+    echo   [OK]    Removed the VDock firewall rule
+) else (
+    echo   [WARN]  Firewall rule "%FW_RULE%" was not removed ^(approval declined^)
+)
+:firewall_done
 
 echo.
 echo   [4/6] Removing shortcuts...
@@ -175,15 +195,23 @@ echo   [OK]    Removed caches and logs
 
 REM The VDock window's Electron profile: HTTP + service-worker caches
 REM (which can keep serving an old frontend), local storage, GPU caches.
+REM The installed (packaged) app uses the same folder and keeps its decks and
+REM settings in vdock-data (DL-010): clear the cache around it, never the data.
+if not exist "%APPDATA%\vdock-electron" goto :electron_profile_done
+if exist "%APPDATA%\vdock-electron\vdock-data" goto :electron_profile_keep_data
+rmdir /s /q "%APPDATA%\vdock-electron" 2>nul
 if exist "%APPDATA%\vdock-electron" (
-    rmdir /s /q "%APPDATA%\vdock-electron" 2>nul
-    if exist "%APPDATA%\vdock-electron" (
-        echo   [WARN]  Could not fully remove %APPDATA%\vdock-electron
-        set "LEFTOVER=1"
-    ) else (
-        echo   [OK]    Removed app cache %APPDATA%\vdock-electron
-    )
+    echo   [WARN]  Could not fully remove %APPDATA%\vdock-electron
+    set "LEFTOVER=1"
+) else (
+    echo   [OK]    Removed app cache %APPDATA%\vdock-electron
 )
+goto :electron_profile_done
+:electron_profile_keep_data
+for /d %%d in ("%APPDATA%\vdock-electron\*") do if /i not "%%~nxd"=="vdock-data" rmdir /s /q "%%~fd" 2>nul
+del /q "%APPDATA%\vdock-electron\*" 2>nul
+echo   [OK]    Removed app cache %APPDATA%\vdock-electron ^(kept the installed app's vdock-data^)
+:electron_profile_done
 
 echo.
 echo   [6/6] Profiles and settings...

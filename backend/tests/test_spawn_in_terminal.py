@@ -1,5 +1,6 @@
 """DL-005: interactive CLI buttons need a visible terminal off Windows."""
 import os
+import shlex
 from unittest.mock import patch
 
 import pytest
@@ -26,8 +27,11 @@ def test_macos_opens_terminal_with_command_file(fake_binary, tmp_path):
     assert argv[:3] == ['open', '-a', 'Terminal']
     script = open(argv[3]).read()
     os.unlink(argv[3])
-    assert f"cd {tmp_path}" in script
-    assert f"{fake_binary} --continue || {fake_binary}" in script
+    # Paths are shlex-quoted in the script; Windows paths get wrapped in
+    # single quotes, POSIX paths without spaces come back unchanged.
+    assert f"cd {shlex.quote(str(tmp_path))}" in script
+    quoted = shlex.quote(fake_binary)
+    assert f"{quoted} --continue || {quoted}" in script
     assert popen.call_args[1]['shell'] is False
 
 

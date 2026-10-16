@@ -2,7 +2,9 @@
 
 Mic Mute reads and sets the default capture device's mute flag - the same
 flag Windows Settings, Teams and hardware mute keys use - so the button
-stays in step with them instead of tracking its own toggle.
+stays in step with them instead of tracking its own toggle. macOS has no
+mute flag; there it is the input level (0 = muted, previous level restored),
+read back after each press (DL-008).
 """
 import platform
 from typing import Any, Dict, Sequence
@@ -44,8 +46,8 @@ class Plugin(SpecPlugin):
         )
 
     def is_available(self) -> tuple:
-        if _SYSTEM != 'Windows':
-            return False, 'Mic Mute is only available on Windows'
+        if _SYSTEM not in ('Windows', 'Darwin'):
+            return False, 'Mic Mute is only available on Windows and macOS'
         return True, ''
 
     def get_action_specs(self) -> Sequence[ActionSpec]:
@@ -56,8 +58,14 @@ class Plugin(SpecPlugin):
         if action_id != 'mic_mute':
             return {'success': False, 'message': f'Unknown action: {action_id}'}
         reading = str(config.get('op') or '') == 'status'
-        muted, err = (xp.read_mic_mute() if reading
-                      else xp.set_mic_mute(None))
+        if _SYSTEM == 'Darwin':
+            # macOS: input level 0 = muted, read back after every change.
+            from actions import macos_controls
+            muted, err = (macos_controls.read_microphone_muted() if reading
+                          else macos_controls.set_microphone_mute(None))
+        else:
+            muted, err = (xp.read_mic_mute() if reading
+                          else xp.set_mic_mute(None))
         if muted is None:
             # A poll is silent (the face says why); only a press is an error.
             return live_result(err, '!', success=reading)

@@ -17,6 +17,7 @@ from .base import (
 )
 from .antigravity import ANTIGRAVITY_COMMANDS, ANTIGRAVITY_PROFILE
 from .claude_code import CLAUDE_CODE_COMMANDS, CLAUDE_CODE_PROFILE
+from .codex import CODEX_COMMANDS, CODEX_PROFILE
 from .copilot import COPILOT_COMMANDS, COPILOT_PROFILE
 from .cursor import CURSOR_COMMANDS, CURSOR_PROFILE
 from .devin import DEVIN_COMMANDS, DEVIN_PROFILE
@@ -27,6 +28,7 @@ from .vscode import VSCODE_COMMANDS, VSCODE_PROFILE
 ALL_COMMANDS: Tuple[Command, ...] = (
     ANTIGRAVITY_COMMANDS
     + COPILOT_COMMANDS + CURSOR_COMMANDS + CLAUDE_CODE_COMMANDS
+    + CODEX_COMMANDS
     + DEVIN_COMMANDS + JETBRAINS_COMMANDS + VISUAL_STUDIO_COMMANDS
     + VSCODE_COMMANDS
 )
@@ -40,13 +42,13 @@ COMMANDS_BY_ID: Dict[str, Command] = {cmd.id: cmd for cmd in ALL_COMMANDS}
 #   resolves to 'vscode' -- whose command set already merges the Copilot
 #   actions in. Copilot stays addressable by profile id for a dedicated AI
 #   scene.
-# - Both terminal agents list TERMINAL_EXES, which cannot disambiguate which
-#   agent a terminal hosts (session_marker/process-scan does that at action
-#   time). Devin is listed before Claude Code so claude-code keeps its
-#   existing claim on terminal exes.
+# - The terminal agents all list TERMINAL_EXES, which cannot disambiguate
+#   which agent a terminal hosts (session_marker/process-scan does that at
+#   action time). Devin and Codex are listed before Claude Code so
+#   claude-code keeps its existing claim on terminal exes.
 ALL_PROFILES: Tuple[AppProfile, ...] = (
     CURSOR_PROFILE, ANTIGRAVITY_PROFILE, COPILOT_PROFILE, DEVIN_PROFILE,
-    CLAUDE_CODE_PROFILE,
+    CODEX_PROFILE, CLAUDE_CODE_PROFILE,
     JETBRAINS_PROFILE, VISUAL_STUDIO_PROFILE, VSCODE_PROFILE,
 )
 
@@ -76,6 +78,7 @@ __all__ = [
     'VISUAL_STUDIO_EXES', 'DEVIN_EXES', 'ANTIGRAVITY_EXES',
     'ANTIGRAVITY_COMMANDS',
     'COPILOT_COMMANDS', 'CURSOR_COMMANDS', 'CLAUDE_CODE_COMMANDS',
+    'CODEX_COMMANDS',
     'DEVIN_COMMANDS', 'JETBRAINS_COMMANDS', 'VISUAL_STUDIO_COMMANDS',
     'VSCODE_COMMANDS',
     'ALL_COMMANDS', 'COMMANDS_BY_ID',

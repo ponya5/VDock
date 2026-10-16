@@ -25,10 +25,15 @@ describe('installCopy', () => {
     expect(installSteps('android').join(' ')).toContain('⋮')
   })
 
-  it('warns on Android over plain http, never on iOS or in a secure context', () => {
-    expect(installNote('android', false)).toContain('USE_SSL')
+  it('is honest about plain http on Android, without jargon (DL-011)', () => {
+    expect(installNote('android', false)).toContain('shortcut')
+    expect(installNote('android', false)).not.toContain('USE_SSL')
     expect(installNote('android', true)).toBeNull()
-    expect(installNote('ios', false)).toBeNull()
+  })
+
+  it('warns iOS users that the Home Screen app signs in on its own (DL-011)', () => {
+    expect(installNote('ios', false)).toContain('signs in on its own')
+    expect(installNote('ios', true)).toContain('signs in on its own')
   })
 })
 
@@ -54,9 +59,10 @@ describe('phone menu wiring', () => {
     expect(chrome).toContain('<InstallSheet v-if="showInstall"')
   })
 
-  it('hints on the keep-awake toggle that plain http needs the installed app or HTTPS', () => {
-    expect(chrome).toContain('const keepAwakeNeedsApp = !window.isSecureContext')
-    expect(chrome).toContain('Needs the installed app or HTTPS (USE_SSL)')
+  it('explains keep-awake without jargon when the real Wake Lock is missing (DL-011)', () => {
+    expect(chrome).toContain('const keepAwakeNeedsApp = !hasWakeLockApi()')
+    expect(chrome).toContain("raise Auto-Lock / Screen timeout in the phone's settings")
+    expect(chrome).not.toContain('USE_SSL')
   })
 
   it('reuses the single install copy for the Connect page step', () => {

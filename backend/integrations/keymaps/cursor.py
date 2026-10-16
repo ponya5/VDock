@@ -13,6 +13,12 @@ from .base import AppProfile, Command, CURSOR_EXES, RISK_INPUT, state_actions_of
 
 NEW_AGENT_CHAT_KEYS = ('ctrl', 'shift', 'l')
 FOCUS_CHAT_FOLLOWUP_KEYS = ('ctrl', 'shift', 'y')
+#: Cursor binds "Focus Chat Followup" as isWindows ? Ctrl+Shift+Y : Cmd+Y
+#: (read from the Cursor 3.25 bundle, DL-009) - the general Ctrl->Cmd rule
+#: would give Cmd+Shift+Y, which does nothing on macOS.
+FOCUS_CHAT_FOLLOWUP_MAC_KEYS = ('cmd', 'y')
+#: "Undo Edits" in the editor and "Cancel Chat" in a focused chat input.
+REJECT_OR_CANCEL_KEYS = ('ctrl', 'shift', 'backspace')
 CHAT_NEWLINE_KEYS = ('shift', 'enter')
 
 CURSOR_COMMANDS: Tuple[Command, ...] = (
@@ -29,8 +35,8 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
     Command(
         id='cursor_followup', label='Send Follow-up',
         description='Send a message to the current agent chat '
-                    '(Ctrl+Shift+Y, type, Enter). Defaults to "continue".',
-        keys=FOCUS_CHAT_FOLLOWUP_KEYS, icon='reply',
+                    '(Ctrl+Shift+Y / Cmd+Y, type, Enter). Defaults to "continue".',
+        keys=FOCUS_CHAT_FOLLOWUP_KEYS, mac_keys=FOCUS_CHAT_FOLLOWUP_MAC_KEYS, icon='reply',
         types_text='continue', submit=True,
         newline_keys=CHAT_NEWLINE_KEYS,
         keywords=('cursor', 'followup', 'continue', 'reply', 'send'),
@@ -39,18 +45,21 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
     Command(
         id='cursor_submit', label='Submit',
         description='Send the message typed in the current agent chat '
-                    '(Ctrl+Shift+Y, Enter) — focusing the chat first, so '
-                    'Enter never lands in a file.',
-        keys=FOCUS_CHAT_FOLLOWUP_KEYS, after_keys=(('enter',),),
+                    '(Ctrl+Shift+Y / Cmd+Y, Enter) — focusing the chat first, '
+                    'so Enter never lands in a file.',
+        keys=FOCUS_CHAT_FOLLOWUP_KEYS, mac_keys=FOCUS_CHAT_FOLLOWUP_MAC_KEYS,
+        after_keys=(('enter',),),
         icon='paper-plane',
         keywords=('cursor', 'submit', 'send', 'enter', 'prompt'),
         target_exes=CURSOR_EXES, risk=RISK_INPUT, priority=10,
     ),
     Command(
         id='cursor_cancel', label='Stop Generating',
-        description='Cancel the running agent / chat generation '
-                    '(Ctrl+Shift+Backspace).',
-        keys=('ctrl', 'shift', 'backspace'), icon='hand',
+        description='Cancel the running agent / chat generation - focuses '
+                    'the chat first, because the same chord in the editor '
+                    'rejects the agent\'s edits.',
+        keys=FOCUS_CHAT_FOLLOWUP_KEYS, mac_keys=FOCUS_CHAT_FOLLOWUP_MAC_KEYS,
+        after_keys=(REJECT_OR_CANCEL_KEYS,), icon='hand',
         keywords=('cursor', 'stop', 'cancel', 'interrupt', 'generation'),
         target_exes=CURSOR_EXES,
     ),
@@ -93,8 +102,9 @@ CURSOR_COMMANDS: Tuple[Command, ...] = (
     ),
     Command(
         id='cursor_reject', label='Reject Diff',
-        description='Reject the suggested change.',
-        keys=('ctrl', 'backspace'), icon='xmark',
+        description='Reject the suggested change (Undo Edits, '
+                    'Ctrl+Shift+Backspace). Ctrl+Backspace only deleted a word.',
+        keys=REJECT_OR_CANCEL_KEYS, icon='xmark',
         keywords=('cursor', 'reject', 'discard', 'diff'),
         target_exes=CURSOR_EXES,
     ),

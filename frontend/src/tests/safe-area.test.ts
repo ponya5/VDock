@@ -48,7 +48,7 @@ describe('safe-area padding', () => {
     const { code, errors } = compileStyle({ source: style, filename: 'AgentWaitingDock.vue', id: 'data-v-test', scoped: true })
     expect(errors).toEqual([])
     expect(code).toMatch(/html\.reveal-fab-visible \.agent-waiting-dock\[data-v-test\]/)
-    expect(code).toMatch(/html:is\(\.device-phone, \.device-tablet\) \.dock-dismiss\[data-v-test\]/)
+    expect(code).toMatch(/html:is\(\.device-phone, \.device-tablet, \.device-panel\) \.dock-dismiss\[data-v-test\]/)
   })
 
   it('does not double-pad surfaces that already handle the inset themselves', () => {
@@ -66,7 +66,7 @@ describe('html device class', () => {
 
 describe('44 px phone and tablet targets', () => {
   const phoneRule = (source: string, selector: string) =>
-    new RegExp(`html:is\\(\\.device-phone, \\.device-tablet\\)\\s+${selector}\\s*\\{[^}]*(min-)?(width|height)[^}]*44px`).test(source)
+    new RegExp(`html:is\\(\\.device-phone, \\.device-tablet, \\.device-panel\\)\\s+${selector}\\s*\\{[^}]*(min-)?(width|height)[^}]*44px`).test(source)
 
   it('grows dock chips, dock dismiss and Mission Control entry on phones', () => {
     const dock = read('components/AgentWaitingDock.vue')

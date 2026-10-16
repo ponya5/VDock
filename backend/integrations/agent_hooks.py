@@ -1,6 +1,6 @@
-"""Install VDock's agent hook into Claude Code, Cursor and Antigravity.
+"""Install VDock's agent hook into Claude Code, Cursor, Antigravity and Codex.
 
-All three read a user-level JSON file listing shell commands to run on
+All four read a user-level JSON file listing shell commands to run on
 lifecycle events. VDock adds one command — ``scripts/vdock_agent_hook.py`` —
 to the events that reveal the agent's state (see ``agent_state``).
 
@@ -21,6 +21,8 @@ import logging
 import os
 import platform
 import re
+import shlex
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
@@ -35,6 +37,8 @@ HOOK_MARKER = 'vdock_agent_hook'
 CLAUDE_HOOK_EVENTS: Tuple[str, ...] = (
     'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse',
     'Notification', 'Stop', 'SessionEnd',
+    # DL-009: immediate permission signal, and the API-error end of a turn.
+    'PermissionRequest', 'StopFailure',
 )
 
 #: Cursor events that are purely observational. Permission-gating events
@@ -67,6 +71,8 @@ class HookInstallResult:
     already: bool
     settings_path: Path
     added_events: Tuple[str, ...]
+    #: A one-time step the user still has to take for the hook to run.
+    note: str = ''
 
 
 @dataclass(frozen=True)
@@ -78,7 +84,43 @@ class HookUninstallResult:
 
 
 def hook_script_path() -> Path:
+    """The hook script shipped with this VDock (source tree / frozen bundle)."""
     return Path(__file__).resolve().parent.parent / 'scripts' / 'vdock_agent_hook.py'
+
+
+#: Release builds run the hook through the frozen backend itself; app.py
+#: dispatches on this flag before importing Flask. It contains HOOK_MARKER,
+#: so ownership detection keeps working for these commands too.
+FROZEN_HOOK_FLAG = '--vdock_agent_hook'
+
+
+def stable_hook_dir() -> Path:
+    """Where the hook copy agents run lives - outside the VDock folder (DL-009).
+
+    The agent's settings file outlives the VDock folder: moved, re-cloned or
+    deleted, a hook pointing *into* it ran ``python3 <missing file>``, which
+    exits 2 - and exit 2 is how Claude Code and Cursor hooks say "block this
+    prompt". A copy under the user's home never disappears with the folder.
+    """
+    return Path.home() / '.vdock' / 'agent_hook'
+
+
+def is_frozen() -> bool:
+    return bool(getattr(sys, 'frozen', False))
+
+
+def ensure_stable_hook_script() -> Path:
+    """Copy the shipped hook script to ``stable_hook_dir()`` when it differs."""
+    target = stable_hook_dir() / 'vdock_agent_hook.py'
+    shipped = hook_script_path().read_bytes()
+    try:
+        if target.read_bytes() == shipped:
+            return target
+    except OSError:
+        pass
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write(target, shipped)
+    return target
 
 
 def hook_interpreter() -> str:
@@ -91,15 +133,48 @@ def hook_interpreter() -> str:
     return 'python' if platform.system() == 'Windows' else 'python3'
 
 
-def hook_command(source: str, event: str = '') -> str:
-    # Forward slashes work on Windows Python too and avoid JSON escaping pain.
-    script = hook_script_path().as_posix()
-    command = (
-        f'{hook_interpreter()} "{script}" --port {Config.PORT} --source {source}'
-    )
+def hook_argv(source: str, event: str = '') -> List[str]:
+    """The hook as an argument list (Codex runs it without a shell).
+
+    Release builds: the frozen backend in hook mode - no Python needed on the
+    machine (a bare ``python`` is the Microsoft Store stub on many Windows
+    PCs). Source installs: the system interpreter on the stable copy, exactly
+    the interpreter choice that already works on both OSes.
+    """
+    if is_frozen():
+        argv = [Path(sys.executable).as_posix(), FROZEN_HOOK_FLAG]
+    else:
+        # Forward slashes work on Windows Python too and avoid JSON escaping pain.
+        argv = [hook_interpreter(), (stable_hook_dir() / 'vdock_agent_hook.py').as_posix()]
+    argv += ['--port', str(Config.PORT), '--source', source]
     # Antigravity's stdin payload doesn't carry the event name, so the
     # command pins it instead of relying on hook_event_name.
-    return f'{command} --event {event}' if event else command
+    if event:
+        argv += ['--event', event]
+    return argv
+
+
+def hook_command(source: str, event: str = '') -> str:
+    argv = hook_argv(source, event)
+    if is_frozen():
+        exe = argv[0]
+        # Quote only when needed: a quoted first token is a plain string to
+        # PowerShell, while a path with spaces needs quotes everywhere.
+        head = f'"{exe}"' if ' ' in exe else exe
+        return ' '.join([head] + argv[1:])
+    return ' '.join([argv[0], f'"{argv[1]}"'] + argv[2:])
+
+
+def hook_target_missing(command: str) -> bool:
+    """True when an installed VDock hook points at a file that is gone."""
+    try:
+        parts = shlex.split(command, posix=True)
+    except ValueError:
+        return False
+    if FROZEN_HOOK_FLAG in parts:
+        return not Path(parts[0]).exists()
+    scripts = [part for part in parts if part.endswith('vdock_agent_hook.py')]
+    return bool(scripts) and not Path(scripts[0]).exists()
 
 
 def claude_settings_path() -> Path:
@@ -378,26 +453,62 @@ def _remove_antigravity_events(settings: Dict[str, Any]) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
-# Codex: ~/.codex/config.toml, top-level ``notify = ["cmd", "arg", ...]``.
-# Codex has one hook, fired when a turn completes, so it can report
-# "ready" but never "working". TOML, so this is a small text-level merge
-# instead of a JSON round-trip: comments and tables are left exactly as is.
+# Codex: ~/.codex/hooks.json, the same {"hooks": {Event: [{matcher, hooks}]}}
+# shape as Claude Code (DL-012). Codex used to have a single ``notify``
+# command, fired when a turn completes; installs made back then keep that
+# line (refreshed, never added) until the user removes the hook.
 # ---------------------------------------------------------------------------
 
-CODEX_HOOK_EVENTS: Tuple[str, ...] = ('agent-turn-complete',)
+CODEX_HOOK_EVENTS: Tuple[str, ...] = (
+    'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse',
+    'PermissionRequest', 'Stop', 'Interrupt', 'SessionEnd',
+)
+
+#: Codex gives these two only 1 s unless told otherwise (3 s at most); the
+#: rest default to 10 minutes - far longer than a state report may take.
+_CODEX_HOOK_TIMEOUTS = {'Interrupt': 3, 'SessionEnd': 3}
+_CODEX_DEFAULT_TIMEOUT = 10
+
+CODEX_TRUST_NOTE = ('Codex runs a new hook only after you trust it: open Codex, '
+                    'type /hooks and trust the VDock hook.')
 
 _TOML_NOTIFY_RE = re.compile(r'^[ \t]*notify[ \t]*=', re.MULTILINE)
 _TOML_FIRST_TABLE_RE = re.compile(r'^[ \t]*\[', re.MULTILINE)
+
+
+def codex_hooks_path() -> Path:
+    return Path.home() / '.codex' / 'hooks.json'
 
 
 def codex_config_path() -> Path:
     return Path.home() / '.codex' / 'config.toml'
 
 
+def codex_installed_events(settings: Dict[str, Any]) -> List[str]:
+    hooks = settings.get('hooks') or {}
+    return [event for event in CODEX_HOOK_EVENTS
+            if _claude_event_has_hook(hooks.get(event))]
+
+
+def _add_codex_events(settings: Dict[str, Any]) -> List[str]:
+    hooks = settings.setdefault('hooks', {})
+    command = hook_command('codex')
+    added: List[str] = []
+    for event in CODEX_HOOK_EVENTS:
+        if _claude_event_has_hook(hooks.get(event)):
+            continue
+        hooks.setdefault(event, []).append({
+            'matcher': '',
+            'hooks': [{'type': 'command', 'command': command,
+                       'timeout': _CODEX_HOOK_TIMEOUTS.get(event, _CODEX_DEFAULT_TIMEOUT)}],
+        })
+        added.append(event)
+    return added
+
+
 def _codex_notify_line() -> str:
-    script = hook_script_path().as_posix()
     # JSON strings are valid TOML basic strings.
-    argv = [hook_interpreter(), script, '--port', str(Config.PORT), '--source', 'codex']
+    argv = hook_argv('codex')
     return f'notify = {json.dumps(argv)}'
 
 
@@ -407,15 +518,34 @@ def _codex_top_level(text: str) -> str:
     return text[:table.start()] if table else text
 
 
-def _codex_installed_events(text: str) -> List[str]:
+def _codex_legacy_notify(text: str) -> bool:
+    """Does the config still carry VDock's own pre-hooks ``notify`` line?"""
+    return any(_TOML_NOTIFY_RE.match(line) and HOOK_MARKER in line
+               for line in _codex_top_level(text).splitlines())
+
+
+def _codex_notify_target_missing(text: str) -> bool:
     for line in _codex_top_level(text).splitlines():
         if _TOML_NOTIFY_RE.match(line) and HOOK_MARKER in line:
-            return list(CODEX_HOOK_EVENTS)
-    return []
+            try:
+                argv = json.loads(line.split('=', 1)[1].strip())
+                if hook_target_missing(shlex.join(argv)):
+                    return True
+            except (ValueError, TypeError):
+                pass
+    return False
 
 
-def _refresh_codex_notify(path: Path, text: str) -> HookInstallResult:
-    """Point an installed codex notify line at today's interpreter and port."""
+def _read_codex_config() -> str:
+    path = codex_config_path()
+    try:
+        return path.read_text(encoding='utf-8') if path.exists() else ''
+    except OSError:
+        return ''
+
+
+def _refresh_codex_notify(path: Path, text: str) -> bool:
+    """Point a legacy VDock notify line at today's interpreter and port."""
     top_level_length = len(_codex_top_level(text))
     fresh_line = _codex_notify_line()
     rewritten = []
@@ -426,34 +556,17 @@ def _refresh_codex_notify(path: Path, text: str) -> HookInstallResult:
         rewritten.append(line)
     updated = ''.join(rewritten) + text[top_level_length:]
     if updated == text:
-        return HookInstallResult(True, True, path, ())
+        return False
     path.with_suffix('.vdock-backup.toml').write_bytes(text.encode('utf-8'))
     _atomic_write(path, updated.encode('utf-8'))
-    logger.info('Refreshed VDock codex hook in %s', path)
-    return HookInstallResult(True, False, path, ())
+    logger.info('Refreshed VDock codex notify hook in %s', path)
+    return True
 
 
-def _install_codex(path: Path) -> HookInstallResult:
-    text = path.read_text(encoding='utf-8') if path.exists() else ''
-    if _codex_installed_events(text):
-        return _refresh_codex_notify(path, text)
-    if _TOML_NOTIFY_RE.search(_codex_top_level(text)):
-        # Codex takes a single notify command; never replace the user's.
-        raise HookSettingsError(
-            f'{path} already defines a notify command - remove it or add '
-            f'the VDock hook by hand')
-    updated = _codex_notify_line() + '\n' + text
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        path.with_suffix('.vdock-backup.toml').write_text(text, encoding='utf-8')
-    path.write_text(updated, encoding='utf-8')
-    logger.info('Installed VDock codex hook into %s', path)
-    return HookInstallResult(True, False, path, CODEX_HOOK_EVENTS)
-
-
-def _uninstall_codex(path: Path) -> HookUninstallResult:
+def _remove_codex_notify(path: Path) -> bool:
+    """Drop VDock's legacy notify line; every other byte stays as it was."""
     if not path.exists():
-        return HookUninstallResult(False, True, path, ())
+        return False
     # Bytes in, bytes out: every other line keeps its exact line ending.
     text = path.read_bytes().decode('utf-8')
     top_level_length = len(_codex_top_level(text))
@@ -463,11 +576,11 @@ def _uninstall_codex(path: Path) -> HookUninstallResult:
             kept.append(line)
     updated = ''.join(kept) + text[top_level_length:]
     if updated == text:
-        return HookUninstallResult(False, True, path, ())
+        return False
     path.with_suffix('.vdock-backup.toml').write_bytes(text.encode('utf-8'))
     _atomic_write(path, updated.encode('utf-8'))
-    logger.info('Removed VDock codex hook from %s', path)
-    return HookUninstallResult(True, False, path, CODEX_HOOK_EVENTS)
+    logger.info('Removed VDock codex notify hook from %s', path)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -495,11 +608,14 @@ _TARGETS: Dict[str, _AgentHookTarget] = {
         antigravity_hooks_path, antigravity_installed_events,
         _add_antigravity_events, AGY_HOOK_EVENTS,
     ),
+    'codex': _AgentHookTarget(
+        codex_hooks_path, codex_installed_events, _add_codex_events,
+        CODEX_HOOK_EVENTS,
+    ),
 }
 
 
-
-SUPPORTED_AGENTS: Tuple[str, ...] = (*_TARGETS, 'codex')
+SUPPORTED_AGENTS: Tuple[str, ...] = tuple(_TARGETS)
 
 #: Strips VDock's own entries from a parsed settings dict, returning the
 #: events it touched. Kept apart from ``_AgentHookTarget`` so installers
@@ -508,6 +624,7 @@ _REMOVERS: Dict[str, Callable[[Dict[str, Any]], List[str]]] = {
     'claude': _remove_claude_events,
     'cursor': _remove_cursor_events,
     'antigravity': _remove_antigravity_events,
+    'codex': _remove_claude_events,  # same hooks.json shape as Claude Code
 }
 
 
@@ -518,16 +635,27 @@ def _target(agent: str) -> _AgentHookTarget:
     return target
 
 
+def _vdock_commands(node: Any) -> List[str]:
+    """Every VDock hook command string inside a settings structure."""
+    found: List[str] = []
+    if isinstance(node, dict):
+        command = node.get('command')
+        if isinstance(command, str) and HOOK_MARKER in command:
+            found.append(command)
+        for child in node.values():
+            found += _vdock_commands(child)
+    elif isinstance(node, list):
+        for child in node:
+            found += _vdock_commands(child)
+    return found
+
+
 def hook_status(agent: str) -> Dict[str, Any]:
-    """Install state for ``agent``: fully installed, partial, or absent."""
-    if agent == 'codex':
-        path = codex_config_path()
-        try:
-            text = path.read_text(encoding='utf-8') if path.exists() else ''
-        except OSError:
-            text = ''
-        return {'installed': bool(_codex_installed_events(text)),
-                'partial': False, 'settings_path': str(path)}
+    """Install state for ``agent``: fully installed, partial, or absent.
+
+    ``broken`` flags an installed hook whose script or executable is gone
+    (DL-009) - Settings offers Reinstall, startup repairs it.
+    """
     target = _target(agent)
     path = target.path()
     try:
@@ -536,9 +664,18 @@ def hook_status(agent: str) -> Dict[str, Any]:
         return {'installed': False, 'partial': False, 'parse_error': True,
                 'settings_path': str(path)}
     present = target.installed_events(settings)
+    broken = any(hook_target_missing(c) for c in _vdock_commands(settings))
+    legacy = False
+    if agent == 'codex':
+        config_text = _read_codex_config()
+        legacy = _codex_legacy_notify(config_text)
+        broken = broken or _codex_notify_target_missing(config_text)
     return {
         'installed': len(present) == len(target.all_events),
-        'partial': 0 < len(present) < len(target.all_events),
+        # A pre-hooks Codex install (notify only) is offered the upgrade.
+        'partial': (0 < len(present) < len(target.all_events))
+                   or (legacy and not present),
+        'broken': broken,
         'settings_path': str(path),
     }
 
@@ -549,21 +686,29 @@ def install_hook(agent: str) -> HookInstallResult:
     Raises HookSettingsError when the existing file can't be parsed, and
     OSError when it can't be written.
     """
-    if agent == 'codex':
-        return _install_codex(codex_config_path())
+    if not is_frozen():
+        ensure_stable_hook_script()
     target = _target(agent)
     path = target.path()
     settings = _load_json(path)
     refreshed = _refresh_stale_commands(settings)
     added = target.add_events(settings)
+    # An install made before Codex had hooks keeps its notify line working.
+    notify_refreshed = False
+    if agent == 'codex':
+        config = codex_config_path()
+        text = _read_codex_config()
+        if _codex_legacy_notify(text):
+            notify_refreshed = _refresh_codex_notify(config, text)
+    note = CODEX_TRUST_NOTE if agent == 'codex' and added else ''
     if not added and not refreshed:
-        return HookInstallResult(True, True, path, ())
+        return HookInstallResult(True, not notify_refreshed, path, (), note)
     _write_with_backup(path, settings)
     logger.info(
         'Installed VDock %s hook into %s (added: %s, refreshed commands: %d)',
         agent, path, ', '.join(added) or 'none', refreshed,
     )
-    return HookInstallResult(True, False, path, tuple(added))
+    return HookInstallResult(True, False, path, tuple(added), note)
 
 
 def refresh_installed_hooks() -> List[str]:
@@ -593,14 +738,13 @@ def uninstall_hook(agent: str) -> HookUninstallResult:
     deleted. Raises HookSettingsError when the file can't be parsed, and
     OSError when it can't be written.
     """
-    if agent == 'codex':
-        return _uninstall_codex(codex_config_path())
     target = _target(agent)
     path = target.path()
     settings = _load_json(path)
     removed = _REMOVERS[agent](settings)
+    notify_removed = agent == 'codex' and _remove_codex_notify(codex_config_path())
     if not removed:
-        return HookUninstallResult(False, True, path, ())
+        return HookUninstallResult(notify_removed, not notify_removed, path, ())
     _write_with_backup(path, settings)
     logger.info('Removed VDock %s hook from %s (%s)', agent, path, ', '.join(removed))
     return HookUninstallResult(True, False, path, tuple(removed))

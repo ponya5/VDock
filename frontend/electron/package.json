@@ -1,6 +1,6 @@
 {
   "name": "vdock-electron",
-  "version": "2.3.3",
+  "version": "2.4.0",
   "description": "VDock - Virtual Stream Deck Desktop App",
   "license": "MIT",
   "author": "ponya5",
@@ -27,7 +27,8 @@
     },
     "files": [
       "main.js",
-      "preload.js"
+      "preload.js",
+      "backend-runtime.js"
     ],
     "extraResources": [
       {
@@ -93,7 +94,13 @@
         "dmg",
         "zip"
       ],
-      "icon": "../public/vdock-icon.png"
+      "icon": "../public/vdock-icon.png",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "VDock controls apps such as Music, Spotify, Terminal and System Events when you press their buttons."
+      }
     },
     "linux": {
       "category": "Utility",

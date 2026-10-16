@@ -27,6 +27,25 @@ cert). The pipeline already signs automatically when the secrets below
 exist; until then, artifacts ship unsigned (Windows) or ad-hoc signed
 (macOS).
 
+Ad-hoc signing matters on macOS: a completely unsigned app is reported
+as **"VDock is damaged and can't be opened"** on Apple Silicon, with no
+way past it except the terminal. When no certificate is configured,
+`release.yml` and `scripts/build-release.sh` therefore pass
+`-c.mac.identity=-` to electron-builder (ad-hoc signature), which turns
+the error into the normal "Apple could not verify..." prompt that users
+can get past in System Settings. With `CSC_LINK` (or a Developer ID in
+the local keychain) the flag is not passed and the real certificate is
+used. The "Verify macOS code signature" step in `release.yml` runs
+`codesign --verify --deep --strict` on every build.
+
+Both signing modes use the hardened runtime with
+`frontend/electron/entitlements.mac.plist` (JIT and unsigned executable
+memory for V8 and the frozen Python's ctypes/pyobjc, library validation
+off for the PyInstaller bundle, and `automation.apple-events`), and
+`Info.plist` carries `NSAppleEventsUsageDescription` — without it macOS
+silently denies the Automation requests behind Play/Next/Previous
+(Music, Spotify) and the Terminal agent buttons instead of asking.
+
 ### Windows (SmartScreen)
 
 Get a code-signing certificate, export as `.p12`/`.pfx`, base64 it into
@@ -61,17 +80,62 @@ free path for notarized distribution. Then:
 Until signing is in place, tell users in release notes:
 
 - **Windows:** SmartScreen → "More info" → "Run anyway" (expected for
-  unsigned/new-reputation apps).
-- **macOS:** right-click → Open, or `xattr -d com.apple.quarantine
-  /Applications/VDock.app` after install.
+  unsigned/new-reputation apps). The installer adds a Windows Defender
+  Firewall rule for `resources\backend\vdock-backend.exe` (Private
+  networks only) so phones can connect; on a per-user install Windows
+  asks for approval once. The uninstaller removes the rule (an update
+  keeps it). The portable exe adds no rule — Windows asks the first
+  time "Allow LAN access" is on.
+- **macOS:** drag VDock to Applications and open it. macOS says it
+  "could not verify VDock is free of malware" → **Done**, then
+  **System Settings → Privacy & Security**, scroll to Security and click
+  **Open Anyway** next to the VDock message, and confirm (macOS 15+ no
+  longer offers right-click → Open for this). Fallback, in Terminal:
+  `xattr -dr com.apple.quarantine /Applications/VDock.app`.
 - **Linux:** no gatekeeper — `chmod +x *.AppImage && ./VDock-*.AppImage`.
+
+## What the packaged app does at run time
+
+Support answers for the installed app (DL-010):
+
+- **Data and logs:** `DATA_DIR` = `<Electron userData>/vdock-data`
+  (`%APPDATA%\vdock-electron\vdock-data` on Windows,
+  `~/Library/Application Support/vdock-electron/vdock-data` on macOS —
+  the folder is named after `package.json` `name`, so never rename it).
+  The backend's output goes to `vdock-backend-electron.log` there, next
+  to `vdock.log`. A source checkout's Electron window uses the same
+  `vdock-electron` profile folder (but `backend/data` for its data), so
+  `uninstall.sh` / `uninstall.bat` clear that folder *around*
+  `vdock-data`, and only one of the two VDock windows runs at a time.
+- **Port:** Electron chooses it, not the backend. `PORT` in
+  `DATA_DIR/.env` (written by Settings → Ports) wins when it is free;
+  an upgraded install keeps the port it used before (5000 on Windows);
+  a fresh install takes the first free port from 5001 (5000 is AirPlay
+  Receiver on every Mac). The choice is saved to `DATA_DIR/.env`.
+- **Crashes:** a backend that dies within 15 s is restarted after 2 s,
+  then 4 s; the third quick failure shows a dialog with the log path
+  instead of restarting forever. "Address already in use" moves it to
+  another port.
+- **PATH (macOS/Linux):** the backend gets the user's login-shell PATH,
+  so `claude`, `gh`, `cursor` from Homebrew/mise/nvm are found when VDock
+  is opened from Finder or the Dock.
+- **One instance:** opening VDock again focuses the running window.
+- **Not yet:** the Windows uninstaller does not remove agent hooks
+  (the frozen backend has no remove-hooks entry point yet), and macOS
+  has no uninstaller — remove hooks in Settings before deleting the app.
 
 ## Local builds
 
 ```bash
-./scripts/build-release.sh    # POSIX: freeze → vite → electron-builder
-./scripts/build-release.ps1   # Windows
+./scripts/build-release.sh              # POSIX: freeze → vite → electron-builder
+./scripts/build-release.sh --mac dir    # macOS: unpacked VDock.app only (fast)
+./scripts/build-release.ps1             # Windows
 ```
+
+Build with Python 3.10–3.14 (CI uses 3.12); `requirements-build.txt`
+pins PyInstaller 6.22.3, which supports up to 3.15 but VDock's runtime
+dependencies do not. Check a macOS build with
+`codesign --verify --deep --strict --verbose=2 dist-electron/mac-arm64/VDock.app`.
 
 Each OS only builds its own installer — cross-building macOS artifacts
 from Windows/Linux isn't supported by electron-builder. That's what the

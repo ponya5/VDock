@@ -121,7 +121,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     activate: '[data-tour="nav-server"]',
     target: '[data-tour="allow-lan"]',
     title: 'Use your phone or tablet',
-    text: 'Phone and tablet access is OFF by default, so nothing else on your network can reach your deck. Until you turn on "Allow LAN access" here and restart VDock (the button appears right here), your phone cannot open VDock. Set a deck password too — then scan the QR code.',
+    text: 'Phone and tablet access is OFF by default, so nothing else on your network can reach your deck — until then your phone cannot open VDock. Press "Turn on phone access" here (a deck password is recommended): VDock restarts once and shows a code — scan it with your phone\'s camera.',
     placement: 'bottom',
   },
   {

@@ -11,6 +11,7 @@ test to clean up after itself.
 """
 import os
 import sys
+import tempfile
 from pathlib import Path
 from unittest import mock
 
@@ -79,7 +80,70 @@ def assume_macos_accessibility_granted():
     """
     with mock.patch(
         'actions.macos_controls.is_accessibility_trusted', return_value=True
+    ), mock.patch(
+        # Nor the host Mac's lock screen (DL-009) - a locked dev machine
+        # would refuse every keystroke test.
+        'utils.window_focus._macos_screen_locked', return_value=False
     ):
+        yield
+
+
+_STABLE_HOOK_DIR = Path(tempfile.mkdtemp(prefix='vdock-test-hook-'))
+
+
+@pytest.fixture(autouse=True)
+def hook_copy_never_lands_in_real_home():
+    """install_hook copies the hook script under ~/.vdock (DL-009); tests
+    must never write the developer's home. Same no-monkeypatch rule."""
+    with mock.patch('integrations.agent_hooks.stable_hook_dir', return_value=_STABLE_HOOK_DIR):
+        yield
+
+
+_AGENT_HOME = Path(tempfile.mkdtemp(prefix='vdock-test-agents-'))
+
+
+@pytest.fixture(autouse=True)
+def agent_settings_never_touch_real_home():
+    """Every agent's settings file lives in a temp home for every test.
+
+    refresh_installed_hooks() walks ALL agents; a test that redirected only
+    Claude's file rewrote the developer's real ~/.cursor/hooks.json (DL-009).
+    Tests that need their own paths still override these per test.
+    """
+    import dataclasses
+    from integrations import agent_hooks
+    redirected = {
+        name: dataclasses.replace(target, path=(lambda name=name, rel=rel: _AGENT_HOME / name / rel))
+        for name, target, rel in (
+            (n, t, t.path().name) for n, t in agent_hooks._TARGETS.items()
+        )
+    }
+    with mock.patch.dict(agent_hooks._TARGETS, redirected), \
+            mock.patch('integrations.agent_hooks.codex_config_path',
+                       return_value=_AGENT_HOME / 'codex' / 'config.toml'):
+        yield
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        'markers',
+        'real_trusted_host: use the real DL-008 "this computer is trusted" rule',
+    )
+
+
+@pytest.fixture(autouse=True)
+def test_client_is_another_device(request):
+    """The Flask test client calls from 127.0.0.1 with ``Host: localhost`` -
+    exactly the computer DL-008 trusts - so every "requires auth" test would
+    sail through. Treat test requests as another device on the Wi-Fi unless a
+    test opts into the real rule with ``@pytest.mark.real_trusted_host``.
+    Same no-monkeypatch rule as above.
+    """
+    if request.node.get_closest_marker('real_trusted_host'):
+        yield
+        return
+    with mock.patch('auth.auth_manager.is_trusted_local_request', return_value=False), \
+            mock.patch('auth.is_trusted_local_request', return_value=False):
         yield
 
 

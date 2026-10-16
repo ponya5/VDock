@@ -83,13 +83,26 @@ def find_target_window(
     return matches[0][0]
 
 
+def _macos_screen_locked() -> bool:
+    """True while the Mac shows its lock screen (no permission needed)."""
+    try:
+        import Quartz
+        session = Quartz.CGSessionCopyCurrentDictionary()
+    except Exception:  # noqa: BLE001 - unknown means "not known to be locked"
+        return False
+    return bool(session and session.get('CGSSessionScreenIsLocked'))
+
+
 def interactive_desktop_blocked() -> bool:
     """True while Windows shows the lock screen or its screensaver.
 
     Input then goes to a separate desktop ('Winlogon' / 'Screen-saver'), so
     no window can be focused and no keystroke reaches an app -- worth
-    telling the user instead of reporting a generic focus failure.
+    telling the user instead of reporting a generic focus failure. macOS:
+    the lock screen does the same (DL-009).
     """
+    if platform.system() == 'Darwin':
+        return _macos_screen_locked()
     if platform.system() != 'Windows':
         return False
     import ctypes
@@ -713,6 +726,19 @@ def find_session_host_window(
     return candidates[0][1]
 
 
+def host_window_for_pid(marker: str, pid: int) -> Optional[int]:
+    """HWND hosting exactly the ``marker`` session ``pid``, else None.
+
+    Unlike ``find_session_host_window(prefer_pid=...)`` this never falls back
+    to another session: answering an approval prompt in the wrong terminal is
+    worse than refusing (DL-012).
+    """
+    for host in list_session_hosts(marker):
+        if host.get('pid') == pid:
+            return host.get('hwnd')
+    return None
+
+
 def list_session_hosts(marker: str) -> List[dict]:
     """One row per live ``marker`` session that owns a host window.
 
@@ -1042,6 +1068,94 @@ def _wait_frontmost(bundle_path: str, timeout: float = _MACOS_FRONT_TIMEOUT) -> 
         time.sleep(0.1)
 
 
+#: Editors that host Claude Code in an integrated terminal pane: the app is
+#: in front, but keystrokes go to whichever pane has focus (DL-009).
+_EDITOR_HOST_IDENTITIES = frozenset({
+    'cursor.app', 'visual studio code.app', 'visual studio code - insiders.app',
+    'vscodium.app', 'windsurf.app', 'antigravity.app',
+})
+
+#: Why the last macOS focus attempt was refused - shown to the user.
+_last_focus_problem: Optional[str] = None
+
+
+def last_focus_problem() -> Optional[str]:
+    return _last_focus_problem
+
+
+def _ax_terminal_focused(app_pid: int) -> Optional[bool]:
+    """Whether an editor's focused element is its integrated terminal.
+
+    VS Code-family apps expose xterm's input as a textarea with class
+    ``xterm-helper-textarea`` described "Terminal N, <process>" (read from
+    Cursor 3.25's accessibility tree). None when it can't be told.
+    """
+    try:
+        from ApplicationServices import (
+            AXIsProcessTrusted, AXUIElementCopyAttributeValue,
+            AXUIElementCreateApplication, AXUIElementSetAttributeValue,
+        )
+    except ImportError:
+        return None
+    try:
+        if not AXIsProcessTrusted():
+            return None
+        app = AXUIElementCreateApplication(app_pid)
+        # Electron builds its accessibility tree only when asked.
+        AXUIElementSetAttributeValue(app, 'AXManualAccessibility', True)
+        focused = None
+        for _attempt in range(6):
+            error, focused = AXUIElementCopyAttributeValue(app, 'AXFocusedUIElement', None)
+            if not error and focused is not None:
+                break
+            time.sleep(0.1)
+        if focused is None:
+            return None
+        error, classes = AXUIElementCopyAttributeValue(focused, 'AXDOMClassList', None)
+        if not error and classes is not None and 'xterm-helper-textarea' in [str(c) for c in classes]:
+            return True
+        error, description = AXUIElementCopyAttributeValue(focused, 'AXDescription', None)
+        return bool(not error and str(description or '').startswith('Terminal '))
+    except Exception as error:  # noqa: BLE001 - unknown = let the caller decide
+        logger.debug('Could not read the focused element: %s', error)
+        return None
+
+
+def session_input_focused(handle: int) -> Optional[bool]:
+    """Will keystrokes reach the session's terminal? (macOS, DL-009)
+
+    False only when the session runs in an editor's integrated terminal and
+    the editor's focus is elsewhere (the open file, the chat) - typing there
+    would edit a file. None when it doesn't apply or can't be told.
+    """
+    if platform.system() != 'Darwin':
+        return None
+    import psutil
+
+    try:
+        host = _macos_host_app(psutil.Process(int(handle)), _macos_regular_app_pids())
+    except (ImportError, psutil.Error, TypeError, ValueError):
+        return None
+    if host is None or os.path.basename(host[1]).lower() not in _EDITOR_HOST_IDENTITIES:
+        return None
+    return _ax_terminal_focused(host[0])
+
+
+def _visible_window_count(app_pid: int) -> Optional[int]:
+    """On-screen normal windows of an app (no permission needed)."""
+    try:
+        from Quartz import (
+            CGWindowListCopyWindowInfo, kCGNullWindowID,
+            kCGWindowListExcludeDesktopElements, kCGWindowListOptionOnScreenOnly,
+        )
+    except ImportError:
+        return None
+    windows = CGWindowListCopyWindowInfo(
+        kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements, kCGNullWindowID)
+    return sum(1 for w in windows or []
+               if w.get('kCGWindowOwnerPID') == app_pid and w.get('kCGWindowLayer') == 0)
+
+
 def session_host_frontmost(handle: int) -> Optional[bool]:
     """Whether the app hosting session ``handle`` is frontmost (macOS).
 
@@ -1092,7 +1206,20 @@ def _focus_session_macos(session_pid: int) -> bool:
     except (psutil.Error, OSError):
         cwd = None
     identity = os.path.basename(bundle).lower()
+    global _last_focus_problem
+    _last_focus_problem = None
     if not _select_tty_tab(identity, tty):
+        if identity in _TTY_TAB_SCRIPTS and (_visible_window_count(app_pid) or 0) > 1:
+            # Without the exact tab, activating the app brings forward its
+            # last-used window - with several open that may be another
+            # shell. Refuse rather than guess (DL-009).
+            name = _macos_host_name(bundle)
+            _last_focus_problem = (
+                f'Several {name} windows are open and macOS did not let VDock pick '
+                f'the one running the session. Allow VDock to control {name} under '
+                'System Settings > Privacy & Security > Automation, or close the '
+                'other windows.')
+            return False
         _raise_project_window(app_pid, cwd)
     # ``open -a`` activates without any permission (NSRunningApplication
     # activation is refused for background processes on recent macOS).

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for VDock.app and every binary inside it
+  (electron-builder: mac.entitlements + mac.entitlementsInherit), DL-010.
+  - allow-jit / allow-unsigned-executable-memory: V8, and libffi closures
+    used by ctypes / pyobjc in the frozen Python backend.
+  - disable-library-validation: the PyInstaller bundle loads its own dylibs
+    and extension modules; required for ad-hoc signed builds.
+  - automation.apple-events: Play/Next/Previous drive Music and Spotify,
+    agent buttons drive Terminal/iTerm (macOS asks once, see
+    NSAppleEventsUsageDescription in package.json).
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+</dict>
+</plist>

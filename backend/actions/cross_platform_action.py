@@ -681,7 +681,7 @@ class CrossPlatformAction(BaseAction):
         if _SYSTEM == 'Windows':
             if self._check_nircmd():
                 return self._run_command(
-                    f'nircmd.exe changesysvolume {nircmd_step_units(self.config.get('step'))}')
+                    f'nircmd.exe changesysvolume {nircmd_step_units(self.config.get("step"))}')
             else:
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_VOLUME_UP)
@@ -701,7 +701,7 @@ class CrossPlatformAction(BaseAction):
         if _SYSTEM == 'Windows':
             if self._check_nircmd():
                 return self._run_command(
-                    f'nircmd.exe changesysvolume -{nircmd_step_units(self.config.get('step'))}')
+                    f'nircmd.exe changesysvolume -{nircmd_step_units(self.config.get("step"))}')
             else:
                 # Use Windows API via ctypes
                 return self._send_windows_key(VK_VOLUME_DOWN)

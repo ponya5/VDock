@@ -30,6 +30,7 @@ def test_all_commands_is_the_union_of_the_per_app_tuples():
         set(keymaps.ANTIGRAVITY_COMMANDS)
         | set(keymaps.COPILOT_COMMANDS) | set(keymaps.CURSOR_COMMANDS)
         | set(keymaps.CLAUDE_CODE_COMMANDS) | set(keymaps.DEVIN_COMMANDS)
+        | set(keymaps.CODEX_COMMANDS)
         | set(keymaps.JETBRAINS_COMMANDS)
         | set(keymaps.VISUAL_STUDIO_COMMANDS) | set(keymaps.VSCODE_COMMANDS)
     )

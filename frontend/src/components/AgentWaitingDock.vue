@@ -228,8 +228,8 @@ html.reveal-fab-footer .agent-waiting-dock {
 .dock-dismiss:hover { background: rgba(var(--agent-rgb, 245, 165, 36), 0.4); }
 
 /* DL-147: 44 px touch floor on phones only — panel/desktop sizes stay. */
-html:is(.device-phone, .device-tablet) .dock-dismiss { width: 44px; height: 44px; }
-html:is(.device-phone, .device-tablet) .dock-inbox { min-height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .dock-dismiss { width: 44px; height: 44px; }
+html:is(.device-phone, .device-tablet, .device-panel) .dock-inbox { min-height: 44px; }
 
 .dock-pop-enter-active,
 .dock-pop-leave-active {
