@@ -70,12 +70,14 @@ jobs:
         shell: pwsh
         run: |
           $env:DATA_DIR = "$env:RUNNER_TEMP\vdock-data"
+          # The packaged app always passes PORT (DL-010); test the same way.
+          $env:PORT = "5799"
           $p = Start-Process -FilePath "dist/vdock-backend/vdock-backend.exe" -PassThru
           Start-Sleep -Seconds 8
           try {
-            $h = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/health" -TimeoutSec 10
+            $h = Invoke-RestMethod -Uri "http://127.0.0.1:5799/api/health" -TimeoutSec 10
             if ($h.status -ne 'ok') { throw "health status: $($h.status)" }
-            $t = Invoke-WebRequest -Uri "http://127.0.0.1:5000/api/templates/list" -TimeoutSec 10
+            $t = Invoke-WebRequest -Uri "http://127.0.0.1:5799/api/templates/list" -TimeoutSec 10
             if ($t.StatusCode -ne 200) { throw "templates: $($t.StatusCode)" }
             Write-Output "backend OK: $($h.plugins_loaded) plugins"
           } finally {
@@ -86,11 +88,13 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           export DATA_DIR="$RUNNER_TEMP/vdock-data"
+          # The packaged app always passes PORT (DL-010); 5000 is AirPlay on macOS.
+          export PORT=5799
           ./dist/vdock-backend/vdock-backend &
           BPID=$!
           sleep 8
-          curl -fsS http://127.0.0.1:5000/api/health
-          curl -fsS -o /dev/null -w "templates: %{http_code}\n" http://127.0.0.1:5000/api/templates/list
+          curl -fsS http://127.0.0.1:5799/api/health
+          curl -fsS -o /dev/null -w "templates: %{http_code}\n" http://127.0.0.1:5799/api/templates/list
           kill $BPID || true
 
       - name: Build frontend
@@ -126,7 +130,28 @@ jobs:
                    APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
             [ -z "${!v:-}" ] && unset "$v"
           done
-          npx electron-builder --publish never
+          extra_args=()
+          if [ "$RUNNER_OS" = "macOS" ] && [ -z "${CSC_LINK:-}" ]; then
+            # No Developer ID: ad-hoc sign (DL-010). An unsigned app is
+            # reported as "damaged" on Apple Silicon; ad-hoc gets the
+            # Privacy & Security > "Open Anyway" path instead.
+            extra_args+=("-c.mac.identity=-")
+          fi
+          npx electron-builder --publish never ${extra_args[@]+"${extra_args[@]}"}
+
+      - name: Verify macOS code signature
+        if: runner.os == 'macOS'
+        working-directory: frontend/electron
+        run: |
+          shopt -s nullglob
+          apps=( dist-electron/mac*/VDock.app )
+          [ ${#apps[@]} -gt 0 ] || { echo "no VDock.app built"; exit 1; }
+          for app in "${apps[@]}"; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            entitlements="$(codesign -d --entitlements - "$app" 2>&1)"
+            grep -q com.apple.security.automation.apple-events <<<"$entitlements"
+            /usr/libexec/PlistBuddy -c 'Print :NSAppleEventsUsageDescription' "$app/Contents/Info.plist"
+          done
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

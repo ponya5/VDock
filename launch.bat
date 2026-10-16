@@ -35,7 +35,29 @@ exit /b 0
 shift
 title VDock Launcher
 
-python scripts\VDock-Launcher.py
+REM The launcher runs on VDock's own venv Python - the one setup.bat chose and
+REM the backend uses - not whatever "python" is on PATH (DL-010).
+set "VENV_PY=%~dp0backend\venv\Scripts\python.exe"
+if not exist "%VENV_PY%" (
+    echo.
+    echo   [ERROR] VDock is not set up yet ^(backend\venv is missing^).
+    echo           Run setup.bat first.
+    echo.
+    pause
+    exit /b 1
+)
+"%VENV_PY%" -c "import sys" >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo   [ERROR] VDock's Python environment ^(backend\venv^) no longer works:
+    echo           the Python it was made with was moved, upgraded or uninstalled.
+    echo           Run setup.bat again - it rebuilds the environment.
+    echo.
+    pause
+    exit /b 1
+)
+
+"%VENV_PY%" scripts\VDock-Launcher.py
 if errorlevel 1 (
     pause
     exit /b 1

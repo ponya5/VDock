@@ -18,9 +18,24 @@ ok()   { echo -e "  ${GREEN}[OK]${NC}    $*"; }
 warn() { echo -e "  ${YELLOW}[WARN]${NC}  $*"; }
 err()  { echo -e "  ${RED}[ERROR]${NC} $*"; }
 
-MIN_PYTHON_VERSION_TUPLE="(3, 9)"
 MIN_NODE_MAJOR_VERSION=20
 PYTHON_BIN=""
+
+# Supported Python window (DL-010). 3.15 is too new: several dependencies
+# (pywinrt on Windows, PyInstaller for release builds) have no 3.15 builds
+# yet, and pip then fails half-way. 3.9 still works (it is the Command Line
+# Tools python3 on a stock Mac) but is end-of-life.
+MIN_PYTHON_MINOR=9
+MAX_PYTHON_MINOR=14
+RECOMMENDED_PYTHON="3.13"
+# Best first: the newest well-supported releases, then the rest.
+PREFERRED_PYTHON_MINORS=(13 12 14 11 10 9)
+# Versioned Pythons that are often not on PATH: Homebrew kegs (Apple Silicon
+# and Intel) and python.org installers. MINOR is replaced by 9..14.
+VDOCK_PYTHON_SEARCH_DIRS="${VDOCK_PYTHON_SEARCH_DIRS-/opt/homebrew/opt/python@3.MINOR/bin /usr/local/opt/python@3.MINOR/bin /Library/Frameworks/Python.framework/Versions/3.MINOR/bin}"
+# "3.15 (/opt/homebrew/bin/python3)" when only an unsupported Python exists.
+UNSUPPORTED_PYTHON=""
+VENV_PROBLEM=""
 
 # Homebrew's Node/Python first: Apple Silicon and Intel Macs both keep them
 # outside the default PATH that Terminal/Finder launches give us.
@@ -37,29 +52,140 @@ is_yes_answer() {
   [[ -z "$answer" || "$answer" =~ ^[Yy]([Ee][Ss])?$ ]]
 }
 
+python_minor_supported() {
+  local version="$1"
+  [[ "$version" =~ ^3\.([0-9]+)$ ]] || return 1
+  local minor="${BASH_REMATCH[1]}"
+  (( minor >= MIN_PYTHON_MINOR && minor <= MAX_PYTHON_MINOR ))
+}
+
+# "3.13" for an interpreter, nothing (and failure) when it does not run.
+python_version_of() {
+  "$1" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null
+}
+
 # python3 can be macOS's /usr/bin stub, which pops an "install developer
 # tools" dialog (or fails) until the Command Line Tools exist - skip it then.
+# Debian/Ubuntu ship python3 without venv/ensurepip (python3-venv).
 is_usable_python() {
-  local candidate="$1"
-  local candidate_path
-  candidate_path="$(command -v "$candidate" 2>/dev/null)" || return 1
+  local candidate_path="$1"
 
   if is_macos && [[ "$candidate_path" == "/usr/bin/python3" ]] && ! xcode-select -p >/dev/null 2>&1; then
     return 1
   fi
 
-  "$candidate" -c "import sys, venv, ensurepip; sys.exit(0 if sys.version_info >= $MIN_PYTHON_VERSION_TUPLE else 1)" >/dev/null 2>&1
+  "$candidate_path" -c "import sys, venv, ensurepip" >/dev/null 2>&1
 }
 
-find_python() {
-  local candidate
-  for candidate in python3 python3.13 python3.12 python3.11 python3.10 python3.9; do
-    if is_usable_python "$candidate"; then
-      PYTHON_BIN="$candidate"
+python_candidates() {
+  local minor dir
+  for minor in "${PREFERRED_PYTHON_MINORS[@]}"; do
+    echo "python3.$minor"
+    for dir in $VDOCK_PYTHON_SEARCH_DIRS; do
+      echo "${dir//MINOR/$minor}/python3.$minor"
+    done
+  done
+  echo python3
+  echo python
+}
+
+python_preference_rank() {
+  local version="$1" rank=0 minor
+  for minor in "${PREFERRED_PYTHON_MINORS[@]}"; do
+    if [[ "$version" == "3.$minor" ]]; then
+      echo "$rank"
       return 0
     fi
+    rank=$((rank + 1))
   done
-  return 1
+  echo 99
+}
+
+# Picks the best supported interpreter into PYTHON_BIN (3.13 > 3.12 > 3.14 >
+# 3.11 > 3.10 > 3.9), whatever it is called. Remembers an unsupported one in
+# UNSUPPORTED_PYTHON so the error can say what was found.
+find_python() {
+  PYTHON_BIN=""
+  UNSUPPORTED_PYTHON=""
+  local best_rank=99 candidate candidate_path version rank
+  while IFS= read -r candidate; do
+    candidate_path="$(command -v "$candidate" 2>/dev/null)" || continue
+    [[ -n "$candidate_path" ]] || continue
+    # The CLT stub would pop an install dialog even for a version query.
+    if is_macos && [[ "$candidate_path" == "/usr/bin/python3" ]] && ! xcode-select -p >/dev/null 2>&1; then
+      continue
+    fi
+    version="$(python_version_of "$candidate_path")" || continue
+    [[ -n "$version" ]] || continue
+    if ! python_minor_supported "$version"; then
+      [[ -n "$UNSUPPORTED_PYTHON" ]] || UNSUPPORTED_PYTHON="$version ($candidate_path)"
+      continue
+    fi
+    is_usable_python "$candidate_path" || continue
+    rank="$(python_preference_rank "$version")"
+    if (( rank < best_rank )); then
+      best_rank="$rank"
+      PYTHON_BIN="$candidate_path"
+    fi
+  done < <(python_candidates)
+  [[ -n "$PYTHON_BIN" ]]
+}
+
+report_unsupported_python() {
+  [[ -n "$UNSUPPORTED_PYTHON" ]] || return 0
+  warn "Found Python $UNSUPPORTED_PYTHON, but VDock needs Python 3.$MIN_PYTHON_MINOR-3.$MAX_PYTHON_MINOR."
+  echo "         Some of its packages have no builds for that version yet. Install"
+  echo "         Python $RECOMMENDED_PYTHON next to it - setup then picks it automatically."
+}
+
+# OK when backend/venv's interpreter runs, is supported, and is the version
+# the venv was made with. A venv made by mise "latest" or a Homebrew python
+# that was upgraded or removed fails here and gets recreated. VENV_PROBLEM
+# says why.
+venv_python_ok() {
+  local venv_dir="$1"
+  local venv_python="$venv_dir/bin/python"
+  VENV_PROBLEM=""
+  if [[ ! -x "$venv_python" ]]; then
+    VENV_PROBLEM="its Python is missing"
+    return 1
+  fi
+  local version
+  version="$(python_version_of "$venv_python")" || true
+  if [[ -z "$version" ]]; then
+    VENV_PROBLEM="its Python no longer runs (moved or uninstalled)"
+    return 1
+  fi
+  if ! python_minor_supported "$version"; then
+    VENV_PROBLEM="it uses Python $version, which VDock does not support"
+    return 1
+  fi
+  local recorded
+  recorded="$(sed -n -E 's/^version(_info)?[[:space:]]*=[[:space:]]*([0-9]+\.[0-9]+).*/\2/p' "$venv_dir/pyvenv.cfg" 2>/dev/null | head -n 1)" || true
+  if [[ -n "$recorded" && "$recorded" != "$version" ]]; then
+    VENV_PROBLEM="it was made with Python $recorded but now runs $version"
+    return 1
+  fi
+}
+
+# pip's own ERROR lines plus what they usually mean - never just "check your
+# connection" when the real problem is a package with no build for this Python.
+report_pip_failure() {
+  local log_file="$1" venv_python="$2"
+  local version
+  version="$(python_version_of "$venv_python")" || true
+  err "Installing the backend's Python packages failed (Python ${version:-?}, $(uname -m))."
+  grep -E '^(ERROR|error):' "$log_file" 2>/dev/null | tail -n 4 | sed 's/^/           /' || true
+  if grep -qiE 'No matching distribution|Could not find a version that satisfies|requires a different Python|Failed (building|to build)|subprocess-exited-with-error' "$log_file" 2>/dev/null; then
+    local brew_hint=""
+    is_macos && brew_hint=" (brew install python@$RECOMMENDED_PYTHON)"
+    echo "         A package has no ready-made build for Python ${version:-?} on this computer."
+    echo "         Install Python $RECOMMENDED_PYTHON$brew_hint, then run:"
+    echo "           rm -rf backend/venv && ./setup.sh"
+  elif grep -qiE 'connection|timed out|Temporary failure in name resolution|SSLError|ProxyError|Could not fetch URL' "$log_file" 2>/dev/null; then
+    echo "         pip could not reach the package index - check your internet connection or proxy."
+  fi
+  echo "         Full log: $log_file"
 }
 
 is_node_usable() {
@@ -72,11 +198,13 @@ is_node_usable() {
 }
 
 print_manual_install_help() {
-  err "Python 3.9+ and Node.js ${MIN_NODE_MAJOR_VERSION}+ are required."
-  echo "         Python:  https://www.python.org/downloads/"
+  err "Python 3.$MIN_PYTHON_MINOR-3.$MAX_PYTHON_MINOR ($RECOMMENDED_PYTHON recommended) and Node.js ${MIN_NODE_MAJOR_VERSION}+ are required."
+  echo "         Python:  https://www.python.org/downloads/ (pick $RECOMMENDED_PYTHON)"
   echo "         Node.js: https://nodejs.org/"
   if is_macos; then
-    echo "         Or with Homebrew (https://brew.sh):  brew install python node"
+    echo "         Or with Homebrew (https://brew.sh):  brew install python@$RECOMMENDED_PYTHON node"
+  elif [[ "$(uname -s)" == "Linux" ]]; then
+    echo "         Debian/Ubuntu: sudo apt install python3 python3-venv nodejs npm"
   fi
   echo "         Then run ./setup.sh again."
 }
@@ -101,7 +229,10 @@ install_with_homebrew() {
 
 ensure_prerequisites() {
   local missing_formulas=()
-  find_python || missing_formulas+=(python)
+  if ! find_python; then
+    report_unsupported_python
+    missing_formulas+=("python@$RECOMMENDED_PYTHON")
+  fi
   is_node_usable || missing_formulas+=(node)
 
   if [[ ${#missing_formulas[@]} -eq 0 ]]; then
@@ -114,6 +245,7 @@ ensure_prerequisites() {
   fi
 
   if ! find_python || ! is_node_usable; then
+    report_unsupported_python
     print_manual_install_help
     return 1
   fi
@@ -144,25 +276,37 @@ install_dependencies() {
 
   echo "  [1/7] Checking Python and Node.js..."
   ensure_prerequisites || return 1
-  ok "$("$PYTHON_BIN" --version 2>&1)"
+  ok "$("$PYTHON_BIN" --version 2>&1) ($PYTHON_BIN)"
+  if [[ "$(python_version_of "$PYTHON_BIN")" == "3.$MIN_PYTHON_MINOR" ]]; then
+    warn "Python 3.$MIN_PYTHON_MINOR is end-of-life. VDock runs on it, but Python $RECOMMENDED_PYTHON is recommended."
+  fi
   ok "Node.js $(node --version)"
   ok "npm $(npm --version)"
 
   echo "  [2/7] Python virtual environment..."
-  local venv_activate="$ROOT/backend/venv/bin/activate"
-  if [[ ! -f "$venv_activate" ]]; then
-    echo "           Creating venv..."
-    "$PYTHON_BIN" -m venv "$ROOT/backend/venv" || return 1
+  local venv_dir="$ROOT/backend/venv"
+  if [[ -e "$venv_dir" ]] && ! venv_python_ok "$venv_dir"; then
+    warn "backend/venv can't be used: $VENV_PROBLEM. Recreating it."
+    rm -rf "$venv_dir"
+  fi
+  if [[ ! -x "$venv_dir/bin/python" ]]; then
+    echo "           Creating venv with $("$PYTHON_BIN" --version 2>&1)..."
+    "$PYTHON_BIN" -m venv "$venv_dir" || { err "Could not create backend/venv with $PYTHON_BIN"; return 1; }
     ok "Virtual environment created"
   else
-    ok "Virtual environment already exists"
+    ok "Virtual environment already exists ($("$venv_dir/bin/python" --version 2>&1))"
   fi
 
   echo "  [3/7] Backend dependencies..."
-  # shellcheck disable=SC1090
-  source "$venv_activate"
-  python -m pip install --upgrade pip --quiet --disable-pip-version-check >/dev/null 2>&1 || warn "pip upgrade failed (non-fatal)"
-  pip install -r "$ROOT/backend/requirements.txt" --quiet --disable-pip-version-check || return 1
+  local venv_python="$venv_dir/bin/python"
+  local pip_log="$ROOT/backend/data/pip-install.log"
+  mkdir -p "$ROOT/backend/data"
+  "$venv_python" -m pip install --upgrade pip --quiet --disable-pip-version-check >/dev/null 2>&1 || warn "pip upgrade failed (non-fatal)"
+  echo "           Installing packages (log: backend/data/pip-install.log)..."
+  if ! "$venv_python" -m pip install -r "$ROOT/backend/requirements.txt" --disable-pip-version-check >"$pip_log" 2>&1; then
+    report_pip_failure "$pip_log" "$venv_python"
+    return 1
+  fi
   ok "Backend dependencies installed"
 
   # Always run: npm install is a no-op when node_modules already matches the
@@ -594,6 +738,11 @@ handle_cli_flag() {
     --launch) launch_vdock; exit $? ;;
   esac
 }
+
+# backend/tests/test_dl010_*.py source this file for its functions only.
+if [[ "${VDOCK_SETUP_LIB_ONLY:-}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 handle_cli_flag "${1:-}"
 
