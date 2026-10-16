@@ -12,6 +12,8 @@ import threading
 import time
 import urllib.request
 
+from utils.tls import ssl_context
+
 logger = logging.getLogger(__name__)
 
 _GEO_URL = 'https://ipwho.is/'
@@ -25,7 +27,7 @@ _neg_until = 0.0            # suppress refetches for a minute after a miss
 
 
 def _fetch_location():
-    with urllib.request.urlopen(_GEO_URL, timeout=_TIMEOUT_S) as resp:
+    with urllib.request.urlopen(_GEO_URL, timeout=_TIMEOUT_S, context=ssl_context()) as resp:
         data = json.loads(resp.read().decode('utf-8'))
     if not data.get('success'):
         raise RuntimeError(f"IP geolocation failed: {data.get('message') or 'no fix'}")

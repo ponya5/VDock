@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from config import project_root
+from utils.tls import ssl_context
 from version import __version__
 
 logger = logging.getLogger(__name__)
@@ -136,7 +137,7 @@ def _http_get_json(url: str) -> Dict[str, Any]:
         'User-Agent': f'VDock/{__version__}',
         'Accept': 'application/vnd.github+json',
     })
-    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:  # nosec B310 - fixed https URL
+    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT, context=ssl_context()) as resp:  # nosec B310 - fixed https URL
         return json.loads(resp.read().decode('utf-8'))
 
 
@@ -347,7 +348,7 @@ def _download(url: str, dest: Path) -> int:
     """Stream ``url`` to ``dest``; returns bytes written. Seam for tests."""
     req = urllib.request.Request(url, headers={'User-Agent': f'VDock/{__version__}'})
     written = 0
-    with urllib.request.urlopen(req, timeout=30) as resp, open(dest, 'wb') as out:  # nosec B310 - prefix validated
+    with urllib.request.urlopen(req, timeout=30, context=ssl_context()) as resp, open(dest, 'wb') as out:  # nosec B310 - prefix validated
         while True:
             chunk = resp.read(1024 * 256)
             if not chunk:
