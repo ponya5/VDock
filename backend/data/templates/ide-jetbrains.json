@@ -59,7 +59,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "shift", "a"] }
+            "config": { "keys": ["ctrl", "shift", "a"], "mac_keys": ["cmd", "shift", "a"] }
           }
         },
         {
@@ -79,7 +79,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["shift", "f10"] }
+            "config": { "keys": ["shift", "f10"], "mac_keys": ["ctrl", "r"] }
           }
         },
         {
@@ -99,7 +99,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["shift", "f9"] }
+            "config": { "keys": ["shift", "f9"], "mac_keys": ["ctrl", "d"] }
           }
         },
         {
@@ -119,7 +119,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "f2"] }
+            "config": { "keys": ["ctrl", "f2"], "mac_keys": ["cmd", "f2"] }
           }
         },
         {
@@ -139,7 +139,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "alt", "shift", "t"] }
+            "config": { "keys": ["ctrl", "alt", "shift", "t"], "mac_keys": ["ctrl", "t"] }
           }
         },
         {
@@ -179,7 +179,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "alt", "l"] }
+            "config": { "keys": ["ctrl", "alt", "l"], "mac_keys": ["cmd", "alt", "l"] }
           }
         },
         {
@@ -219,7 +219,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["alt", "insert"] }
+            "config": { "keys": ["alt", "insert"], "mac_keys": ["cmd", "n"] }
           }
         },
         {
@@ -259,7 +259,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "f"] }
+            "config": { "keys": ["ctrl", "f"], "mac_keys": ["cmd", "f"] }
           }
         },
         {
@@ -279,7 +279,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "r"] }
+            "config": { "keys": ["ctrl", "r"], "mac_keys": ["cmd", "r"] }
           }
         },
         {
@@ -299,7 +299,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "shift", "f"] }
+            "config": { "keys": ["ctrl", "shift", "f"], "mac_keys": ["cmd", "shift", "f"] }
           }
         },
         {
@@ -319,7 +319,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "n"] }
+            "config": { "keys": ["ctrl", "n"], "mac_keys": ["cmd", "o"] }
           }
         },
         {
@@ -339,7 +339,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "shift", "n"] }
+            "config": { "keys": ["ctrl", "shift", "n"], "mac_keys": ["cmd", "shift", "o"] }
           }
         },
         {
@@ -359,7 +359,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "/"] }
+            "config": { "keys": ["ctrl", "/"], "mac_keys": ["cmd", "/"] }
           }
         },
         {
@@ -379,7 +379,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "d"] }
+            "config": { "keys": ["ctrl", "d"], "mac_keys": ["cmd", "d"] }
           }
         },
         {
@@ -399,7 +399,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "e"] }
+            "config": { "keys": ["ctrl", "e"], "mac_keys": ["cmd", "e"] }
           }
         },
         {
@@ -419,7 +419,7 @@
           "enabled": true,
           "action": {
             "type": "hotkey",
-            "config": { "keys": ["ctrl", "alt", "s"] }
+            "config": { "keys": ["ctrl", "alt", "s"], "mac_keys": ["cmd", ","] }
           }
         }
       ]

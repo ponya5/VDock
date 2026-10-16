@@ -26,12 +26,15 @@ interface AuthState {
   unlocked: boolean
   /** First probe completed — App.vue waits on this before deciding anything. */
   checked: boolean
+  /** A scanned QR's sign-in code was already used or expired (DL-011). */
+  pairFailed: boolean
 }
 
 export const authState = reactive<AuthState>({
   required: false,
   unlocked: false,
   checked: false,
+  pairFailed: false,
 })
 
 let token: string | null = null
@@ -53,12 +56,44 @@ export function getAuthToken(): string | null {
   return token
 }
 
-export function setAuthToken(value: string) {
+export function setAuthToken(value: string, { renewal = false } = {}) {
   token = value
   try {
     localStorage.setItem(TOKEN_KEY, value)
   } catch { /* same caveat as the load path */ }
-  for (const fn of tokenListeners) fn()
+  // A renewal swaps a still-valid token: the live socket stays as it is (it
+  // reads getAuthToken() on its next reconnect), so no listener churn.
+  if (!renewal) for (const fn of tokenListeners) fn()
+}
+
+/** Renew every 6 h while open; sign-ins last 30 days (DL-008). */
+const RENEW_INTERVAL_MS = 6 * 60 * 60 * 1000
+let renewTimer: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Swap the held token for a fresh one so a device in regular use never
+ * reaches the expiry and has to type the password again. A rejected token
+ * (password changed, key rotated) is left to the normal 401 handling.
+ */
+export async function renewAuthToken(): Promise<boolean> {
+  if (!token) return false
+  try {
+    const res = await axios.post('/api/auth/refresh', null, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 8000,
+    })
+    const issued = res.data?.token
+    if (!issued) return false
+    setAuthToken(issued, { renewal: true })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function startTokenRenewal() {
+  if (renewTimer !== null) return
+  renewTimer = setInterval(() => { void renewAuthToken() }, RENEW_INTERVAL_MS)
 }
 
 export function clearAuthToken() {
@@ -93,8 +128,13 @@ export async function probeAuth() {
     })
     const required = !!res.data?.config?.require_auth
     authState.required = required
-    // 200 while auth is on means the stored token was accepted.
-    authState.unlocked = !required || !!token
+    // 200 while auth is on means the server accepted this device: our token,
+    // or no token at all on the computer VDock runs on (trusted, DL-008).
+    authState.unlocked = true
+    if (required && token) {
+      void renewAuthToken()
+      startTokenRenewal()
+    }
   } catch (err: any) {
     if (err?.response?.status === 401) {
       // Stored token rejected (expired or a stale SECRET_KEY) — drop it.

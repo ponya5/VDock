@@ -4,20 +4,63 @@
       <section class="panel">
         <div class="panel-head"><h2>Connect a device</h2><span class="hint">Any phone or tablet on your Wi-Fi can be a second deck — no app to install.</span></div>
         <div class="panel-body">
-          <div v-if="!lanEnabled" class="note warn lan-off-banner" role="status" data-testid="lan-off-banner">
-            <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
-            <div>
-              <b>Mobile connection is off.</b> Your phone or tablet can't open VDock until you
-              turn on <b>Allow LAN access</b> below and restart VDock. It starts off so nothing
-              else on your network can reach your deck unless you choose to.
+          <!-- DL-008: one step from "I want my phone" to the QR - save LAN access
+               (+ the recommended password), restart, land back here on the code. -->
+          <div v-if="!lanEnabled" class="phone-setup" data-testid="phone-setup" data-tour="allow-lan">
+            <div class="phone-setup-head">
+              <FontAwesomeIcon :icon="['fas', 'mobile-screen-button']" class="phone-setup-icon" />
+              <div>
+                <b>Use VDock on your phone or tablet</b>
+                <p>Phone access is off, so nothing else on your Wi-Fi can reach your deck. Turn it on and VDock restarts once — then scan the code that appears here.</p>
+              </div>
+            </div>
+            <div v-if="!passwordSet && !skipPassword" class="phone-setup-pw">
+              <label class="sr-only" for="phone-setup-pw">Deck password</label>
+              <input id="phone-setup-pw" v-model="setupPassword" type="password" class="input" placeholder="Deck password" autocomplete="new-password" />
+              <label class="sr-only" for="phone-setup-pw2">Confirm password</label>
+              <input id="phone-setup-pw2" v-model="setupConfirm" type="password" class="input" placeholder="Confirm" autocomplete="new-password" @keyup.enter="enablePhoneAccess" />
+              <p class="muted phone-setup-hint">Recommended: devices on your Wi-Fi enter it once (or sign in by scanning the code). This {{ computerNoun }} never needs it.</p>
+            </div>
+            <p v-if="setupError" class="status-msg status-error">{{ setupError }}</p>
+            <div class="phone-setup-actions">
+              <button type="button" class="btn primary" :disabled="restarting" data-action="enable-phone-access" @click="enablePhoneAccess">
+                <FontAwesomeIcon :icon="['fas', restarting ? 'spinner' : 'power-off']" :spin="restarting" />
+                {{ restarting ? 'Restarting VDock…' : 'Turn on phone access' }}
+              </button>
+              <button v-if="!passwordSet && !skipPassword" type="button" class="btn link sm" @click="skipPassword = true">Continue without a password</button>
+              <span v-else-if="skipPassword" class="muted phone-setup-hint">No password: anyone on this Wi-Fi can press your keys. <button type="button" class="btn link sm" @click="skipPassword = false">Add one</button></span>
             </div>
           </div>
-          <ol class="connect-steps">
-            <li><b>Same Wi-Fi.</b> Connect the phone or tablet to the same network as this {{ computerNoun }}.</li>
-            <li><b>Allow LAN access.</b> Turn it on below, then press <b>Restart VDock now</b> — this makes the deck reachable on your network.</li>
-            <li><b>Scan the code.</b> Point the device camera at the QR, or type the deck address into its browser.</li>
-            <li><b>Optional:</b> {{ CONNECT_INSTALL_STEP }}</li>
-          </ol>
+          <!-- DL-011: once phone access is live the code comes first - it is
+               the one thing this card is for. -->
+          <div v-if="lanUrl && phoneLive" class="row stack qr-first" data-testid="qr-first">
+            <p class="qr-headline"><b>Point your phone's camera at this code</b> — VDock opens in its browser. {{ CONNECT_INSTALL_STEP }}</p>
+            <div class="qr-row">
+              <div class="qr-code-col">
+                <canvas ref="qrCanvas" class="qr-canvas" />
+                <p class="muted qr-note">Same Wi-Fi as this {{ computerNoun }}. The code opens the deck address below.</p>
+                <p v-if="pairing" class="muted qr-note" data-testid="pair-warning">This code signs a device in — don't share screenshots of it.</p>
+              </div>
+              <div class="qr-preview-col">
+                <img
+                  :src="'/assets/help/mobile-preview.jpg'"
+                  alt="VDock open on two phones side by side: the Media scene with volume controls and a slider on one, the Claude Code scene with Submit, Continue and Interrupt on the other"
+                  class="qr-preview-img"
+                  loading="lazy"
+                />
+                <p class="muted qr-note">This is what it looks like once it's open on the phone.</p>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="lanEnabled && !restartRequired" class="row">
+            <div class="note warn qr-offline">
+              <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+              <div>
+                LAN address unavailable. Enable <b>Allow LAN access</b> and restart VDock —
+                until then VDock only listens on this {{ computerNoun }}.
+              </div>
+            </div>
+          </div>
           <div class="row" data-tour="allow-lan">
             <div class="row-text">
               <span class="label">Allow LAN access</span>
@@ -89,33 +132,6 @@
               </div>
             </div>
           </div>
-          <div v-if="lanUrl" class="row stack">
-            <div class="qr-row">
-              <div class="qr-code-col">
-                <canvas ref="qrCanvas" class="qr-canvas" />
-                <p class="muted qr-note">The code encodes the address above. It changes when the backend port or your LAN address changes.</p>
-                <p v-if="pairing" class="muted qr-note" data-testid="pair-warning">This code signs a device in — don't share screenshots of it.</p>
-              </div>
-              <div class="qr-preview-col">
-                <img
-                  :src="'/assets/help/mobile-preview.jpg'"
-                  alt="VDock open on two phones side by side: the Media scene with volume controls and a slider on one, the Claude Code scene with Submit, Continue and Interrupt on the other"
-                  class="qr-preview-img"
-                  loading="lazy"
-                />
-                <p class="muted qr-note">This is what it looks like once it's open on the phone.</p>
-              </div>
-            </div>
-          </div>
-          <div v-else class="row">
-            <div class="note warn qr-offline">
-              <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
-              <div>
-                LAN address unavailable. Enable <b>Allow LAN access</b> and restart VDock —
-                until then VDock only listens on this {{ computerNoun }}.
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>
@@ -143,7 +159,42 @@ const lanEnabled = computed(() => serverConfig.value?.allow_lan ?? false)
 // The switch was saved but the running server still has its startup bind
 // (DL-007) — "relaunching" used to reuse that server, so offer the restart here.
 const restartRequired = computed(() => serverConfig.value?.restart_required === true)
+const phoneLive = computed(() => lanEnabled.value && !restartRequired.value)
 const { restarting, error: restartError, restart } = useBackendRestart()
+const passwordSet = computed(() => !!serverConfig.value?.auth_password_set && !!serverConfig.value?.require_auth)
+
+// --- One-step phone setup (DL-008) --------------------------------------------
+const setupPassword = ref('')
+const setupConfirm = ref('')
+const skipPassword = ref(false)
+const setupError = ref('')
+
+async function enablePhoneAccess() {
+  setupError.value = ''
+  const changes: Record<string, unknown> = { allow_lan: true }
+  if (!passwordSet.value && !skipPassword.value) {
+    const pw = setupPassword.value.trim()
+    if (pw.length < 4 || pw.length > 128) {
+      setupError.value = 'Choose a password of 4–128 characters, or continue without one.'
+      return
+    }
+    if (pw !== setupConfirm.value.trim()) {
+      setupError.value = "Passwords don't match."
+      return
+    }
+    changes.require_auth = true
+    changes.auth_password = pw
+  }
+  if (!(await settingsStore.updateServerConfig(changes))) {
+    setupError.value = 'VDock could not save this — try again.'
+    return
+  }
+  setupPassword.value = ''
+  setupConfirm.value = ''
+  // Applies the new bind; the page reloads on this card with the QR showing.
+  await restart()
+  if (restartError.value) setupError.value = restartError.value
+}
 const { hostOs } = useHostOs()
 const computerNoun = computed(() => (hostOs.value === 'macos' ? 'Mac' : 'PC'))
 
@@ -283,7 +334,21 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
   color: #e7cd9a;
 }
 .note.warn svg { color: var(--warn); }
-.lan-off-banner { margin-bottom: 10px; }
+.qr-first { margin-bottom: 8px; }
+.qr-headline { margin: 0 0 12px; }
+.phone-setup {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px; margin-bottom: 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--accent, #4c8dff) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #4c8dff) 40%, transparent);
+}
+.phone-setup-head { display: flex; gap: 12px; align-items: flex-start; }
+.phone-setup-head p { margin: 4px 0 0; }
+.phone-setup-icon { font-size: 1.6em; color: var(--accent, #4c8dff); margin-top: 2px; }
+.phone-setup-pw { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.phone-setup-pw .input { width: 180px; max-width: 100%; }
+.phone-setup-hint { flex-basis: 100%; margin: 0; font-size: var(--fs-sm); }
+.phone-setup-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .connect-steps {
   margin: 0 0 6px;
   padding: 12px 14px 12px 30px;

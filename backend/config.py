@@ -62,6 +62,22 @@ def _resolve_data_dir(base_dir: Path) -> Path:
     return default_dir
 
 
+DEFAULT_TOKEN_EXPIRATION = 30 * 86400
+#: What .env.example shipped before DL-008, copied verbatim into every .env by
+#: setup - a template value, not a choice, so it means "the default".
+_LEGACY_TEMPLATE_TOKEN_EXPIRATION = '86400'
+
+
+def _token_expiration(raw: Optional[str]) -> int:
+    raw = (raw or '').strip()
+    if not raw or raw == _LEGACY_TEMPLATE_TOKEN_EXPIRATION:
+        return DEFAULT_TOKEN_EXPIRATION
+    try:
+        return max(60, int(raw))
+    except ValueError:
+        return DEFAULT_TOKEN_EXPIRATION
+
+
 def _probe_ip() -> Optional[str]:
     """IPv4 of the interface the default route would use.
 
@@ -200,8 +216,13 @@ def env_file() -> Path:
     """The one .env file VDock reads and writes.
 
     ``backend/.env`` for source runs; ``DATA_DIR/.env`` when frozen (the
-    install directory may be read-only).
+    install directory may be read-only). ``VDOCK_ENV_FILE`` points a second
+    instance (the e2e smoke test's throwaway backend) at its own file, so it
+    never writes the real deck password into ``backend/.env``.
     """
+    override = os.environ.get('VDOCK_ENV_FILE', '').strip()
+    if override:
+        return Path(override)
     if getattr(sys, 'frozen', False):
         data_dir = os.environ.get('DATA_DIR') or str(_default_data_dir(Path(__file__).resolve().parent))
         return Path(data_dir) / '.env'
@@ -374,7 +395,9 @@ class Config:
     # door the moment someone turns auth on without setting a password.
     # init_app() refuses to start in that state instead.
     AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', '')
-    TOKEN_EXPIRATION = int(os.environ.get('TOKEN_EXPIRATION', 86400))  # 24 hours
+    # 30 days; devices refresh while in use (DL-008), so only an idle device
+    # ever has to sign in again. A password change revokes them all.
+    TOKEN_EXPIRATION = _token_expiration(os.environ.get('TOKEN_EXPIRATION'))
     
     # Rate limiting settings
     RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'False').lower() == 'true'  # Disabled for local development

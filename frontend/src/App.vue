@@ -51,6 +51,7 @@ import ConnectionBanner from '@/components/ConnectionBanner.vue'
 import { probeAuth } from '@/services/auth'
 import { initConnectionResume } from '@/services/connectionResume'
 import { initProfileSync } from '@/services/profileSync'
+import { useDeviceClass } from '@/composables/useDeviceClass'
 import { useAgentAlerts } from '@/services/agentAlerts'
 import { useToggleSync } from '@/services/toggleSync'
 import { initTriggerEvents } from '@/services/triggerEvents'
@@ -106,7 +107,10 @@ onMounted(async () => {
 
   // Show welcome notification for first time users
   const hasSeenWelcome = localStorage.getItem('vdock_welcome_shown')
-  if (!hasSeenWelcome && route.path === '/' && !isStandaloneSettings.value) {
+  // Phones and tablets get their own intro (PhoneIntro, DL-011) - this toast
+  // pointed them at Settings, which they can't open.
+  const handheld = ['phone', 'tablet'].includes(useDeviceClass().deviceClass.value)
+  if (!hasSeenWelcome && !handheld && route.path === '/' && !isStandaloneSettings.value) {
     setTimeout(() => {
       notificationsStore.info(
         'Welcome to VDock!',

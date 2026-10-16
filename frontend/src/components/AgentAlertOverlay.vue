@@ -34,7 +34,18 @@
             </div>
           </template>
         </div>
+        <!-- DL-011: a permission prompt is answered right here (any scene,
+             any device) - "Got it" alone sent tablet users hunting. -->
+        <div v-if="card.kind === 'alert' && decidable[card.alert.source]" class="alert-decide" data-testid="alert-decide">
+          <button type="button" class="alert-approve" :disabled="deciding" @click="decide(card.alert.source, 'approve')">
+            <FontAwesomeIcon :icon="['fas', 'check']" /> Approve
+          </button>
+          <button type="button" class="alert-deny" :disabled="deciding" @click="decide(card.alert.source, 'deny')">
+            <FontAwesomeIcon :icon="['fas', 'xmark']" /> Deny
+          </button>
+        </div>
         <button
+          v-else
           class="alert-dismiss"
           @click="card.kind === 'rollup' ? alerts.dismiss() : alerts.dismiss(card.alert.source)"
         >
@@ -48,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { agentBrandFor, agentBrandVars } from '@/services/agentBrand'
 import { useAgentAlerts } from '@/services/agentAlerts'
@@ -59,6 +70,8 @@ import { waitingChipSources } from '@/services/agentWaiting'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
 import AgentWaitingDock from '@/components/AgentWaitingDock.vue'
+import { decideMissionSession, fetchMission, type MissionDecision } from '@/services/missionControl'
+import { useNotificationsStore } from '@/stores/notifications'
 
 const alerts = useAgentAlerts()
 const settingsStore = useSettingsStore()
@@ -94,6 +107,46 @@ const cards = computed<AlertCard[]>(() => {
   return list.map((alert) => ({ kind: 'alert' as const, alert }))
 })
 
+// source -> the one session waiting for a decision. Two waiting sessions of
+// the same agent stay "Got it" here (Mission Control picks between them), so
+// a tap can never answer the wrong one.
+const decidable = ref<Record<string, string>>({})
+const deciding = ref(false)
+const notifications = useNotificationsStore()
+
+async function refreshDecidable(list: AgentAlert[]) {
+  if (!list.length) { decidable.value = {}; return }
+  try {
+    const { sessions } = await fetchMission()
+    const next: Record<string, string> = {}
+    for (const alert of list) {
+      const waiting = sessions.filter((s) => s.source === alert.source && s.can_decide)
+      if (waiting.length === 1) next[alert.source] = waiting[0].session_id
+    }
+    decidable.value = next
+  } catch {
+    decidable.value = {}
+  }
+}
+watch(visibleAlerts, (list) => { void refreshDecidable(list) }, { immediate: true })
+
+async function decide(source: string, decision: MissionDecision) {
+  const sessionId = decidable.value[source]
+  if (!sessionId || deciding.value) return
+  deciding.value = true
+  try {
+    await decideMissionSession(source, sessionId, decision)
+    alerts.dismiss(source)
+  } catch (error: any) {
+    notifications.error(
+      decision === 'approve' ? 'Could not approve' : 'Could not deny',
+      error?.response?.data?.error || 'The agent did not receive it',
+    )
+  } finally {
+    deciding.value = false
+  }
+}
+
 function logoFor(source: string): string | undefined {
   return agentBrandFor(source).logo
 }
@@ -104,6 +157,17 @@ function rollupLabel(list: AgentAlert[]): string {
 </script>
 
 <style scoped>
+.alert-decide { display: flex; gap: 10px; flex-shrink: 0; }
+.alert-approve, .alert-deny {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 0 clamp(14px, 2vw, 22px);
+  border-radius: 12px; border: none; font-weight: 700;
+  font-size: clamp(0.9rem, 0.7rem + 0.8vw, 1.15rem); cursor: pointer;
+}
+.alert-approve { background: #22c55e; color: #052e14; }
+.alert-deny { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.alert-approve:disabled, .alert-deny:disabled { opacity: 0.6; }
+
 /* Sits above everything — dashboard (1000/2000), screensaver (500),
    tutorial (10000) — the whole point is you can't miss it. The dock sits
    just under at 29000 so its chips never cover the banner's buttons. */

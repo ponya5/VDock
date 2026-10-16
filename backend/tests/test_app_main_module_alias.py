@@ -33,7 +33,12 @@ print("same" if imported_socketio is served["socketio"] else "different")
 
 
 def test_importing_app_while_running_as_script_reuses_the_served_socketio(tmp_path):
-    env = {**os.environ, 'VDOCK_PROBE_ENV': str(tmp_path / '.env'), 'SECRET_KEY': ''}
+    # The __main__ block also repairs installed agent hooks under HOME and
+    # writes DATA_DIR - a private home keeps the developer's real
+    # ~/.claude / ~/.cursor files untouched (DL-009).
+    env = {**os.environ, 'VDOCK_PROBE_ENV': str(tmp_path / '.env'), 'SECRET_KEY': '',
+           'HOME': str(tmp_path), 'USERPROFILE': str(tmp_path),
+           'DATA_DIR': str(tmp_path / 'data')}
     completed = subprocess.run(
         [sys.executable, '-c', PROBE], cwd=BACKEND_DIR, env=env,
         capture_output=True, text=True, timeout=120,

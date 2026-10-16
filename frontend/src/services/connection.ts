@@ -34,6 +34,15 @@ export function markDisconnected() {
   offlineTimer = setTimeout(() => { connection.status = 'offline' }, OFFLINE_AFTER_MS)
 }
 
+/**
+ * True while the socket is down, even inside the first seconds before the
+ * banner shows. A failed request in that state is the same outage the banner
+ * reports - its own "Network Error" toast only contradicted it (DL-011).
+ */
+export function isConnectionDown(): boolean {
+  return down
+}
+
 export function markConnected() {
   down = false
   clearTimers()

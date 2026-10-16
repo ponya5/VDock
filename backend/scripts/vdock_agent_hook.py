@@ -31,6 +31,11 @@ POST_TIMEOUT_SECONDS = 1.5
 CLAUDE_STATE_BY_EVENT = {
     'SessionStart': 'ready',
     'Stop': 'ready',
+    # A turn ended by an API error never fires Stop (DL-009).
+    'StopFailure': 'ready',
+    # Fires the moment a permission decision is needed; the permission
+    # Notification only follows after a delay, mostly when you're away.
+    'PermissionRequest': 'permission',
     'UserPromptSubmit': 'working',
     'PreToolUse': 'working',
     'PostToolUse': 'working',
@@ -86,10 +91,22 @@ DEFAULT_MESSAGES = {
 }
 
 
-def _claude_notification_state(payload: Dict[str, Any]) -> str:
+#: Claude Code notification types (hooks reference) that need the user, or
+#: that mean the session is idle. Anything else (auth_success, quota_*...)
+#: says nothing about the session's state and must not flip it.
+CLAUDE_NEEDS_YOU_NOTIFICATIONS = frozenset({
+    'permission_prompt', 'elicitation_dialog', 'elicitation_url_dialog',
+    'agent_needs_input',
+})
+CLAUDE_IDLE_NOTIFICATIONS = frozenset({'idle_prompt', 'agent_completed'})
+
+
+def _claude_notification_state(payload: Dict[str, Any]) -> Optional[str]:
     notification_type = str(payload.get('notification_type') or '')
     if notification_type:
-        return 'permission' if 'permission' in notification_type else 'ready'
+        if notification_type in CLAUDE_NEEDS_YOU_NOTIFICATIONS:
+            return 'permission'
+        return 'ready' if notification_type in CLAUDE_IDLE_NOTIFICATIONS else None
     message = str(payload.get('message') or '').lower()
     return 'permission' if 'permission' in message else 'ready'
 
@@ -190,9 +207,36 @@ def conversation_fields(source: str, payload: Dict[str, Any]) -> Dict[str, str]:
     return fields
 
 
+def _short(text: Any, limit: int = 160) -> str:
+    flat = ' '.join(str(text or '').split())
+    return flat if len(flat) <= limit else flat[:limit - 1] + '\u2026'
+
+
+def permission_detail(payload: Dict[str, Any]) -> str:
+    """What a PermissionRequest is about, in words a phone user can judge
+    before tapping Approve (DL-011): "Run: git push", "Edit app.py"..."""
+    tool = str(payload.get('tool_name') or '')
+    tool_input = payload.get('tool_input')
+    tool_input = tool_input if isinstance(tool_input, dict) else {}
+    path = str(tool_input.get('file_path') or tool_input.get('notebook_path') or '')
+    name = path.replace('\\', '/').rstrip('/').rsplit('/', 1)[-1]
+    if tool == 'Bash' and tool_input.get('command'):
+        return 'Run: ' + _short(tool_input['command'])
+    if tool in ('Edit', 'MultiEdit', 'NotebookEdit') and name:
+        return f'Edit {name}'
+    if tool == 'Write' and name:
+        return f'Write {name}'
+    if tool == 'WebFetch' and tool_input.get('url'):
+        return 'Open ' + _short(tool_input['url'], 120)
+    if tool == 'WebSearch' and tool_input.get('query'):
+        return 'Search the web: ' + _short(tool_input['query'], 120)
+    return f'Use {tool}' if tool else ''
+
+
 def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     cwd = _session_cwd(payload)
     event_name = str(payload.get('hook_event_name') or payload.get('event') or '')
+    detail = permission_detail(payload) if event_name == 'PermissionRequest' else ''
     return {
         **conversation_fields(source, payload),
         'source': source,
@@ -204,10 +248,13 @@ def build_body(source: str, state: str, payload: Dict[str, Any]) -> Dict[str, An
         'prompted': event_name not in ('SessionStart', 'Notification'),
         # Only a notification means "come back to the agent" — a normal
         # Stop is ready too, but shouldn't pop the alert every turn.
-        'attention': payload.get('hook_event_name') == 'Notification',
+        'attention': event_name in ('Notification', 'PermissionRequest'),
+        # The later permission Notification only says "...to use Bash"; the
+        # backend keeps this specific text for the same pending request.
+        'detailed': bool(detail),
         # Claude Code: session_id; Cursor: conversation_id.
         'session_id': payload.get('session_id') or payload.get('conversation_id') or '',
-        'message': payload.get('message') or DEFAULT_MESSAGES[state],
+        'message': detail or payload.get('message') or DEFAULT_MESSAGES[state],
         'cwd': cwd,
         'project': cwd.replace('\\', '/').rstrip('/').rsplit('/', 1)[-1],
     }
@@ -254,8 +301,20 @@ def _post(port: int, body: Dict[str, Any]) -> None:
     )
     try:
         urllib.request.urlopen(request, timeout=POST_TIMEOUT_SECONDS)
+        return
     except (OSError, ValueError):
         pass  # VDock not running or busy — the agent must not notice.
+    # With HTTPS on, VDock's one port speaks only TLS (DL-009). Its own
+    # self-signed certificate, on this machine - nothing to verify.
+    import ssl
+    secure = urllib.request.Request(
+        request.full_url.replace('http://', 'https://', 1), data=request.data,
+        headers=dict(request.header_items()), method='POST')
+    try:
+        urllib.request.urlopen(secure, timeout=POST_TIMEOUT_SECONDS,
+                               context=ssl._create_unverified_context())
+    except (OSError, ValueError):
+        pass
 
 
 def _parse_args() -> Tuple[int, str, str, list]:

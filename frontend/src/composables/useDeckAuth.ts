@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
-import { authState, clearAuthToken } from '@/services/auth'
+import { authState, clearAuthToken, probeAuth } from '@/services/auth'
 import type { ServerConfig } from '@/types'
 
 /**
@@ -21,10 +21,11 @@ export function useDeckAuth() {
       return false
     }
     if (enabled) {
-      // The server now demands a token this device doesn't hold — the gate
-      // takes over; unlocking with the just-set password reloads clean.
+      // Other devices now need the password; this one may not (the computer
+      // VDock runs on is trusted, DL-008) - ask the server instead of
+      // assuming the lock screen.
       authState.required = true
-      authState.unlocked = false
+      await probeAuth()
     } else {
       authState.required = false
       clearAuthToken()

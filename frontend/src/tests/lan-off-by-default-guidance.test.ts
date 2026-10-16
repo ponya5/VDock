@@ -16,11 +16,11 @@ describe('LAN access is off by default and clearly explained', () => {
     expect(backendEnvExample).toMatch(/^ALLOW_LAN=False$/m)
   })
 
-  it('shows a prominent banner on the Connect page while LAN access is off', () => {
-    expect(connectPanelSource).toContain('v-if="!lanEnabled"')
-    expect(connectPanelSource).toContain('data-testid="lan-off-banner"')
-    expect(connectPanelSource).toContain('Mobile connection is off.')
-    expect(connectPanelSource).toContain("can't open VDock until you")
+  it('leads the Connect page with a one-step phone setup while LAN access is off (DL-008)', () => {
+    expect(connectPanelSource).toContain('v-if="!lanEnabled" class="phone-setup"')
+    expect(connectPanelSource).toContain('data-testid="phone-setup"')
+    expect(connectPanelSource).toContain('Phone access is off, so nothing else on your Wi-Fi can reach your deck.')
+    expect(connectPanelSource).toContain('Turn on phone access')
   })
 
   it('states on the switch itself that no other device can connect without it', () => {

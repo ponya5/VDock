@@ -213,3 +213,51 @@ def test_paste_image_is_ctrl_v_on_macos(mocker):
 
 def test_paste_image_stays_alt_v_on_windows(windows_keymaps):
     assert _paste_image_steps() == [['alt', 'v']]
+
+
+# ---------------------------------------------------------------------------
+# Mic Mute on macOS (input level 0 = muted, read back after each press)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mic(mocker):
+    level = {'input': 44}
+
+    def run(script, javascript=False, arguments=None):
+        if script == 'get volume settings':
+            return True, f"output volume:40, input volume:{level['input']}, alert volume:100, output muted:false"
+        if script.startswith('set volume input volume '):
+            level['input'] = int(script.rsplit(' ', 1)[1])
+        return True, ''
+
+    mocker.patch.object(macos_controls, '_run_osascript', side_effect=run)
+    macos_controls._input_volume_before_mute = None
+    return level
+
+
+def test_mic_mute_toggles_and_restores_the_level(mic):
+    assert macos_controls.set_microphone_mute(None) == (True, None)
+    assert mic['input'] == 0
+    assert macos_controls.set_microphone_mute(None) == (False, None)
+    assert mic['input'] == 44
+
+
+def test_mic_mute_button_is_available_on_macos(mocker, mic):
+    from integrations import system_live_pack
+    mocker.patch.object(system_live_pack, '_SYSTEM', 'Darwin')
+    plugin = system_live_pack.Plugin()
+    assert plugin.is_available() == (True, '')
+    pressed = plugin.execute_action('mic_mute', {})
+    assert pressed['success'] is True and 'muted' in pressed['message'].lower()
+    status = plugin.execute_action('mic_mute', {'op': 'status'})
+    assert status['success'] is True
+
+
+def test_mic_mute_windows_path_unchanged(mocker):
+    from integrations import system_live_pack
+    mocker.patch.object(system_live_pack, '_SYSTEM', 'Windows')
+    read = mocker.patch.object(system_live_pack.xp, 'read_mic_mute', return_value=(False, None))
+    darwin = mocker.patch.object(macos_controls, 'read_microphone_muted')
+    system_live_pack.Plugin().execute_action('mic_mute', {'op': 'status'})
+    read.assert_called_once()
+    darwin.assert_not_called()

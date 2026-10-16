@@ -32,8 +32,10 @@ agent_mission_bp = Blueprint('agent_mission', __name__)
 
 #: source -> (approve command id, deny command id). Only agents that ship
 #: confirm keymaps can be answered remotely; others are listed + focusable.
+#: Claude Code's permission dialog is a menu: Enter picks the highlighted
+#: "Yes", Esc cancels - typed y/n are not its keys (DL-009, verified live).
 DECISION_COMMANDS = {
-    'claude': ('cc_approve', 'cc_deny'),
+    'claude': ('cc_accept', 'cc_interrupt'),
 }
 
 #: Process marker used to find a source's session window.
@@ -214,6 +216,18 @@ def decide():
                         'error': result.get('message') or 'Could not answer the prompt',
                         'details': result.get('details')}), 502
     logger.info('Mission control: %s %s session %s', decision, source, session_id)
+    # The hooks only speak again at the next tool call (approve) or never
+    # (Esc ends the turn without a Stop event) - show the outcome now so the
+    # phone doesn't keep asking for a decision that was already made.
+    agent_state.record(
+        source,
+        agent_state.STATE_WORKING if decision == 'approve' else agent_state.STATE_READY,
+        message='' if decision == 'approve' else 'Denied from the deck',
+        cwd=entry.get('cwd') or '', project=entry.get('project') or '',
+        session_id=session_id, prompted=bool(entry.get('prompted')),
+    )
+    from routes import agent_events
+    agent_events._broadcast_states()
     return jsonify({'success': True, 'decision': decision})
 
 

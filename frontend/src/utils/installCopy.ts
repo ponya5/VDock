@@ -27,8 +27,12 @@ export function installSteps(platform: InstallPlatform): string[] {
 
 /** Honest about plain HTTP: Android then makes a shortcut, not a real install. */
 export function installNote(platform: InstallPlatform, secureContext: boolean): string | null {
-  if (platform === 'ios') return null
+  if (platform === 'ios') {
+    // A Home Screen web app keeps its own storage, so Safari's sign-in does
+    // not carry over (DL-011).
+    return 'The Home Screen app signs in on its own: if your deck has a password, enter it once there (or scan a fresh code from the computer).'
+  }
   return secureContext
     ? null
-    : 'Over plain Wi-Fi (http) this adds a shortcut that opens in the browser. For a real installed app, turn on HTTPS (USE_SSL) on the PC.'
+    : 'Over plain Wi-Fi this adds a shortcut that opens in the browser — it works the same, just with the browser bar.'
 }

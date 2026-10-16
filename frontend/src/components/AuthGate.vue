@@ -6,7 +6,11 @@
           <FontAwesomeIcon :icon="['fas', 'lock']" />
         </div>
         <h1 class="gate-title">VDock is locked</h1>
-        <p class="gate-sub">Enter the deck password to continue.</p>
+        <p v-if="authState.pairFailed" class="gate-sub gate-pair" data-testid="pair-failed">
+          That sign-in code was already used or has expired. Scan the fresh code on your computer
+          (Settings › Devices &amp; network), or enter the deck password.
+        </p>
+        <p v-else class="gate-sub">Enter the deck password to continue. This device then stays signed in.</p>
         <form class="gate-form" @submit.prevent="submit">
           <input
             ref="inputEl"

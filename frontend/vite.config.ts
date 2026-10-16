@@ -90,7 +90,10 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: `http://127.0.0.1:${backendPort}`,
-          changeOrigin: true
+          changeOrigin: true,
+          // changeOrigin makes a phone's request look local to the backend;
+          // X-Forwarded-For keeps it from counting as the trusted host (DL-008).
+          xfwd: true
         }
       }
     },

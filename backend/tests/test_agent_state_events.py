@@ -237,6 +237,7 @@ def test_claude_install_upgrades_a_dl045_install_and_keeps_foreign_hooks(agent_h
     written = json.loads(settings_path.read_text(encoding='utf-8'))
     assert set(result.added_events) == {
         'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'SessionEnd',
+        'PermissionRequest', 'StopFailure',
     }
     assert written['theme'] == 'dark'
     assert written['hooks']['PreToolUse'][0] == foreign_hook

@@ -384,7 +384,14 @@ function dismiss() {
     padding: 8px 10px 8px 12px;
     font-size: calc(0.85rem * min(var(--touch-multiplier, 1), 1.6));
     max-width: calc(100vw - 16px);
+    /* nowrap pushed Dismiss off a phone screen (DL-011): let the buttons
+       drop to a second line, full-size touch targets. */
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+    border-radius: 18px;
   }
+  .snooze-btn { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosError } from 'axios'
 import { getAuthToken, markUnauthorized } from '@/services/auth'
+import { isConnectionDown } from '@/services/connection'
 
 // After a phone unlocks / the tab returns / the network comes back, the radio
 // is often not up yet: requests fail for a few seconds and then work. Inside
@@ -98,6 +99,11 @@ class ApiClient {
         console.warn('Network error during resume grace (suppressed):', config?.url)
         return
       }
+      // The reconnect banner owns "can't reach the PC" (DL-011).
+      if (isConnectionDown()) {
+        console.warn('Network error while the connection is down (banner shown):', config?.url)
+        return
+      }
       // Throttle network errors to prevent spam on page load
       if (currentTime - this.lastErrorTime < this.errorThrottleMs) {
         console.warn('Network error throttled:', config?.url)
@@ -106,9 +112,9 @@ class ApiClient {
       this.lastErrorTime = currentTime
       
       this.notificationsStore.error(
-        'Network Error',
-        'Unable to connect to the server. Please check your internet connection.',
-        'The server may be offline or you may have connectivity issues.',
+        "Couldn't reach VDock",
+        'VDock on your computer did not answer - it may be busy or restarting. Try again in a moment.',
+        'Check that the computer is awake and on the same Wi-Fi.',
         { duration: 8000 }
       )
       return

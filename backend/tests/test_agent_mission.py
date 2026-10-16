@@ -115,17 +115,23 @@ def test_approve_types_into_that_sessions_window(client, sent):
         'source': 'claude', 'session_id': 'b', 'decision': 'approve'})
 
     assert response.get_json()['success'] is True
-    assert sent == [('cc_approve', {'cwd': 'C:/repos/web',
-                                    'editor_label': 'Claude Code'})]
+    # Claude's permission dialog is a menu: Enter takes the highlighted Yes
+    # (DL-009, verified live) - typed y/n are not its keys.
+    assert sent == [('cc_accept', {'cwd': 'C:/repos/web',
+                                   'editor_label': 'Claude Code'})]
+    # The phone shows the outcome at once instead of a stale "needs you".
+    states = {e['session_id']: e['state'] for e in agent_state.session_entries('claude')}
+    assert states['b'] == 'working' and states['a'] == 'permission'
 
 
-def test_deny_uses_the_deny_command(client, sent):
+def test_deny_presses_esc_and_shows_ready(client, sent):
     _record('claude', 'permission', 'a')
 
     client.post('/api/agent-mission/decide', json={
         'source': 'claude', 'session_id': 'a', 'decision': 'deny'})
 
-    assert sent[0][0] == 'cc_deny'
+    assert sent[0][0] == 'cc_interrupt'
+    assert agent_state.session_entries('claude')[0]['state'] == 'ready'
 
 
 @pytest.mark.parametrize('state', ['working', 'ready'])

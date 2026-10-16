@@ -85,7 +85,8 @@ def _conversation(previous_entry: Dict[str, Any], prompt: str, reply: str) -> Di
 
 def record(source: str, state: str, message: str = '', cwd: str = '',
            project: str = '', session_id: str = DEFAULT_SESSION_ID,
-           prompt: str = '', reply: str = '', prompted: bool = False) -> Dict[str, Any]:
+           prompt: str = '', reply: str = '', prompted: bool = False,
+           detailed: bool = False) -> Dict[str, Any]:
     """Store ``state`` for one session of ``source``; returns the entry."""
     if state not in ALLOWED_STATES:
         raise ValueError(f'Unknown agent state: {state}')
@@ -106,6 +107,8 @@ def record(source: str, state: str, message: str = '', cwd: str = '',
             'prompted': bool(prompted) or bool(prompt)
                         or bool(previous.get('prompted')),
             **_conversation(previous, prompt, reply),
+            # The message names what a permission prompt is about (DL-011).
+            'detailed': bool(detailed),
             'ts': time.time(),
         }
         sessions[session_id] = entry

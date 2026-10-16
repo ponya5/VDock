@@ -1,6 +1,6 @@
 import type { Router } from 'vue-router'
 import apiClient from '@/api/client'
-import { exchangePairToken } from '@/services/auth'
+import { authState, exchangePairToken } from '@/services/auth'
 
 /** Tokens live 10 minutes on the server; refresh the QR a minute early. */
 export const PAIR_REFRESH_MS = 9 * 60 * 1000
@@ -31,7 +31,8 @@ export async function consumePairQuery(router: Router): Promise<void> {
   const token = route.query.pair
   if (typeof token !== 'string' || !token) return
 
-  await exchangePairToken(token)
+  // A used/expired code used to leave a bare lock screen; say why (DL-011).
+  authState.pairFailed = !(await exchangePairToken(token))
   const { pair: _used, ...rest } = route.query
   await router.replace({ path: route.path, query: rest, hash: route.hash })
 }
