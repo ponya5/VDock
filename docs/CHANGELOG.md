@@ -5,6 +5,16 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] — 2026-10-17
+
+Theme: **a shorter, more useful first-run tour**.
+
+### Changed
+- **First-run tour is 7 short steps** (was 10) and covers scenes, your deck, agents & automation and phone access
+- **Pick your apps** — tick Claude Code, Cursor, Codex, ChatGPT, Spotify and more and each gets a ready-made scene when you continue
+- **Skip any time** — "Skip tour" on every card, the X, or the Escape key; skipping adds nothing
+- The highlight now fits every screen size: the card never covers what it explains and its arrow points at it
+
 ## [2.5.0] — 2026-10-17
 
 Theme: **friendlier settings and app scenes**.
