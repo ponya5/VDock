@@ -85,7 +85,7 @@ const emit = defineEmits<{ navigate: [target: SettingsRoute] }>()
 
 const settingsStore = useSettingsStore()
 const { serverConfig, setAllowLan } = useServerConfig()
-const { githubTokenMissing, keystrokesBlocked, accessibilityApp, loaded, refresh } = useSetupStatus()
+const { keystrokesBlocked, accessibilityApp, loaded, refresh } = useSetupStatus()
 const { isCompactTouch } = useDeviceClass()
 const autoScenes = useAutoSceneSwitching()
 
@@ -108,16 +108,7 @@ const attention = computed<AttentionItem[]>(() => {
       title: 'macOS is blocking VDock from pressing keys',
       detail: `Claude Code, Cursor and shortcut buttons can't type until you turn on "${accessibilityApp.value || 'VDock'}" under Accessibility.`,
       action: 'Fix it',
-      target: { section: 'agents', page: 'alerts', anchor: 'agent-alerts' },
-    })
-  }
-  if (githubTokenMissing.value) {
-    items.push({
-      id: 'github-token',
-      title: 'GitHub token not set',
-      detail: 'Live PR and CI buttons are off.',
-      action: 'Add it',
-      target: { section: 'integrations', page: 'accounts', anchor: 'accounts' },
+      target: { section: 'agents', page: 'alerts', anchor: 'mac-accessibility' },
     })
   }
   return items

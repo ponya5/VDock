@@ -9,8 +9,9 @@ import { SECTIONS, SEARCH } from '@/settings/registry'
 const view = settingsSource()
 
 describe('weather location move', () => {
-  it('tab is renamed to Integrations and header drops widget copy', () => {
-    expect(SECTIONS.some((s) => s.name === 'Integrations')).toBe(true)
+  it('Integrations is folded into Agents & automation and header drops widget copy', () => {
+    expect(SECTIONS.some((s) => s.name === 'Integrations')).toBe(false)
+    expect(SECTIONS.some((s) => s.pages.some((p) => p.id === 'accounts'))).toBe(true)
     expect(view).not.toContain('Widgets & Integration')
   })
 

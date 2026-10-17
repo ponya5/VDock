@@ -9,6 +9,15 @@ import { settingsSource } from './helpers/settingsSource'
 const source = settingsSource()
 const allAnchors = SECTIONS.flatMap((s) => s.pages.flatMap((p) => p.anchors))
 
+describe('merged Integrations section', () => {
+  it('old integrations links land on Agents & automation', () => {
+    expect(resolveRoute({ section: 'integrations', page: 'accounts' })).toEqual({ section: 'agents', page: 'accounts' })
+    expect(resolveRoute({ section: 'integrations', page: 'templates' })).toEqual({ section: 'agents', page: 'scenes' })
+    expect(resolveRoute({ section: 'agents', page: 'mcp' })).toEqual({ section: 'agents', page: 'alerts' })
+    expect(resolveRoute({ tab: 'templates' })).toEqual({ section: 'agents', page: 'scenes' })
+  })
+})
+
 describe('registry shape', () => {
   it('has at most seven sections and lists only those with pages', () => {
     expect(SECTIONS.length).toBeLessThanOrEqual(7)

@@ -9,10 +9,10 @@
       </span>
     </div>
     <div class="panel-body">
-      <div v-if="keystrokesBlocked" class="row row-warn" data-testid="mac-accessibility">
+      <div v-if="keystrokesBlocked" id="mac-accessibility" class="row row-warn" data-testid="mac-accessibility">
         <div class="row-text">
           <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Let VDock press keys</span>
-          <p>macOS blocks VDock's keystrokes until you allow it under Privacy &amp; Security › Accessibility — Claude Code, Cursor and shortcut buttons can't type until then. Turn on <b>{{ accessibilityApp || 'VDock' }}</b> in the list that opens (macOS lists VDock's server under the app that started it), then press Check again.</p>
+          <p>macOS blocks VDock's keystrokes until you allow it under Privacy &amp; Security › Accessibility — Claude Code, Cursor and shortcut buttons can't type until then. Turn on <b>{{ accessibilityApp || 'VDock' }}</b> in the list that opens (macOS lists VDock's server under the app that started it), then press Check again. Already on but still blocked? Switch it off and on again — or remove it with “−” and re-add it — which macOS needs after VDock updates.</p>
         </div>
         <div class="row-control">
           <button type="button" class="btn sm primary" :disabled="!isLocalDevice" @click="openAccessibilitySettings">
@@ -137,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useSetupStatus } from '@/composables/useSetupStatus'
@@ -316,6 +316,9 @@ async function removeAgentHook(agent: HookAgentId) {
 
 onMounted(fetchAgentHookStatus)
 onMounted(refreshSetupStatus)
+// Coming back from System Settings: re-check so the warning clears without a manual refresh.
+onMounted(() => window.addEventListener('focus', refreshSetupStatus))
+onBeforeUnmount(() => window.removeEventListener('focus', refreshSetupStatus))
 </script>
 
 <style scoped>
