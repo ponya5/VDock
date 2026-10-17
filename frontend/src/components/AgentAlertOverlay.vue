@@ -329,4 +329,18 @@ function rollupLabel(list: AgentAlert[]): string {
   transform: translateY(-16px);
   opacity: 0;
 }
+
+/* A shrunk desktop window: one slim row so the banner stops covering half of it.
+   Phones/tablets/panels keep their own sizes (rules above). */
+@media (max-width: 600px), (max-height: 460px) {
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-alert-stack { top: 6px; width: calc(100vw - 12px); gap: 6px; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-alert { flex-wrap: nowrap; gap: 10px; padding: 8px 10px; border-radius: 14px; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-icon { width: 36px; height: 36px; border-radius: 10px; font-size: 1.1rem; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-pulse, html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-project { display: none; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-title { font-size: 0.95rem; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-message { font-size: 0.8rem; margin-top: 2px; -webkit-line-clamp: 1; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-decide { gap: 6px; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-approve, html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-deny,
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .alert-dismiss { min-height: 34px; padding: 0 10px; gap: 6px; border-radius: 9px; font-size: 0.85rem; }
+}
 </style>

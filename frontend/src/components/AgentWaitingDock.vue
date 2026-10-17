@@ -244,4 +244,8 @@ html:is(.device-phone, .device-tablet, .device-panel) .dock-inbox { min-height: 
 @media (prefers-reduced-motion: reduce) {
   .dock-pulse { animation: none; opacity: 0; }
 }
+
+@media (max-width: 600px), (max-height: 460px) {
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .dock-chip { padding: 4px 10px; font-size: 0.75rem; max-width: min(60vw, 260px); }
+}
 </style>

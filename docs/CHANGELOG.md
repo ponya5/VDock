@@ -5,6 +5,11 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.3] — 2026-10-17
+
+### Changed
+- **Alerts fit a small window** — in a shrunk desktop window the "needs you" banner, toasts, the agent action bar (Submit, Continue, Mode…) and the Snooze/Dismiss bar become slim single-row versions instead of covering half the deck
+
 ## [2.5.2] — 2026-10-17
 
 ### Changed

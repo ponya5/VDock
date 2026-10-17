@@ -419,5 +419,12 @@ html:is(.device-phone, .device-tablet, .device-panel) .details-toggle { min-heig
     max-width: none;
   }
 }
+
+@media (max-width: 600px), (max-height: 460px) {
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .notification-toast { width: min(340px, calc(100vw - 16px)); padding: 8px 10px; gap: 8px; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .toast-icon { width: 24px; height: 24px; font-size: 0.9rem; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .toast-title { font-size: 0.85rem; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .toast-message { font-size: 0.78rem; line-height: 1.35; }
+}
 </style>
 

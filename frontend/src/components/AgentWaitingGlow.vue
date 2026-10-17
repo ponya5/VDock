@@ -405,4 +405,16 @@ html:is(.device-phone, .device-tablet, .device-panel) .snooze-btn {
   .agent-waiting-orbit { display: none; }
   .agent-waiting-fx { display: none; }
 }
+
+/* A shrunk desktop window: slimmer Snooze/Dismiss bar, kept clear of the Header tab at bottom-right. */
+@media (max-width: 600px), (max-height: 460px) {
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-waiting-snooze {
+    bottom: 6px; left: 8px; transform: none;
+    max-width: calc(100vw - 80px);
+    gap: 6px; padding: 5px 6px 5px 10px; font-size: 0.8rem;
+    flex-wrap: nowrap; white-space: nowrap; border-radius: 14px;
+  }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .snooze-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .snooze-btn { min-height: 30px; padding: 0 12px; font-size: 0.8rem; }
+}
 </style>

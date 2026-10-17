@@ -709,5 +709,10 @@ html:is(.device-phone, .device-tablet, .device-panel) .item-dismiss {
     align-items: stretch;
   }
 }
+
+@media (max-width: 600px), (max-height: 460px) {
+  /* below the agent alert banner (z 30000, ~58px tall) so a toast is never hidden by it */
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .toast-container { top: 70px; gap: 4px; }
+}
 </style>
 
