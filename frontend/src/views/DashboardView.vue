@@ -1758,6 +1758,13 @@ onUnmounted(() => {
   user-select: none;
 }
 
+/* A shrunk desktop window: a small chevron tab instead of the labelled pill, so it
+   stops covering the bottom-right buttons. (Phones/tablets hide this FAB anyway.) */
+@media (max-width: 600px), (max-height: 460px) {
+  .header-reveal-fab { width: 56px; height: 38px; border-radius: 12px; }
+  .header-reveal-fab .fab-label { display: none; }
+}
+
 /* Orbiting accent light — a conic sweep clipped to the rim by the inner
    plate, so the edge itself reads alive instead of a static border. */
 .header-reveal-fab::before {

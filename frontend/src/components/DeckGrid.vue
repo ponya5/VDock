@@ -14,7 +14,7 @@
       :key="button.id"
       :button="button"
       :is-edit-mode="isEditMode"
-      :show-labels="showLabels"
+      :show-labels="showLabels && !iconOnly"
       :show-tooltips="showTooltips"
       :compact="compact"
       :button-size="effectiveButtonSize"
@@ -205,6 +205,7 @@ let hostObserver: ResizeObserver | undefined
 const { isMobileViewport } = useMobileViewport()
 
 const GRID_PAD = 8
+const SMALL_WINDOW_CELL_PX = 120
 const GRID_GAP = 8
 
 // DL-147: a phone or tablet held in portrait shows the landscape-authored page
@@ -235,8 +236,20 @@ const cellMetrics = computed(() => {
   const cellPx = Math.max(36, Math.floor(Math.min(fitW, fitH)))
   const aspect = cellH / cellW
   const compact = !isMobileViewport.value && !reflow.value.reflowed && (aspect > 1.3 || aspect < 0.7)
-  const fit = isMobileViewport.value || compact || reflow.value.reflowed
+  // A shrunk desktop window: stretch cells can no longer honour the button's own
+  // minimum size, so rows spill out of the pane. Fit mode releases the minimums
+  // and scales icons with the cell (effectiveButtonSize) so the whole deck stays visible.
+  const small = !isMobileViewport.value && Math.min(fitW, fitH) < SMALL_WINDOW_CELL_PX
+  const fit = isMobileViewport.value || compact || reflow.value.reflowed || small
   return { cellW, cellH, cellPx, compact, fit }
+})
+
+// A shrunk desktop window: cells too narrow for a readable label ("Vol…") show
+// the icon alone. Phones keep their labels (their layout is designed for them).
+const ICON_ONLY_BELOW_PX = SMALL_WINDOW_CELL_PX
+const iconOnly = computed(() => {
+  const m = cellMetrics.value
+  return !isMobileViewport.value && !!m && Math.min(m.cellW, m.cellH) < ICON_ONLY_BELOW_PX
 })
 
 // Small-cell overrides (min-size release, tighter padding) apply whenever
