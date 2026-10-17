@@ -516,4 +516,8 @@ function chooseTarget(pid: number | null) {
   .chip-waiting-nudge,
   .agent-target-row.waiting { animation: none; }
 }
+
+@media (max-width: 600px), (max-height: 460px) {
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-target-chip { min-height: 30px; padding: 0 8px; font-size: 0.75rem; }
+}
 </style>

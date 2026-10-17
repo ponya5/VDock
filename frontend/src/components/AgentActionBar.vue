@@ -291,4 +291,26 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
 @media (prefers-reduced-motion: reduce) {
   .agent-state-dot { animation: none !important; }
 }
+
+/* A shrunk desktop window: one slim bar - status and target on a line, the action
+   buttons in a row beneath - instead of tall touch-sized tiles that run off the window. */
+@media (max-width: 600px), (max-height: 460px) {
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-action-bar {
+    --agent-action-height: 38px;
+    flex-direction: row; flex-wrap: wrap; gap: 6px;
+    margin: 6px 6px 0; padding: 6px; border-radius: 12px;
+  }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-state-dot { width: 10px; height: 10px; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-state-text strong { font-size: 0.85rem; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-state-text span { font-size: 0.72rem; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-actions { display: flex; flex: 1 1 100%; gap: 6px; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-action {
+    flex: 1 1 56px; min-width: 0; flex-direction: row; gap: 6px;
+    padding: 0 6px; border-radius: 10px; font-size: 0.75rem;
+  }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-action-icon { font-size: 1em; }
+  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-action-label {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+}
 </style>
