@@ -98,11 +98,21 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      // The bundle is served from localhost (Flask/Electron) and precached by
-      // the PWA service worker, so a single ~2.8MB chunk costs nothing over a
-      // network. Raise the limit so full setup doesn't print a spurious
-      // "chunks are larger than 500 kB" warning.
-      chunkSizeWarningLimit: 3500
+      // Served from localhost and precached by the service worker, so size costs
+      // little - but one 3.7MB file hid growth. Heavy vendors get their own chunks
+      // and the secondary screens load lazily (router); the limit sits just above
+      // the largest remaining chunk so real growth warns again.
+      chunkSizeWarningLimit: 1700, // vendor-icons (every FontAwesome icon, ~1.6MB) is the largest
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined
+            if (/node_modules\/(three|ogl|vgpu)\//.test(id)) return 'vendor-graphics'
+            if (id.includes('@fortawesome')) return 'vendor-icons'
+            return undefined
+          }
+        }
+      }
     },
     test: {
       environment: 'jsdom',
