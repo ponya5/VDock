@@ -210,8 +210,14 @@ const appName = computed(() => {
 // Any deck action (media, volume, open URL...) can go on the app's scene, not only hotkeys.
 const deckActions = computed(() => {
   const q = searchQuery.value.toLowerCase()
-  return presetRegistry.filter(p => p.category === 'system' &&
-    (!q || p.name.toLowerCase().includes(q) || p.keywords?.some(k => k.includes(q))))
+  // Media and volume first; power actions last so they are never the first thing offered.
+  const POWER = ['shutdown', 'restart', 'sleep', 'lock', 'close-app']
+  const rank = (p: ButtonPreset) =>
+    POWER.includes(p.id) ? 2 : p.keywords?.some(k => k === 'media' || k === 'audio') ? 0 : 1
+  return presetRegistry
+    .filter(p => p.category === 'system' &&
+      (!q || p.name.toLowerCase().includes(q) || p.keywords?.some(k => k.includes(q))))
+    .sort((a, b) => rank(a) - rank(b))
 })
 
 const categoryLabels: Record<string, string> = {
