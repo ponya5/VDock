@@ -76,16 +76,14 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import Collapse from '@/components/Collapse.vue'
 import { templateCategories, type AppTemplate } from '@/data/appTemplates'
-import type { Scene, Button } from '@/types'
+import { addTemplateScene } from '@/composables/useTemplateScenes'
 import AppPathEditor from '@/components/AppPathEditor.vue'
 import { appPaths, templateAppKey } from '@/api/appPaths'
 
-const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
 
 const expandedCategories = ref<string[]>([])
@@ -112,23 +110,9 @@ function toggleCategory(id: string) {
 }
 
 async function addTemplateAsScene(template: AppTemplate) {
-  const profile = dashboardStore.currentProfile
-  if (!profile) { notificationsStore.error('No profile', 'Load a profile first.'); return }
   addingTemplate.value = template.id
   try {
-    const buttons: Button[] = template.buttons.map((b, index) => ({
-      id: `button-${Date.now()}-${index}`,
-      label: b.label, icon: b.icon, icon_type: 'fontawesome', action: b.action as Button['action'], shape: 'rounded',
-      position: { row: Math.floor(index / 5), col: index % 5 }, size: { rows: 1, cols: 1 },
-      style: { backgroundColor: b.style?.backgroundColor ?? template.color, textColor: b.style?.textColor ?? '#ffffff' },
-      tooltip: b.tooltip ?? b.label, enabled: true
-    }))
-    const newScene: Scene = {
-      id: `scene-${Date.now()}`, name: template.name, icon: template.icon[1] ?? 'layer-group',
-      color: template.color, pages: [{ id: `page-${Date.now()}`, name: 'Page 1', buttons, grid_config: { rows: 4, cols: 5 } }],
-      appId: template.id, autoCreated: false
-    }
-    dashboardStore.addScene(newScene)
+    if (!addTemplateScene(template)) { notificationsStore.error('No profile', 'Load a profile first.'); return }
     notificationsStore.success('Scene added', `"${template.name}" scene added to your dashboard.`)
   } finally { addingTemplate.value = null }
 }
