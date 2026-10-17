@@ -5,6 +5,11 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.2] — 2026-10-17
+
+### Changed
+- **Small window = icon buttons** — shrink the desktop window and the deck drops the text labels, scales the buttons down so every one stays visible, and the "Header" tab becomes a small chevron instead of covering buttons
+
 ## [2.5.1] — 2026-10-17
 
 Theme: **a shorter, more useful first-run tour**.
