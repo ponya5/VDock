@@ -275,7 +275,7 @@ const features: GuideFeature[] = [
     title: 'Integrations & Triggers',
     tagline: 'The deck reacts on its own',
     body: [
-      '<strong>Auto scene switching</strong> watches running apps: open Cursor and its scene appears; close it and the deck returns. Monitored apps and per-scene bindings live under Integrations → Apps &amp; scenes.',
+      '<strong>Auto scene switching</strong> watches running apps: open Cursor and its scene appears; close it and the deck returns. Monitored apps and per-scene bindings live under Agents &amp; automation → Apps &amp; scenes.',
       '<strong>Triggers</strong> fire actions without a tap — on a schedule, when an app launches, when an agent finishes, or when a webhook arrives. Each trigger pairs an event with any deck action.',
       '<strong>Agent alerts</strong> tune how the waiting glow appears: banner, chips, dock — pick what you notice.',
     ],

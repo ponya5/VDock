@@ -36,8 +36,21 @@ export function useSettingsNavigation(scroller: Ref<HTMLElement | null>) {
     void nextTick(() => scroller.value?.scrollTo({ top: 0 }))
   }
 
-  function scrollToPanel(id: string) {
-    void nextTick(() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+  // Scroll to the anchor and pulse it so the user sees which setting the link meant.
+  // The element may mount a beat later (rows gated on an async status fetch), so retry briefly.
+  function scrollToPanel(id: string, tries = 15) {
+    void nextTick(() => {
+      const el = document.getElementById(id)
+      if (!el) {
+        if (tries > 0) setTimeout(() => scrollToPanel(id, tries - 1), 100)
+        return
+      }
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el.classList.remove('nav-flash')
+      void el.offsetWidth // restart the animation when the same anchor is hit twice
+      el.classList.add('nav-flash')
+      setTimeout(() => el.classList.remove('nav-flash'), 2600)
+    })
   }
 
   function syncQuery() {

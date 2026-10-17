@@ -63,10 +63,10 @@ afterEach(async () => {
 })
 
 describe('Settings shell navigation', () => {
-  it('lists the seven sections plus the guide link', async () => {
+  it('lists the six sections plus the guide link', async () => {
     const w = await openSettings('/settings')
     const names = w.findAll('.nav-rail-item').map((el) => el.text())
-    expect(names).toEqual(['Overview', 'Appearance', 'Agents & automation', 'Integrations', 'Devices & network', 'System', 'About', 'Guide'])
+    expect(names).toEqual(['Overview', 'Appearance', 'Agents & automation', 'Devices & network', 'System', 'About', 'Guide'])
   })
 
   it('opens Devices > Connect for the legacy ?tab=connect link', async () => {
@@ -78,7 +78,7 @@ describe('Settings shell navigation', () => {
   it('opens a page named by ?section=&page=', async () => {
     const w = await openSettings('/settings?section=agents&page=alerts')
     expect(activeSection(w)).toBe('Agents & automation')
-    expect(activePage(w)).toBe('Agent alerts')
+    expect(activePage(w)).toBe('AI agents')
   })
 
   it('jumps to Security when the search result for "password" is picked', async () => {
@@ -92,18 +92,13 @@ describe('Settings shell navigation', () => {
 
   it('scrolls to the panel named by ?anchor=', async () => {
     await openSettings('/settings?section=appearance&page=buttons&anchor=touch')
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' })
   })
 
-  it('lands on Overview and links a missing GitHub token to Accounts & keys', async () => {
+  it('does not flag an unset GitHub token as needing attention (it is optional)', async () => {
     const w = await openSettings('/settings')
     expect(activeSection(w)).toBe('Overview')
-    const row = w.find('.attention-row')
-    expect(row.text()).toContain('GitHub token not set')
-    await row.trigger('click')
-    await flushPromises()
-    expect(activeSection(w)).toBe('Integrations')
-    expect(w.find('[data-key="GITHUB_TOKEN"]').text()).toContain('Not set')
+    expect(w.find('.attention-row').exists()).toBe(false)
   })
 
   it.each(['token', 'github'])('finds Accounts & keys when searching "%s"', async (word) => {
@@ -111,7 +106,7 @@ describe('Settings shell navigation', () => {
     await w.find('#setting-search').setValue(word)
     await w.find('.nav-result').trigger('click')
     await flushPromises()
-    expect(activeSection(w)).toBe('Integrations')
+    expect(activeSection(w)).toBe('Agents & automation')
     expect(activePage(w)).toBe('Accounts & keys')
   })
 })

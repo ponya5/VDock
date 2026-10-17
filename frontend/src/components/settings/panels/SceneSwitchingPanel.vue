@@ -116,11 +116,10 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import apiClient from '@/api/client'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
-import { fetchAppProfiles, hasAppShortcuts, topAppShortcuts, type AppProfileDto } from '@/api/appProfiles'
-import type { RunningApp, Scene, Button } from '@/types'
-import { appIdForExe } from '@/data/appBackgrounds'
+import { fetchAppProfiles, type AppProfileDto } from '@/api/appProfiles'
+import type { RunningApp, Scene } from '@/types'
 import { useAppIntegrations, setAppIntegrations, setAutoSceneSwitching } from '@/composables/useAppIntegrations'
-import { getAppScene, createButtonFromShortcut } from '@/composables/useAppShortcutScenes'
+import { getAppScene, ensureSceneForApp } from '@/composables/useAppShortcutScenes'
 
 defineEmits<{ (e: 'manage-shortcuts', app: RunningApp): void }>()
 
@@ -250,11 +249,13 @@ async function refreshRunningApps() {
 
 function isAppIntegrationEnabled(appExe: string): boolean { return appIntegrations.value.some(i => i.appExe === appExe && i.enabled) }
 
-function toggleAppIntegration(app: RunningApp) {
+async function toggleAppIntegration(app: RunningApp) {
   const idx = appIntegrations.value.findIndex(i => i.appExe === app.exe)
   if (idx >= 0) { appIntegrations.value[idx].enabled = !appIntegrations.value[idx].enabled }
   else { appIntegrations.value.push({ appExe: app.exe, appName: app.name, sceneId: '', enabled: true, autoCreateScene: false }) }
   saveAppIntegrations()
+  // Turning an app on gives it a ready scene straight away.
+  if (isAppIntegrationEnabled(app.exe) && !getAppScene(app.exe)) await createSceneForApp(app)
 }
 
 function updateAppScene(appExe: string, sceneId: string) {
@@ -263,21 +264,15 @@ function updateAppScene(appExe: string, sceneId: string) {
 }
 
 async function createSceneForApp(app: RunningApp) {
-  const profile = dashboardStore.currentProfile
-  if (!profile) { notificationsStore.error('No profile', 'No profile loaded.'); return }
-  const sceneName = app.name.replace('.exe', '')
+  if (!dashboardStore.currentProfile) { notificationsStore.error('No profile', 'No profile loaded.'); return }
   try {
-    const profiles = await fetchAppProfiles()
-    const topShortcuts = hasAppShortcuts(profiles, app.exe) ? topAppShortcuts(profiles, app.exe, 8) : []
-    const buttons: Button[] = topShortcuts.map((shortcut, index) => createButtonFromShortcut(shortcut, index))
-    const newScene: Scene = {
-      id: `scene-${Date.now()}`, name: sceneName, icon: 'window-maximize', color: '#3498db',
-      pages: [{ id: `page-${Date.now()}`, name: 'Page 1', buttons, grid_config: { rows: 4, cols: 5 } }],
-      triggeredByApp: app.exe, appId: appIdForExe(app.exe), autoCreated: true
-    }
-    dashboardStore.addScene(newScene)
-    updateAppScene(app.exe, newScene.id)
-    notificationsStore.success('Scene created', `"${sceneName}" created with ${buttons.length} shortcut buttons`)
+    const scene = await ensureSceneForApp(app.exe, app.name)
+    if (!scene) return
+    saveAppIntegrations()
+    const count = scene.pages[0]?.buttons.length ?? 0
+    notificationsStore.success('Scene ready', count
+      ? `"${scene.name}" is set up with ${count} buttons`
+      : `"${scene.name}" is empty - open Manage shortcuts (gear) to add actions`)
   } catch { notificationsStore.error('Create failed', 'Failed to create scene') }
 }
 

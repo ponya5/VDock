@@ -1227,3 +1227,11 @@
     animation: none;
   }
 }
+
+/* Settings deep links pulse their target so the user sees what to change. */
+.nav-flash { animation: nav-flash 2.4s ease-out; }
+@keyframes nav-flash {
+  0%, 30% { box-shadow: 0 0 0 3px var(--accent, #4f8cff), 0 0 24px 4px color-mix(in srgb, var(--accent, #4f8cff) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .nav-flash { animation-duration: 0.01s; outline: 3px solid var(--accent, #4f8cff); } }

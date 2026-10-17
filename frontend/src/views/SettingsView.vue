@@ -140,9 +140,11 @@
       v-if="showShortcutManager"
       class="settings-isolate"
       :app-exe="selectedAppForShortcuts?.exe || ''"
+      :app-label="selectedAppForShortcuts?.name"
       :scene-id="getAppScene(selectedAppForShortcuts?.exe || '')"
       @close="showShortcutManager = false"
       @add-shortcut="handleAddShortcut"
+      @add-preset="handleAddPreset"
     />
 
     <!-- Live screensaver layout editor — mounted in THIS window so Customize
@@ -184,7 +186,8 @@ import type { RunningApp, Button } from '@/types'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { refreshVdock, requestVdockRefresh } from '@/composables/useVdockRefresh'
 import { useAppIntegrations, reloadAppIntegrations } from '@/composables/useAppIntegrations'
-import { getAppScene, createButtonFromShortcut } from '@/composables/useAppShortcutScenes'
+import { getAppScene, createButtonFromShortcut, ensureSceneForApp, placeButton } from '@/composables/useAppShortcutScenes'
+import { presetToButton, type ButtonPreset } from '@/data/presets'
 import { sliderFill } from '@/utils/sliderFill'
 import { useBackgroundPreview } from '@/composables/useBackgroundPreview'
 import SiteFooter from '@/components/SiteFooter.vue'
@@ -496,27 +499,27 @@ const panelBindings = computed<Record<string, Record<string, unknown>>>(() => ({
   AboutPanel: { onRequestFeature: () => { showFeatureRequest.value = true } },
 }))
 
-function handleAddShortcut(shortcut: AppShortcut) {
-  const sceneId = getAppScene(selectedAppForShortcuts.value?.exe || '')
-  if (!sceneId) { notificationsStore.error('No scene', 'Please create a scene first'); return }
-  const profile = dashboardStore.currentProfile
-  if (!profile) return
-  const scene = profile.scenes.find(s => s.id === sceneId)
-  if (!scene?.pages?.length) { notificationsStore.error('Scene missing', 'Scene not found'); return }
-  const page = scene.pages[0]
-  const buttons = page.buttons || []
-  let emptySlot = null
-  for (let row = 0; row < page.grid_config.rows && !emptySlot; row++) {
-    for (let col = 0; col < page.grid_config.cols && !emptySlot; col++) {
-      if (!buttons.some(b => b.position.row === row && b.position.col === col)) emptySlot = { row, col }
-    }
+async function addButtonToAppScene(build: () => Button, label: string) {
+  const app = selectedAppForShortcuts.value
+  if (!app) return
+  const scene = await ensureSceneForApp(app.exe, app.name)
+  if (!scene) { notificationsStore.error('No profile', 'No profile loaded.'); return }
+  loadAppIntegrations()
+  if (!placeButton(scene.pages[0], build())) {
+    notificationsStore.error('Scene full', 'No empty slots available in the scene')
+    return
   }
-  if (!emptySlot) { notificationsStore.error('Scene full', 'No empty slots available in the scene'); return }
-  const newButton = createButtonFromShortcut(shortcut, 0)
-  newButton.position = emptySlot
-  dashboardStore.addButton(newButton)
+  dashboardStore.saveProfile()
   showShortcutManager.value = false
-  notificationsStore.success('Shortcut added', `"${shortcut.name}" added to scene`)
+  notificationsStore.success('Added', `"${label}" added to the ${scene.name} scene`)
+}
+
+function handleAddShortcut(shortcut: AppShortcut) {
+  return addButtonToAppScene(() => createButtonFromShortcut(shortcut, 0), shortcut.name)
+}
+
+function handleAddPreset(preset: ButtonPreset) {
+  return addButtonToAppScene(() => presetToButton(preset, { row: 0, col: 0 }), preset.name)
 }
 
 function loadAppIntegrations() {

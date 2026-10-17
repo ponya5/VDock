@@ -2,7 +2,7 @@
 // anchors, search entries and legacy deep-link ids. SettingsView, the search box
 // and the deep-link resolver all read from here; panels never know where they live.
 
-export type SectionId = 'overview' | 'appearance' | 'agents' | 'integrations' | 'devices' | 'system' | 'about'
+export type SectionId = 'overview' | 'appearance' | 'agents' | 'devices' | 'system' | 'about'
 type Icon = [string, string]
 
 export interface SettingsPage {
@@ -65,17 +65,10 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'agents', name: 'Agents & automation', icon: ['fas', 'robot'], tour: 'nav-integration',
     pages: [
-      { id: 'alerts', name: 'Agent alerts', title: 'Agent alerts', blurb: 'Banner, glow, deck chips and toasts when something needs you.', panels: ['AgentAlertsPanel', 'NotificationsPanel'], anchors: ['agent-alerts', 'notifications'] },
-      { id: 'scenes', name: 'Scene switching', title: 'Scene switching', blurb: 'Scenes that follow the app in focus.', panels: ['SceneSwitchingPanel'], anchors: ['auto-switch', 'running-apps'] },
-      { id: 'triggers', name: 'Triggers', title: 'Triggers', blurb: 'Automatic rules: when something happens (a time, an app opens, an AI agent needs you, a script calls in), VDock switches scene, shows a notification or runs an action.', panels: ['TriggersPanel'], anchors: [], autosaves: true },
-      { id: 'mcp', name: 'MCP server', title: 'MCP server', blurb: 'Let local agents act on the deck.', panels: ['McpPanel'], anchors: ['mcp-server'], autosaves: true },
-    ],
-  },
-  {
-    id: 'integrations', name: 'Integrations', icon: ['fas', 'plug'], tour: 'nav-templates',
-    pages: [
-      { id: 'accounts', name: 'Accounts & keys', title: 'Accounts & keys', blurb: 'Which keys and tools VDock can use, and where to add them.', panels: ['AccountsPanel'], anchors: ['accounts', 'tools'], autosaves: true },
-      { id: 'templates', name: 'App templates', title: 'App templates', blurb: 'Drop-in scenes for popular apps.', panels: ['TemplatesPanel'], anchors: [], autosaves: true },
+      { id: 'scenes', name: 'Apps & scenes', title: 'Apps & scenes', blurb: 'Pick the apps you use and the deck switches to their buttons when you open them. Add ready-made app scenes here too.', panels: ['SceneSwitchingPanel', 'TemplatesPanel'], anchors: ['auto-switch', 'running-apps'], tour: 'nav-templates' },
+      { id: 'alerts', name: 'AI agents', title: 'AI agents', blurb: 'Know when Claude, Cursor or Codex needs you, and let agents press deck keys.', panels: ['AgentAlertsPanel', 'McpPanel', 'NotificationsPanel'], anchors: ['agent-alerts', 'mac-accessibility', 'mcp-server', 'notifications'] },
+      { id: 'triggers', name: 'Automation', title: 'Automation', blurb: 'Do things on their own: when a time comes, an app opens, an agent needs you or a script calls in, VDock switches scene, shows a notification or runs an action.', panels: ['TriggersPanel'], anchors: [], autosaves: true },
+      { id: 'accounts', name: 'Accounts & keys', title: 'Accounts & keys', blurb: 'Which keys and tools VDock can use, and where to add them. All optional.', panels: ['AccountsPanel'], anchors: ['accounts', 'tools'], autosaves: true },
     ],
   },
   {
@@ -107,15 +100,16 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications follow app focus', section: 'agents', page: 'scenes', anchor: 'auto-switch', icon: ['fas', 'shuffle'] },
   { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', section: 'agents', page: 'scenes', anchor: 'running-apps', icon: ['fas', 'desktop'] },
   { label: 'Agent Attention Alerts', keywords: 'agent alerts waiting glow banner chips dock notification permission idle', section: 'agents', page: 'alerts', anchor: 'agent-alerts', icon: ['fas', 'user-clock'] },
+  { label: 'Let VDock press keys (Accessibility)', keywords: 'accessibility macos permission keystrokes blocked privacy security allow keys', section: 'agents', page: 'alerts', anchor: 'mac-accessibility', icon: ['fas', 'universal-access'] },
   { label: 'Agent Hooks', keywords: 'agent hooks install claude codex cursor status', section: 'agents', page: 'alerts', anchor: 'agent-alerts', icon: ['fas', 'plug-circle-check'] },
   { label: 'Notifications', keywords: 'notifications toast toasts popups alerts errors', section: 'agents', page: 'alerts', anchor: 'notifications', icon: ['fas', 'bell'] },
   { label: 'Triggers & Schedules', keywords: 'triggers schedules automation time app foreground agent webhook scene switch pause resume', section: 'agents', page: 'triggers', icon: ['fas', 'bolt'] },
-  { label: 'MCP Server', keywords: 'mcp server agents model context protocol tools press button enable disable', section: 'agents', page: 'mcp', anchor: 'mcp-server', icon: ['fas', 'robot'] },
-  { label: 'GitHub Token', keywords: 'github token key pat api env accounts keys live pr ci buttons', section: 'integrations', page: 'accounts', anchor: 'accounts', icon: ['fab', 'github'] },
-  { label: 'Accounts & Keys', keywords: 'accounts keys anthropic claude weather api key token env secrets cli gh', section: 'integrations', page: 'accounts', anchor: 'accounts', icon: ['fas', 'key'] },
+  { label: 'MCP Server', keywords: 'mcp server agents model context protocol tools press button enable disable', section: 'agents', page: 'alerts', anchor: 'mcp-server', icon: ['fas', 'robot'] },
+  { label: 'GitHub Token', keywords: 'github token key pat api env accounts keys live pr ci buttons', section: 'agents', page: 'accounts', anchor: 'accounts', icon: ['fab', 'github'] },
+  { label: 'Accounts & Keys', keywords: 'accounts keys anthropic claude weather api key token env secrets cli gh', section: 'agents', page: 'accounts', anchor: 'accounts', icon: ['fas', 'key'] },
   { label: 'Overview', keywords: 'overview needs attention status quick switches setup', section: 'overview', page: 'overview', icon: ['fas', 'gauge-high'] },
   { label: 'Quick Switches', keywords: 'quick switches toggles lan screensaver agent alerts auto scene', section: 'overview', page: 'overview', anchor: 'quick-switches', icon: ['fas', 'toggle-on'] },
-  { label: 'Command-line Tools', keywords: 'cli tools gh github cli claude code cli installed path', section: 'integrations', page: 'accounts', anchor: 'tools', icon: ['fas', 'terminal'] },
+  { label: 'Command-line Tools', keywords: 'cli tools gh github cli claude code cli installed path', section: 'agents', page: 'accounts', anchor: 'tools', icon: ['fas', 'terminal'] },
   { label: 'Edit Keys', keywords: 'edit keys buttons change action dashboard edit mode', section: 'overview', page: 'overview', anchor: 'edit-keys', icon: ['fas', 'pen-to-square'] },
   { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck allow lan deck address', section: 'devices', page: 'connect', icon: ['fas', 'mobile-screen-button'] },
   { label: 'Deck Password', keywords: 'password authentication auth login lock secure require unlock', section: 'devices', page: 'security', anchor: 'security', icon: ['fas', 'lock'] },
@@ -135,7 +129,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Spectrum Screensaver', keywords: 'spectrum visualizer audio skin winamp aurora ember scope shuffle media controls fullscreen', section: 'appearance', page: 'screensaver', anchor: 'ss-spectrum', icon: ['fas', 'wave-square'] },
   { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', section: 'appearance', page: 'screensaver', anchor: 'ss-widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', section: 'appearance', page: 'screensaver', anchor: 'ss-widgets', icon: ['fas', 'cloud-sun'] },
-  { label: 'App Templates', keywords: 'templates presets apps buttons app paths executable', section: 'integrations', page: 'templates', icon: ['fas', 'layer-group'] },
+  { label: 'App Templates', keywords: 'templates presets apps buttons app paths executable', section: 'agents', page: 'scenes', icon: ['fas', 'layer-group'] },
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', section: 'system', page: 'logs', icon: ['fas', 'file-lines'] },
   { label: 'Startup', keywords: 'launcher terminal close debug startup', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'up-right-from-square'] },
@@ -147,7 +141,7 @@ export const SEARCH: SearchEntry[] = [
 /** Pre-registry `?tab=` ids and the page each opened. */
 export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> = {
   appearance: { section: 'appearance' },
-  templates: { section: 'integrations', page: 'templates' },
+  templates: { section: 'agents', page: 'scenes' },
   server: { section: 'devices', page: 'security' },
   integration: { section: 'agents' },
   connect: { section: 'devices', page: 'connect' },
@@ -159,7 +153,10 @@ export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> 
 export const LEGACY_SUBS: Record<string, string> = { apps: 'scenes' }
 
 /** Pages that were folded into another page (Advanced "ports" now lives under "security"). */
-export const LEGACY_PAGES: Record<string, string> = { ports: 'security' }
+export const LEGACY_PAGES: Record<string, string> = { ports: 'security', templates: 'scenes', mcp: 'alerts' }
+
+/** Sections that were merged into another (Integrations now lives under Agents & automation). */
+export const LEGACY_SECTIONS: Record<string, SectionId> = { integrations: 'agents' }
 
 /** Sections that have pages - the ones the sidebar lists. */
 export const NAV_SECTIONS: SettingsSection[] = SECTIONS.filter((s) => s.pages.length > 0)
@@ -195,7 +192,8 @@ function locateAnchor(anchor: string): SettingsRoute | undefined {
 export function resolveRoute(query: Record<string, unknown>): SettingsRoute {
   const anchor = str(query.anchor)
   const legacy = LEGACY_TABS[str(query.tab) ?? '']
-  const section = findSection(str(query.section) ?? legacy?.section)
+  const rawSection = str(query.section)
+  const section = findSection((rawSection && LEGACY_SECTIONS[rawSection]) || rawSection || legacy?.section)
   if (!section) {
     return (anchor && locateAnchor(anchor)) || fallbackRoute(findSection(LANDING)!)
   }

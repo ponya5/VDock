@@ -9,7 +9,7 @@
          place (DL-014 addendum #3). -->
     <Transition name="hdr-reveal">
       <!-- Main Header -->
-      <header v-if="settingsStore.showHeader" ref="headerRef" class="deck-header dashboard-header">
+      <header v-if="settingsStore.showHeader" ref="headerRef" class="deck-header dashboard-header" @pointerenter="holdAutohide" @pointerleave="releaseAutohide">
       <div class="header-background"></div>
       <div class="header-content">
         <div class="header-left">
@@ -280,6 +280,19 @@ function toggleAutohidePin() {
   } else {
     // Resume from where it paused rather than restarting at 5s —
     // unpinning should not silently grant a fresh window.
+    startAutohide(autohideRemainingMs)
+  }
+}
+
+// Hovering the header freezes the countdown (real mouse only: a finger tap
+// has no hover and must not leave it frozen). Leaving resumes from the same
+// spot; a pinned header stays paused.
+function holdAutohide(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && !autohidePaused.value) stopAutohide()
+}
+
+function releaseAutohide(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && !autohidePaused.value && settingsStore.showHeader) {
     startAutohide(autohideRemainingMs)
   }
 }

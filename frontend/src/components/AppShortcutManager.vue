@@ -72,7 +72,18 @@
 
           <div v-if="filteredShortcuts.length === 0" class="empty-state">
             <FontAwesomeIcon :icon="['fas', 'search']" />
-            <p>No shortcuts found</p>
+            <p>No keyboard shortcuts for {{ appName }} - pick a deck action below</p>
+          </div>
+
+          <h3 class="shortcut-group">Deck actions</h3>
+          <div v-for="preset in deckActions" :key="preset.id" class="shortcut-item" data-testid="deck-action">
+            <div class="shortcut-info">
+              <div class="shortcut-name">{{ preset.name }}</div>
+            </div>
+            <button class="btn btn-primary btn-sm add-btn" title="Add to scene" @click="emit('addPreset', preset)">
+              <FontAwesomeIcon :icon="['fas', 'plus']" />
+              Add
+            </button>
           </div>
         </div>
 
@@ -149,6 +160,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { presetRegistry, type ButtonPreset } from '@/data/presets'
 import {
   fetchAppProfiles,
   appShortcutsForExe,
@@ -159,6 +171,7 @@ import {
 
 interface Props {
   appExe: string
+  appLabel?: string
   sceneId: string
 }
 
@@ -167,6 +180,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
   addShortcut: [shortcut: AppShortcut]
+  addPreset: [preset: ButtonPreset]
 }>()
 
 const searchQuery = ref('')
@@ -188,7 +202,17 @@ onMounted(async () => {
 
 const allShortcuts = computed(() => appShortcutsForExe(profiles.value, props.appExe))
 const categories = computed(() => Array.from(new Set(allShortcuts.value.map(s => s.category))))
-const appName = computed(() => appLabelForExe(profiles.value, props.appExe))
+const appName = computed(() => {
+  const known = appLabelForExe(profiles.value, props.appExe)
+  return known === props.appExe.replace('.exe', '') && props.appLabel ? props.appLabel : known
+})
+
+// Any deck action (media, volume, open URL...) can go on the app's scene, not only hotkeys.
+const deckActions = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  return presetRegistry.filter(p => p.category === 'system' &&
+    (!q || p.name.toLowerCase().includes(q) || p.keywords?.some(k => k.includes(q))))
+})
 
 const categoryLabels: Record<string, string> = {
   general: 'General',
@@ -420,6 +444,7 @@ function addCustomShortcut() {
   border-color: var(--color-primary);
 }
 
+.shortcut-group { margin: 16px 0 8px; font-size: 0.95rem; opacity: 0.8; }
 .shortcuts-list {
   display: flex;
   flex-direction: column;
