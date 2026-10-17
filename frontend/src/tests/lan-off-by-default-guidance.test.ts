@@ -32,6 +32,6 @@ describe('LAN access is off by default and clearly explained', () => {
     expect(connectPanelSource).toContain('data-tour="allow-lan"')
     expect(tutorialSource).toContain("title: 'Use your phone or tablet'")
     expect(tutorialSource).toContain("target: '[data-tour=\"allow-lan\"]'")
-    expect(tutorialSource).toContain('your phone cannot open VDock')
+    expect(tutorialSource).toContain('no other device can reach your deck')
   })
 })

@@ -1,5 +1,9 @@
 import { reactive, computed } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useDashboardStore } from '@/stores/dashboard'
+import { TUTORIAL_APPS, findTemplate } from '@/data/tutorialApps'
+import { addTemplateScene } from '@/composables/useTemplateScenes'
+import { ensureSceneForApp } from '@/composables/useAppShortcutScenes'
 
 /**
  * First-run bubble tutorial. A small reactive store so DashboardView
@@ -23,6 +27,8 @@ import { useSettingsStore } from '@/stores/settings'
 export const TUTORIAL_DONE_KEY = 'vdock_tutorial_done'
 export const TUTORIAL_PENDING_KEY = 'vdock_tutorial_pending'
 export interface TutorialStep {
+  /** `apps` renders the app picker inside the card. */
+  kind?: 'apps'
   /** CSS selector to spotlight; null/undefined renders a centered card. */
   target?: string
   title: string
@@ -50,16 +56,15 @@ export interface TutorialStep {
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    route: '/profiles',
+    route: '/',
     title: 'Welcome to VDock',
-    text: 'A quick tour — tap Next to walk through the essentials, or Skip to explore on your own.',
+    text: 'Your computer\'s controls on a deck you can tap — on this screen or on your phone. A one-minute tour; skip it any time.',
   },
   {
-    route: '/profiles',
-    target: '.profiles-grid',
-    title: 'Pick a Profile',
-    text: 'A profile is a full deck: scenes, pages, buttons. Tap ▶ on "My VDock" to load the starter — or "+ New Profile" to start blank and customize later.',
-    placement: 'bottom',
+    route: '/',
+    kind: 'apps',
+    title: 'What do you use?',
+    text: 'Tick your apps and each gets a ready-made scene of buttons. Media controls are already included. You can add or remove scenes later.',
   },
   {
     route: '/',
@@ -67,76 +72,71 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     // live in the header chrome — reveal it first (autohide default-off).
     needsHeader: true,
     target: '.enhanced-scene-nav, .mc-scene-rail',
-    title: 'Scenes & Pages',
-    text: 'Each scene is a page of buttons for a context — media, Claude Code, websites. Tap a pill to switch — or swipe right/left anywhere on the dashboard to move between scenes.',
+    title: 'Scenes',
+    text: 'A scene is a page of buttons for one job — media, Claude Code, a website. Tap a pill to switch, or swipe left and right anywhere on the deck.',
     placement: 'bottom',
     optional: true,
   },
   {
     route: '/',
-    target: '.deck-grid',
-    title: 'Your Deck',
-    text: 'Tap a button to run its action — media controls, hotkeys, websites, agent commands. Scenes with more buttons get extra pages — flip them with the dots or ‹ › below.',
-    placement: 'top',
-    optional: true,
-  },
-  {
-    route: '/',
-    // Phones render the deck read-only — no edit affordance there.
-    needsHeader: true,
-    target: '[aria-label="Toggle Edit Mode"]',
-    title: 'Edit Mode',
-    text: 'Tap the pencil to customize: add buttons to empty slots, drag to rearrange, resize, and pick actions from the sidebar.',
+    target: '.deck-grid .deck-button',
+    title: 'Your deck',
+    text: 'Tap a button to run it. To change the layout, open the header and tap the pencil: add, drag and resize buttons.',
     placement: 'bottom',
     optional: true,
   },
   {
-    route: '/',
-    // Only mounts while the current scene is agent-backed — switch to
-    // such a scene first; the mobile agent console is the same surface
-    // on touch panels.
-    needsAgentScene: true,
-    target: '.agent-action-bar, .mobile-agent-console',
-    title: 'Agent Sessions',
-    text: 'Running Claude Code or other agents? This bar shows their state — and with multiple sessions open, the chip lets you pick exactly which terminal your button taps control.',
-    placement: 'top',
+    route: '/settings',
+    target: '[data-tour="nav-integration"]',
+    title: 'Agents & automation',
+    text: 'Get an alert when Claude, Cursor or Codex needs you, let scenes follow the app you are using, and set rules that run on their own.',
+    placement: 'right',
     optional: true,
-  },
-  {
-    route: '/settings',
-    target: '.nav',
-    title: 'Settings',
-    text: 'Everything is configured from this rail — Appearance, Agents & automation, Integrations, Devices & network, and System.',
-    placement: 'right',
-  },
-  {
-    route: '/settings',
-    target: '.nav-search',
-    title: 'Find a Setting',
-    text: 'Not sure where something lives? Type it — "screensaver", "touch", "port" — and jump straight to the right card.',
-    placement: 'right',
   },
   {
     route: '/settings',
     activate: '[data-tour="nav-server"]',
     target: '[data-tour="allow-lan"]',
     title: 'Use your phone or tablet',
-    text: 'Phone and tablet access is OFF by default, so nothing else on your network can reach your deck — until then your phone cannot open VDock. Press "Turn on phone access" here (a deck password is recommended): VDock restarts once and shows a code — scan it with your phone\'s camera.',
+    text: 'Phone access is off until you turn it on, so no other device can reach your deck. Press "Turn on phone access" here (a password is recommended). VDock restarts once and shows a code to scan with your phone\'s camera.',
     placement: 'bottom',
   },
   {
     route: '/',
     title: 'You\'re all set',
-    text: 'Leave the deck idle and the screensaver kicks in with weather, news, and market widgets. The full Guide is in the Settings sidebar — re-run this tour anytime from Settings → System → About.',
+    text: 'The Guide in the Settings sidebar covers everything else, and you can replay this tour from Settings → About.',
   },
 ]
 
 interface TutorialState {
   active: boolean
   stepIndex: number
+  /** TUTORIAL_APPS ids ticked in the "What do you use?" step. */
+  picked: string[]
 }
 
-const state = reactive<TutorialState>({ active: false, stepIndex: 0 })
+const state = reactive<TutorialState>({ active: false, stepIndex: 0, picked: [] })
+
+/** Adds a scene for each ticked app that has none yet; returns how many were added. */
+async function applyPickedApps(): Promise<number> {
+  const profile = useDashboardStore().currentProfile
+  const picked = state.picked.splice(0)
+  if (!profile || !picked.length) return 0
+  let added = 0
+  for (const id of picked) {
+    const app = TUTORIAL_APPS.find(a => a.id === id)
+    if (!app) continue
+    const exists = profile.scenes.some(sc => sc.appId === app.id || sc.triggeredByApp === app.source.replace('starter:', ''))
+    if (exists) continue
+    if (app.source.startsWith('starter:')) {
+      if (await ensureSceneForApp(app.source.slice(8), app.label)) added++
+    } else {
+      const template = findTemplate(app.source)
+      if (template && addTemplateScene(template)) added++
+    }
+  }
+  return added
+}
 
 export function useTutorial() {
   const currentStep = computed(() => TUTORIAL_STEPS[state.stepIndex])
@@ -149,8 +149,16 @@ export function useTutorial() {
   }
 
   function next() {
+    // Leaving the apps step adds the ticked apps' scenes.
+    if (currentStep.value?.kind === 'apps') void applyPickedApps()
     if (isLast.value) finish()
     else state.stepIndex++
+  }
+
+  function togglePicked(id: string) {
+    const i = state.picked.indexOf(id)
+    if (i >= 0) state.picked.splice(i, 1)
+    else state.picked.push(id)
   }
 
   function back() {
@@ -160,6 +168,7 @@ export function useTutorial() {
   function finish() {
     state.active = false
     state.stepIndex = 0
+    state.picked = [] // skipping adds nothing
     // Persisted server-side boolean + legacy localStorage marker.
     useSettingsStore().tutorialCompleted = true
     localStorage.setItem(TUTORIAL_DONE_KEY, '1')
@@ -199,6 +208,7 @@ export function useTutorial() {
     isLast,
     start,
     next,
+    togglePicked,
     back,
     finish,
     requestLaunch,

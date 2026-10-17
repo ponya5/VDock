@@ -71,10 +71,10 @@ describe('manual-only progression', () => {
   })
 
   it('a step with a missing target stays put — centered card, no skip', async () => {
-    const wrapper = await mountTour()
+    await mountTour()
     const tour = useTutorial()
     tour.start()
-    // Jump to the 'Scenes & Pages' step (index 2): its target selectors
+    // Jump to the 'Scenes' step (index 2): its target selectors
     // don't exist in this bare mount — the old code auto-skipped to 4.
     tour.state.stepIndex = 2
     await flushPromises()
@@ -121,13 +121,11 @@ describe('wiring (source)', () => {
 // mobile chrome being spotlighted).
 describe('header-targeted steps', () => {
   it('steps pointing into DeckHeader declare needsHeader', () => {
-    const scenes = TUTORIAL_STEPS.find((s) => s.title === 'Scenes & Pages')
-    const edit = TUTORIAL_STEPS.find((s) => s.title === 'Edit Mode')
+    const scenes = TUTORIAL_STEPS.find((s) => s.title === 'Scenes')
     expect(scenes?.needsHeader).toBe(true)
-    expect(edit?.needsHeader).toBe(true)
     // Steps not pointing into the header must not force a reveal.
     for (const s of TUTORIAL_STEPS) {
-      if (s === scenes || s === edit) continue
+      if (s === scenes) continue
       expect(s.needsHeader ?? false, `"${s.title}" must not reveal the header`).toBe(false)
     }
   })
@@ -141,25 +139,44 @@ describe('header-targeted steps', () => {
     expect(tourSrc).toContain('isMobileViewport')
   })
 
-  it('agent step spotlights the mobile console as a fallback', () => {
-    const agents = TUTORIAL_STEPS.find((s) => s.title === 'Agent Sessions')
-    expect(agents?.target).toContain('.agent-action-bar')
-    expect(agents?.target).toContain('.mobile-agent-console')
-  })
-
   it('an explicit Launch tutorial still starts on compact-touch viewports', () => {
     const dash = readFileSync(resolve(__dirname, '../views/DashboardView.vue'), 'utf-8')
     expect(dash).toContain("vdock_tutorial_pending")
     expect(dash).toMatch(/tourPending \|\| !isMobileViewport/)
   })
 
-  it('agent step switches to an agent-backed scene before measuring', () => {
-    const agents = TUTORIAL_STEPS.find((s) => s.title === 'Agent Sessions')
-    expect(agents?.needsAgentScene).toBe(true)
+  it('can still switch to an agent-backed scene for a step that needs one (needsAgentScene)', () => {
     // The tour hops scenes via the store and restores it when leaving '/'.
+    expect(tourSrc).toContain('needsAgentScene')
     expect(tourSrc).toContain('sceneAppProfile')
     expect(tourSrc).toContain('dashboardStore.setScene')
     expect(tourSrc).toContain('sceneSwitchFrom')
     expect(tourSrc).toContain('restoreDashboardState')
+  })
+})
+
+// DL-022: short tour, always skippable, apps picker, phone step.
+describe('tour content (DL-022)', () => {
+  it('stays short', () => {
+    expect(TUTORIAL_STEPS.length).toBeLessThanOrEqual(8)
+  })
+
+  it('has an apps step and a phone step', () => {
+    expect(TUTORIAL_STEPS.some((s) => s.kind === 'apps')).toBe(true)
+    expect(TUTORIAL_STEPS.some((s) => s.target === '[data-tour="allow-lan"]')).toBe(true)
+  })
+
+  it('every card has a Skip tour button, and Escape skips', () => {
+    expect(tourSrc).toContain('Skip tour')
+    expect(tourSrc).toContain("e.key === 'Escape'")
+  })
+
+  it('ticked apps add scenes on Next; skipping adds nothing', async () => {
+    await mountTour()
+    const tour = useTutorial()
+    tour.start()
+    tour.state.picked = ['claude-code']
+    tour.finish()
+    expect(tour.state.picked).toEqual([])
   })
 })

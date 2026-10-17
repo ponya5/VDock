@@ -28,13 +28,25 @@
         </div>
         <h3 class="tour-title">{{ step.title }}</h3>
         <p class="tour-text">{{ step.text }}</p>
+        <div v-if="step.kind === 'apps'" class="tour-apps" role="group" aria-label="Apps you use">
+          <span class="tour-app included"><FontAwesomeIcon :icon="['fas', 'circle-check']" /> Media <small>included</small></span>
+          <button
+            v-for="app in TUTORIAL_APPS"
+            :key="app.id"
+            type="button"
+            class="tour-app"
+            :class="{ on: tour.state.picked.includes(app.id) }"
+            :aria-pressed="tour.state.picked.includes(app.id)"
+            @click="tour.togglePicked(app.id)"
+          >
+            <FontAwesomeIcon :icon="app.icon" /> {{ app.label }}
+          </button>
+        </div>
         <div class="tour-actions">
-          <button class="tour-btn ghost" @click="tour.finish">Skip</button>
+          <button class="tour-btn ghost" data-testid="tour-skip" @click="tour.finish">Skip tour</button>
           <span class="tour-spacer"></span>
           <button v-if="!tour.isFirst.value" class="tour-btn ghost" @click="tour.back">Back</button>
-          <button class="tour-btn primary" @click="tour.next">
-            {{ tour.isLast.value ? 'Done' : 'Next' }}
-          </button>
+          <button class="tour-btn primary" @click="tour.next">{{ nextLabel }}</button>
         </div>
       </div>
     </div>
@@ -46,6 +58,7 @@ import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useTutorial, TUTORIAL_STEPS } from '@/services/tutorial'
+import { TUTORIAL_APPS } from '@/data/tutorialApps'
 import { useSettingsStore } from '@/stores/settings'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useMobileViewport } from '@/utils/mobileViewport'
@@ -61,6 +74,14 @@ const router = useRouter()
 const route = useRoute()
 const steps = TUTORIAL_STEPS
 const step = computed(() => tour.currentStep.value)
+const nextLabel = computed(() => {
+  if (tour.isLast.value) return 'Done'
+  if (step.value?.kind === 'apps') {
+    const n = tour.state.picked.length
+    return n ? `Add ${n} & continue` : 'Continue'
+  }
+  return tour.isFirst.value ? 'Start' : 'Next'
+})
 const bubbleEl = ref<HTMLElement | null>(null)
 const targetRect = ref<DOMRect | null>(null)
 const bubbleSize = ref({ w: 420, h: 240 })
@@ -152,7 +173,8 @@ async function prepareStep() {
     await nextTick()
   }
   if (token !== prepareToken) return
-  if (s.route !== '/') restoreDashboardState()
+  // Put the header back as soon as a step no longer needs it, not only when leaving '/'.
+  if (s.route !== '/' || !s.needsHeader) restoreDashboardState()
   // On mobile the header would *replace* the mobile chrome we're meant
   // to spotlight (.mc-scene-rail) — skip the reveal, the rail is already
   // mounted and the edit button genuinely doesn't exist there.
@@ -236,6 +258,11 @@ function startReanchor() {
   stopReanchor()
   reanchorTimer = setInterval(() => {
     if (!tour.state.active) return
+    if (bubbleEl.value) {
+      const b = bubbleEl.value.getBoundingClientRect()
+      if (b.width !== bubbleSize.value.w || b.height !== bubbleSize.value.h) bubbleSize.value = { w: b.width, h: b.height }
+    }
+    viewport.value = { w: window.innerWidth, h: window.innerHeight }
     const sel = step.value?.target
     if (!sel) { targetRect.value = null; return }
     const el = firstVisible(sel)
@@ -247,13 +274,19 @@ function stopReanchor() {
   if (reanchorTimer) { clearInterval(reanchorTimer); reanchorTimer = null }
 }
 
+function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && tour.state.active) tour.finish()
+}
+
 onMounted(() => {
   measure()
+  window.addEventListener('keydown', onKey)
   window.addEventListener('resize', measure)
   window.addEventListener('scroll', measure, true)
 })
 onUnmounted(() => {
   stopReanchor()
+  window.removeEventListener('keydown', onKey)
   window.removeEventListener('resize', measure)
   window.removeEventListener('scroll', measure, true)
 })
@@ -261,11 +294,18 @@ onUnmounted(() => {
 const spotlightStyle = computed(() => {
   const r = targetRect.value
   if (!r) return {}
+  // Clamp to the screen so a target taller or wider than the viewport still
+  // shows a ring (and the dim cut-out) instead of one that runs off-screen.
+  const { w: vw, h: vh } = viewport.value
+  const top = Math.max(4, r.top - PAD)
+  const left = Math.max(4, r.left - PAD)
+  const bottom = Math.min(vh - 4, r.bottom + PAD)
+  const right = Math.min(vw - 4, r.right + PAD)
   return {
-    top: `${r.top - PAD}px`,
-    left: `${r.left - PAD}px`,
-    width: `${r.width + PAD * 2}px`,
-    height: `${r.height + PAD * 2}px`,
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${Math.max(0, right - left)}px`,
+    height: `${Math.max(0, bottom - top)}px`,
   }
 })
 
@@ -276,15 +316,29 @@ const placement = computed<{ side: 'top' | 'bottom' | 'left' | 'right' | 'none' 
   const bw = bubbleSize.value.w
   const bh = bubbleSize.value.h
   const pref = step.value?.placement || 'bottom'
-  const fits = {
-    top: r.top - PAD - BUBBLE_GAP - bh > 8,
-    bottom: r.bottom + PAD + BUBBLE_GAP + bh < viewport.value.h - 8,
-    left: r.left - PAD - BUBBLE_GAP - bw > 8,
-    right: r.right + PAD + BUBBLE_GAP + bw < viewport.value.w - 8,
+  const narrow = viewport.value.w < 600
+  const room = {
+    top: r.top - PAD - BUBBLE_GAP,
+    bottom: viewport.value.h - r.bottom - PAD - BUBBLE_GAP,
+    left: r.left - PAD - BUBBLE_GAP,
+    right: viewport.value.w - r.right - PAD - BUBBLE_GAP,
   }
-  if (fits[pref]) return { side: pref }
-  const fallbacks: Array<'top' | 'bottom' | 'left' | 'right'> = ['bottom', 'top', 'right', 'left']
-  return { side: fallbacks.find((s) => fits[s]) || 'bottom' }
+  const fits = {
+    top: room.top - bh > 8,
+    bottom: room.bottom - bh > 8,
+    left: room.left - bw > 8,
+    right: room.right - bw > 8,
+  }
+  const order: Array<'top' | 'bottom' | 'left' | 'right'> =
+    narrow ? ['bottom', 'top'] : [pref, 'bottom', 'top', 'right', 'left']
+  const preferred = narrow && (pref === 'left' || pref === 'right') ? 'bottom' : pref
+  if (fits[preferred]) return { side: preferred }
+  const found = order.find((sd) => fits[sd])
+  if (found) return { side: found }
+  // Nothing fits (tall target, small screen): take the side with the most room;
+  // the bubble is clamped on-screen and scrolls if it must.
+  const sides = (narrow ? ['bottom', 'top'] : ['bottom', 'top', 'right', 'left']) as Array<'top' | 'bottom' | 'left' | 'right'>
+  return { side: sides.sort((x, y) => room[y] - room[x])[0] }
 })
 
 const arrowSide = computed(() => placement.value.side)
@@ -328,7 +382,10 @@ const bubbleStyle = computed(() => {
   // Clamp inside the viewport
   left = Math.min(Math.max(8, left), vw - bw - 8)
   top = Math.min(Math.max(8, top), vh - bh - 8)
-  return { top: `${top}px`, left: `${left}px` }
+  // Keep the arrow on the target even when the bubble was clamped to a screen edge.
+  const arrowX = Math.min(Math.max(20, cx - left), Math.max(20, bw - 20))
+  const arrowY = Math.min(Math.max(20, cy - top), Math.max(20, bh - 20))
+  return { top: `${top}px`, left: `${left}px`, '--arrow-x': `${arrowX}px`, '--arrow-y': `${arrowY}px` }
 })
 </script>
 
@@ -368,6 +425,9 @@ const bubbleStyle = computed(() => {
   padding: 18px 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   transition: top 0.25s ease, left 0.25s ease;
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
 }
 
 .tour-bubble-head {
@@ -443,6 +503,25 @@ const bubbleStyle = computed(() => {
 
 .tour-btn.ghost:hover { color: var(--color-text, #fff); }
 
+/* App picker */
+.tour-apps { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.tour-app {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 8px 14px; border-radius: 999px;
+  font: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  color: var(--color-text-secondary, #b9c2d0);
+  background: transparent; border: 1px solid var(--color-border, #2a3444);
+}
+.tour-app:hover { color: var(--color-text, #fff); }
+.tour-app.on { color: #fff; background: var(--color-primary, #4f8ef7); border-color: var(--color-primary, #4f8ef7); }
+.tour-app.included { cursor: default; opacity: 0.7; }
+.tour-app small { font-weight: 400; opacity: 0.8; }
+@media (max-width: 480px) {
+  .tour-bubble { padding: 14px 14px; }
+  .tour-title { font-size: 1.15rem; }
+  .tour-btn { padding: 10px 14px; }
+}
+
 /* Arrow pointing back toward the spotlight */
 .tour-bubble::before {
   content: '';
@@ -456,19 +535,19 @@ const bubbleStyle = computed(() => {
 
 .tour-bubble.arrow-none::before { display: none; }
 .tour-bubble.arrow-bottom::before {
-  top: -8px; left: 50%; margin-left: -7px;
+  top: -8px; left: var(--arrow-x, 50%); margin-left: -7px;
   border-right: none; border-bottom: none;
 }
 .tour-bubble.arrow-top::before {
-  bottom: -8px; left: 50%; margin-left: -7px;
+  bottom: -8px; left: var(--arrow-x, 50%); margin-left: -7px;
   border-left: none; border-top: none;
 }
 .tour-bubble.arrow-right::before {
-  left: -8px; top: 50%; margin-top: -7px;
+  left: -8px; top: var(--arrow-y, 50%); margin-top: -7px;
   border-right: none; border-top: none;
 }
 .tour-bubble.arrow-left::before {
-  right: -8px; top: 50%; margin-top: -7px;
+  right: -8px; top: var(--arrow-y, 50%); margin-top: -7px;
   border-left: none; border-bottom: none;
 }
 </style>
