@@ -329,6 +329,9 @@ function startAutohide(fromMs: number = AUTOHIDE_MS) {
   secondsLeft.value = Math.ceil(autohideRemainingMs / 1000)
   progressWidth.value = (autohideRemainingMs / AUTOHIDE_MS) * 100
   autohideTimer = setInterval(() => {
+    // pointerenter never fires when the header slides in under a resting
+    // cursor, so also poll :hover (fine pointers only — touch hover sticks).
+    if (!autohidePaused.value && headerRef.value?.matches(':hover') && window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
     autohideRemainingMs -= TICK_MS
     secondsLeft.value = Math.max(0, Math.ceil(autohideRemainingMs / 1000))
     progressWidth.value = Math.max(0, (autohideRemainingMs / AUTOHIDE_MS) * 100)

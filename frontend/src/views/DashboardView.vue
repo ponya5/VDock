@@ -34,7 +34,6 @@
 
     <!-- Decomposed Header component -->
     <DeckHeader
-      v-else
       :current-profile="currentProfile"
       :current-scene="currentScene"
       :current-scene-index="currentSceneIndex"
