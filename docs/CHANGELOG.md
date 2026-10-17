@@ -5,6 +5,29 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] — 2026-10-17
+
+Theme: **friendlier settings and app scenes**.
+
+### Added
+- **App scenes set themselves up** — turning an app on under Agents & automation → Apps & scenes now creates its scene straight away; Spotify, Music, iTunes and VLC start with media buttons (play, next, volume, now playing)
+- **Add any deck action to an app scene** — the app's gear dialog lists deck actions (media and volume first), not only keyboard shortcuts
+- **"Fix it" shows you where** — settings links scroll to the exact setting and pulse it
+
+### Changed
+- **Agents, Automation and Integrations are one section** — Agents & automation, with four pages: Apps & scenes, AI agents, Automation, Accounts & keys (old links still work)
+- The header's auto-hide countdown pauses while the mouse is over it
+- The desktop window can be resized down to 480×360
+- A missing GitHub token is no longer listed under "Needs attention"
+- Faster start: vendor code split into separate files; Settings and Profiles load on demand (build warning gone)
+
+### Fixed
+- "Add shortcut" put the button on the scene on screen instead of the app's own scene
+- The macOS Accessibility warning re-checks when you return from System Settings, and explains the off/on step when the entry is already on
+
+### Not verified at release
+- Windows hardware run; the macOS Accessibility stale-entry fix and the 480×360 window in the packaged app
+
 ## [2.4.1] — 2026-10-16
 
 Theme: **macOS fixes** (patch on 2.4.0).
