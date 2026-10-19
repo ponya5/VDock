@@ -141,6 +141,23 @@ describe('ConnectionBanner', () => {
     await wrapper.find('button').trigger('click')
     expect(fakeSocket.connect).toHaveBeenCalledTimes(1)
   })
+
+  it('Dismiss hides the banner for the outage and a reconnect re-arms it', async () => {
+    const wrapper = mountBanner()
+    const banner = () => wrapper.find('[data-testid="connection-banner"]').exists()
+    markDisconnected()
+    vi.advanceTimersByTime(OFFLINE_AFTER_MS)
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="connection-banner-dismiss"]').trigger('click')
+    expect(banner()).toBe(false)
+
+    markConnected()
+    await wrapper.vm.$nextTick()
+    markDisconnected()
+    vi.advanceTimersByTime(OFFLINE_AFTER_MS)
+    await wrapper.vm.$nextTick()
+    expect(banner()).toBe(true)
+  })
 })
 
 describe('initConnectionResume', () => {

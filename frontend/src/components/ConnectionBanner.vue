@@ -1,20 +1,25 @@
 <template>
-  <div v-if="connection.status !== 'connected'" class="connection-banner" role="status" data-testid="connection-banner">
+  <div v-if="connection.status !== 'connected' && !dismissed" class="connection-banner" role="status" data-testid="connection-banner">
     <template v-if="connection.status === 'reconnecting'">
       <span class="cb-text">Reconnecting…</span>
     </template>
     <template v-else>
       <span class="cb-text">Can't reach VDock at {{ host }} — is the PC awake?</span>
       <button type="button" class="cb-retry" @click="socketClient.ensureConnected()">Retry</button>
+      <button type="button" class="cb-retry" data-testid="connection-banner-dismiss" @click="dismissed = true">Dismiss</button>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import socketClient from '@/api/socket'
 import { connection } from '@/services/connection'
 
 const host = window.location.hostname
+// Hidden for the rest of this outage; a reconnect re-arms it for the next one.
+const dismissed = ref(false)
+watch(() => connection.status, (s) => { if (s === 'connected') dismissed.value = false })
 </script>
 
 <style scoped>
