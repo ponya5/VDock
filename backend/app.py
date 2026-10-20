@@ -152,7 +152,7 @@ limiter = Limiter(
 
 socketio = SocketIO(
     app,
-    cors_allowed_origins=Config.socket_origins(),
+    cors_allowed_origins=Config.socket_origin_allowed,
     async_mode='threading'
 )
 
