@@ -6,6 +6,9 @@ import re
 import secrets
 import shutil
 import socket
+from urllib.parse import urlparse
+
+from werkzeug.wrappers import Request
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -668,6 +671,22 @@ class Config:
                     origins.add(f'{scheme}://{host}:{cls.PORT}')
                     origins.add(f'http://{host}:{frontend_port}')
         return sorted(origins)
+
+    @classmethod
+    def socket_origin_allowed(cls, origin: str, environ: Dict[str, Any]) -> bool:
+        """Socket.IO origin check: the listed origins, plus same-origin.
+
+        A page this server served connects back to the address the browser
+        used to load it, so its Origin equals the request's Host. That holds
+        for ``deck.local``, a changed DHCP address or a VPN IP the static list
+        could not predict -- while a page from another site still differs and
+        stays refused.
+        """
+        if origin in cls.socket_origins():
+            return True
+        request_host = Request(environ).host.lower()
+        origin_host = urlparse(origin).netloc.lower()
+        return bool(request_host) and origin_host == request_host
 
     @classmethod
     def load_config(cls) -> Dict[str, Any]:
