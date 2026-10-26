@@ -1,6 +1,15 @@
 @echo off
 cd /d "%~dp0"
 
+REM `launch.bat --version` (DL-151): print the checkout's version and exit.
+if /i "%~1"=="--version" goto :print_version
+if /i "%~1"=="-V" goto :print_version
+goto :after_version
+:print_version
+for /f "tokens=2 delims='" %%v in ('findstr /b "__version__" backend\version.py') do echo VDock %%v
+exit /b 0
+:after_version
+
 REM ── Launcher window behavior ───────────────────────────────────
 REM Optional override: set VDOCK_AUTO_CLOSE_LAUNCHER=0 or 1 here.
 REM Otherwise controlled from Settings → Server → "Close launcher terminal after startup".

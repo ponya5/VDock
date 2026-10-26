@@ -31,6 +31,13 @@ if __name__ == '__main__' and sys.argv[1:2] == ['--vdock_remove_agent_hooks']:
         pass
     sys.exit(0)
 
+# `vdock-backend --version` (DL-151): report the installed version and exit
+# before any service or the HTTP server starts.
+if __name__ == '__main__' and sys.argv[1:2] in (['--version'], ['-V']):
+    from version import __version__ as _v
+    print(f'VDock {_v}')
+    sys.exit(0)
+
 # `python app.py` runs this file as `__main__`. Routes that lazily
 # `from app import action_executor` would otherwise execute it a second time
 # as module `app` -- building a second, unserved SocketIO and re-pointing
