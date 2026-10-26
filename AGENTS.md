@@ -10,6 +10,10 @@ Every non-trivial implementation, feature, bug fix, or design change MUST be doc
 - Update the index table in `design-log/README.md` when adding a new entry.
 - Trivial changes (typo fixes, one-line tweaks) are exempt; when in doubt, log it.
 
+## Versioning and tagging
+
+The version only changes when a release is cut. When the user asks to tag or release, run `python scripts/bump_version.py --dry-run`, tell them the decided level (major = breaking, minor = any `feat`, patch = fixes only), then `python scripts/bump_version.py --tag` once the working tree is committed. Never hand-edit the version files, never bump per commit, and do not push the tag unless asked (pushing starts the public release build). Use conventional commit subjects (`feat:`, `fix:`, `feat!:`). Details: `docs/RELEASING.md`.
+
 ## Serving the frontend to the 7" panel
 
 The Flask backend serves `frontend/dist` (see `app.py` `frontend_index`/`dist_root`). The physical touch panel loads the **built bundle**, not the Vite dev server — after frontend changes, run `cd frontend && npm run build` or the device keeps showing the stale build. The dev server on :4444 is for live verification (Playwright) only.

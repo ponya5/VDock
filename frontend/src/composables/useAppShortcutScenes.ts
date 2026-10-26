@@ -7,9 +7,11 @@ import { presetRegistry, presetToButton } from '@/data/presets'
 import { starterPresetIds } from '@/data/appStarterActions'
 import { appIdForExe } from '@/data/appBackgrounds'
 
-/** The scene an app is linked to (empty string when unlinked). */
+/** The scene an app is linked to (empty string when unlinked or the scene is gone). */
 export function getAppScene(appExe: string): string {
-  return useAppIntegrations().value.find(i => i.appExe === appExe)?.sceneId || ''
+  const id = useAppIntegrations().value.find(i => i.appExe === appExe)?.sceneId || ''
+  const scenes = useDashboardStore().currentProfile?.scenes
+  return id && scenes && !scenes.some(s => s.id === id) ? '' : id
 }
 
 /** A hotkey button for a known app shortcut, placed on a 5-column grid by index. */
@@ -78,7 +80,8 @@ export async function ensureSceneForApp(appExe: string, appName: string): Promis
   const dashboard = useDashboardStore()
   const profile = dashboard.currentProfile
   if (!profile) return null
-  const existing = profile.scenes.find(s => s.id === getAppScene(appExe))
+  const linked = getAppScene(appExe)
+  const existing = linked ? profile.scenes.find(s => s.id === linked) : undefined
   if (existing) return existing
 
   const profiles = await fetchAppProfiles()
