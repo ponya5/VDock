@@ -23,9 +23,12 @@
         role="radio"
         :aria-checked="i === currentSceneIndex ? 'true' : 'false'"
         :tabindex="i === currentSceneIndex ? 0 : -1"
+        :aria-label="scene.name"
+        :title="scene.name"
         class="mc-seg"
         :class="{
           'is-active': i === currentSceneIndex,
+          'is-compact': compactRail && i !== currentSceneIndex,
           'agent-waiting': sceneWaiting(scene),
           'seg-sweep-out': sweep?.out === i,
           'seg-sweep-in': sweep?.in === i,
@@ -42,7 +45,12 @@
           aria-hidden="true"
         />
         <FontAwesomeIcon v-else-if="scene.icon" :icon="parseIcon(scene.icon)" class="mc-seg-icon" />
-        <span class="mc-seg-label">{{ scene.name }}</span>
+        <span
+          v-if="compactRail && i !== currentSceneIndex && !segLogo(scene) && !scene.icon"
+          class="mc-seg-initial"
+          aria-hidden="true"
+        >{{ sceneInitial(scene) }}</span>
+        <span v-if="!compactRail || i === currentSceneIndex" class="mc-seg-label">{{ scene.name }}</span>
         <span
           v-if="sceneAppIsLive(scene, appIntegrations) || sceneWaiting(scene)"
           class="mc-live"
@@ -268,6 +276,14 @@ function sceneWaiting(scene: Scene): boolean {
 /** Gallery logo for the scene's app, or null → the FA icon renders. */
 function segLogo(scene: Scene): string | null {
   return sceneLogo(scene, appIntegrations.value)
+}
+
+/** With more than 3 scenes only the active one keeps its name (DL-027) —
+ *  the rest collapse to logo/icon/initial so more of them fit on screen. */
+const compactRail = computed(() => props.scenes.length > 3)
+
+function sceneInitial(scene: Scene): string {
+  return (scene.name.trim()[0] ?? '?').toUpperCase()
 }
 
 function parseIcon(iconValue: unknown) {
@@ -717,6 +733,9 @@ onUnmounted(() => {
   transition: transform 80ms ease;
 }
 .mc-seg.is-active { color: #fff; }
+/* Collapsed (name hidden) segments: square-ish, still a 48px touch target. */
+.mc-seg.is-compact { min-width: 48px; padding: 8px 10px; }
+.mc-seg-initial { font-weight: 700; font-size: 1.05em; }
 
 .mc-seg-icon { flex-shrink: 0; }
 

@@ -391,6 +391,7 @@ function resetAppearanceSection() {
 }
 
 const applyingButtonBehaviour = ref(false)
+let defaultsBeforeApply: { animation: string; iconLoop: string; effect: string } | null = null
 
 // "Save & Apply to all keys" — commits the draft (preview refs) as the
 // persisted defaults AND rewrites every existing key (DL-031 follow-up:
@@ -400,6 +401,12 @@ const applyingButtonBehaviour = ref(false)
 async function applyButtonBehaviourToAll() {
   applyingButtonBehaviour.value = true
   try {
+    // Remembered so "Undo last apply" can put the new-button defaults back too.
+    defaultsBeforeApply = {
+      animation: settingsStore.buttonDefaultAnimation,
+      iconLoop: settingsStore.buttonDefaultIconLoop,
+      effect: settingsStore.buttonDefaultEffect,
+    }
     settingsStore.buttonDefaultAnimation = previewAnimation.value
     settingsStore.buttonDefaultIconLoop = previewIconLoop.value
     settingsStore.buttonDefaultEffect = previewEffect.value
@@ -434,9 +441,41 @@ async function applyButtonBehaviourToAll() {
     // browser"), tell the dashboard window to refresh itself as well.
     requestVdockRefresh()
 
-    notificationsStore.success('Button style applied', 'Animation, icon motion, and effect applied to every button on your dashboard.')
+    notificationsStore.success('Button style applied', 'Animation, icon motion, and effect applied to every button on your dashboard. Changed your mind? Use "Undo last apply".')
   } catch (err: any) {
     notificationsStore.error('Failed to apply', err?.message || 'Could not apply the button style to all buttons.')
+  } finally {
+    applyingButtonBehaviour.value = false
+  }
+}
+
+// Reset every key to the factory look: same path as Apply (so it is undoable),
+// with the draft and the persisted defaults put back to factory first.
+async function resetAllKeysToDefault() {
+  previewAnimation.value = SETTINGS_DEFAULTS.buttonDefaultAnimation
+  previewIconLoop.value = SETTINGS_DEFAULTS.buttonDefaultIconLoop
+  previewEffect.value = SETTINGS_DEFAULTS.buttonDefaultEffect
+  await applyButtonBehaviourToAll()
+}
+
+async function undoApplyToAllKeys() {
+  applyingButtonBehaviour.value = true
+  try {
+    const restored = await dashboardStore.undoGlobalButtonStyle()
+    if (!restored) {
+      notificationsStore.error('Undo failed', dashboardStore.lastProfileSaveError || 'Nothing to undo, or the profile could not be saved.')
+      return
+    }
+    if (defaultsBeforeApply) {
+      settingsStore.buttonDefaultAnimation = previewAnimation.value = defaultsBeforeApply.animation
+      settingsStore.buttonDefaultIconLoop = previewIconLoop.value = defaultsBeforeApply.iconLoop
+      settingsStore.buttonDefaultEffect = previewEffect.value = defaultsBeforeApply.effect
+      settingsStore.saveSettings()
+      defaultsBeforeApply = null
+    }
+    await refreshVdock()
+    requestVdockRefresh()
+    notificationsStore.success('Undone', `Restored ${restored} key${restored === 1 ? '' : 's'} to how they were before the last apply.`, { important: true })
   } finally {
     applyingButtonBehaviour.value = false
   }
@@ -490,6 +529,10 @@ const panelBindings = computed<Record<string, Record<string, unknown>>>(() => ({
     'onUpdate:iconLoop': (v: string) => { previewIconLoop.value = v },
     effect: previewEffect.value,
     'onUpdate:effect': (v: string) => { previewEffect.value = v },
+    busy: applyingButtonBehaviour.value,
+    'onApply-all': applyButtonBehaviourToAll,
+    'onUndo-all': undoApplyToAllKeys,
+    'onReset-all': resetAllKeysToDefault,
   },
   AppearanceBackground: { onOpenScreensaverBackground: () => go({ section: 'appearance', page: 'screensaver', anchor: 'ss-background' }) },
   ScreensaverPanel: { onCustomizeLayout: () => { screensaverLayoutEditOpen.value = true } },

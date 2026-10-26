@@ -1,4 +1,19 @@
 <template>
+    <section class="panel" id="scene-order">
+      <div class="panel-head"><h2>Scene order</h2><span class="hint">The order of scenes in the header and on mobile.</span></div>
+      <div class="panel-body">
+        <p v-if="availableScenes.length < 2" class="order-empty">Add another scene to reorder.</p>
+        <ol v-else class="order-list">
+          <li v-for="(scene, i) in availableScenes" :key="scene.id" class="order-item" data-testid="scene-order-item">
+            <span class="order-num">{{ i + 1 }}</span>
+            <span class="order-name">{{ scene.name }}</span>
+            <button type="button" class="btn-icon" :disabled="i === 0" :aria-label="`Move ${scene.name} up`" @click="dashboardStore.moveScene(scene.id, -1)"><FontAwesomeIcon :icon="['fas', 'chevron-up']" /></button>
+            <button type="button" class="btn-icon" :disabled="i === availableScenes.length - 1" :aria-label="`Move ${scene.name} down`" @click="dashboardStore.moveScene(scene.id, 1)"><FontAwesomeIcon :icon="['fas', 'chevron-down']" /></button>
+          </li>
+        </ol>
+      </div>
+    </section>
+
     <section class="panel" id="auto-switch">
       <div class="panel-head"><h2>Auto scene switching</h2><span class="hint">Scenes follow the app in focus.</span></div>
       <div class="panel-body">
@@ -320,3 +335,13 @@ async function toggleAutoSwitching() {
 
 onMounted(refreshRunningApps)
 </script>
+
+<style scoped>
+.order-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.order-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.order-num { width: 20px; text-align: center; opacity: 0.55; font-variant-numeric: tabular-nums; }
+.order-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-item .btn-icon { min-width: 40px; min-height: 40px; }
+.order-item .btn-icon:disabled { opacity: 0.3; cursor: default; }
+.order-empty { margin: 0; opacity: 0.6; }
+</style>

@@ -18,6 +18,73 @@ import timerButtons from '@/services/timerButtons'
 
 export const LAST_PROFILE_STORAGE_KEY = 'vdock_last_profile'
 
+export interface GlobalButtonStyleUpdates { animation?: string; iconLoop?: string; effect?: string }
+
+interface ButtonStyleUndoEntry { id: string; style?: Button['style']; layers?: Button['layers'] }
+
+/** Mutates one button to carry the given animation / icon loop / effect. */
+export function applyStyleUpdates(button: Button, updates: GlobalButtonStyleUpdates): void {
+  if (updates.animation !== undefined) {
+    button.style = {
+      ...button.style,
+      animation: updates.animation === 'none' ? undefined : (updates.animation as any)
+    }
+    // layers.behaviour takes priority over style.animation in DeckButton's
+    // buttonClasses (`layers?.behaviour ?? style?.animation`), so a button
+    // seeded with a behaviour (e.g. defaultProfile's Volume Down/Previous)
+    // would otherwise silently ignore this global animation choice.
+    if (button.layers?.behaviour) {
+      button.layers = { ...button.layers, behaviour: undefined }
+    }
+  }
+  if (updates.iconLoop !== undefined) {
+    const existingIcon = button.layers?.icon
+    const iconType = existingIcon?.type ?? (button.icon_type as any) ?? 'fontawesome'
+    const iconValue = existingIcon?.value ?? button.icon ?? 'star'
+    button.layers = {
+      ...button.layers,
+      icon: updates.iconLoop === 'none'
+        ? (existingIcon ? { ...existingIcon, loop: undefined } : undefined)
+        : { type: iconType, value: iconValue, loop: updates.iconLoop as any, size: existingIcon?.size }
+    }
+  }
+  if (updates.effect !== undefined) {
+    button.layers = {
+      ...button.layers,
+      effect: updates.effect === 'none' ? undefined : { type: updates.effect as any, tint: 'brand' }
+    }
+  }
+}
+
+/** Every button in a profile: all scene pages plus the docked sidebar. */
+export function allProfileButtons(profile: Profile): Button[] {
+  const out: Button[] = []
+  for (const scene of profile.scenes) for (const page of scene.pages) out.push(...page.buttons)
+  out.push(...(profile.dockedButtons ?? []))
+  return out
+}
+
+/** How many buttons (and per field) an apply would change — read-only, for review. */
+export function previewButtonStyleChanges(profile: Profile, updates: GlobalButtonStyleUpdates) {
+  const fields = ['animation', 'iconLoop', 'effect'] as const
+  const result = { total: 0, changed: 0, perField: { animation: 0, iconLoop: 0, effect: 0 } }
+  for (const button of allProfileButtons(profile)) {
+    result.total++
+    const snap = (b: Button) => JSON.stringify([b.style, b.layers])
+    const before = snap(button)
+    const all = JSON.parse(JSON.stringify(button)) as Button
+    applyStyleUpdates(all, updates)
+    if (snap(all) !== before) result.changed++
+    for (const f of fields) {
+      if (updates[f] === undefined) continue
+      const one = JSON.parse(JSON.stringify(button)) as Button
+      applyStyleUpdates(one, { [f]: updates[f] })
+      if (snap(one) !== before) result.perField[f]++
+    }
+  }
+  return result
+}
+
 export const useDashboardStore = defineStore('dashboard', () => {
   const currentProfile = ref<Profile | null>(null)
   const currentSceneIndex = ref(0)
@@ -319,6 +386,23 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  /** Move a scene up (-1) or down (+1) in the header/rail order. The scene
+   *  being viewed stays selected even though its index shifts. */
+  function moveScene(sceneId: string, delta: -1 | 1) {
+    if (!currentProfile.value) return
+    const scenes = currentProfile.value.scenes
+    const from = scenes.findIndex(s => s.id === sceneId)
+    const to = from + delta
+    if (from < 0 || to < 0 || to >= scenes.length) return
+    const viewedId = scenes[currentSceneIndex.value]?.id
+    const [moved] = scenes.splice(from, 1)
+    scenes.splice(to, 0, moved)
+    const viewed = scenes.findIndex(s => s.id === viewedId)
+    if (viewed >= 0) currentSceneIndex.value = viewed
+    addToHistory()
+    saveProfile()
+  }
+
   function updateScene(sceneId: string, updates: Partial<Scene>) {
     if (!currentProfile.value) return
     const scene = currentProfile.value.scenes.find(s => s.id === sceneId)
@@ -410,37 +494,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
   async function applyGlobalButtonStyle(updates: { animation?: string; iconLoop?: string; effect?: string }): Promise<boolean> {
     if (!currentProfile.value) return false
 
-    const applyToButton = (button: Button) => {
-      if (updates.animation !== undefined) {
-        button.style = {
-          ...button.style,
-          animation: updates.animation === 'none' ? undefined : (updates.animation as any)
-        }
-        // layers.behaviour takes priority over style.animation in DeckButton's
-        // buttonClasses (`layers?.behaviour ?? style?.animation`), so a button
-        // seeded with a behaviour (e.g. defaultProfile's Volume Down/Previous)
-        // would otherwise silently ignore this global animation choice.
-        if (button.layers?.behaviour) {
-          button.layers = { ...button.layers, behaviour: undefined }
-        }
-      }
-      if (updates.iconLoop !== undefined) {
-        const existingIcon = button.layers?.icon
-        const iconType = existingIcon?.type ?? (button.icon_type as any) ?? 'fontawesome'
-        const iconValue = existingIcon?.value ?? button.icon ?? 'star'
-        button.layers = {
-          ...button.layers,
-          icon: updates.iconLoop === 'none'
-            ? (existingIcon ? { ...existingIcon, loop: undefined } : undefined)
-            : { type: iconType, value: iconValue, loop: updates.iconLoop as any, size: existingIcon?.size }
-        }
-      }
-      if (updates.effect !== undefined) {
-        button.layers = {
-          ...button.layers,
-          effect: updates.effect === 'none' ? undefined : { type: updates.effect as any, tint: 'brand' }
-        }
-      }
+    const applyToButton = (button: Button) => applyStyleUpdates(button, updates)
+
+    // Undo snapshot: the pre-apply look of every button this apply will change.
+    const before = new Map<Button, string>()
+    for (const b of allProfileButtons(currentProfile.value)) {
+      before.set(b, JSON.stringify({ style: b.style, layers: b.layers }))
     }
 
     for (const scene of currentProfile.value.scenes) {
@@ -457,6 +516,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
       applyToButton(button)
     }
 
+    const entries: ButtonStyleUndoEntry[] = []
+    for (const [b, json] of before) {
+      if (JSON.stringify({ style: b.style, layers: b.layers }) !== json) {
+        entries.push({ id: b.id, ...JSON.parse(json) })
+      }
+    }
+
     addToHistory()
     // Awaited (unlike the fire-and-forget saveProfile() calls elsewhere in
     // this store) so callers can safely tell other open VDock windows to
@@ -464,7 +530,38 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // otherwise a same-tick refresh request could race the PUT and pull
     // back stale data. Returned so a failed save can't masquerade as
     // "applied" in the caller's toast.
-    return await saveProfile()
+    const saved = await saveProfile()
+    if (saved && entries.length) {
+      buttonStyleUndo.value = { profileId: currentProfile.value.id, entries }
+    }
+    return saved
+  }
+
+  /** The last "apply to all" can be undone until the next one (or reload). */
+  const buttonStyleUndo = ref<{ profileId: string; entries: ButtonStyleUndoEntry[] } | null>(null)
+  const canUndoButtonStyle = computed(
+    () => !!buttonStyleUndo.value && buttonStyleUndo.value.profileId === currentProfile.value?.id
+  )
+
+  /** Restores every button the last apply changed. Returns how many were restored. */
+  async function undoGlobalButtonStyle(): Promise<number> {
+    const undo = buttonStyleUndo.value
+    if (!undo || !currentProfile.value || undo.profileId !== currentProfile.value.id) return 0
+    const byId = new Map(undo.entries.map(e => [e.id, e]))
+    let restored = 0
+    for (const b of allProfileButtons(currentProfile.value)) {
+      const e = byId.get(b.id)
+      if (!e) continue
+      if (e.style === undefined) delete b.style
+      else b.style = JSON.parse(JSON.stringify(e.style))
+      if (e.layers === undefined) delete b.layers
+      else b.layers = JSON.parse(JSON.stringify(e.layers))
+      restored++
+    }
+    addToHistory()
+    if (!(await saveProfile())) return 0
+    buttonStyleUndo.value = null
+    return restored
   }
 
   function toggleEditMode() {
@@ -899,6 +996,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     previousScene,
     addScene,
     removeScene,
+    moveScene,
     updateScene,
     resetScene,
     setPage,
@@ -917,6 +1015,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     updateButton,
     getButton,
     applyGlobalButtonStyle,
+    undoGlobalButtonStyle,
+    canUndoButtonStyle,
     toggleEditMode,
     saveProfile,
     lastProfileSaveError,

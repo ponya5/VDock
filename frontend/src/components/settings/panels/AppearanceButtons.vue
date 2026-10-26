@@ -120,6 +120,49 @@
     </div>
   </section>
 
+  <section class="panel" id="apply-all">
+    <div class="panel-head">
+      <h2>Apply to all keys</h2>
+      <span class="hint">Push the chosen animation, icon motion and design to every key, review it, undo it.</span>
+    </div>
+    <div class="panel-body">
+      <div v-if="!review" class="note">
+        <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+        <div>Open the dashboard once to load a profile, then apply here.</div>
+      </div>
+      <template v-else>
+        <div class="row stack">
+          <div class="row-text">
+            <span class="label">Review</span>
+            <p>{{ review.changed === 0 ? `All ${review.total} keys already match your selection.` : `${review.changed} of ${review.total} keys (all scenes and the docked sidebar) will change. Colours, labels and actions are not touched.` }}</p>
+          </div>
+          <ul class="apply-review" data-testid="apply-review">
+            <li><span>Animation</span><b>{{ prettyValue(previewAnimation) }}</b><span class="apply-count">{{ review.perField.animation }} keys</span></li>
+            <li><span>Icon animation</span><b>{{ prettyValue(previewIconLoop) }}</b><span class="apply-count">{{ review.perField.iconLoop }} keys</span></li>
+            <li><span>Key design</span><b>{{ prettyValue(previewEffect) }}</b><span class="apply-count">{{ review.perField.effect }} keys</span></li>
+          </ul>
+        </div>
+        <div class="row">
+          <div class="row-text">
+            <span class="label">Apply, undo or start over</span>
+            <p>Undo restores exactly what the last apply changed. Reset puts every key back to the default look ({{ prettyValue(defaultsUpdates.animation) }} animation, {{ prettyValue(defaultsUpdates.iconLoop) }} icon motion, {{ prettyValue(defaultsUpdates.effect) }} design) — undoable too.</p>
+          </div>
+          <div class="row-control apply-actions">
+            <button type="button" class="btn primary sm" data-testid="apply-all-btn" :disabled="busy || review.changed === 0" @click="emit('apply-all')">
+              <FontAwesomeIcon :icon="['fas', busy ? 'spinner' : 'check']" :spin="busy" /> Apply to {{ review.changed || 'all' }} keys
+            </button>
+            <button type="button" class="btn sm" data-testid="undo-apply-btn" :disabled="busy || !dashboardStore.canUndoButtonStyle" @click="emit('undo-all')">
+              <FontAwesomeIcon :icon="['fas', 'rotate-left']" /> Undo last apply
+            </button>
+            <button type="button" class="btn ghost sm" data-testid="reset-all-btn" :disabled="busy || resetReview === 0" @click="emit('reset-all')">
+              <FontAwesomeIcon :icon="['fas', 'arrow-rotate-left']" /> Reset keys to default look
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
   <section class="panel" id="motion">
     <div class="panel-head"><h2>Motion</h2><span class="hint">Press animation and idle icon motion.</span></div>
     <div class="panel-body">
@@ -295,7 +338,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
-import { useDashboardStore } from '@/stores/dashboard'
+import { useDashboardStore, previewButtonStyleChanges } from '@/stores/dashboard'
 import { useDeviceClass } from '@/composables/useDeviceClass'
 import { useDevicePrefs } from '@/services/devicePrefs'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -335,6 +378,32 @@ const previewDefaults = {
 function resetButtonDefault(key: keyof typeof previewDefaults) {
   previewDefaults[key].value = SETTINGS_DEFAULTS[key]
   settingsStore[key] = SETTINGS_DEFAULTS[key]
+}
+
+// Apply-to-all review: a read-only dry run over the loaded profile.
+defineProps<{ busy?: boolean }>()
+const emit = defineEmits<{ 'apply-all': []; 'undo-all': []; 'reset-all': [] }>()
+
+const defaultsUpdates = {
+  animation: SETTINGS_DEFAULTS.buttonDefaultAnimation,
+  iconLoop: SETTINGS_DEFAULTS.buttonDefaultIconLoop,
+  effect: SETTINGS_DEFAULTS.buttonDefaultEffect,
+}
+const review = computed(() => {
+  const profile = dashboardStore.currentProfile
+  if (!profile) return null
+  return previewButtonStyleChanges(profile, {
+    animation: previewAnimation.value,
+    iconLoop: previewIconLoop.value,
+    effect: previewEffect.value,
+  })
+})
+const resetReview = computed(() => {
+  const profile = dashboardStore.currentProfile
+  return profile ? previewButtonStyleChanges(profile, defaultsUpdates).changed : 0
+})
+function prettyValue(v: string): string {
+  return v === 'none' ? 'None' : v.charAt(0).toUpperCase() + v.slice(1).replace(/-/g, ' ')
 }
 
 const previewButton = computed<Button>(() => ({
@@ -420,6 +489,11 @@ function stepPreviewGrid(axis: 'cols' | 'rows', delta: number) {
   min-width: 1.4ch;
   text-align: center;
 }
+.apply-review { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.apply-review li { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.apply-review li > span:first-child { flex: 1; opacity: 0.75; }
+.apply-count { min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.6; }
+.apply-actions { flex-wrap: wrap; gap: 8px; }
 .sub {
   color: var(--text-3);
   font-size: var(--fs-xs);
