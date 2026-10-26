@@ -5,6 +5,13 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] — 2026-10-26
+
+### Added
+- **Apply to all keys** (Appearance → Buttons) — review how many keys an animation / icon motion / design change touches, apply it, undo it, or reset every key to the default look
+- **Scene order** (Apps & scenes) — move scenes up/down; the header and the phone rail follow that order
+- **Compact phone scene rail** — with more than 3 scenes only the active one shows its name; the rest collapse to logo/icon/initial
+
 ## [2.5.4] — 2026-10-26
 
 ### Fixed
