@@ -9,6 +9,8 @@
 // scene auto-populate for these apps, so they stay here as a plain, static
 // database until (if ever) a future phase gives them real profiles.
 
+import { exeKey } from '@/utils/appExe'
+
 export interface MiscAppShortcut {
   name: string
   keys: string[]
@@ -73,8 +75,12 @@ export const MISC_APP_SHORTCUTS: readonly MiscAppShortcutDatabase[] = [
 ]
 
 function findDatabase(exe: string): MiscAppShortcutDatabase | undefined {
-  const needle = exe.toLowerCase()
-  return MISC_APP_SHORTCUTS.find(db => db.appExe.toLowerCase() === needle)
+  const needle = exeKey(exe)
+  // Exe OR display name — macOS scans 'google chrome' where the db entry is
+  // 'chrome.exe' / 'Google Chrome' (DL-025).
+  return MISC_APP_SHORTCUTS.find(
+    db => exeKey(db.appExe) === needle || exeKey(db.appName) === needle,
+  )
 }
 
 /** True when a static entry (not a backend profile) covers this process name. */

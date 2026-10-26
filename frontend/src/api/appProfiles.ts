@@ -1,4 +1,5 @@
 import apiClient from '@/api/client'
+import { exeKey } from '@/utils/appExe'
 import {
   hasMiscAppShortcuts,
   miscAppLabelForExe,
@@ -65,14 +66,16 @@ export async function fetchAppProfiles(): Promise<AppProfileDto[]> {
   return data.profiles ?? []
 }
 
-/** Commands for a process name, highest priority first. */
+/** Commands for a process name, highest priority first. Exes compare on
+ * normalized identity — a scanned 'cursor' and the profiled 'cursor.app'
+ * are the same app (DL-025). */
 export function shortcutsForExe(
   profiles: AppProfileDto[],
   exe: string,
 ): AppCommandDto[] {
   if (!exe) return []
-  const needle = exe.toLowerCase()
-  const profile = profiles.find(p => p.exes.some(e => e.toLowerCase() === needle))
+  const needle = exeKey(exe)
+  const profile = profiles.find(p => p.exes.some(e => exeKey(e) === needle))
   if (!profile) return []
 
   return [...profile.commands].sort(
@@ -122,7 +125,7 @@ export function topAppShortcuts(
 
 /** The display label for a process name, or the exe with its extension stripped. */
 export function appLabelForExe(profiles: AppProfileDto[], exe: string): string {
-  const needle = exe.toLowerCase()
-  const profile = profiles.find(p => p.exes.some(e => e.toLowerCase() === needle))
+  const needle = exeKey(exe)
+  const profile = profiles.find(p => p.exes.some(e => exeKey(e) === needle))
   return profile?.label ?? miscAppLabelForExe(exe) ?? exe.replace('.exe', '')
 }

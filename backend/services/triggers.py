@@ -471,6 +471,14 @@ def _read_app_exe() -> Optional[str]:
     return str(exe).lower() if exe else None
 
 
+def _norm_exe(exe: Any) -> str:
+    """Exe-identity key — 'Spotify.app', 'spotify' and 'Spotify.exe' are the
+    same app. macOS reports bundle names where the scanned list and user
+    config use process names, so raw equality never matches there (DL-025)."""
+    return re.sub(r'[^a-z0-9]', '',
+                  re.sub(r'\.(app|exe)$', '', str(exe or '').strip().lower()))
+
+
 def _read_agent_states() -> Dict[str, Any]:
     try:
         return agent_state.snapshot() or {}
@@ -536,7 +544,8 @@ def _tick(now: Optional[datetime] = None) -> None:
             rt['prev_app'] = app_exe
             if prev is _UNSET:
                 continue  # first observation = baseline, never a fire
-            if app_exe == str(event.get('exe') or '').lower() \
+            if _norm_exe(app_exe) == _norm_exe(event.get('exe')) \
+                    and _norm_exe(app_exe) \
                     and prev != app_exe:
                 _fire(trigger)
 

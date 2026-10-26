@@ -21,7 +21,7 @@ describe('app scene placement', () => {
     expect(firstFreeSlot(page([{ row: 0, col: 0, rows: 2, cols: 3 }]))).toBeNull()
   })
   it('starter presets exist, matched on Windows and macOS process names', () => {
-    for (const exe of ['Spotify.exe', 'spotify']) {
+    for (const exe of ['Spotify.exe', 'spotify', 'Spotify.app']) {
       const ids = starterPresetIds(exe)
       expect(ids.length).toBeGreaterThan(0)
       for (const id of ids) expect(presetRegistry.some(p => p.id === id), id).toBe(true)

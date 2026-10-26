@@ -33,6 +33,19 @@ describe('shortcutsForExe', () => {
     expect(shortcutsForExe(PROFILES, 'cursor.exe')[0].id).toBe('cursor_composer')
   })
 
+  test('macOS identities match: scanned process name ↔ bundle id ↔ Windows exe (DL-025)', () => {
+    const macProfiles: AppProfileDto[] = [
+      { ...PROFILES[0], exes: ['cursor.exe', 'cursor.app'] },
+    ]
+    // Scanned macOS process name hits the '.app' profile exe
+    expect(shortcutsForExe(macProfiles, 'cursor')).toHaveLength(2)
+    // Monitor's bundle id hits the Windows-style exe
+    expect(shortcutsForExe(PROFILES, 'Cursor.app')).toHaveLength(2)
+    // The scanned lowercase form hits 'cursor.exe' too
+    expect(shortcutsForExe(PROFILES, 'cursor')).toHaveLength(2)
+    expect(appLabelForExe(macProfiles, 'cursor')).toBe('Cursor')
+  })
+
   test('an unknown exe yields an empty list, not an error', () => {
     expect(shortcutsForExe(PROFILES, 'notepad.exe')).toEqual([])
   })
@@ -55,6 +68,14 @@ describe('apps outside the backend keymap system fall back to the static databas
       expect(topAppShortcuts(PROFILES, exe, 3)).toHaveLength(3)
     }
     expect(appLabelForExe(PROFILES, 'chrome.exe')).toBe('Google Chrome')
+  })
+
+  test('macOS process names resolve the static db via exe or app name (DL-025)', () => {
+    // Scanned on macOS these are 'google chrome', 'Discord', 'OBS'
+    expect(hasAppShortcuts(PROFILES, 'google chrome')).toBe(true)
+    expect(hasAppShortcuts(PROFILES, 'Google Chrome.app')).toBe(true)
+    expect(hasAppShortcuts(PROFILES, 'discord')).toBe(true)
+    expect(appLabelForExe(PROFILES, 'google chrome')).toBe('Google Chrome')
   })
 
   test('an app in neither source has no shortcuts', () => {
