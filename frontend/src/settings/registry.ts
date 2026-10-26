@@ -56,7 +56,7 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'], tour: 'nav-appearance',
     pages: [
-      { id: 'buttons', name: 'Buttons', title: 'Buttons', blurb: 'Sizing, motion and press feedback for every deck key.', panels: ['AppearanceButtons'], anchors: ['sizing', 'touch', 'design', 'motion', 'feedback'] },
+      { id: 'buttons', name: 'Buttons', title: 'Buttons', blurb: 'Sizing, motion and press feedback for every deck key.', panels: ['AppearanceButtons'], anchors: ['sizing', 'touch', 'design', 'apply-all', 'motion', 'feedback'] },
       { id: 'layout', name: 'Layout & sidebar', title: 'Layout & sidebar', blurb: 'The docked sidebar and dashboard font.', panels: ['AppearanceLayout'], anchors: ['typography', 'sidebar'] },
       { id: 'background', name: 'Background', title: 'Background', blurb: 'Dashboard wallpaper and per-scene overrides.', panels: ['AppearanceBackground'], anchors: ['dashboard-bg', 'scene-bg'] },
       { id: 'screensaver', name: 'Screen saver', title: 'Screen saver', blurb: 'Idle screen widgets, timing and its own backdrop.', panels: ['ScreensaverPanel'], anchors: ['ss-general', 'ss-spectrum', 'ss-background', 'ss-widgets'], tour: 'subtab-screensaver' },
@@ -65,7 +65,7 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'agents', name: 'Agents & automation', icon: ['fas', 'robot'], tour: 'nav-integration',
     pages: [
-      { id: 'scenes', name: 'Apps & scenes', title: 'Apps & scenes', blurb: 'Pick the apps you use and the deck switches to their buttons when you open them. Add ready-made app scenes here too.', panels: ['SceneSwitchingPanel', 'TemplatesPanel'], anchors: ['auto-switch', 'running-apps'], tour: 'nav-templates' },
+      { id: 'scenes', name: 'Apps & scenes', title: 'Apps & scenes', blurb: 'Pick the apps you use and the deck switches to their buttons when you open them. Add ready-made app scenes here too.', panels: ['SceneSwitchingPanel', 'TemplatesPanel'], anchors: ['scene-order', 'auto-switch', 'running-apps'], tour: 'nav-templates' },
       { id: 'alerts', name: 'AI agents', title: 'AI agents', blurb: 'Know when Claude, Cursor or Codex needs you, and let agents press deck keys.', panels: ['AgentAlertsPanel', 'McpPanel', 'NotificationsPanel'], anchors: ['agent-alerts', 'mac-accessibility', 'mcp-server', 'notifications'] },
       { id: 'triggers', name: 'Automation', title: 'Automation', blurb: 'Do things on their own: when a time comes, an app opens, an agent needs you or a script calls in, VDock switches scene, shows a notification or runs an action.', panels: ['TriggersPanel'], anchors: [], autosaves: true },
       { id: 'accounts', name: 'Accounts & keys', title: 'Accounts & keys', blurb: 'Which keys and tools VDock can use, and where to add them. All optional.', panels: ['AccountsPanel'], anchors: ['accounts', 'tools'], autosaves: true },
@@ -97,6 +97,7 @@ export const SECTIONS: SettingsSection[] = [
 export const NOT_SEARCHABLE: string[] = ['features', 'build', 'attention']
 
 export const SEARCH: SearchEntry[] = [
+  { label: 'Scene Order', keywords: 'scene order reorder move up down header rail tabs sort', section: 'agents', page: 'scenes', anchor: 'scene-order', icon: ['fas', 'arrow-down-up-across-line'] },
   { label: 'Auto Scene Switching', keywords: 'auto scene switching monitored applications follow app focus', section: 'agents', page: 'scenes', anchor: 'auto-switch', icon: ['fas', 'shuffle'] },
   { label: 'Running Applications', keywords: 'running apps processes filter search dev tools', section: 'agents', page: 'scenes', anchor: 'running-apps', icon: ['fas', 'desktop'] },
   { label: 'Agent Attention Alerts', keywords: 'agent alerts waiting glow banner chips dock notification permission idle', section: 'agents', page: 'alerts', anchor: 'agent-alerts', icon: ['fas', 'user-clock'] },
@@ -116,6 +117,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'security', anchor: 'connection', icon: ['fas', 'server'] },
   { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', section: 'appearance', page: 'buttons', anchor: 'touch', icon: ['fas', 'hand-pointer'] },
   { label: 'Button Size & Transparency', keywords: 'button size labels tooltips transparency display', section: 'appearance', page: 'buttons', anchor: 'sizing', icon: ['fas', 'table-cells-large'] },
+  { label: 'Apply to All Keys', keywords: 'apply all buttons keys undo reset default look review same appearance behaviour', section: 'appearance', page: 'buttons', anchor: 'apply-all', icon: ['fas', 'clone'] },
   { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all key design', section: 'appearance', page: 'buttons', anchor: 'design', icon: ['fas', 'sliders'] },
   { label: 'Motion & Animation', keywords: 'motion animation press idle icon tilt wiggle', section: 'appearance', page: 'buttons', anchor: 'motion', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Press Sound', keywords: 'sound audio click feedback labels tooltips', section: 'appearance', page: 'buttons', anchor: 'feedback', icon: ['fas', 'volume-high'] },
