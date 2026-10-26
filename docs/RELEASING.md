@@ -141,8 +141,23 @@ Each OS only builds its own installer — cross-building macOS artifacts
 from Windows/Linux isn't supported by electron-builder. That's what the
 release workflow is for.
 
-Bump the version in **three** places together: `backend/version.py`,
-`frontend/package.json` and `frontend/electron/package.json` (run
-`npm version <x.y.z> --no-git-tag-version` in each folder to keep the
-lockfiles in step). `backend/tests/test_version_consistency.py` fails when they
-drift; `/api/health` and the MCP server read `backend/version.py`.
+## Version numbers
+
+The version moves **only when a release is cut**, never per commit, and the
+level follows what shipped since the previous `v*` tag:
+
+| Level | When | Example |
+|---|---|---|
+| **major** | a breaking change (`type!:` subject or a `BREAKING CHANGE:` footer) | 2.6.0 → 3.0.0 |
+| **minor** | anything user-visible: at least one `feat` commit | 2.6.0 → 2.7.0 |
+| **patch** | only fixes, perf, refactor, docs or chore | 2.6.0 → 2.6.1 |
+
+`python scripts/bump_version.py --tag` applies this: it reads the commits since
+the last tag, picks the level, updates `backend/version.py`,
+`frontend/package.json`, `frontend/electron/package.json` and both lockfiles,
+commits `chore: release X.Y.Z` and creates the `vX.Y.Z` tag. Use `--dry-run` to
+see the decision first, or pass `major|minor|patch|x.y.z` to override it. It
+never pushes: `git push origin HEAD vX.Y.Z` starts the release build.
+`backend/tests/test_version_consistency.py` fails when the files drift;
+`/api/health` and the MCP server read `backend/version.py`. Use conventional
+commit subjects (`feat:`, `fix:`, ...) so the decision is right.

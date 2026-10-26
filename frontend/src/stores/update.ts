@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getHealthVersion, getUpdateStatus, installUpdate, type UpdateStatus } from '@/api/update'
+import { useNotificationsStore } from '@/stores/notifications'
 import { reloadPage } from '@/utils/reloadPage'
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
@@ -30,6 +31,24 @@ export const useUpdateStore = defineStore('update', () => {
     return !!s.available && !!s.latest && s.latest !== dismissedVersion.value
   })
 
+  /**
+   * One-time "Updated to vX" confirmation. The installer relaunches the app
+   * silently, so without this an update looks like nothing happened (DL-152).
+   * The last seen version is per device/browser.
+   */
+  function announceIfUpdated(current: string) {
+    try {
+      const KEY = 'vdock.update.lastSeenVersion'
+      const previous = localStorage.getItem(KEY)
+      localStorage.setItem(KEY, current)
+      if (previous && previous !== current) {
+        useNotificationsStore().success(`Updated to v${current}`, `VDock was v${previous}. See Settings > About for details.`)
+      }
+    } catch {
+      // storage unavailable: skip the confirmation
+    }
+  }
+
   async function refresh(force = false) {
     checking.value = true
     try {
@@ -44,7 +63,7 @@ export const useUpdateStore = defineStore('update', () => {
     // bundle we are running is stale.
     const current = status.value?.current
     if (current) {
-      if (!loadedVersion) loadedVersion = current
+      if (!loadedVersion) { loadedVersion = current; announceIfUpdated(current) }
       else if (current !== loadedVersion) { stop(); reloadPage(); return }
     }
     syncPolling()

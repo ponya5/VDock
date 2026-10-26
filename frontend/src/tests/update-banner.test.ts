@@ -181,3 +181,24 @@ describe('after an update', () => {
     expect(reload.reloadPage).not.toHaveBeenCalled()
   })
 })
+
+describe('post-update confirmation (DL-152)', () => {
+  it('announces once when the version changed since the last launch', async () => {
+    const { useNotificationsStore } = await import('@/stores/notifications')
+    const spy = vi.spyOn(useNotificationsStore(), 'success')
+    localStorage.setItem('vdock.update.lastSeenVersion', '2.5.4')
+    api.getUpdateStatus.mockResolvedValue({ ...base, current: '2.6.0', available: false })
+    const store = useUpdateStore()
+    await store.refresh()
+    expect(spy).toHaveBeenCalledWith('Updated to v2.6.0', expect.stringContaining('2.5.4'))
+    expect(localStorage.getItem('vdock.update.lastSeenVersion')).toBe('2.6.0')
+  })
+
+  it('stays quiet on a first run and when the version is unchanged', async () => {
+    const { useNotificationsStore } = await import('@/stores/notifications')
+    const spy = vi.spyOn(useNotificationsStore(), 'success')
+    api.getUpdateStatus.mockResolvedValue({ ...base, current: '2.6.0', available: false })
+    await useUpdateStore().refresh()
+    expect(spy).not.toHaveBeenCalled()
+  })
+})

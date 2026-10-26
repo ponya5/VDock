@@ -58,7 +58,8 @@ import { useAgentAlerts } from '@/services/agentAlerts'
 import { useToggleSync } from '@/services/toggleSync'
 import { initTriggerEvents } from '@/services/triggerEvents'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
-import { useAppIntegrations, useAutoSceneSwitching } from '@/composables/useAppIntegrations'
+import { useAppIntegrations, useAutoSceneSwitching, setAppIntegrations } from '@/composables/useAppIntegrations'
+import { relinkAppIntegrations } from '@/utils/appSceneLinks'
 import { isStandaloneSettingsRoute } from '@/utils/openStandaloneSettings'
 import { screensaverCovered } from '@/services/screensaverState'
 
@@ -150,6 +151,19 @@ onMounted(async () => {
   autoSceneSwitcher.initialize(integrationsRef.value)
   syncAutoSwitch()
   watch([integrationsRef, autoSwitchRef], syncAutoSwitch, { deep: true })
+
+  // Repair app→scene links that point at scenes the profile no longer has.
+  const repairLinks = () => {
+    const scenes = dashboardStore.currentProfile?.scenes
+    if (!scenes) return
+    const fixed = relinkAppIntegrations(integrationsRef.value, scenes)
+    if (fixed) setAppIntegrations(fixed)
+  }
+  watch(
+    () => [dashboardStore.currentProfile?.id, dashboardStore.currentProfile?.scenes.map(s => s.id).join(',')],
+    repairLinks,
+    { immediate: true },
+  )
 })
 
 function handleBeforeUnload() {
