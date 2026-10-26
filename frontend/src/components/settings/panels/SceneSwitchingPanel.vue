@@ -260,10 +260,12 @@ async function toggleAppIntegration(app: RunningApp) {
   // (DL-025). Declining leaves the app enabled with no linked scene.
   if (isAppIntegrationEnabled(app.exe) && !getAppScene(app.exe)) {
     const seeded = await appSceneHasStarterContent(app.exe, app.name)
-    if (!seeded) {
+    {
       const ok = await confirmDialog({
         title: 'Add a scene?',
-        message: `You're about to add a new scene for "${app.name}". It will start empty — you can add actions to it later via Manage shortcuts.`,
+        message: seeded
+          ? `You're about to add a new scene for "${app.name}", pre-filled with starter buttons.`
+          : `You're about to add a new scene for "${app.name}". It will start empty — you can add actions to it later via Manage shortcuts.`,
         confirmLabel: 'Add scene',
         cancelLabel: 'Not now',
         danger: false,

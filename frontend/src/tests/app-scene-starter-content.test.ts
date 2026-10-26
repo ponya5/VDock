@@ -46,7 +46,8 @@ describe('SceneSwitchingPanel empty-scene confirm (DL-025)', () => {
   it('checks starter content and prompts before auto-creating', () => {
     expect(panel).toContain('appSceneHasStarterContent')
     expect(panel).toContain('confirmDialog')
-    // The prompt is conditional — scenes with content still auto-create.
-    expect(panel).toContain('if (!seeded)')
+    // DL-026: always prompt, seeded or not — never auto-create silently.
+    expect(panel).not.toContain('if (!seeded)')
+    expect(panel).toContain('pre-filled with starter buttons')
   })
 })
