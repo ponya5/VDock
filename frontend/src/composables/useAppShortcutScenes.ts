@@ -53,6 +53,24 @@ export function placeButton(page: Page, button: Button): boolean {
 }
 
 /**
+ * True when `ensureSceneForApp` would seed the new scene with buttons
+ * (keymap/misc shortcuts or starter deck presets) — false means it would
+ * come out empty. Callers prompt before creating an empty scene (DL-025).
+ * `appName` is a second lookup name for scanned apps whose process name and
+ * display name differ.
+ */
+export async function appSceneHasStarterContent(
+  appExe: string,
+  appName?: string,
+): Promise<boolean> {
+  const profiles = await fetchAppProfiles()
+  return hasAppShortcuts(profiles, appExe)
+    || (appName ? hasAppShortcuts(profiles, appName) : false)
+    || starterPresetIds(appExe).length > 0
+    || (appName ? starterPresetIds(appName).length > 0 : false)
+}
+
+/**
  * The scene linked to an app, creating and linking one when there is none.
  * Starts with the app's keymap shortcuts, else its starter deck presets.
  */

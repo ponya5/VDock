@@ -4,11 +4,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 // scene-linked integration fires the scene-switch callbacks with that
 // scene's id; unlinked/disabled/unknown apps do nothing.
 
-let appChangeHandler: ((app: { exe: string }) => void) | null = null
+type FakeApp = { exe: string; name?: string; path?: string }
+let appChangeHandler: ((app: FakeApp) => void) | null = null
 
 vi.mock('@/services/appMonitor', () => ({
   appMonitorService: {
-    onAppChange: (cb: (app: { exe: string }) => void) => { appChangeHandler = cb },
+    onAppChange: (cb: (app: FakeApp) => void) => { appChangeHandler = cb },
     offAppChange: () => { appChangeHandler = null },
     start: vi.fn().mockResolvedValue(true),
     stop: vi.fn().mockResolvedValue(true),
@@ -20,6 +21,7 @@ import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 
 const integrations = [
   { appExe: 'spotify.exe', appName: 'Spotify', sceneId: 'scene-spotify', enabled: true, autoCreateScene: false },
+  { appExe: 'google chrome', appName: 'Google Chrome', sceneId: 'scene-chrome', enabled: true, autoCreateScene: false },
   { appExe: 'cursor.exe', appName: 'Cursor', sceneId: 'scene-cursor', enabled: false, autoCreateScene: false },
   { appExe: 'notepad.exe', appName: 'Notepad', sceneId: '', enabled: true, autoCreateScene: false },
 ]
@@ -45,10 +47,30 @@ describe('autoSceneSwitcher', () => {
     expect(onSwitch).toHaveBeenCalledWith('scene-spotify', 'Spotify.exe')
   })
 
+  it('matches a macOS bundle id to a scanned process name (DL-025)', () => {
+    // Scanner stores 'google chrome'; the macOS monitor reports 'Google Chrome.app'
+    appChangeHandler?.({
+      exe: 'Google Chrome.app',
+      name: 'Google Chrome',
+      path: '/Applications/Google Chrome.app',
+    })
+    expect(onSwitch).toHaveBeenCalledWith('scene-chrome', 'Google Chrome.app')
+  })
+
+  it('matches a scanned Windows exe to a macOS bundle id and vice versa', () => {
+    appChangeHandler?.({ exe: 'Spotify.app', name: 'Spotify', path: '/Applications/Spotify.app' })
+    expect(onSwitch).toHaveBeenCalledWith('scene-spotify', 'Spotify.app')
+  })
+
   it('ignores disabled integrations, unlinked integrations and unknown apps', () => {
     appChangeHandler?.({ exe: 'cursor.exe' })
     appChangeHandler?.({ exe: 'notepad.exe' })
-    appChangeHandler?.({ exe: 'chrome.exe' })
+    appChangeHandler?.({ exe: 'firefox.exe' })
+    expect(onSwitch).not.toHaveBeenCalled()
+  })
+
+  it('does not match a different app sharing a prefix', () => {
+    appChangeHandler?.({ exe: 'Spotify Helper.app', name: 'Spotify Helper' })
     expect(onSwitch).not.toHaveBeenCalled()
   })
 

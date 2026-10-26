@@ -119,7 +119,8 @@ import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
 import { fetchAppProfiles, type AppProfileDto } from '@/api/appProfiles'
 import type { RunningApp, Scene } from '@/types'
 import { useAppIntegrations, setAppIntegrations, setAutoSceneSwitching } from '@/composables/useAppIntegrations'
-import { getAppScene, ensureSceneForApp } from '@/composables/useAppShortcutScenes'
+import { getAppScene, ensureSceneForApp, appSceneHasStarterContent } from '@/composables/useAppShortcutScenes'
+import { confirmDialog } from '@/composables/useConfirm'
 
 defineEmits<{ (e: 'manage-shortcuts', app: RunningApp): void }>()
 
@@ -254,8 +255,24 @@ async function toggleAppIntegration(app: RunningApp) {
   if (idx >= 0) { appIntegrations.value[idx].enabled = !appIntegrations.value[idx].enabled }
   else { appIntegrations.value.push({ appExe: app.exe, appName: app.name, sceneId: '', enabled: true, autoCreateScene: false }) }
   saveAppIntegrations()
-  // Turning an app on gives it a ready scene straight away.
-  if (isAppIntegrationEnabled(app.exe) && !getAppScene(app.exe)) await createSceneForApp(app)
+  // Turning an app on gives it a ready scene straight away — but a scene with
+  // no shortcuts or starter presets would be created empty, so ask first
+  // (DL-025). Declining leaves the app enabled with no linked scene.
+  if (isAppIntegrationEnabled(app.exe) && !getAppScene(app.exe)) {
+    const seeded = await appSceneHasStarterContent(app.exe, app.name)
+    if (!seeded) {
+      const ok = await confirmDialog({
+        title: 'Add a scene?',
+        message: `You're about to add a new scene for "${app.name}". It will start empty — you can add actions to it later via Manage shortcuts.`,
+        confirmLabel: 'Add scene',
+        cancelLabel: 'Not now',
+        danger: false,
+        icon: 'window-maximize',
+      })
+      if (!ok) return
+    }
+    await createSceneForApp(app)
+  }
 }
 
 function updateAppScene(appExe: string, sceneId: string) {

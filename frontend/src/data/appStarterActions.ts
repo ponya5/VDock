@@ -1,6 +1,9 @@
 // Deck presets a new app scene starts with when the app has no keymap profile
-// (backend/misc shortcuts cover IDEs, Chrome, ...). Keys: lowercased process
-// name without ".exe" ("Spotify.exe" on Windows, "spotify" on macOS).
+// (backend/misc shortcuts cover IDEs, Chrome, ...). Keys: normalized process
+// identity — "Spotify.exe" (Windows), "spotify" (macOS scan), "Spotify.app"
+// (macOS foreground monitor) all resolve to 'spotify'.
+
+import { exeKey } from '@/utils/appExe'
 
 const MEDIA_PLAYER = ['play-stop', 'prev-track', 'next-track', 'volume-down', 'volume-up', 'mute', 'now-playing']
 
@@ -12,5 +15,5 @@ const STARTERS: Record<string, string[]> = {
 }
 
 export function starterPresetIds(exe: string): string[] {
-  return STARTERS[exe.toLowerCase().replace(/\.exe$/, '')] ?? []
+  return STARTERS[exeKey(exe)] ?? []
 }

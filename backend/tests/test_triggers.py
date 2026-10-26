@@ -201,6 +201,25 @@ def test_app_trigger_fires_on_entry_only(store, emitted, monkeypatch):
     assert navs == [{'scene': 'Media'}, {'scene': 'Media'}]
 
 
+def test_app_trigger_matches_macos_bundle_id(store, emitted, monkeypatch):
+    """macOS reports 'Spotify.app' while scanned lists and user config say
+    'spotify' — normalized identity must match (DL-025)."""
+    current = ['other.app']
+    monkeypatch.setattr(
+        app_monitor, 'get_current_active_app',
+        lambda: {'exe': current[0], 'name': current[0]},
+    )
+    triggers.add_trigger({
+        'event': {'type': 'app_foreground', 'exe': 'spotify'},
+        'action': {'type': 'switch_scene', 'scene': 'Media'},
+    })
+    triggers._tick()                       # baseline: other.app
+    current[0] = 'Spotify.app'
+    triggers._tick()                       # entry → fire
+    triggers._tick()                       # sustained → no refire
+    assert len(_fired(emitted)) == 1
+
+
 def test_app_trigger_first_observation_is_baseline(store, emitted, monkeypatch):
     """Already-foreground when the engine first looks = no fire — otherwise
     every backend restart while the app is focused re-runs the action."""

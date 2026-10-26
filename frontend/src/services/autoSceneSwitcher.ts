@@ -4,6 +4,7 @@
  */
 
 import { appMonitorService } from './appMonitor'
+import { appMatchesExe, exeKey } from '@/utils/appExe'
 import type { RunningApp, AppIntegration, Profile } from '@/types'
 
 class AutoSceneSwitcher {
@@ -100,10 +101,10 @@ class AutoSceneSwitcher {
       return
     }
 
-    // Find matching integration
-    const integration = this.appIntegrations.find(
-      int => int.appExe?.toLowerCase() === app.exe?.toLowerCase() && int.enabled && int.sceneId
-    )
+    // Find matching integration. The scan list stores process names while
+    // the macOS monitor reports bundle names ('Spotify.app') — match on
+    // normalized identity, not raw equality (DL-025).
+    const integration = this.integrationForApp(app)
 
     if (integration && integration.sceneId) {
       console.warn(`Switching to scene for app: ${app.exe}`)
@@ -130,13 +131,23 @@ class AutoSceneSwitcher {
   }
 
   /**
+   * The enabled, scene-linked integration a foreground app belongs to.
+   */
+  private integrationForApp(app: RunningApp): AppIntegration | undefined {
+    return this.appIntegrations.find(
+      int => int.enabled && int.sceneId && appMatchesExe(app, int.appExe, int.appName)
+    )
+  }
+
+  /**
    * Find scene ID for an app
    */
   findSceneForApp(appExe: string): string | null {
+    const key = exeKey(appExe)
     const integration = this.appIntegrations.find(
-      int => int.appExe?.toLowerCase() === appExe?.toLowerCase() && int.enabled && int.sceneId
+      int => int.enabled && int.sceneId && exeKey(int.appExe) === key && key !== ''
     )
-    
+
     return integration?.sceneId || null
   }
 }
