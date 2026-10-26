@@ -73,7 +73,12 @@ jobs:
           # The packaged app always passes PORT (DL-010); test the same way.
           $env:PORT = "5799"
           $p = Start-Process -FilePath "dist/vdock-backend/vdock-backend.exe" -PassThru
-          Start-Sleep -Seconds 8
+          # Cold start on a shared runner varies (8-20 s); wait for health, not a fixed sleep.
+          $h = $null
+          for ($i = 0; $i -lt 60 -and -not $h; $i++) {
+            Start-Sleep -Seconds 2
+            try { $h = Invoke-RestMethod -Uri "http://127.0.0.1:5799/api/health" -TimeoutSec 5 } catch { }
+          }
           try {
             $h = Invoke-RestMethod -Uri "http://127.0.0.1:5799/api/health" -TimeoutSec 10
             if ($h.status -ne 'ok') { throw "health status: $($h.status)" }
@@ -92,7 +97,11 @@ jobs:
           export PORT=5799
           ./dist/vdock-backend/vdock-backend &
           BPID=$!
-          sleep 8
+          # Cold start on a shared runner varies (8-20 s); wait for health, not a fixed sleep.
+          for i in $(seq 1 60); do
+            curl -fsS -o /dev/null http://127.0.0.1:5799/api/health 2>/dev/null && break
+            sleep 2
+          done
           curl -fsS http://127.0.0.1:5799/api/health
           curl -fsS -o /dev/null -w "templates: %{http_code}\n" http://127.0.0.1:5799/api/templates/list
           kill $BPID || true
