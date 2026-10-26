@@ -3,6 +3,15 @@ const path = require('path')
 const fs = require('fs')
 const { spawn, execFileSync } = require('child_process')
 const runtime = require('./backend-runtime')
+// `VDock --version` (DL-151): print and exit before the lock, window or backend.
+if (process.argv.slice(1).some(a => a === '--version' || a === '-V')) {
+  try {
+    fs.writeSync(1, `VDock ${require('./package.json').version}\n`)
+  } catch {
+    // stdout may be closed for a GUI-subsystem exe; nothing to report to
+  }
+  process.exit(0)
+}
 // Detect development mode by checking if backend exists relative to electron
 // directory. In a repo checkout that dir always exists, so the launcher passes
 // VDOCK_PRODUCTION=1 when it skipped the Vite dev server and Electron should

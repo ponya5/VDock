@@ -9,6 +9,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+# `launch.sh --version` (DL-151): print the checkout's version and exit.
+if [[ "${1:-}" == "--version" || "${1:-}" == "-V" ]]; then
+  sed -n "s/^__version__ = '\(.*\)'.*/VDock \1/p" backend/version.py
+  exit 0
+fi
+
 # Prefer Homebrew Node/Python on Apple Silicon and Intel Macs
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
