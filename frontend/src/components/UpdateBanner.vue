@@ -46,7 +46,7 @@ onMounted(() => update.start())
 /* Overlay: floats above the deck so it never moves a key. */
 .update-banner {
   position: fixed;
-  bottom: max(10px, env(safe-area-inset-bottom));
+  top: max(10px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   z-index: 8900;
