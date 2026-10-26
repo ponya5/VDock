@@ -5,6 +5,12 @@ All notable changes to VDock will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.4] — 2026-10-26
+
+### Fixed
+- **Auto scene switching on phones** — app→scene links made before field-level sync were never uploaded, so phones had nothing to match. They now sync to the server on load
+- **Adding a scene always asks first** — enabling an app in Scene Switching now prompts "Add a scene?" even when the scene would come with starter buttons
+
 ## [2.5.3] — 2026-10-17
 
 ### Changed
