@@ -929,6 +929,17 @@ export const useSettingsStore = defineStore('settings', () => {
         persistedBaseline = { ...persistedBaseline, ...payload }
       }
 
+      // App->scene links made before field-level sync existed live only in
+      // this device's localStorage and never diff as "changed", so the server
+      // (and every phone) never got them. Seed them up once if it has none.
+      const serverLinks = (serverSettings as { appIntegrations?: unknown } | undefined)?.appIntegrations
+      if (
+        useAppIntegrations().value.length > 0 &&
+        !(Array.isArray(serverLinks) && serverLinks.length > 0)
+      ) {
+        pendingSyncKeys.add('appIntegrations')
+      }
+
       serverSyncEnabled = true
       // Keys queued by pre-sync saves flush now — with post-sync values, so
       // remote-applied keys echo back harmlessly and genuinely local edits
