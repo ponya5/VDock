@@ -13,6 +13,7 @@
          background under the opaque saver only burns frame budget. -->
     <BackgroundRenderer v-if="!isStandaloneSettings && !screensaverCovered" />
     <router-view />
+    <VersionWatermark v-if="showVersionWatermark" />
     <!-- Toasts render in standalone settings too — the test buttons and
          layout editor live there and must surface results. -->
     <NotificationCenter v-if="showNotifications" />
@@ -48,6 +49,7 @@ import AgentMissionControl from '@/components/AgentMissionControl.vue'
 import LiveActionMenu from '@/components/LiveActionMenu.vue'
 import AuthGate from '@/components/AuthGate.vue'
 import ConnectionBanner from '@/components/ConnectionBanner.vue'
+import VersionWatermark from '@/components/VersionWatermark.vue'
 import { probeAuth } from '@/services/auth'
 import { initConnectionResume } from '@/services/connectionResume'
 import { initProfileSync } from '@/services/profileSync'
@@ -68,6 +70,12 @@ const dashboardStore = useDashboardStore()
 const actionCatalogStore = useActionCatalogStore()
 
 const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
+
+// Settings and the guide already show the version in their own footer.
+const DECK_ROUTE_PATHS = ['/', '/edit', '/profiles']
+const showVersionWatermark = computed(
+  () => !isStandaloneSettings.value && DECK_ROUTE_PATHS.includes(route.path),
+)
 
 watch(isStandaloneSettings, (standalone) => {
   document.title = standalone ? 'VDock Settings' : 'VDock - Virtual Stream Deck'
