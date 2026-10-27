@@ -1,6 +1,27 @@
 <template>
         <div class="content has-rail">
 <div class="col">
+  <section class="panel" id="design">
+    <div class="panel-head">
+      <h2>Key design</h2>
+      <span class="hint">The default face for every key.</span>
+      <span class="spacer"></span>
+      <SettingResetButton label="Button design" :at-default="previewEffect === SETTINGS_DEFAULTS.buttonDefaultEffect" @reset="resetButtonDefault('buttonDefaultEffect')" />
+    </div>
+    <div class="panel-body">
+      <div class="row stack design-row">
+        <ButtonDesignPicker v-model="previewEffect" class="settings-isolate" />
+      </div>
+      <div class="note">
+        <FontAwesomeIcon :icon="['fas', 'circle-info']" />
+        <div>
+          Don't see the change on the dashboard? Click the <strong>Refresh</strong> button there
+          (the circular arrow icon in the header) to push it through.
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" id="sizing">
     <div class="panel-head">
       <h2>Sizing &amp; touch</h2>
@@ -94,27 +115,6 @@
             <span class="cap">90%</span>
             <span class="val">{{ settings.buttonTransparency }}%</span>
           </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="panel" id="design">
-    <div class="panel-head">
-      <h2>Key design</h2>
-      <span class="hint">The default face for every key.</span>
-      <span class="spacer"></span>
-      <SettingResetButton label="Button design" :at-default="previewEffect === SETTINGS_DEFAULTS.buttonDefaultEffect" @reset="resetButtonDefault('buttonDefaultEffect')" />
-    </div>
-    <div class="panel-body">
-      <div class="row stack design-row">
-        <ButtonDesignPicker v-model="previewEffect" class="settings-isolate" />
-      </div>
-      <div class="note">
-        <FontAwesomeIcon :icon="['fas', 'circle-info']" />
-        <div>
-          Don't see the change on the dashboard? Click the <strong>Refresh</strong> button there
-          (the circular arrow icon in the header) to push it through.
         </div>
       </div>
     </div>

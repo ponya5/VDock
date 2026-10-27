@@ -341,7 +341,8 @@ watch(
     if (previewAnimation.value === oa) previewAnimation.value = a
     if (previewIconLoop.value === oi) previewIconLoop.value = i
     if (previewEffect.value === oe) previewEffect.value = e
-  }
+  },
+  { flush: 'sync' } // before buttonPageDirty re-evaluates, or the "Draft changes" toast flashes
 )
 function revertButtonDefaults() {
   previewAnimation.value = settingsStore.buttonDefaultAnimation
