@@ -17,9 +17,10 @@
          exclusive; widget mode paints its own backdrop then widgets. -->
     <SpectrumStage v-if="spectrumBackdrop" :backdrop="layoutEdit" />
     <StatsStage v-else-if="statsMode" />
+    <RobotStage v-else-if="robotMode" />
 
     <!-- Widget-surface backdrop — only when no fullscreen stage is up. -->
-    <template v-if="!spectrumBackdrop && !statsMode">
+    <template v-if="!spectrumBackdrop && !statsMode && !robotMode">
     <!-- Custom screensaver background on its own layer so it never has to
          fight the base color for specificity. Component-kind entries
          (WebGL/CSS effects) mount directly; a scrim keeps text readable. -->
@@ -282,7 +283,7 @@
          duplicate the stage's own media bar.
          DL-141: the spectrum/system-stats widgets were demoted — they're
          screensaver *types*, not widgets. -->
-    <template v-if="!spectrumBackdrop">
+    <template v-if="!spectrumBackdrop && !robotMode">
     <div
       v-if="showNowPlayingWidget"
       :ref="el => setWidgetEl('nowplaying', el)"
@@ -367,6 +368,7 @@ import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
 import NowPlayingWidget from '@/components/screensaver/NowPlayingWidget.vue'
 import SpectrumStage from '@/components/screensaver/SpectrumStage.vue'
 import StatsStage from '@/components/screensaver/StatsStage.vue'
+import RobotStage from '@/components/screensaver/RobotStage.vue'
 import { pickNextSaverType, type ScreensaverType } from '@/services/screensaverTypes'
 import {
   defaultScreensaverLayout,
@@ -524,8 +526,10 @@ const spectrumBackdrop = computed(() => effectiveStyle.value === 'spectrum')
 const spectrumOverlay = computed(() =>
   spectrumBackdrop.value && settingsStore.screensaverSpectrumWidgets
 )
+// DL-153: the robot buddy swaps the whole surface like stats does.
+const robotMode = computed(() => effectiveStyle.value === 'robot' && !props.layoutEdit)
 const widgetLayerOn = computed(() =>
-  !statsMode.value
+  !statsMode.value && !robotMode.value
   && (!spectrumBackdrop.value || spectrumOverlay.value || props.layoutEdit)
 )
 // DL-125: same swap for the fullscreen system monitor.

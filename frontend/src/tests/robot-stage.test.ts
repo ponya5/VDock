@@ -1,9 +1,16 @@
 // DL-153 — robot render components.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import RobotFace from '@/components/screensaver/robot/RobotFace.vue'
 import RobotBubble from '@/components/screensaver/robot/RobotBubble.vue'
 import { FaceAnimator } from '@/services/robot/animator'
+import { setActivePinia, createPinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import RobotStage from '@/components/screensaver/RobotStage.vue'
+
+vi.mock('@/composables/useSystemStats', () => ({ useSystemStats: () => ({ stats: { value: null }, start: () => {}, stop: () => {} }) }))
+vi.mock('@/composables/useWeather', () => ({ useWeather: () => ({ weather: { value: null }, start: () => {}, stop: () => {} }) }))
 
 function frameAfter(setup: (a: FaceAnimator) => void, ms = 1000) {
   const a = new FaceAnimator(() => 0.5)
@@ -41,5 +48,72 @@ describe('RobotBubble', () => {
   it('renders the quip text, nothing when null', () => {
     expect(mount(RobotBubble, { props: { text: 'Bold choice.' } }).text()).toContain('Bold choice.')
     expect(mount(RobotBubble, { props: { text: null } }).find('.robot-bubble').exists()).toBe(false)
+  })
+})
+
+describe('RobotStage', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 16) as unknown as number)
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('renders face and clock halves with live data attributes', async () => {
+    const w = mount(RobotStage, { attachTo: document.body })
+    await new Promise(r => setTimeout(r, 80))
+    expect(w.find('.rs-face svg.robot-face').exists()).toBe(true)
+    expect(w.find('.rs-clock').exists()).toBe(true)
+    expect(w.attributes('data-mood')).toBe('funny')
+    w.unmount()
+  })
+
+  it('stops the animation loop on unmount (Review Focus 3)', async () => {
+    const cancel = vi.fn((id: number) => clearTimeout(id))
+    vi.stubGlobal('cancelAnimationFrame', cancel)
+    const w = mount(RobotStage, { attachTo: document.body })
+    await new Promise(r => setTimeout(r, 50))
+    w.unmount()
+    expect(cancel).toHaveBeenCalled()
+  })
+
+  it('a touch drag on the face cancels the synthetic click; a tap does not (Review Focus 1)', async () => {
+    const w = mount(RobotStage, { attachTo: document.body })
+    const face = w.find('.rs-face').element
+    const touch = (type: string, x: number, y: number) => {
+      const e = new Event(type, { bubbles: true, cancelable: true }) as any
+      e.touches = type === 'touchend' ? [] : [{ clientX: x, clientY: y }]
+      e.changedTouches = [{ clientX: x, clientY: y }]
+      face.dispatchEvent(e)
+      return e as Event
+    }
+    touch('touchstart', 100, 100)
+    touch('touchmove', 160, 100)
+    expect(touch('touchend', 160, 100).defaultPrevented).toBe(true)
+    touch('touchstart', 100, 100)
+    expect(touch('touchend', 102, 101).defaultPrevented).toBe(false)
+    w.unmount()
+  })
+
+  it('touchstart on the face does not reach the saver root', () => {
+    const w = mount(RobotStage, { attachTo: document.body })
+    const seen = vi.fn()
+    document.body.addEventListener('touchstart', seen)
+    const e = new Event('touchstart', { bubbles: true }) as any
+    e.touches = [{ clientX: 1, clientY: 1 }]
+    w.find('.rs-face').element.dispatchEvent(e)
+    expect(seen).not.toHaveBeenCalled()
+    document.body.removeEventListener('touchstart', seen)
+    w.unmount()
+  })
+})
+
+describe('ScreenSaver wiring', () => {
+  const src = readFileSync(resolve(__dirname, '../components/ScreenSaver.vue'), 'utf8')
+  it('mounts RobotStage in robot mode and hides widgets + now playing', () => {
+    expect(src).toMatch(/<RobotStage v-else-if="robotMode" \/>/)
+    expect(src).toMatch(/robotMode = computed\(\(\) => effectiveStyle\.value === 'robot' && !props\.layoutEdit\)/)
+    expect(src).toMatch(/!statsMode\.value && !robotMode\.value/)
+    expect(src).toMatch(/v-if="!spectrumBackdrop && !robotMode"/)
   })
 })
