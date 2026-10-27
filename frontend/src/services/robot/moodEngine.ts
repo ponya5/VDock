@@ -201,10 +201,10 @@ export class MoodEngine {
 
   private computeBaseline(s: RobotSignals, lastPointerAt: number, now: number): BaselineState {
     const nightHour = s.hour >= 23 || s.hour < 6
-    if (s.agent === 'permission') return 'waiting'
-    if (s.agent === 'working') return 'working'
-    if (nightHour && !s.musicPlaying && now - lastPointerAt >= NIGHT_IDLE_MS) return 'night'
-    if (s.musicPlaying) return 'music'
+    if (s.agent === 'permission' && this.opts.reactTo.agent) return 'waiting'
+    if (s.agent === 'working' && this.opts.reactTo.agent) return 'working'
+    if (nightHour && this.opts.reactTo.ambient && !s.musicPlaying && now - lastPointerAt >= NIGHT_IDLE_MS) return 'night'
+    if (s.musicPlaying && this.opts.reactTo.music) return 'music'
     return 'idle'
   }
 
