@@ -40,10 +40,6 @@ export function migrateBackground(settings: LegacyBackgroundFields): string {
   return typeof legacy === 'string' && legacy ? legacy : DEFAULT_BACKGROUND_ID
 }
 
-/**
- * Factory defaults for user-adjustable settings. Single source of truth —
- * reset buttons in Settings → Appearance restore these values (DL-028).
- */
 export type RobotMood = 'funny' | 'grumpy' | 'sarcastic' | 'sweet' | 'random'
 export interface RobotReactTo { agent: boolean; music: boolean; system: boolean; ambient: boolean }
 export const ROBOT_MOODS: readonly RobotMood[] = ['funny', 'grumpy', 'sarcastic', 'sweet', 'random']
@@ -55,6 +51,10 @@ export function sanitizeRobotReactTo(v: unknown): RobotReactTo {
   return { agent: pick('agent'), music: pick('music'), system: pick('system'), ambient: pick('ambient') }
 }
 
+/**
+ * Factory defaults for user-adjustable settings. Single source of truth —
+ * reset buttons in Settings → Appearance restore these values (DL-028).
+ */
 export const SETTINGS_DEFAULTS = {
   buttonSize: 1.0,
   buttonTransparency: 0,

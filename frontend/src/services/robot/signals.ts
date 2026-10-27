@@ -17,6 +17,7 @@ import type { RobotSignals, WeatherKind } from './moodEngine'
 import type { Mood } from './reactions'
 
 const MOODS: Mood[] = ['funny', 'grumpy', 'sarcastic', 'sweet']
+const ACTIVE_UPDATE = ['downloading', 'installing', 'restarting']
 const RANDOM_KEY = 'vdock.robot.randomMood'
 
 export function aggregateAgent(entries: Array<{ state: string; prompted?: boolean }>): RobotSignals['agent'] {
@@ -51,6 +52,23 @@ export function resolveMood(
   return mood
 }
 
+/** Counts strictly newer timestamps — keeps growing when the store caps its list. */
+export class MonotonicCounter {
+  private count = 0
+  constructor(private last = 0) {}
+  update(ts: number | null): number {
+    if (ts !== null && ts > this.last) { this.count++; this.last = ts }
+    return this.count
+  }
+}
+
+export function updateIsAvailable(
+  s: { state?: string; available?: boolean; latest?: string } | null | undefined, dismissed: string,
+): boolean {
+  if (!s || s.state === 'error' || ACTIVE_UPDATE.includes(s.state ?? '')) return false
+  return Boolean(s.available) && Boolean(s.latest) && s.latest !== dismissed
+}
+
 export function localDay(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
@@ -63,6 +81,9 @@ export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLe
   const weather = useWeather()
   const notifications = useNotificationsStore()
   const update = useUpdateStore()
+  const newestNotification = () =>
+    notifications.notifications.reduce((m, n) => Math.max(m, new Date(n.timestamp).getTime()), 0) || null
+  const notifCounter = new MonotonicCounter(newestNotification() ?? 0)
   const clock = ref(new Date())
   let timer: ReturnType<typeof setInterval> | null = null
 
@@ -72,8 +93,8 @@ export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLe
     cpuPercent: sys.stats.value?.cpuPercent ?? null,
     batteryPercent: sys.stats.value?.batteryPercent ?? null,
     batteryCharging: sys.stats.value?.batteryCharging ?? null,
-    notificationCount: notifications.notifications.length,
-    updateAvailable: Boolean(update.visible),
+    notificationCount: notifCounter.update(newestNotification()),
+    updateAvailable: updateIsAvailable(update.status, update.dismissedVersion),
     weather: mapWeather(weather.weather.value),
     isDay: weather.weather.value?.isDay ?? true,
     hour: clock.value.getHours(),
