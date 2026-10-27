@@ -5,6 +5,7 @@
 import type { ExpressionId } from './expressions'
 import type { SequenceId } from './sequences'
 import type { AccessoryId, IconId, PropId } from './robotArt'
+import type { SceneId } from './scenes'
 import type { RobotReactTo } from '@/stores/settings'
 
 export type Mood = 'funny' | 'grumpy' | 'sarcastic' | 'sweet'
@@ -13,7 +14,7 @@ export type RobotEvent =
   | 'cpuHigh' | 'batteryLow' | 'notification' | 'update' | 'morning' | 'noon' | 'night' | 'weather'
   | 'pointerEnter' | 'pointerEyes' | 'pointerMouth' | 'pointerShake' | 'pointerDizzy' | 'pointerAnnoyed'
   | 'pointerCircle' | 'pointerLinger' | 'pointerApproach' | 'pointerLeave' | 'pointerReturn'
-export interface Reaction { icon?: IconId; expr: ExpressionId; seq?: SequenceId; prop?: PropId; accessory?: AccessoryId; ms?: number }
+export interface Reaction { icon?: IconId; expr: ExpressionId; seq?: SequenceId; prop?: PropId; accessory?: AccessoryId; scene?: SceneId; ms?: number }
 export type BaselineState = 'idle' | 'working' | 'waiting' | 'music' | 'night'
 
 export const ICON_MS = 1200
@@ -22,16 +23,16 @@ const all = (r: Reaction | null): Record<Mood, Reaction | null> => ({ funny: r, 
 
 export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
   greet: {
-    funny: { expr: 'joy', prop: 'wave', ms: 2600 },
+    funny: { expr: 'joy', seq: 'hello-hand', ms: 2600 },
     grumpy: { expr: 'unimpressed', ms: 2000 },
     sarcastic: { expr: 'smug', prop: 'wave', ms: 2200 },
     sweet: { expr: 'happy', prop: 'heart', ms: 2600 },
   },
   agentWorking: {
-    funny: { icon: 'dots', expr: 'focused', prop: 'laptop' },
+    funny: { icon: 'dots', expr: 'typing', scene: 'typing' },
     grumpy: { icon: 'dots', expr: 'squint' },
     sarcastic: { icon: 'dots', expr: 'side-eye' },
-    sweet: { icon: 'dots', expr: 'focused', prop: 'heart' },
+    sweet: { icon: 'dots', expr: 'typing', scene: 'typing', prop: 'heart' },
   },
   agentLong: {
     funny: { icon: 'spinner', expr: 'focused', accessory: 'wizard-hat', prop: 'sparkles' },
@@ -46,10 +47,10 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { icon: 'exclaim', expr: 'shy', prop: 'wave', ms: 5000 },
   },
   agentDone: {
-    funny: { icon: 'check', expr: 'joy', seq: 'celebrate', accessory: 'party-hat', ms: 4500 },
+    funny: { icon: 'check', expr: 'excited', seq: 'cheer', accessory: 'party-hat', prop: 'trophy', ms: 4500 },
     grumpy: { icon: 'check', expr: 'unimpressed', seq: 'sigh' },
     sarcastic: { icon: 'check', expr: 'smug', accessory: 'sunglasses' },
-    sweet: { icon: 'check', expr: 'love', prop: 'sparkles' },
+    sweet: { icon: 'check', expr: 'love', seq: 'clap', prop: 'sparkles', ms: 4000 },
   },
   musicStart: {
     funny: { icon: 'equalizer', expr: 'happy', prop: 'notes', ms: 3000 },
@@ -134,7 +135,7 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
   },
   pointerCircle: all({ expr: 'dizzy', ms: 2000 }),
   pointerLinger: {
-    funny: { expr: 'shy', ms: 2600 },
+    funny: { expr: 'shy', seq: 'cover-eyes', ms: 2600 },
     grumpy: { expr: 'suspicious', ms: 2200 },
     sarcastic: { expr: 'suspicious', ms: 2200 },
     sweet: { expr: 'love', ms: 2600 },
@@ -147,7 +148,7 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { icon: 'question', expr: 'sad', ms: 1800 },
   },
   pointerReturn: {
-    funny: { expr: 'joy', seq: 'startle', ms: 2000 },
+    funny: { expr: 'cheeky', seq: 'cheeky-wink', prop: 'rocket', ms: 2000 },
     grumpy: { expr: 'unimpressed', ms: 1600 },
     sarcastic: { expr: 'surprised', seq: 'double-take', ms: 1800 },
     sweet: { expr: 'joy', prop: 'heart', ms: 2000 },
@@ -155,17 +156,25 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
 }
 
 export const BASELINES: Record<Mood, Record<BaselineState, ExpressionId>> = {
-  funny: { idle: 'neutral', working: 'focused', waiting: 'puppy', music: 'happy', night: 'asleep' },
+  funny: { idle: 'neutral', working: 'typing', waiting: 'puppy', music: 'happy', night: 'asleep' },
   grumpy: { idle: 'bored', working: 'squint', waiting: 'glare', music: 'unimpressed', night: 'asleep' },
   sarcastic: { idle: 'unimpressed', working: 'side-eye', waiting: 'side-eye', music: 'smug', night: 'asleep' },
-  sweet: { idle: 'content', working: 'focused', waiting: 'puppy', music: 'content', night: 'asleep' },
+  sweet: { idle: 'content', working: 'typing', waiting: 'puppy', music: 'content', night: 'asleep' },
+}
+
+/** Scene held for as long as the baseline lasts (DL-155). */
+export const BASELINE_SCENE: Record<Mood, Partial<Record<BaselineState, SceneId>>> = {
+  funny: { working: 'typing' },
+  grumpy: {},
+  sarcastic: {},
+  sweet: { working: 'typing' },
 }
 
 export const IDLE_GAGS: Record<Mood, SequenceId[]> = {
-  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink'],
+  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes'],
   grumpy: ['sigh', 'head-shake', 'look-around'],
   sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug'],
-  sweet: ['giggle', 'look-around', 'nod', 'wink'],
+  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes'],
 }
 
 export const PRIORITY: Record<RobotEvent, number> = {

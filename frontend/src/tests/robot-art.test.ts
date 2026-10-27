@@ -1,6 +1,7 @@
 // DL-153 — every art id has drawable elements; sequences reference only real ids.
 import { describe, it, expect } from 'vitest'
-import { EYE_GLYPHS, MOUTH_GLYPHS, ICONS, PROPS, ACCESSORIES, artTransform, propEnvelope } from '@/services/robot/robotArt'
+import { EYE_GLYPHS, MOUTH_GLYPHS, ICONS, PROPS, ACCESSORIES, GRADIENTS, artTransform, propEnvelope } from '@/services/robot/robotArt'
+import { SCENES, SCENE_IDS, handPoses } from '@/services/robot/scenes'
 import { SEQUENCES, SequencePlayer, type SeqStep } from '@/services/robot/sequences'
 import { EXPRESSION_IDS } from '@/services/robot/expressions'
 
@@ -8,7 +9,8 @@ describe('robot art', () => {
   it('ships the spec catalogs', () => {
     expect(Object.keys(ICONS).sort()).toEqual(['battery', 'bubble', 'check', 'dots', 'download', 'envelope',
       'equalizer', 'exclaim', 'question', 'spinner', 'warning'])
-    expect(Object.keys(PROPS)).toHaveLength(19)
+    expect(Object.keys(PROPS)).toHaveLength(21)
+    expect(Object.keys(PROPS)).toEqual(expect.arrayContaining(['rocket', 'trophy']))
     expect(Object.keys(ACCESSORIES).sort()).toEqual(['chef-hat', 'headphones', 'nightcap', 'party-hat', 'scarf', 'sunglasses', 'wizard-hat'])
     expect(Object.keys(EYE_GLYPHS).sort()).toEqual(['dot', 'gt', 'heart', 'lt', 'spiral', 'star', 'x'])
     expect(Object.keys(MOUTH_GLYPHS).sort()).toEqual(['pout', 'teeth'])
@@ -23,13 +25,23 @@ describe('robot art', () => {
     }
   })
 
-  it('uses only white + the accent tokens', () => {
-    const allowed = new Set(['#fff', '#ffd84d', '#ff6fa8', '#ff4d4d', '#6cc7ff', '#ff9a4d', 'none', '#000', 'currentColor'])
+  it('uses only white, the accent tokens and the shared gradients', () => {
+    const allowed = new Set(['#fff', '#ffd84d', '#ff6fa8', '#ff4d4d', '#6cc7ff', '#ff9a4d', 'none', '#000', 'currentColor', '#e8a317', '#8a4f24'])
+    const gradientIds = new Set(GRADIENTS.map(g => `url(#${g.id})`))
     for (const set of [EYE_GLYPHS, MOUTH_GLYPHS, ICONS, PROPS, ACCESSORIES]) {
       for (const def of Object.values(set)) for (const el of def.els) {
-        for (const k of ['fill', 'stroke']) if (el.attrs[k] !== undefined) expect(allowed.has(String(el.attrs[k]))).toBe(true)
+        for (const k of ['fill', 'stroke']) {
+          if (el.attrs[k] === undefined) continue
+          const v = String(el.attrs[k])
+          expect(allowed.has(v) || gradientIds.has(v), v).toBe(true)
+        }
       }
     }
+  })
+
+  it('every gradient has at least two stops and a unique id', () => {
+    expect(new Set(GRADIENTS.map(g => g.id)).size).toBe(GRADIENTS.length)
+    for (const g of GRADIENTS) expect(g.stops.length, g.id).toBeGreaterThanOrEqual(2)
   })
 
   it('artTransform is finite for every anim and moment', () => {
@@ -56,7 +68,7 @@ describe('sequences', () => {
   it('ships the spec sequences', () => {
     for (const id of ['wink', 'look-around', 'eye-roll', 'double-take', 'nod', 'head-shake', 'yawn-sleep', 'wake-up',
       'sneeze', 'hiccup', 'giggle', 'shiver', 'sweat-wipe', 'whistle-away', 'peek-a-boo', 'startle', 'shrug',
-      'celebrate', 'sigh']) {
+      'celebrate', 'sigh', 'type-session', 'cheer', 'clap', 'cover-eyes', 'hello-hand', 'cheeky-wink']) {
       expect(Object.keys(SEQUENCES)).toContain(id)
     }
   })
@@ -71,6 +83,7 @@ describe('sequences', () => {
         if (s.prop) expect(Object.keys(PROPS)).toContain(s.prop)
         if (s.icon) expect(Object.keys(ICONS)).toContain(s.icon)
         if (s.accessory) expect(Object.keys(ACCESSORIES)).toContain(s.accessory)
+        if (s.scene) expect(SCENE_IDS).toContain(s.scene)
       }
       expect(seq.duration, id).toBeGreaterThanOrEqual(last)
     }
@@ -82,5 +95,33 @@ describe('sequences', () => {
     const all = [...p.due(1000), ...p.due(1100), ...p.due(5000)]
     expect(all.map(s => s.at)).toEqual(SEQUENCES.wink.steps.map(s => s.at))
     expect(p.active(1000 + SEQUENCES.wink.duration + 1)).toBe(false)
+  })
+})
+
+describe('scenes (DL-155)', () => {
+  it('every scene yields finite poses for both hands at every moment', () => {
+    for (const id of SCENE_IDS) for (const p of [0, 0.5, 1, 1.12]) for (const t of [0, 321, 5000]) {
+      for (const h of handPoses(id, p, t)) {
+        for (const n of [h.x, h.y, h.rot, h.thumb, ...h.curl]) expect(Number.isFinite(n), `${id} ${p} ${t}`).toBe(true)
+      }
+    }
+  })
+
+  it('hands start off-screen and arrive on the face box', () => {
+    for (const id of ['typing', 'cheer', 'clap', 'cover'] as const) {
+      const [l0, r0] = handPoses(id, 0, 0)
+      const [l1, r1] = handPoses(id, 1, 0)
+      expect(l0.x, id).toBeLessThan(0)
+      expect(r0.x, id).toBeGreaterThan(200)
+      expect(l1.x, id).toBeGreaterThan(0)
+      expect(r1.x, id).toBeLessThan(200)
+    }
+  })
+
+  it('typing curls the fingers over time and only that scene shows a laptop', () => {
+    const a = handPoses('typing', 1, 0)[0].curl.join()
+    const b = handPoses('typing', 1, 137)[0].curl.join()
+    expect(a).not.toBe(b)
+    expect(SCENE_IDS.filter(id => SCENES[id].laptop)).toEqual(['typing'])
   })
 })

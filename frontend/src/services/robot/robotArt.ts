@@ -9,8 +9,8 @@ import type { EyeGlyph, MouthGlyph } from './expressions'
 export const COLORS = { white: '#fff', yellow: '#ffd84d', pink: '#ff6fa8', red: '#ff4d4d', blue: '#6cc7ff', orange: '#ff9a4d' } as const
 const W = COLORS.white
 export type ArtAnim = 'none' | 'bounce' | 'spin' | 'wave' | 'twinkle' | 'float' | 'drip' | 'pulse' | 'pop' | 'fall' | 'scan' | 'steam' | 'sway' | 'eq'
-export interface ArtEl { tag: 'path' | 'circle' | 'rect'; attrs: Record<string, string | number>; anim?: ArtAnim; phase?: number }
-export interface ArtDef { els: ArtEl[]; anim?: ArtAnim; anchor?: [number, number]; life?: number }
+export interface ArtEl { tag: 'path' | 'circle' | 'rect' | 'ellipse'; attrs: Record<string, string | number>; anim?: ArtAnim; phase?: number }
+export interface ArtDef { els: ArtEl[]; anim?: ArtAnim; anchor?: [number, number]; life?: number; /** Extra size on top of the pop-in envelope (DL-155). */ scale?: number }
 
 const line = (d: string, stroke: string = W, width = 4): ArtEl =>
   ({ tag: 'path', attrs: { d, fill: 'none', stroke, 'stroke-width': width, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' } })
@@ -56,26 +56,147 @@ export const ICONS = {
 } satisfies Record<string, ArtDef>
 export type IconId = keyof typeof ICONS
 
+// --- DL-155: full-colour props -------------------------------------------------
+// Gradients live once in RobotFace's <defs>; art references them as url(#rb-<id>).
+export interface GradientDef { id: string; x1?: number; y1?: number; x2?: number; y2?: number; stops: ReadonlyArray<readonly [number, string]> }
+export const GRADIENTS: readonly GradientDef[] = [
+  { id: 'rb-skin', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#ffffff'], [1, '#c9d4ff']] },
+  { id: 'rb-sleeve', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#6cc7ff'], [1, '#3a7bff']] },
+  { id: 'rb-cuff', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#ff8fbd'], [1, '#ff4f93']] },
+  { id: 'rb-metal', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#e8ecf8'], [1, '#8d96b5']] },
+  { id: 'rb-metal-dark', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#4a516e'], [1, '#262b40']] },
+  { id: 'rb-screen', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#14204a'], [1, '#0a0f26']] },
+  { id: 'rb-gold', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#fff1a8'], [0.5, '#ffd84d'], [1, '#e8a317']] },
+  { id: 'rb-mug', x1: 0, y1: 0, x2: 1, y2: 0, stops: [[0, '#ffffff'], [1, '#c4cdf5']] },
+  { id: 'rb-glass', x1: 0.2, y1: 0, x2: 0.8, y2: 1, stops: [[0, '#fff7c2'], [0.6, '#ffd84d'], [1, '#ff9a4d']] },
+  { id: 'rb-heart', x1: 0.2, y1: 0, x2: 0.8, y2: 1, stops: [[0, '#ff9cc7'], [1, '#ff3f7f']] },
+  { id: 'rb-red', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#ff7a7a'], [1, '#e02a2a']] },
+  { id: 'rb-blue', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#bfe6ff'], [1, '#3f9bff']] },
+  { id: 'rb-sun', x1: 0.2, y1: 0.2, x2: 0.8, y2: 0.8, stops: [[0, '#fff3a0'], [1, '#ff9a4d']] },
+  { id: 'rb-ice', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#e6f6ff'], [1, '#6cc7ff']] },
+]
+const G = (id: string) => `url(#rb-${id})`
+const ell = (cx: number, cy: number, rx: number, ry: number, fill: string, extra: Record<string, string | number> = {}): ArtEl =>
+  ({ tag: 'ellipse', attrs: { cx, cy, rx, ry, fill, ...extra } })
+const box = (x: number, y: number, w: number, h: number, rx: number, fill: string, extra: Record<string, string | number> = {}): ArtEl =>
+  ({ tag: 'rect', attrs: { x, y, width: w, height: h, rx, fill, ...extra } })
+const shine = (cx: number, cy: number, rx: number, ry: number): ArtEl => ell(cx, cy, rx, ry, W, { opacity: 0.55 })
+const COFFEE_BROWN = '#8a4f24'
+
 export const PROPS = {
-  wave: { els: [line('M-6 10 V-10 M0 10 V-14 M6 10 V-10 M12 12 V-2 M-10 2 C-12 14 -2 22 6 22 C14 22 16 14 14 6')], anim: 'wave', anchor: [172, 56], life: 2600 },
-  sparkles: { els: [shape(STAR4(0, 0, 1), COLORS.yellow), animated(shape(STAR4(14, -12, 0.6), COLORS.yellow), 'twinkle', 1), animated(shape(STAR4(-12, 12, 0.5), COLORS.yellow), 'twinkle', 2)], anim: 'twinkle', anchor: [168, 34], life: 2400 },
-  zzz: { els: [line('M-8 -4 H0 L-8 4 H0', W, 3), animated(line('M4 -14 H10 L4 -8 H10', W, 2.5), 'float', 1)], anim: 'float', anchor: [160, 30], life: 3000 },
-  notes: { els: [line('M-4 6 V-12 L8 -14 V4', W, 3), dot(-7, 6, 4), dot(5, 4, 4)], anim: 'float', anchor: [168, 40], life: 2600 },
-  heart: { els: [shape(HEART, COLORS.pink)], anim: 'float', anchor: [166, 36], life: 2400 },
-  sweat: { els: [shape(DROP, COLORS.blue)], anim: 'drip', anchor: [148, 34], life: 2200 },
-  anger: { els: [line('M-8 -3 Q-3 -3 -3 -8 M3 -8 Q3 -3 8 -3 M8 3 Q3 3 3 8 M-3 8 Q-3 3 -8 3', COLORS.red, 3.5)], anim: 'pulse', anchor: [150, 26], life: 2400 },
-  question: { els: [line('M-6 -8 C-6 -16 7 -16 7 -8 C7 -3 0 -2 0 4', W, 4), dot(0, 11, 2.5)], anim: 'pop', anchor: [160, 28], life: 2000 },
-  exclaim: { els: [line('M0 -14 V4', W, 5), dot(0, 12, 3)], anim: 'pop', anchor: [160, 28], life: 1800 },
-  bulb: { els: [line('M0 -14 a10 10 0 1 1 0.1 0', COLORS.yellow, 3), line('M-5 8 H5 M-4 12 H4', COLORS.yellow, 3)], anim: 'pop', anchor: [100, 4], life: 2200 },
-  confetti: { els: [animated({ tag: 'rect', attrs: { x: -20, y: -10, width: 4, height: 7, fill: COLORS.yellow } }, 'fall', 0), animated({ tag: 'rect', attrs: { x: -6, y: -16, width: 4, height: 7, fill: COLORS.pink } }, 'fall', 1), animated({ tag: 'rect', attrs: { x: 8, y: -8, width: 4, height: 7, fill: COLORS.blue } }, 'fall', 2), animated({ tag: 'rect', attrs: { x: 20, y: -14, width: 4, height: 7, fill: COLORS.orange } }, 'fall', 3)], anchor: [100, 10], life: 2600 },
-  magnifier: { els: [line('M0 -9 a9 9 0 1 1 -0.1 0', W, 3.5), line('M6 6 L14 14', W, 4)], anim: 'scan', anchor: [100, 128], life: 3000 },
-  laptop: { els: [line('M-14 -10 H14 V6 H-14 Z M-18 10 H18', W, 3)], anim: 'pop', anchor: [100, 132], life: 3000 },
-  coffee: { els: [line('M-10 -6 H8 V8 Q8 12 4 12 H-6 Q-10 12 -10 8 Z M8 -2 Q14 -2 14 3 Q14 7 8 7', W, 3), animated(line('M-4 -10 Q-6 -14 -4 -18 M2 -10 Q0 -14 2 -18', W, 2), 'steam')], anchor: [36, 112], life: 4000 },
-  thermometer: { els: [line('M0 -14 V6', W, 6), dot(0, 10, 5, COLORS.red), line('M0 -2 V6', COLORS.red, 3)], anim: 'pulse', anchor: [166, 50], life: 2600 },
-  sun: { els: [dot(0, 0, 7, COLORS.yellow), line('M0 -14 V-10 M0 10 V14 M-14 0 H-10 M10 0 H14 M-10 -10 L-7 -7 M7 7 L10 10 M-10 10 L-7 7 M7 -7 L10 -10', COLORS.yellow, 2.5)], anim: 'spin', anchor: [172, 22], life: 3000 },
-  umbrella: { els: [line('M-16 0 Q0 -18 16 0 Z', W, 3), line('M0 0 V12 Q0 16 -4 14', W, 3)], anim: 'sway', anchor: [100, 0], life: 3200 },
-  snowflake: { els: [line('M0 -12 V12 M-10 -6 L10 6 M-10 6 L10 -6', COLORS.blue, 2.5)], anim: 'spin', anchor: [170, 26], life: 3000 },
-  tear: { els: [shape(DROP, COLORS.blue)], anim: 'drip', anchor: [62, 84], life: 2200 },
+  wave: {
+    els: [
+      box(-12, 18, 24, 9, 3, G('cuff')),
+      box(-11, -12, 5.5, 22, 2.75, G('skin')), box(-5, -17, 5.5, 27, 2.75, G('skin')),
+      box(1, -15, 5.5, 25, 2.75, G('skin')), box(7, -9, 5.5, 20, 2.75, G('skin')),
+      ell(0, 12, 13, 11, G('skin')),
+      shape('M-11 12 Q-24 8 -21 -1 Q-19 -6 -14 -2 L-9 5 Z', G('skin')),
+      line('M19 -8 Q26 0 19 8', COLORS.yellow, 2.5), line('M24 -12 Q34 0 24 12', COLORS.yellow, 2),
+    ], anim: 'wave', anchor: [172, 56], life: 2600, scale: 1.25,
+  },
+  sparkles: {
+    els: [shape(STAR4(0, 0, 1.5), G('gold')), animated(shape(STAR4(18, -14, 0.9), G('gold')), 'twinkle', 1),
+      animated(shape(STAR4(-16, 14, 0.75), G('gold')), 'twinkle', 2), animated(dot(14, 16, 2.2, COLORS.pink), 'twinkle', 3),
+      animated(dot(-18, -12, 2, COLORS.blue), 'twinkle', 4)],
+    anim: 'twinkle', anchor: [168, 34], life: 2400,
+  },
+  zzz: {
+    els: [line('M-10 -6 H2 L-10 6 H2', G('ice'), 4.5), animated(line('M6 -20 H15 L6 -11 H15', G('ice'), 3.5), 'float', 1),
+      animated(line('M18 -34 H25 L18 -27 H25', COLORS.blue, 2.5), 'float', 2)],
+    anim: 'float', anchor: [160, 30], life: 3000,
+  },
+  notes: {
+    els: [line('M-8 10 V-14 L10 -17 V7', COLORS.pink, 3.5), ell(-11, 10, 5.5, 4.2, G('heart')), ell(7, 7, 5.5, 4.2, G('heart')),
+      animated(line('M18 4 V-10 L28 -12 V0', COLORS.blue, 3), 'float', 1), animated(ell(15, 4, 4, 3, G('blue')), 'float', 1),
+      animated(ell(25, 0, 4, 3, G('blue')), 'float', 1)],
+    anim: 'float', anchor: [168, 40], life: 2600,
+  },
+  heart: {
+    els: [shape(HEART, G('heart')), line(HEART, COLORS.red, 1.8), ell(-6, -8, 3.5, 2.2, W, { opacity: 0.6 })],
+    anim: 'float', anchor: [166, 36], life: 2400, scale: 1.4,
+  },
+  sweat: { els: [shape(DROP, G('blue')), ell(-2.5, 0, 1.6, 3, W, { opacity: 0.7 })], anim: 'drip', anchor: [148, 34], life: 2200, scale: 1.4 },
+  anger: {
+    els: [dot(0, 0, 13, COLORS.orange), line('M-9 -4 Q-4 -4 -4 -9 M4 -9 Q4 -4 9 -4 M9 4 Q4 4 4 9 M-4 9 Q-4 4 -9 4', COLORS.red, 4.5)],
+    anim: 'pulse', anchor: [150, 26], life: 2400,
+  },
+  question: {
+    els: [dot(0, 0, 15, G('gold')), line('M-6 -6 C-6 -14 7 -14 7 -6 C7 -1 0 0 0 6', '#000', 3.8), dot(0, 11, 2.4, '#000')],
+    anim: 'pop', anchor: [160, 28], life: 2000,
+  },
+  exclaim: {
+    els: [dot(0, 0, 15, G('red')), line('M0 -9 V3', W, 4.5), dot(0, 9, 2.6, W)],
+    anim: 'pop', anchor: [160, 28], life: 1800,
+  },
+  bulb: {
+    els: [{ tag: 'circle', attrs: { cx: 0, cy: -4, r: 21, fill: COLORS.yellow, opacity: 0.28 } },
+      shape('M-11 6 C-17 -2 -14 -18 0 -19 C14 -18 17 -2 11 6 C9 9 9 11 9 13 H-9 C-9 11 -9 9 -11 6 Z', G('glass')),
+      line('M-4 12 V2 L0 -4 L4 2 V12', '#e8a317', 1.8), shine(-6, -11, 3, 5),
+      box(-8, 13, 16, 4, 2, G('metal')), box(-6, 17, 12, 4, 2, G('metal-dark')),
+      line('M0 -30 V-26 M-20 -22 L-17 -19 M20 -22 L17 -19 M-26 -6 H-22 M22 -6 H26', COLORS.yellow, 2.5)],
+    anim: 'pop', anchor: [100, 4], life: 2200, scale: 1.1,
+  },
+  confetti: {
+    els: [animated(box(-24, -10, 5, 9, 1, COLORS.yellow), 'fall', 0), animated(box(-14, -16, 5, 9, 1, COLORS.pink), 'fall', 1),
+      animated(box(-4, -8, 5, 9, 1, COLORS.blue), 'fall', 2), animated(box(6, -15, 5, 9, 1, COLORS.orange), 'fall', 3),
+      animated(box(16, -9, 5, 9, 1, COLORS.red), 'fall', 4), animated(box(26, -14, 5, 9, 1, COLORS.yellow), 'fall', 5),
+      animated(dot(-19, -20, 3, COLORS.blue), 'fall', 6), animated(dot(1, -22, 3, COLORS.pink), 'fall', 7),
+      animated(dot(21, -21, 3, COLORS.yellow), 'fall', 8), animated(dot(-9, -4, 2.5, COLORS.orange), 'fall', 9)],
+    anchor: [100, 6], life: 2600, scale: 1.3,
+  },
+  magnifier: {
+    els: [{ tag: 'circle', attrs: { cx: 0, cy: 0, r: 12, fill: G('blue'), opacity: 0.55 } },
+      { tag: 'circle', attrs: { cx: 0, cy: 0, r: 12, fill: 'none', stroke: G('metal'), 'stroke-width': 4.5 } },
+      line('M9 9 L20 20', COFFEE_BROWN, 6), shine(-4, -5, 3.5, 2)],
+    anim: 'scan', anchor: [100, 128], life: 3000, scale: 1.2,
+  },
+  laptop: {
+    els: [box(-17, -12, 34, 22, 3, G('metal-dark')), box(-14, -9, 28, 16, 1.5, G('screen')),
+      box(-11, -6, 14, 2.2, 1, COLORS.pink), box(-11, -2, 20, 2.2, 1, COLORS.blue), box(-11, 2, 10, 2.2, 1, COLORS.yellow),
+      shape('M-21 12 H21 L18 16 H-18 Z', G('metal'))],
+    anim: 'pop', anchor: [100, 132], life: 3000, scale: 1.3,
+  },
+  coffee: {
+    els: [ell(0, 15, 18, 4, G('metal'), { opacity: 0.9 }),
+      shape('M-12 -6 H10 V8 Q10 14 4 14 H-6 Q-12 14 -12 8 Z', G('mug')),
+      line('M10 -2 Q19 -2 19 4 Q19 10 10 9', COLORS.white, 3), ell(-1, -6, 11, 3, COFFEE_BROWN), shine(-6, 3, 1.8, 5),
+      animated(line('M-6 -12 Q-9 -18 -6 -24 M2 -12 Q-1 -18 2 -24', COLORS.white, 2.4), 'steam')],
+    anchor: [36, 112], life: 4000, scale: 1.25,
+  },
+  thermometer: {
+    els: [box(-4, -18, 8, 26, 4, G('blue')), dot(0, 11, 7, G('red')), box(-1.6, -4, 3.2, 14, 1.6, COLORS.red),
+      line('M6 -12 H10 M6 -6 H10 M6 0 H10', W, 1.8)],
+    anim: 'pulse', anchor: [166, 50], life: 2600, scale: 1.2,
+  },
+  sun: {
+    els: [dot(0, 0, 11, G('sun')), line('M0 -20 V-14 M0 14 V20 M-20 0 H-14 M14 0 H20 M-14 -14 L-10 -10 M10 10 L14 14 M-14 14 L-10 10 M10 -10 L14 -14', COLORS.yellow, 3.2),
+      shine(-4, -4, 3, 2)],
+    anim: 'spin', anchor: [172, 22], life: 3000,
+  },
+  umbrella: {
+    els: [shape('M-22 2 Q-22 -20 0 -22 Q22 -20 22 2 Q15 -4 7 2 Q0 -4 -7 2 Q-15 -4 -22 2 Z', G('heart')),
+      shape('M-7 2 Q0 -4 7 2 Q4 -12 0 -22 Q-4 -12 -7 2 Z', G('glass')),
+      line('M0 2 V16 Q0 22 -5 20', COFFEE_BROWN, 3.2), dot(0, -23, 2, '#e8a317')],
+    anim: 'sway', anchor: [100, 0], life: 3200, scale: 1.1,
+  },
+  snowflake: {
+    els: [line('M0 -16 V16 M-14 -8 L14 8 M-14 8 L14 -8', G('ice'), 3), line('M-4 -13 L0 -9 L4 -13 M-4 13 L0 9 L4 13', COLORS.blue, 2), dot(0, 0, 3, W)],
+    anim: 'spin', anchor: [170, 26], life: 3000,
+  },
+  tear: { els: [shape(DROP, G('blue')), ell(-2.5, 0, 1.6, 3, W, { opacity: 0.7 })], anim: 'drip', anchor: [62, 84], life: 2200, scale: 1.5 },
+  rocket: {
+    els: [animated(shape('M-6 14 Q0 34 6 14 Z', G('sun')), 'pulse', 0), animated(shape('M-3 14 Q0 26 3 14 Z', COLORS.yellow), 'pulse', 1),
+      shape('M-8 8 L-17 18 L-8 16 Z', G('red')), shape('M8 8 L17 18 L8 16 Z', G('red')),
+      shape('M0 -24 Q12 -10 9 12 H-9 Q-12 -10 0 -24 Z', G('skin')), shape('M0 -24 Q6 -18 8 -12 H-8 Q-6 -18 0 -24 Z', G('red')),
+      dot(0, -3, 4.5, G('blue')), { tag: 'circle', attrs: { cx: 0, cy: -3, r: 4.5, fill: 'none', stroke: G('metal'), 'stroke-width': 1.6 } }],
+    anim: 'float', anchor: [168, 62], life: 2800, scale: 1.2,
+  },
+  trophy: {
+    els: [shape('M-12 -14 H12 V-2 Q12 10 0 12 Q-12 10 -12 -2 Z', G('gold')),
+      line('M-12 -10 Q-22 -10 -20 -2 Q-18 4 -11 4 M12 -10 Q22 -10 20 -2 Q18 4 11 4', '#e8a317', 2.8),
+      box(-2.5, 12, 5, 7, 1, G('gold')), box(-9, 19, 18, 5, 2, G('metal-dark')), shape(STAR4(0, -3, 0.9), W), shine(-6, -6, 2, 5)],
+    anim: 'pop', anchor: [100, 4], life: 2600, scale: 1.2,
+  },
 } satisfies Record<string, ArtDef>
 export type PropId = keyof typeof PROPS
 
