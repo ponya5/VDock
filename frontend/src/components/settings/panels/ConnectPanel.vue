@@ -96,16 +96,6 @@
               </button>
             </div>
           </div>
-          <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn" data-testid="unprotected-row">
-            <div class="row-text">
-              <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Phone access is unprotected</span>
-              <p>Right now anyone on this Wi-Fi can press your keys and answer your agents. Require pairing so only devices that scan the code can connect — or set a password instead.</p>
-            </div>
-            <div class="row-control">
-              <button type="button" class="btn sm primary" data-action="require-pairing" @click="requirePairing">Require pairing</button>
-              <DeckPasswordForm :cancellable="false" />
-            </div>
-          </div>
           <div v-if="pairing && phoneLive" class="row stack" data-testid="devices">
             <div class="row-text">
               <span class="label">Connected devices</span>
@@ -174,7 +164,6 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { useServerConfig } from '@/composables/useServerConfig'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { copyText } from '@/utils/copyText'
-import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
 import {
   PAIR_REFRESH_MS, buildPairUrl, requestPairToken, fetchDevices, revokeDevice, revokeAllDevices, timeAgo,
   type PairedDevice,
@@ -236,14 +225,6 @@ const PUBLIC_NETWORK_TEXT =
   + 'If this is your home Wi-Fi, set it to "Private" in Windows (Settings › Network & internet › Wi-Fi). Otherwise leave phone access off, or connect through a VPN such as Tailscale.'
 const networkPublic = computed(() => serverConfig.value?.network_profile === 'public')
 
-async function requirePairing() {
-  const ok = await settingsStore.updateServerConfig({ pair_only: true })
-  notificationsStore[ok ? 'success' : 'error'](
-    ok ? 'Pairing required' : 'Could not save',
-    ok ? 'Devices now have to scan the code to connect.' : 'Try again.',
-  )
-  if (ok) await settingsStore.loadServerConfig()
-}
 const { hostOs } = useHostOs()
 const computerNoun = computed(() => (hostOs.value === 'macos' ? 'Mac' : 'PC'))
 

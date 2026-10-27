@@ -37,6 +37,7 @@ vi.mock('@/services/pairing', () => ({
 vi.mock('@/api/client', () => ({ default: { get: vi.fn().mockResolvedValue({ data: {} }) } }))
 
 import ConnectPanel from '@/components/settings/panels/ConnectPanel.vue'
+import SecurityPanel from '@/components/settings/panels/SecurityPanel.vue'
 
 function mountPanel() {
   return mount(ConnectPanel, { global: { stubs: { FontAwesomeIcon: true, DeckPasswordForm: true } } })
@@ -131,9 +132,10 @@ describe('connected phone access (DL-154)', () => {
     expect(w.find('[data-testid="public-network-warning"]').text()).toContain('Tailscale')
   })
 
-  it('offers "Require pairing" on a legacy unprotected deck', async () => {
+  it('offers "Require pairing" on a legacy unprotected deck, under Security (not Connect)', async () => {
     serverConfig.value = { ...LIVE, require_auth: false, auth_password_set: false, pair_only: false }
-    const w = mountPanel()
+    expect(mountPanel().find('[data-testid="unprotected-row"]').exists()).toBe(false)
+    const w = mount(SecurityPanel, { global: { stubs: { FontAwesomeIcon: true, DeckPasswordForm: true } } })
     await w.find('[data-action="require-pairing"]').trigger('click')
     await flushPromises()
     expect(updateServerConfig).toHaveBeenCalledWith({ pair_only: true })

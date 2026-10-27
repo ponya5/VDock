@@ -68,6 +68,13 @@ const designs = [
   { value: 'statuskey', label: 'Status Key', icon: ['fas', 'circle-dot'] },
   { value: 'fullart',   label: 'Full Art',   icon: ['fas', 'image'] },
   { value: 'folder',    label: 'Folder',     icon: ['fas', 'folder-open'] },
+  { value: 'sunset', label: 'Sunset', icon: ['fas', 'sun'] },
+  { value: 'ocean', label: 'Ocean', icon: ['fas', 'water'] },
+  { value: 'candy', label: 'Candy', icon: ['fas', 'heart'] },
+  { value: 'terminal', label: 'Terminal', icon: ['fas', 'terminal'] },
+  { value: 'midnight', label: 'Midnight', icon: ['fas', 'moon'] },
+  { value: 'paper', label: 'Paper', icon: ['fas', 'file'] },
+  { value: 'outline', label: 'Outline', icon: ['fas', 'vector-square'] },
 ] as const
 
 const overlays = [
@@ -111,11 +118,11 @@ function onOverlayChange(e: Event) {
 
 .design-swatch-grid {
   display: grid;
-  /* Fixed ~88px tiles keep the picker compact — fluid 1fr columns let the
-     swatches dominate the whole panel on wide layouts. */
-  grid-template-columns: repeat(5, minmax(0, 88px));
+  /* Fixed ~88px tiles, as many per row as fit — wide panels use 2 rows
+     instead of leaving the sides empty. */
+  grid-template-columns: repeat(auto-fill, 88px);
   gap: 8px;
-  justify-content: center;
+  justify-content: start;
 }
 
 .design-swatch-wrap {
@@ -237,7 +244,7 @@ function onOverlayChange(e: Event) {
 
 @media (max-width: 640px) {
   .design-swatch-grid {
-    grid-template-columns: repeat(4, minmax(0, 72px));
+    grid-template-columns: repeat(auto-fill, 72px);
     gap: 6px;
   }
 }

@@ -2,10 +2,20 @@
   <section class="panel" id="security">
     <div class="panel-head"><h2>Security</h2><span class="hint">The deck password every device unlocks with.</span></div>
     <div class="panel-body">
+      <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn" data-testid="unprotected-row">
+        <div class="row-text">
+          <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Phone access is unprotected</span>
+          <p>Right now anyone on this Wi-Fi can press your keys and answer your agents. Require pairing so only devices that scan the code can connect.</p>
+        </div>
+        <div class="row-control">
+          <button type="button" class="btn sm primary" data-action="require-pairing" @click="requirePairing">Require pairing</button>
+          <button type="button" class="btn link sm" data-action="use-password" @click="authSetupOpen = true">Use a password instead</button>
+        </div>
+      </div>
       <div class="row">
         <div class="row-text">
           <span class="label">Authentication</span>
-          <p>{{ serverConfig?.require_auth ? 'On. Every device unlocks with the deck password.' : 'Off. Anyone on your network who can reach the deck address can control this deck.' }}</p>
+          <p>{{ serverConfig?.require_auth ? (serverConfig.pair_only ? 'On, pairing only. A device gets in by scanning the code on Connect a device — there is no password.' : 'On. Every device unlocks with the deck password.') : 'Off. Anyone on your network who can reach the deck address can control this deck.' }}</p>
         </div>
         <div class="row-control">
           <label class="switch"><span class="sr-only">Require authentication</span><input type="checkbox" :checked="serverConfig?.require_auth ?? false" @change="toggleAuth" /><span class="track"></span></label>
@@ -22,13 +32,14 @@
       </div>
       <div v-if="serverConfig?.require_auth" class="row">
         <div class="row-text">
-          <span class="label">Deck password</span>
-          <p>{{ authChangeOpen ? 'Already-unlocked devices stay unlocked — the new password applies to the next unlock.' : 'Change the password devices use to unlock.' }}</p>
+          <span class="label">{{ serverConfig.pair_only ? 'Use a password instead' : 'Deck password' }}</span>
+          <p v-if="serverConfig.pair_only">Switches off pairing-only: devices can then also unlock by typing this password. Scanning the Connect code still works.</p>
+          <p v-else>{{ authChangeOpen ? 'Already-unlocked devices stay unlocked — the new password applies to the next unlock.' : 'Change the password devices use to unlock.' }}</p>
         </div>
         <div class="row-control">
           <DeckPasswordForm v-if="authChangeOpen" mode="change" @done="authChangeOpen = false" @cancel="authChangeOpen = false" />
           <button v-else type="button" class="btn sm" @click="authChangeOpen = true">
-            <FontAwesomeIcon :icon="['fas', 'key']" /> Change password
+            <FontAwesomeIcon :icon="['fas', 'key']" /> {{ serverConfig.pair_only ? 'Set a password' : 'Change password' }}
           </button>
         </div>
       </div>
@@ -38,6 +49,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
+import { useNotificationsStore } from '@/stores/notifications'
 import { useServerConfig } from '@/composables/useServerConfig'
 import { useDeckAuth } from '@/composables/useDeckAuth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -46,6 +59,17 @@ import { confirmDialog } from '@/composables/useConfirm'
 
 const { serverConfig } = useServerConfig()
 const { setAuthEnabled } = useDeckAuth()
+const settingsStore = useSettingsStore()
+const notificationsStore = useNotificationsStore()
+
+async function requirePairing() {
+  const ok = await settingsStore.updateServerConfig({ pair_only: true })
+  notificationsStore[ok ? 'success' : 'error'](
+    ok ? 'Pairing required' : 'Could not save',
+    ok ? 'Devices now have to scan the code to connect.' : 'Try again.',
+  )
+  if (ok) await settingsStore.loadServerConfig()
+}
 
 // ── Authentication (DL-126) ──────────────────────────────────────────────
 // require_auth writes through the same /api/config channel as the other

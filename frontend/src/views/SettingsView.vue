@@ -82,12 +82,24 @@
             <span v-if="buttonPageDirty" class="draft-chip"><span class="draft-dot" aria-hidden="true"></span>Draft not applied</span>
             <button
               type="button"
+              class="btn sm"
+              data-testid="apply-defaults-btn"
+              title="Save this look as the default for new keys. Existing keys are not changed."
+              :disabled="applyingButtonBehaviour || !buttonPageDirty"
+              @click="applyButtonDefaults"
+            >
+              <FontAwesomeIcon :icon="['fas', 'check']" /> Apply
+            </button>
+            <button
+              type="button"
               class="btn primary sm"
+              data-testid="apply-all-topbar-btn"
+              title="Save and rewrite the look of every existing key"
               :disabled="applyingButtonBehaviour"
               @click="applyButtonBehaviourToAll"
             >
               <FontAwesomeIcon :icon="['fas', applyingButtonBehaviour ? 'spinner' : 'floppy-disk']" :spin="applyingButtonBehaviour" />
-              {{ applyingButtonBehaviour ? 'Applying…' : 'Save & Apply to all keys' }}
+              {{ applyingButtonBehaviour ? 'Applying…' : 'Apply to all keys' }}
             </button>
           </template>
           <button
@@ -313,13 +325,24 @@ watch(buttonPageDirty, (dirty) => {
     draftToastShown = true
     notificationsStore.warning(
       'Draft changes',
-      'Motion and key design stay drafts until Save & Apply — which rewrites every existing key, including per-key customisation.',
+      'Motion and key design stay drafts until you Apply (new keys only) or Apply to all keys (rewrites every existing key, including per-key customisation).',
       { duration: 7000, important: true }
     )
   } else if (!dirty) {
     draftToastShown = false
   }
 })
+// The draft starts from the store before the server settings have loaded, so a
+// late load must carry an untouched draft along — otherwise the page opens on
+// the factory look with a false "Draft not applied" and Apply-to-all would push it.
+watch(
+  () => [settingsStore.buttonDefaultAnimation, settingsStore.buttonDefaultIconLoop, settingsStore.buttonDefaultEffect] as const,
+  ([a, i, e], [oa, oi, oe]) => {
+    if (previewAnimation.value === oa) previewAnimation.value = a
+    if (previewIconLoop.value === oi) previewIconLoop.value = i
+    if (previewEffect.value === oe) previewEffect.value = e
+  }
+)
 function revertButtonDefaults() {
   previewAnimation.value = settingsStore.buttonDefaultAnimation
   previewIconLoop.value = settingsStore.buttonDefaultIconLoop
@@ -391,6 +414,15 @@ function resetAppearanceSection() {
 }
 
 const applyingButtonBehaviour = ref(false)
+
+// "Apply" — commits the draft as the default for NEW keys only and refreshes
+// the deck; existing keys keep their look (that is "Apply to all keys").
+async function applyButtonDefaults() {
+  settingsStore.buttonDefaultAnimation = previewAnimation.value
+  settingsStore.buttonDefaultIconLoop = previewIconLoop.value
+  settingsStore.buttonDefaultEffect = previewEffect.value
+  await applyToDashboard()
+}
 let defaultsBeforeApply: { animation: string; iconLoop: string; effect: string } | null = null
 
 // "Save & Apply to all keys" — commits the draft (preview refs) as the

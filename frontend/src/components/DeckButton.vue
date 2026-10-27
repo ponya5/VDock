@@ -489,6 +489,13 @@ const buttonClasses = computed(() => {
     'deck-button-statuskey': vis.effect.type === 'statuskey',
     'deck-button-fullart': vis.effect.type === 'fullart',
     'deck-button-folder': vis.effect.type === 'folder',
+    'deck-button-sunset': vis.effect.type === 'sunset',
+    'deck-button-ocean': vis.effect.type === 'ocean',
+    'deck-button-candy': vis.effect.type === 'candy',
+    'deck-button-terminal': vis.effect.type === 'terminal',
+    'deck-button-midnight': vis.effect.type === 'midnight',
+    'deck-button-paper': vis.effect.type === 'paper',
+    'deck-button-outline': vis.effect.type === 'outline',
 
     // Animations (mapped from behaviour layer or legacy style.animation)
     'btn-pulse': anim === 'pulse',

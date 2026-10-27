@@ -802,7 +802,14 @@
                 'deck-button-deckkey': buttonDesign === 'deckkey',
                 'deck-button-statuskey': buttonDesign === 'statuskey',
                 'deck-button-fullart': buttonDesign === 'fullart',
-                'deck-button-folder': buttonDesign === 'folder'
+                'deck-button-folder': buttonDesign === 'folder',
+                'deck-button-sunset': buttonDesign === 'sunset',
+                'deck-button-ocean': buttonDesign === 'ocean',
+                'deck-button-candy': buttonDesign === 'candy',
+                'deck-button-terminal': buttonDesign === 'terminal',
+                'deck-button-midnight': buttonDesign === 'midnight',
+                'deck-button-paper': buttonDesign === 'paper',
+                'deck-button-outline': buttonDesign === 'outline'
               }"
               :style="buttonDesign === 'gradient' && editedButton.style?.gradient ? { background: editedButton.style.gradient } : {}"
             >

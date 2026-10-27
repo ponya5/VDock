@@ -2287,3 +2287,69 @@ select option {
 #app[data-ui-font='mono'] .reveal-pill {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* ── More key designs (DL-029) ─────────────────────────────────────────────
+   sunset / ocean / candy / terminal carry their own palette; midnight / paper /
+   outline follow --btn-brand like the rich cards above. */
+.deck-button-sunset {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 255, 255, 0.3), transparent 70%),
+    linear-gradient(160deg, #ffa24f 0%, #ec3f6e 52%, #6a2cc7 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 24px rgba(236, 63, 110, 0.35) !important;
+}
+.deck-button-ocean {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 255, 255, 0.28), transparent 70%),
+    linear-gradient(160deg, #35e0c8 0%, #1d84dc 52%, #162f86 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 24px rgba(29, 132, 220, 0.35) !important;
+}
+.deck-button-candy {
+  border-radius: 28px !important;
+  background: linear-gradient(160deg, #ffd9ec 0%, #e5d4ff 100%) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 8px 0 #c9a8ee, 0 14px 22px rgba(120, 80, 170, 0.3) !important;
+}
+.deck-button-candy .button-icon,
+.deck-button-candy .button-label { color: #5b2a86 !important; }
+.deck-button-candy:active:not(.edit-mode):not(.is-placeholder) {
+  transform: translateY(5px);
+  box-shadow: 0 3px 0 #c9a8ee, 0 6px 10px rgba(120, 80, 170, 0.3) !important;
+}
+.deck-button-terminal {
+  background:
+    repeating-linear-gradient(0deg, rgba(60, 255, 120, 0.06) 0 1px, transparent 1px 4px),
+    #031208 !important;
+  border: 1px solid #28d964 !important;
+  box-shadow: inset 0 0 18px rgba(40, 217, 100, 0.2), 0 0 16px rgba(40, 217, 100, 0.25) !important;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+}
+.deck-button-terminal .button-icon,
+.deck-button-terminal .button-label {
+  color: #4dff8a !important;
+  text-shadow: 0 0 8px rgba(77, 255, 138, 0.6);
+}
+.deck-button-midnight {
+  background: linear-gradient(180deg, #181a24, #0d0e15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-top: 3px solid var(--btn-brand, #6c8cff) !important;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45) !important;
+}
+.deck-button-midnight .button-icon { color: var(--btn-brand, #6c8cff) !important; }
+.deck-button-paper {
+  background: linear-gradient(180deg, #ffffff, #efeae2) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 0 #fff inset, 0 10px 20px rgba(60, 40, 20, 0.25) !important;
+}
+.deck-button-paper .button-icon { color: var(--btn-brand, #d9534f) !important; }
+.deck-button-paper .button-label { color: #3a3128 !important; }
+.deck-button-outline {
+  background: transparent !important;
+  border: 2px solid var(--btn-brand, #4aa3ff) !important;
+  box-shadow: none !important;
+}
+.deck-button-outline .button-icon { color: var(--btn-brand, #4aa3ff) !important; }
+.deck-button-outline:hover:not(.edit-mode):not(.is-placeholder) {
+  background: color-mix(in srgb, var(--btn-brand, #4aa3ff) 16%, transparent) !important;
+}
