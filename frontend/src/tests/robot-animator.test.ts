@@ -105,4 +105,27 @@ describe('FaceAnimator', () => {
     a.step(60_000, 60_000)
     expect(a.frame().eyeL + a.frame().mouth + a.frame().transform).not.toMatch(/NaN|Infinity/)
   })
+
+  it('fades the drawn mouth when a mouth glyph takes over (no single-frame pop)', () => {
+    const a = new FaceAnimator(seeded())
+    let t = run(a, 500)
+    expect(a.frame().mouthOpacity).toBeGreaterThan(0.9)
+    a.setExpression('pout')
+    let prev = a.frame().mouthOpacity
+    for (let i = 0; i < 120; i++) {
+      a.step(16.7, (t += 16.7))
+      const o = a.frame().mouthOpacity
+      expect(prev - o).toBeLessThan(0.8)
+      prev = o
+    }
+    expect(prev).toBeLessThan(0.1)
+    a.setExpression('neutral')
+    for (let i = 0; i < 240; i++) {
+      a.step(16.7, (t += 16.7))
+      const o = a.frame().mouthOpacity
+      expect(o - prev).toBeLessThan(0.8)
+      prev = o
+    }
+    expect(prev).toBeGreaterThan(0.9)
+  })
 })

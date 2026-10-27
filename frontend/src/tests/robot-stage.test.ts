@@ -31,7 +31,7 @@ describe('RobotFace', () => {
     const f = frameAfter(a => { a.setExpression('love'); a.setAccessory('headphones'); a.addProp('notes') }, 600)
     const w = mount(RobotFace, { props: { frame: f, level: 0 } })
     expect(w.findAll('[data-glyph="heart"]')).toHaveLength(2)
-    expect(w.find('[data-accessory="headphones"]').exists()).toBe(true)
+    expect(w.find('g[data-accessory="headphones"]').exists()).toBe(true)
     expect(w.find('[data-prop="notes"]').exists()).toBe(true)
     const g = mount(RobotFace, { props: { frame: frameAfter(a => a.setIcon('exclaim')), level: 0 } })
     expect(g.find('svg').attributes('data-icon')).toBe('exclaim')

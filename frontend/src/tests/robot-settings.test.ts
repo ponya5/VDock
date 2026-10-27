@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { SAVER_TYPES, SHUFFLE_POOL, saverTypeLabel } from '@/services/screensaverTypes'
 import { useSettingsStore, SETTINGS_DEFAULTS, sanitizeRobotReactTo } from '@/stores/settings'
+import type { AxiosResponse } from 'axios'
 import apiClient from '@/api/client'
 
 vi.mock('@/api/client', () => ({
@@ -22,7 +23,7 @@ beforeEach(() => {
 // The store applies a loaded payload via loadSettingsFromServer (same feed as
 // settings-malformed-payload.test.ts).
 async function applySettings(s: ReturnType<typeof useSettingsStore>, settings: any) {
-  vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { settings } })
+  vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { settings } } as unknown as AxiosResponse)
   await s.loadSettingsFromServer()
 }
 

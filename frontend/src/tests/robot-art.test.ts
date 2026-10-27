@@ -43,6 +43,13 @@ describe('robot art', () => {
     expect(propEnvelope(1000, 2000).opacity).toBeCloseTo(1, 2)
     expect(propEnvelope(2000, 2000).opacity).toBeCloseTo(0, 2)
   })
+
+  it('propEnvelope overshoots then settles to 1', () => {
+    let max = 0
+    for (let a = 0; a <= 260; a += 5) max = Math.max(max, propEnvelope(a, 2000).scale)
+    expect(max).toBeGreaterThan(1.05)
+    expect(propEnvelope(300, 2000).scale).toBe(1)
+  })
 })
 
 describe('sequences', () => {

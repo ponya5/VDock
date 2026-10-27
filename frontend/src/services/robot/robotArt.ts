@@ -125,7 +125,9 @@ export function propEnvelope(ageMs: number, lifeMs: number): { scale: number; op
   if (ageMs <= 0) return { scale: 0.3, opacity: 0 }
   if (ageMs < IN) {
     const u = ageMs / IN
-    return { scale: 0.3 + 0.7 * (1 + 0.25 * Math.sin(u * Math.PI)) * u, opacity: Math.min(1, u * 2) }
+    const v = u - 1
+    const back = 1 + 3.5 * v * v * v + 2.5 * v * v // easeOutBack: peaks ~1.19, lands on 1
+    return { scale: 0.3 + 0.7 * back, opacity: Math.min(1, u * 2) }
   }
   if (ageMs > lifeMs - OUT) {
     const u = Math.max(0, (lifeMs - ageMs) / OUT)
