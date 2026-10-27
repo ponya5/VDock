@@ -10,7 +10,7 @@ from collections import OrderedDict
 from threading import Lock
 from typing import Callable
 
-TTL_S = 600
+TTL_S = 180
 MAX_LIVE = 5
 
 _lock = Lock()

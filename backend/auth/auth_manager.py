@@ -134,6 +134,13 @@ class AuthManager:
         # change. Tokens from older builds carry no 'pw' and simply expire.
         if 'pw' in payload and payload['pw'] != _password_fingerprint():
             return None
+        # A revoked (or unknown) device id is signed out individually
+        # (DL-154). Tokens from before device ids carry no 'did'.
+        did = payload.get('did')
+        if did:
+            from services import devices
+            if not devices.is_active(did):
+                return None
         return payload
     
     @staticmethod
@@ -184,7 +191,10 @@ def require_auth(f):
         
         # Add payload to request context
         request.auth_data = payload
-        
+        if payload.get('did'):
+            from services import devices
+            devices.touch(payload['did'], request.remote_addr or '')
+
         return f(*args, **kwargs)
     
     return decorated_function

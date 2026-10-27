@@ -221,6 +221,19 @@ describe('AuthGate', () => {
     wrapper.unmount()
   })
 
+  it('asks a pair-only deck to be scanned instead of showing a password field (DL-154)', async () => {
+    const auth = await freshAuth()
+    auth.authState.required = true
+    auth.authState.unlocked = false
+    auth.authState.pairOnly = true
+    const { default: AuthGate } = await import('@/components/AuthGate.vue')
+    const wrapper = mount(AuthGate, { attachTo: document.body })
+    await flushPromises()
+    expect(document.body.querySelector('[data-testid="pair-only-hint"]')).not.toBeNull()
+    expect(document.body.querySelector('.gate-input')).toBeNull()
+    wrapper.unmount()
+  })
+
   it('shows the server error when login fails', async () => {
     axiosPost.mockRejectedValue({ response: { status: 401 } })
     const auth = await freshAuth()

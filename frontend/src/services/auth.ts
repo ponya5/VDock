@@ -28,6 +28,8 @@ interface AuthState {
   checked: boolean
   /** A scanned QR's sign-in code was already used or expired (DL-011). */
   pairFailed: boolean
+  /** The deck has no typed password: only a scanned code signs a device in (DL-154). */
+  pairOnly: boolean
 }
 
 export const authState = reactive<AuthState>({
@@ -35,6 +37,7 @@ export const authState = reactive<AuthState>({
   unlocked: false,
   checked: false,
   pairFailed: false,
+  pairOnly: false,
 })
 
 let token: string | null = null
@@ -113,6 +116,15 @@ export function markUnauthorized() {
   clearAuthToken()
   authState.required = true
   authState.unlocked = false
+  void loadAuthMode()
+}
+
+/** Ask the (public) server whether this lock screen should offer a password at all. */
+export async function loadAuthMode() {
+  try {
+    const res = await axios.get('/api/auth/mode', { timeout: 5000 })
+    authState.pairOnly = !!res.data?.pair_only
+  } catch { /* the password form stays; harmless */ }
 }
 
 /**

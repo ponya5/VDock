@@ -5,7 +5,7 @@ from threading import Lock
 from flask import Blueprint, request, jsonify
 from auth import AuthManager
 from config import Config
-from services import pairing
+from services import devices, pairing
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -36,6 +36,14 @@ def _clear_failures(ip: str) -> None:
         _attempts.pop(ip, None)
 
 
+def _device_token() -> str:
+    """A login token bound to a freshly registered device (DL-154)."""
+    device_id = devices.register(
+        request.headers.get('User-Agent', ''), request.remote_addr or '',
+    )
+    return AuthManager.generate_token({'authenticated': True, 'did': device_id})
+
+
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
     """Authenticate and get a token.
@@ -59,10 +67,19 @@ def login():
     token = AuthManager.authenticate(password)
     if token:
         _clear_failures(ip)
+        if Config.REQUIRE_AUTH:
+            token = _device_token()
         return jsonify({'token': token, 'success': True})
 
     _record_failure(ip)
     return jsonify({'error': 'Invalid password', 'success': False}), 401
+
+
+@auth_bp.route('/api/auth/mode', methods=['GET'])
+def auth_mode():
+    """Public hint for the lock screen: pair-only decks have no password to type."""
+    pair_only = bool(Config.REQUIRE_AUTH and Config.load_config().get('pair_only'))
+    return jsonify({'pair_only': pair_only})
 
 
 @auth_bp.route('/api/auth/pair-token', methods=['POST'])
@@ -99,8 +116,7 @@ def pair():
 
     if Config.REQUIRE_AUTH and pairing.redeem(pair_token):
         _clear_failures(ip)
-        token = AuthManager.generate_token({'authenticated': True})
-        return jsonify({'token': token, 'success': True})
+        return jsonify({'token': _device_token(), 'success': True})
 
     _record_failure(ip)
     return jsonify({'error': 'Invalid or expired pairing code', 'success': False}), 401
@@ -120,7 +136,10 @@ def refresh_token():
     payload = AuthManager.verify_token(parts[1])
     if not payload:
         return jsonify({'error': 'Invalid or expired token', 'success': False}), 401
-    token = AuthManager.generate_token({'authenticated': True})
+    claims = {'authenticated': True}
+    if payload.get('did'):
+        claims['did'] = payload['did']
+    token = AuthManager.generate_token(claims)
     return jsonify({'token': token, 'success': True})
 
 
@@ -134,3 +153,43 @@ def verify_token():
         return jsonify({'valid': True})
 
     return _verify()
+
+
+@auth_bp.route('/api/auth/devices', methods=['GET'])
+def list_devices():
+    """Devices signed in to the deck, newest activity first (DL-154)."""
+    from auth import require_auth
+
+    @require_auth
+    def _list():
+        current = getattr(request, 'auth_data', {}).get('did')
+        rows = [{**d, 'current': d['id'] == current} for d in devices.list_devices()]
+        return jsonify({'devices': rows, 'success': True})
+
+    return _list()
+
+
+@auth_bp.route('/api/auth/devices/<device_id>', methods=['DELETE'])
+def revoke_device(device_id: str):
+    """Sign one device out; its token fails on the next request."""
+    from auth import require_auth
+
+    @require_auth
+    def _revoke():
+        if not devices.revoke(device_id):
+            return jsonify({'error': 'Unknown device', 'success': False}), 404
+        return jsonify({'success': True})
+
+    return _revoke()
+
+
+@auth_bp.route('/api/auth/devices', methods=['DELETE'])
+def revoke_all_devices():
+    """Sign every device out."""
+    from auth import require_auth
+
+    @require_auth
+    def _revoke_all():
+        return jsonify({'revoked': devices.revoke_all(), 'success': True})
+
+    return _revoke_all()
