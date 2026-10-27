@@ -68,6 +68,11 @@ ALLOWED_USER_SETTING_KEYS = {
     # DL-133: + the Shuffle type's rotation cadence.
     'screensaverStyle',
     'screensaverShuffleMinutes',
+    # DL-153: robot buddy saver.
+    'robotMood',
+    'robotFaceSide',
+    'robotQuips',
+    'robotReactTo',
     'spectrumSkin',
     'spectrumShuffle',
     'spectrumShuffleMinutes',

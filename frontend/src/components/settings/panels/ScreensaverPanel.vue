@@ -19,6 +19,7 @@
             <option value="widgets">Widget dashboard</option>
             <option value="spectrum">Spectrum visualizer</option>
             <option value="stats">System stats</option>
+            <option value="robot">Robot buddy</option>
             <option value="shuffle">Shuffle</option>
           </select>
         </div>
@@ -49,6 +50,54 @@
           </select>
         </div>
       </div>
+      <!-- DL-153: robot buddy options — deliberately few. -->
+      <template v-if="settingsStore.screensaverStyle === 'robot' || settingsStore.screensaverStyle === 'shuffle'">
+        <div class="row">
+          <div class="row-text">
+            <span class="label">Robot mood</span>
+            <p>Its personality — how it reacts to what your machine is doing.</p>
+          </div>
+          <div class="row-control">
+            <select v-model="settingsStore.robotMood" class="select" aria-label="Robot mood">
+              <option value="funny">Funny</option>
+              <option value="grumpy">Grumpy</option>
+              <option value="sarcastic">Sarcastic</option>
+              <option value="sweet">Sweet</option>
+              <option value="random">Random (daily)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-text">
+            <span class="label">Face side</span>
+            <p>Which half the robot sits on; the clock takes the other.</p>
+          </div>
+          <div class="row-control">
+            <select v-model="settingsStore.robotFaceSide" class="select" aria-label="Robot face side">
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-text">
+            <span class="label">Speech bubbles</span>
+            <p>Short quips now and then.</p>
+          </div>
+          <div class="row-control">
+            <label class="switch"><span class="sr-only">Speech bubbles</span><input type="checkbox" :checked="settingsStore.robotQuips" @change="settingsStore.robotQuips = !settingsStore.robotQuips" /><span class="track"></span></label>
+          </div>
+        </div>
+        <div v-for="g in ROBOT_REACT_GROUPS" :key="g.key" class="row">
+          <div class="row-text">
+            <span class="label">React to {{ g.label }}</span>
+            <p>{{ g.blurb }}</p>
+          </div>
+          <div class="row-control">
+            <label class="switch"><span class="sr-only">React to {{ g.label }}</span><input type="checkbox" :checked="settingsStore.robotReactTo[g.key]" @change="settingsStore.robotReactTo = { ...settingsStore.robotReactTo, [g.key]: !settingsStore.robotReactTo[g.key] }" /><span class="track"></span></label>
+          </div>
+        </div>
+      </template>
       <div class="row stack">
         <div class="row-head">
           <div class="row-text">
@@ -549,6 +598,13 @@ function resetScreensaverWidgets() {
   settingsStore.screensaverClockEnabled = SETTINGS_DEFAULTS.screensaverClockEnabled
 }
 
+const ROBOT_REACT_GROUPS = [
+  { key: 'agent', label: 'coding agents', blurb: 'Claude Code / Cursor working, waiting for you, done.' },
+  { key: 'music', label: 'music', blurb: 'Headphones and dancing while something plays.' },
+  { key: 'system', label: 'system load', blurb: 'CPU spikes and low battery.' },
+  { key: 'ambient', label: 'time & weather', blurb: 'Morning coffee, sleepy nights, sunglasses on sunny days.' },
+] as const
+
 // DL-123: spectrum screensaver mode — skin registry for the swatch grid.
 const spectrumSkins = SPECTRUM_SKINS
 
@@ -558,6 +614,10 @@ const screensaverStyleLabel = computed(() => saverTypeLabel(settingsStore.screen
 const spectrumAtDefault = computed(() =>
   settingsStore.screensaverStyle === SETTINGS_DEFAULTS.screensaverStyle &&
   settingsStore.screensaverShuffleMinutes === SETTINGS_DEFAULTS.screensaverShuffleMinutes &&
+  settingsStore.robotMood === SETTINGS_DEFAULTS.robotMood &&
+  settingsStore.robotFaceSide === SETTINGS_DEFAULTS.robotFaceSide &&
+  settingsStore.robotQuips === SETTINGS_DEFAULTS.robotQuips &&
+  JSON.stringify(settingsStore.robotReactTo) === JSON.stringify(SETTINGS_DEFAULTS.robotReactTo) &&
   settingsStore.spectrumSkin === SETTINGS_DEFAULTS.spectrumSkin &&
   settingsStore.spectrumShuffle === SETTINGS_DEFAULTS.spectrumShuffle &&
   settingsStore.spectrumShuffleMinutes === SETTINGS_DEFAULTS.spectrumShuffleMinutes &&
@@ -566,6 +626,10 @@ const spectrumAtDefault = computed(() =>
 function resetSpectrumSettings() {
   settingsStore.screensaverStyle = SETTINGS_DEFAULTS.screensaverStyle
   settingsStore.screensaverShuffleMinutes = SETTINGS_DEFAULTS.screensaverShuffleMinutes
+  settingsStore.robotMood = SETTINGS_DEFAULTS.robotMood
+  settingsStore.robotFaceSide = SETTINGS_DEFAULTS.robotFaceSide
+  settingsStore.robotQuips = SETTINGS_DEFAULTS.robotQuips
+  settingsStore.robotReactTo = { ...SETTINGS_DEFAULTS.robotReactTo }
   settingsStore.spectrumSkin = SETTINGS_DEFAULTS.spectrumSkin
   settingsStore.spectrumShuffle = SETTINGS_DEFAULTS.spectrumShuffle
   settingsStore.spectrumShuffleMinutes = SETTINGS_DEFAULTS.spectrumShuffleMinutes
