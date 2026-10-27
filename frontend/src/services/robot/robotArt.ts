@@ -34,6 +34,8 @@ export const EYE_GLYPHS: Record<EyeGlyph, ArtDef> = {
 }
 
 export const MOUTH_GLYPHS: Record<MouthGlyph, ArtDef> = {
+  zigzag: { els: [line('M-20 4 L-13 -5 L-6 4 L1 -5 L8 4 L15 -5 L22 4', W, 5)], anim: 'pulse' },
+  round: { els: [dot(0, 0, 8)], anim: 'pulse' },
   pout: { els: [line('M-4 -8 C4 -8 4 0 -2 0 C4 0 4 8 -4 8', W, 4)] },
   teeth: { els: [{ tag: 'rect', attrs: { x: -16, y: -7, width: 32, height: 14, rx: 4, fill: 'none', stroke: W, 'stroke-width': 4 } }, line('M-8 -7 V7 M0 -7 V7 M8 -7 V7', W, 3)] },
 }
