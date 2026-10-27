@@ -12,7 +12,8 @@
           <button type="button" class="btn link sm" data-action="use-password" @click="authSetupOpen = true">Use a password instead</button>
         </div>
       </div>
-      <div class="row">
+      <!-- While phone access is unprotected the warning row above is the one control. -->
+      <div v-if="!(serverConfig?.allow_lan && !serverConfig.require_auth)" class="row">
         <div class="row-text">
           <span class="label">Authentication</span>
           <p>{{ serverConfig?.require_auth ? (serverConfig.pair_only ? 'On, pairing only. A device gets in by scanning the code on Connect a device — there is no password.' : 'On. Every device unlocks with the deck password.') : 'Off. Anyone on your network who can reach the deck address can control this deck.' }}</p>
