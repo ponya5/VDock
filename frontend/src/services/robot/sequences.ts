@@ -7,6 +7,7 @@
 import type { ExpressionId } from './expressions'
 import type { FaceScalars } from './faceRig'
 import type { AccessoryId, IconId, PropId } from './robotArt'
+import type { SceneId } from './scenes'
 
 export interface SeqStep {
   at: number
@@ -15,6 +16,7 @@ export interface SeqStep {
   prop?: PropId
   icon?: IconId | null
   accessory?: AccessoryId | null
+  scene?: SceneId | null
 }
 export interface SequenceDef { readonly steps: readonly SeqStep[]; duration: number }
 
@@ -38,6 +40,13 @@ export const SEQUENCES = {
   shrug: { duration: 1600, steps: [{ at: 0, expr: 'bored', nudge: { tilt: -6, bounce: -4 } }, { at: 600, nudge: { tilt: 0, bounce: 0 } }] },
   celebrate: { duration: 2600, steps: [{ at: 0, expr: 'joy', prop: 'confetti', nudge: { bounce: -8 } }, { at: 300, nudge: { bounce: 0 } }, { at: 600, nudge: { bounce: -8 } }, { at: 900, nudge: { bounce: 0 } }, { at: 1500, expr: 'happy', prop: 'sparkles' }] },
   sigh: { duration: 2000, steps: [{ at: 0, expr: 'bored', nudge: { scale: 1.04, lookY: -0.3 } }, { at: 800, nudge: { scale: 0.97, lookY: 0.4 } }, { at: 1500, nudge: { scale: 1, lookY: 0 } }] },
+  // DL-155: Wingy's hands
+  'type-session': { duration: 5200, steps: [{ at: 0, expr: 'determined', scene: 'typing' }, { at: 1800, expr: 'focused' }, { at: 3600, expr: 'proud', prop: 'sparkles' }, { at: 4600, scene: null }] },
+  cheer: { duration: 3200, steps: [{ at: 0, expr: 'excited', scene: 'cheer', prop: 'confetti', nudge: { bounce: -8 } }, { at: 400, nudge: { bounce: 0 } }, { at: 800, nudge: { bounce: -8 } }, { at: 1200, nudge: { bounce: 0 } }, { at: 2600, expr: 'happy', scene: null }] },
+  clap: { duration: 2800, steps: [{ at: 0, expr: 'joy', scene: 'clap' }, { at: 2200, expr: 'happy', scene: null }] },
+  'cover-eyes': { duration: 2600, steps: [{ at: 0, expr: 'shy', scene: 'cover' }, { at: 1900, expr: 'cheeky', scene: null }] },
+  'hello-hand': { duration: 2600, steps: [{ at: 0, expr: 'happy', scene: 'hello' }, { at: 2000, scene: null }] },
+  'cheeky-wink': { duration: 1400, steps: [{ at: 0, expr: 'cheeky' }, { at: 1100, expr: 'happy' }] },
 } as const satisfies Record<string, SequenceDef>
 export type SequenceId = keyof typeof SEQUENCES
 

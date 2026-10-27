@@ -12,6 +12,7 @@ import {
 import { resolveExpression, type ExpressionId, type EyeGlyph, type MouthGlyph } from './expressions'
 import { PROPS, type AccessoryId, type IconId, type PropId } from './robotArt'
 import { SequencePlayer, type SequenceId } from './sequences'
+import { SCENES, type SceneId } from './scenes'
 
 export interface GlyphFrame<T> { id: T | null; opacity: number; scale: number }
 export interface PropFrame { key: number; id: PropId; age: number }
@@ -24,6 +25,8 @@ export interface FaceFrame {
   faceOpacity: number
   icon: GlyphFrame<IconId>
   accessory: GlyphFrame<AccessoryId> & { dy: number }
+  /** Hands scene (DL-155): p is the springy slide-in progress. */
+  scene: GlyphFrame<SceneId> & { p: number }
   props: PropFrame[]
   transform: string
   expression: ExpressionId
@@ -72,6 +75,7 @@ export class FaceAnimator {
   private readonly mouthGlyphSlot = new Slot<MouthGlyph>()
   private readonly iconSlot = new Slot<IconId>()
   private readonly accessorySlot = new Slot<AccessoryId>(SPRINGS.bouncy)
+  private readonly sceneSlot = new Slot<SceneId>(SPRINGS.bouncy)
   private readonly faceVis = createSpring(1, SPRINGS.fade)
   private readonly mouthVis = createSpring(1, SPRINGS.fade)
   private readonly player = new SequencePlayer()
@@ -122,6 +126,7 @@ export class FaceAnimator {
   setBob(level: number): void { this.bob = clamp(level, 0, 1) }
   setIcon(id: IconId | null): void { this.iconSlot.desired = id }
   setAccessory(id: AccessoryId | null): void { this.accessorySlot.desired = id }
+  setScene(id: SceneId | null): void { this.sceneSlot.desired = id }
   addProp(id: PropId): void { this.props.push({ key: ++this.propSeq, id, born: this.now }) }
   playSequence(id: SequenceId): void { this.player.start(id, this.now) }
   /** Cancel a running sequence so it stops overwriting the face. */
@@ -137,6 +142,7 @@ export class FaceAnimator {
       if (s.prop) this.addProp(s.prop)
       if (s.icon !== undefined) this.setIcon(s.icon)
       if (s.accessory !== undefined) this.setAccessory(s.accessory)
+      if (s.scene !== undefined) this.setScene(s.scene)
     }
     if (this.player.current && !this.player.active(now)) { this.player.stop(); this.nudge = {} }
 
@@ -169,7 +175,7 @@ export class FaceAnimator {
     setEye(this.eyeR, this.base.eyeR, glyphOn(this.glyphR))
     this.mouthVis.target = this.mouthGlyphSlot.busy ? 0 : 1
     stepSpring(this.mouthVis, dtMs)
-    for (const s of [this.glyphL, this.glyphR, this.mouthGlyphSlot, this.iconSlot, this.accessorySlot]) s.step(dtMs)
+    for (const s of [this.glyphL, this.glyphR, this.mouthGlyphSlot, this.iconSlot, this.accessorySlot, this.sceneSlot]) s.step(dtMs)
     this.faceVis.target = this.iconSlot.busy ? 0 : 1
     stepSpring(this.faceVis, dtMs)
 
@@ -206,7 +212,9 @@ export class FaceAnimator {
     const dx = this.reduced ? 0 : 3 * Math.sin((2 * Math.PI * t) / 7000)
     const dy = this.reduced ? 0 : 2 * Math.sin((2 * Math.PI * t) / 9000)
     const bob = this.reduced ? 0 : -6 * this.bob * Math.abs(Math.sin((2 * Math.PI * t) / 450))
-    const scale = face.scale * (1 + breathe)
+    const sc = this.sceneSlot.frame()
+    const lift = sc.id ? SCENES[sc.id].lift * clamp(this.sceneSlot.spring.value, 0, 1) : 0
+    const scale = face.scale * (1 + breathe) * (1 - 0.2 * lift)
     const acc = this.accessorySlot.frame()
     return {
       eyeL: eyePath(eyeL, lx, ly, 'L'),
@@ -227,8 +235,9 @@ export class FaceAnimator {
       faceOpacity: clamp(this.faceVis.value, 0, 1),
       icon: this.iconSlot.frame(),
       accessory: { ...acc, dy: (1 - Math.max(0, Math.min(1.2, this.accessorySlot.spring.value))) * -30 },
+      scene: { ...sc, p: this.sceneSlot.spring.value },
       props: this.props.map(pr => ({ key: pr.key, id: pr.id, age: t - pr.born })),
-      transform: `translate(${f2(100 + dx)} ${f2(70 + dy + face.bounce + bob)}) rotate(${f2(face.tilt)}) scale(${f2(scale)}) translate(-100 -70)`,
+      transform: `translate(${f2(100 + dx)} ${f2(70 + dy + face.bounce + bob - 20 * lift)}) rotate(${f2(face.tilt)}) scale(${f2(scale)}) translate(-100 -70)`,
       expression: this.expr,
       t,
     }

@@ -60,6 +60,15 @@ export const EXPRESSIONS = {
   pout: { eyes: { w: 26, h: 40 }, mouthGlyph: 'pout', face: { mouthOpacity: 0 } },
   whistle: { eyes: { lidTop: 0.2 }, face: { lookX: -0.8, lookY: -0.5, mouthWidth: 8, mouthOpen: 0.4, mouthCurve: 0 } },
   'teeth-grit': { eyes: { lidTop: 0.35, lidBottom: 0.3, lidTilt: 0.5 }, mouthGlyph: 'teeth', face: { mouthOpacity: 0 } },
+  // DL-155
+  excited: { eyes: { h: 54, w: 36 }, face: { mouthCurve: 1, mouthOpen: 0.8, mouthWidth: 32, tongue: 1, blush: 0.3 } },
+  proud: { eyes: CONTENT_EYE, face: { mouthCurve: 1, mouthWidth: 28, lookY: -0.3, blush: 0.25 } },
+  determined: { eyes: { lidTop: 0.3, lidTilt: 0.5, h: 40 }, face: { mouthCurve: 0.1, mouthWidth: 22, lookY: 0.4 } },
+  dreamy: { glyphs: ['star', 'star'], face: { mouthCurve: 0.6, mouthWidth: 18, lookY: -0.3, blush: 0.5 } },
+  cheeky: { eyeL: HAPPY_EYE, face: { mouthCurve: 1, mouthOpen: 0.5, mouthWidth: 28, tongue: 1, mouthSkew: 0.5 } },
+  nervous: { eyes: { w: 26, h: 44, lidTilt: -0.3 }, face: { mouthWave: 1, mouthCurve: 0, mouthWidth: 20, lookX: -0.6 } },
+  relieved: { eyes: CONTENT_EYE, face: { mouthCurve: 0.5, mouthOpen: 0.3, mouthWidth: 22, lookY: 0.2 } },
+  typing: { eyes: { lidTop: 0.15, h: 34 }, face: { mouthCurve: 0.15, mouthWidth: 20, lookY: 0.9 } },
   yawn: { eyes: { lidTop: 0.75, lidBottom: 0.2 }, face: { mouthWidth: 18, mouthOpen: 1, mouthCurve: -0.2 } },
 } as const satisfies Record<string, ExpressionDef>
 

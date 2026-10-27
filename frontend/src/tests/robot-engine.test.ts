@@ -187,3 +187,26 @@ describe('MoodEngine', () => {
     expect(e.state.reaction).toBe('weather')
   })
 })
+
+describe('hands scenes (DL-155)', () => {
+  it('funny/sweet sit at the laptop while the agent works, and put it away after', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    const started = [
+      ...types(e.step(sig({ agent: 'working' }), [], 0, 10_000)),
+      ...types(e.step(sig({ agent: 'working' }), [], 0, 12_000)), // the icon clears, then the face commands land
+    ]
+    expect(started).toContain('scene:typing')
+    // reaction (4 s) ends, the baseline keeps the laptop up
+    const during = types(e.step(sig({ agent: 'working' }), [], 0, 30_000))
+    expect(during.filter(c => c.startsWith('scene:')).every(c => c === 'scene:typing')).toBe(true)
+    const after = types(e.step(sig({ agent: 'idle' }), [], 0, 60_000))
+    expect(after.join()).not.toContain('scene:typing')
+  })
+
+  it('grumpy never pulls out a laptop', () => {
+    const e = new MoodEngine({ mood: 'grumpy', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    expect(types(e.step(sig({ agent: 'working' }), [], 0, 10_000))).not.toContain('scene:typing')
+  })
+})

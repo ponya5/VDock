@@ -16,6 +16,9 @@
       <filter id="robot-glow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="5" />
       </filter>
+      <linearGradient v-for="g in GRADIENTS" :id="g.id" :key="g.id" :x1="g.x1 ?? 0" :y1="g.y1 ?? 0" :x2="g.x2 ?? 1" :y2="g.y2 ?? 1">
+        <stop v-for="(st, i) in g.stops" :key="i" :offset="st[0]" :stop-color="st[1]" />
+      </linearGradient>
     </defs>
     <g :transform="frame.transform">
       <!-- glow copy (static filter) + crisp face, faded together while an icon shows -->
@@ -54,9 +57,10 @@
        :transform="`translate(100 70) scale(${frame.icon.scale * 1.4})`">
       <RobotArt :def="ICONS[frame.icon.id]" :t="frame.t" :level="level" />
     </g>
+    <RobotHands v-if="frame.scene.id" :scene="frame.scene.id" :p="frame.scene.p" :t="frame.t" :opacity="frame.scene.opacity" />
     <g v-for="p in frame.props" :key="p.key" :data-prop="p.id"
        :opacity="propEnvelope(p.age, PROPS[p.id].life ?? 2000).opacity"
-       :transform="`translate(${(PROPS[p.id].anchor ?? [170, 40])[0]} ${(PROPS[p.id].anchor ?? [170, 40])[1]}) scale(${propEnvelope(p.age, PROPS[p.id].life ?? 2000).scale})`">
+       :transform="`translate(${(PROPS[p.id].anchor ?? [170, 40])[0]} ${(PROPS[p.id].anchor ?? [170, 40])[1]}) scale(${propEnvelope(p.age, PROPS[p.id].life ?? 2000).scale * ((PROPS[p.id] as ArtDef).scale ?? 1)})`">
       <RobotArt :def="PROPS[p.id]" :t="p.age" :level="level" />
     </g>
   </svg>
@@ -64,7 +68,8 @@
 
 <script setup lang="ts">
 import RobotArt from './RobotArt.vue'
-import { EYE_GLYPHS, MOUTH_GLYPHS, ICONS, PROPS, ACCESSORIES, propEnvelope } from '@/services/robot/robotArt'
+import RobotHands from './RobotHands.vue'
+import { EYE_GLYPHS, MOUTH_GLYPHS, ICONS, PROPS, ACCESSORIES, GRADIENTS, propEnvelope, type ArtDef } from '@/services/robot/robotArt'
 import type { FaceFrame } from '@/services/robot/animator'
 
 defineProps<{ frame: FaceFrame; level: number }>()

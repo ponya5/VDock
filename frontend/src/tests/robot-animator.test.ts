@@ -139,3 +139,29 @@ describe('FaceAnimator', () => {
     expect(a.frame().expression).toBe('glare')
   })
 })
+
+describe('hands scenes (DL-155)', () => {
+  it('slides a scene in, lifts the face for the laptop, and clears it again', () => {
+    const a = new FaceAnimator(() => 0.5)
+    const base = (() => { for (let t = 0; t < 200; t += 16.7) a.step(16.7, t); return a.frame() })()
+    expect(base.scene.id).toBeNull()
+    a.setScene('typing')
+    for (let t = 200; t < 1600; t += 16.7) a.step(16.7, t)
+    const on = a.frame()
+    expect(on.scene.id).toBe('typing')
+    expect(on.scene.p).toBeGreaterThan(0.9)
+    expect(on.transform).not.toBe(base.transform)
+    a.setScene(null)
+    for (let t = 1600; t < 3400; t += 16.7) a.step(16.7, t)
+    expect(a.frame().scene.id).toBeNull()
+  })
+
+  it('a sequence step can open and close a scene', () => {
+    const a = new FaceAnimator(() => 0.5)
+    a.playSequence('clap')
+    for (let t = 0; t < 1000; t += 16.7) a.step(16.7, t)
+    expect(a.frame().scene.id).toBe('clap')
+    for (let t = 1000; t < 4800; t += 16.7) a.step(16.7, t)
+    expect(a.frame().scene.id).toBeNull()
+  })
+})

@@ -8,9 +8,10 @@ import type { RobotReactTo } from '@/stores/settings'
 import type { ExpressionId } from './expressions'
 import type { SequenceId } from './sequences'
 import type { AccessoryId, IconId, PropId } from './robotArt'
+import type { SceneId } from './scenes'
 import type { PointerGesture } from './pointerSense'
 import {
-  REACTIONS, BASELINES, IDLE_GAGS, PRIORITY, COOLDOWN_MS, EVENT_GROUP, ICON_MS,
+  REACTIONS, BASELINES, BASELINE_SCENE, IDLE_GAGS, PRIORITY, COOLDOWN_MS, EVENT_GROUP, ICON_MS,
   type Mood, type RobotEvent, type BaselineState, type Reaction,
 } from './reactions'
 import { QUIPS } from './quips'
@@ -33,7 +34,7 @@ export interface RobotSignals {
 export type RobotCommand =
   | { type: 'expr'; id: ExpressionId } | { type: 'seq'; id: SequenceId }
   | { type: 'icon'; id: IconId | null } | { type: 'prop'; id: PropId }
-  | { type: 'accessory'; id: AccessoryId | null } | { type: 'quip'; text: string }
+  | { type: 'accessory'; id: AccessoryId | null } | { type: 'scene'; id: SceneId | null } | { type: 'quip'; text: string }
 type DayStorage = Pick<Storage, 'getItem' | 'setItem'>
 export interface EngineOptions {
   mood: Mood; quips: boolean; reactTo: RobotReactTo; rand?: () => number
@@ -67,6 +68,7 @@ export class MoodEngine {
   private baseline: BaselineState = 'idle'
   private shownBaseExpr: ExpressionId | null = null
   private shownBaseAcc: AccessoryId | null | undefined = undefined
+  private shownBaseScene: SceneId | null | undefined = undefined
   private lastQuipAt = -Infinity
   private lastQuip = ''
   private nextGagAt = 0
@@ -93,6 +95,7 @@ export class MoodEngine {
     this.opts = { ...this.opts, ...opts }
     this.shownBaseExpr = null // re-emit the baseline in the new mood
     this.shownBaseAcc = undefined
+    this.shownBaseScene = undefined
   }
 
   get state(): { reaction: RobotEvent | null; baseline: BaselineState; mood: Mood } {
@@ -155,6 +158,7 @@ export class MoodEngine {
       this.reaction = null
       this.shownBaseExpr = null
       this.shownBaseAcc = undefined
+      this.shownBaseScene = undefined
       this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
     }
     if (!this.reaction) {
@@ -163,6 +167,8 @@ export class MoodEngine {
       const acc = this.baselineAccessory(s, now)
       if (expr !== this.shownBaseExpr) { out.push({ type: 'expr', id: expr }); this.shownBaseExpr = expr }
       if (acc !== this.shownBaseAcc) { out.push({ type: 'accessory', id: acc }); this.shownBaseAcc = acc }
+      const scene = BASELINE_SCENE[this.opts.mood][this.baseline] ?? null
+      if (this.gagUntil === 0 && scene !== this.shownBaseScene) { out.push({ type: 'scene', id: scene }); this.shownBaseScene = scene }
       if (this.baseline === 'idle') {
         if (this.nextGagAt === 0) this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
         else if (now >= this.nextGagAt) {
@@ -187,6 +193,7 @@ export class MoodEngine {
     if (r.seq) face.unshift({ type: 'expr', id: r.expr })
     if (r.prop) face.push({ type: 'prop', id: r.prop })
     if (r.accessory) face.push({ type: 'accessory', id: r.accessory })
+    face.push({ type: 'scene', id: r.scene ?? null })
     if (r.icon) {
       out.push({ type: 'icon', id: r.icon })
       this.iconUp = true

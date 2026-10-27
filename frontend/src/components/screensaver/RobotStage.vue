@@ -86,6 +86,7 @@ function apply(cmds: RobotCommand[]): void {
       case 'icon': animator.setIcon(c.id); break
       case 'prop': animator.addProp(c.id); break
       case 'accessory': animator.setAccessory(c.id); break
+      case 'scene': animator.setScene(c.id); break
       case 'quip':
         quip.value = c.text
         if (quipTimer) clearTimeout(quipTimer)
