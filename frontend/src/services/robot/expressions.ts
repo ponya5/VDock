@@ -6,7 +6,7 @@
 import { defaultParams, type EyeParams, type FaceParams, type FaceScalars } from './faceRig'
 
 export type EyeGlyph = 'heart' | 'spiral' | 'x' | 'gt' | 'lt' | 'star' | 'dot'
-export type MouthGlyph = 'pout' | 'teeth'
+export type MouthGlyph = 'pout' | 'teeth' | 'zigzag' | 'round'
 
 export interface ExpressionDef {
   eyes?: Partial<EyeParams>
@@ -68,7 +68,19 @@ export const EXPRESSIONS = {
   cheeky: { eyeL: HAPPY_EYE, face: { mouthCurve: 1, mouthOpen: 0.5, mouthWidth: 28, tongue: 1, mouthSkew: 0.5 } },
   nervous: { eyes: { w: 26, h: 44, lidTilt: -0.3 }, face: { mouthWave: 1, mouthCurve: 0, mouthWidth: 20, lookX: -0.6 } },
   relieved: { eyes: CONTENT_EYE, face: { mouthCurve: 0.5, mouthOpen: 0.3, mouthWidth: 22, lookY: 0.2 } },
-  typing: { eyes: { lidTop: 0.15, h: 34 }, face: { mouthCurve: 0.15, mouthWidth: 20, lookY: 0.9 } },
+  typing: { eyes: { lidTop: 0.1, h: 46 }, face: { mouthCurve: 0.15, mouthWidth: 20, lookY: 0.9 } },
+  // DL-156: expression sheet
+  startled: { eyes: { h: 52, w: 30 }, face: { pupil: 1, mouthWidth: 12, mouthOpen: 0.7, mouthCurve: 0 } },
+  'evil-grin': { eyes: { lidTop: 0.78, lidTilt: 0.8 }, face: { mouthCurve: 1, mouthOpen: 0.55, mouthWidth: 44 } },
+  'sad-tear': { eyes: { h: 52 }, face: { tear: 1, bubbleDots: 1, mouthCurve: -0.9, mouthWidth: 30, lookY: 0.2 } },
+  confused: { glyphs: ['x', 'x'], face: { bubbleQ: 1, mouthCurve: 0, mouthWidth: 22 } },
+  smirk: { face: { mouthCurve: 0.9, mouthSkew: -0.9, mouthWidth: 22 } },
+  wink: { eyeR: { lidTop: 0.4, lidBottom: 0.4, curveUp: 1 }, face: { mouthCurve: 0.6, mouthWidth: 18 } },
+  rage: { eyes: { lidTop: 0.42, lidTilt: 1, h: 46 }, mouthGlyph: 'zigzag', face: { rage: 1, mouthOpacity: 0 } },
+  gasp: { eyes: { h: 54 }, mouthGlyph: 'round', face: { pupil: 1, mouthOpacity: 0 } },
+  relaxed: { eyes: { lidTop: 0.8, curveDown: 1 }, face: { mouthCurve: 0.5, mouthWidth: 26 } },
+  inspecting: { eyeL: { lidTop: 0.65, lidBottom: 0.15 }, eyeR: { h: 56, w: 34 }, face: { mouthCurve: -0.1, mouthOpen: 0.35, mouthWidth: 24, tongue: 1, lookX: 0.4, mouthSkew: -0.4 } },
+  chatty: { eyes: { lidTop: 0.2 }, face: { mouthCurve: 0.2, mouthOpen: 0.7, mouthWidth: 22, lookX: 0.5 } },
   yawn: { eyes: { lidTop: 0.75, lidBottom: 0.2 }, face: { mouthWidth: 18, mouthOpen: 1, mouthCurve: -0.2 } },
 } as const satisfies Record<string, ExpressionDef>
 

@@ -47,6 +47,36 @@ export const SEQUENCES = {
   'cover-eyes': { duration: 2600, steps: [{ at: 0, expr: 'shy', scene: 'cover' }, { at: 1900, expr: 'cheeky', scene: null }] },
   'hello-hand': { duration: 2600, steps: [{ at: 0, expr: 'happy', scene: 'hello' }, { at: 2000, scene: null }] },
   'cheeky-wink': { duration: 1400, steps: [{ at: 0, expr: 'cheeky' }, { at: 1100, expr: 'happy' }] },
+  // DL-156: storyboard scenes (from the reference clips)
+  inspect: { duration: 3300, steps: [{ at: 0, expr: 'inspecting', scene: 'inspect', nudge: { lookX: 0.2 } }, { at: 1200, nudge: { lookX: 0.6 } }, { at: 2200, nudge: { lookX: 0.2 } }, { at: 3000, expr: 'smug', scene: null }] },
+  'phone-call': { duration: 3400, steps: [{ at: 0, expr: 'chatty', scene: 'call' }, { at: 500, nudge: { mouthOpen: 0.1 } }, { at: 800, nudge: { mouthOpen: 0.8 } }, { at: 1100, nudge: { mouthOpen: 0.1 } }, { at: 1400, nudge: { mouthOpen: 0.7 } }, { at: 1900, expr: 'bored', nudge: { mouthOpen: 0 } }, { at: 2300, expr: 'chatty', nudge: { mouthOpen: 0.8 } }, { at: 3200, expr: 'happy', scene: null }] },
+  'take-notes': { duration: 3400, steps: [{ at: 0, expr: 'focused', scene: 'notes' }, { at: 1200, expr: 'content' }, { at: 2200, expr: 'focused', nudge: { lookY: 0.6 } }, { at: 3100, expr: 'proud', scene: null }] },
+  relax: { duration: 3500, steps: [{ at: 0, expr: 'relaxed', scene: 'relax' }, { at: 3100, expr: 'happy', scene: null }] },
+  'sneaker-walk': { duration: 2300, steps: [{ at: 0, scene: 'sneakers' }, { at: 2000, scene: null }] },
+  'hand-on-chin': { duration: 2600, steps: [{ at: 0, expr: 'thinking', scene: 'chin' }, { at: 1400, expr: 'suspicious' }, { at: 2300, expr: 'happy', scene: null }] },
+  'rage-fit': { duration: 2400, steps: [{ at: 0, expr: 'rage', nudge: { bounce: -4 } }, { at: 600, nudge: { bounce: 0 } }, { at: 1000, nudge: { bounce: -4 } }, { at: 1500, nudge: { bounce: 0 } }, { at: 2100, expr: 'unimpressed' }] },
+  'sad-moment': { duration: 3000, steps: [{ at: 0, expr: 'sad-tear' }, { at: 2600, expr: 'content' }] },
+  'what-now': { duration: 2600, steps: [{ at: 0, expr: 'confused' }, { at: 2200, expr: 'neutral' }] },
+  'gasp-wink': { duration: 2200, steps: [{ at: 0, expr: 'gasp', nudge: { bounce: -8 } }, { at: 500, nudge: { bounce: 0 } }, { at: 1100, expr: 'startled' }, { at: 1700, expr: 'wink' }] },
+  'evil-plan': { duration: 2400, steps: [{ at: 0, expr: 'smirk' }, { at: 900, expr: 'evil-grin' }, { at: 2000, expr: 'smirk' }] },
+  // the whole reference storyboard, in order
+  storyboard: {
+    duration: 25500,
+    steps: [
+      { at: 0, expr: 'typing', scene: 'typing' },
+      { at: 2400, expr: 'inspecting', scene: 'inspect' },
+      { at: 5700, expr: 'chatty', scene: 'call' },
+      { at: 6500, nudge: { mouthOpen: 0.8 } }, { at: 7000, nudge: { mouthOpen: 0.1 } }, { at: 7500, nudge: { mouthOpen: 0.8 } }, { at: 8300, nudge: { mouthOpen: 0.1 } },
+      { at: 9100, expr: 'focused', scene: 'notes', nudge: { mouthOpen: 0 } },
+      { at: 12500, expr: 'relaxed', scene: 'relax' },
+      { at: 16000, expr: 'neutral', scene: 'sneakers' },
+      { at: 18300, expr: 'thinking', scene: 'chin' },
+      { at: 19300, expr: 'typing', scene: 'typing' },
+      { at: 22800, expr: 'inspecting', scene: 'inspect' },
+      { at: 24400, expr: 'smug' },
+      { at: 25000, scene: null },
+    ],
+  },
 } as const satisfies Record<string, SequenceDef>
 export type SequenceId = keyof typeof SEQUENCES
 

@@ -5,20 +5,35 @@
  * and the clock, handPoses() says where each hand is and how its fingers curl.
  * RobotHands.vue only draws what this returns.
  */
-export type SceneId = 'typing' | 'cheer' | 'clap' | 'cover' | 'hello'
+export type SceneId =
+  | 'typing' | 'cheer' | 'clap' | 'cover' | 'hello'
+  | 'inspect' | 'call' | 'notes' | 'relax' | 'sneakers' | 'chin'
 
 export interface SceneDef {
   /** 0..1 — how far the face lifts/shrinks to make room (the laptop sits below it). */
   lift: number
   laptop: boolean
+  /** Drawn by RobotScenery (outline storyboard style) instead of the glove hands. */
+  toon?: boolean
+  /** Where the face goes while the scene is up (viewBox units / scale delta). */
+  fx?: number
+  fy?: number
+  fs?: number
+  hideFace?: boolean
 }
 
 export const SCENES = {
-  typing: { lift: 1, laptop: true },
-  cheer: { lift: 0, laptop: false },
+  typing: { lift: 0, laptop: true, toon: true, fx: 24, fy: -4, fs: -0.18 },
+  cheer: { lift: 0, laptop: false, toon: true, fy: -6 },
   clap: { lift: 0, laptop: false },
   cover: { lift: 0, laptop: false },
-  hello: { lift: 0, laptop: false },
+  hello: { lift: 0, laptop: false, toon: true, fx: 20, fs: -0.1 },
+  inspect: { lift: 0, laptop: false, toon: true, fx: -24, fy: -6 },
+  call: { lift: 0, laptop: false, toon: true, fy: -14, fs: -0.12 },
+  notes: { lift: 0, laptop: false, toon: true, fx: 8, fy: -22, fs: -0.12 },
+  relax: { lift: 0, laptop: false, toon: true, fx: -14 },
+  sneakers: { lift: 0, laptop: false, toon: true, hideFace: true },
+  chin: { lift: 0, laptop: false, toon: true, fx: 18, fs: -0.1 },
 } as const satisfies Record<SceneId, SceneDef>
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[]
 
@@ -77,6 +92,10 @@ export function handPoses(scene: SceneId, p: number, tMs: number): [HandPose, Ha
         { x: lerp(-50, 64, u), y: lerp(100, 76 - peek * 4, u), rot: -90, mirror: false, curl: [10, 8, 10, 14], thumb: -20, visible: true },
         { x: lerp(250, 136, u), y: lerp(100, 76 - peek * 4, u), rot: -90, mirror: true, curl: [10, 8, 10, 14], thumb: -20, visible: true },
       ]
+    }
+    case 'inspect': case 'call': case 'notes': case 'relax': case 'sneakers': case 'chin': {
+      const none: HandPose = { x: -100, y: 0, rot: 0, mirror: false, curl: OPEN, thumb: -40, visible: false }
+      return [none, none]
     }
     case 'hello': {
       const hidden: HandPose = { x: -100, y: 0, rot: 0, mirror: false, curl: OPEN, thumb: -40, visible: false }

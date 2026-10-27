@@ -171,10 +171,10 @@ export const BASELINE_SCENE: Record<Mood, Partial<Record<BaselineState, SceneId>
 }
 
 export const IDLE_GAGS: Record<Mood, SequenceId[]> = {
-  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes'],
-  grumpy: ['sigh', 'head-shake', 'look-around'],
-  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug'],
-  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes'],
+  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan'],
+  grumpy: ['sigh', 'head-shake', 'look-around', 'rage-fit', 'hand-on-chin'],
+  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect'],
+  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes'],
 }
 
 export const PRIORITY: Record<RobotEvent, number> = {

@@ -12,7 +12,7 @@ import {
 import { resolveExpression, type ExpressionId, type EyeGlyph, type MouthGlyph } from './expressions'
 import { PROPS, type AccessoryId, type IconId, type PropId } from './robotArt'
 import { SequencePlayer, type SequenceId } from './sequences'
-import { SCENES, type SceneId } from './scenes'
+import { SCENES, type SceneDef, type SceneId } from './scenes'
 
 export interface GlyphFrame<T> { id: T | null; opacity: number; scale: number }
 export interface PropFrame { key: number; id: PropId; age: number }
@@ -21,6 +21,8 @@ export interface FaceFrame {
   eyeOpacityL: number; eyeOpacityR: number
   mouth: string; mouthCenter: [number, number]; mouthOpacity: number
   tongue: string; tongueOpacity: number; blush: number
+  /** DL-156 decorations: pupils, tear, thought bubbles, rage glow (0..1 each). */
+  deco: { pupil: number; tear: number; bubbleDots: number; bubbleQ: number; rage: number }
   glyphL: GlyphFrame<EyeGlyph>; glyphR: GlyphFrame<EyeGlyph>; mouthGlyph: GlyphFrame<MouthGlyph>
   faceOpacity: number
   icon: GlyphFrame<IconId>
@@ -59,7 +61,7 @@ const eyeConfig = (k: EyeKey): SpringConfig => (k.startsWith('lid') ? SPRINGS.sn
 const faceConfig = (k: FaceKey): SpringConfig =>
   k === 'lookX' || k === 'lookY' || k === 'tilt' ? SPRINGS.look
     : k === 'bounce' || k === 'scale' ? SPRINGS.bouncy
-      : k === 'mouthOpacity' || k === 'blush' || k === 'tongue' ? SPRINGS.fade : SPRINGS.soft
+      : k === 'mouthOpacity' || k === 'blush' || k === 'tongue' || k === 'pupil' || k === 'tear' || k === 'bubbleDots' || k === 'bubbleQ' || k === 'rage' ? SPRINGS.fade : SPRINGS.soft
 
 const smooth = (u: number) => u * u * (3 - 2 * u)
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -176,7 +178,8 @@ export class FaceAnimator {
     this.mouthVis.target = this.mouthGlyphSlot.busy ? 0 : 1
     stepSpring(this.mouthVis, dtMs)
     for (const s of [this.glyphL, this.glyphR, this.mouthGlyphSlot, this.iconSlot, this.accessorySlot, this.sceneSlot]) s.step(dtMs)
-    this.faceVis.target = this.iconSlot.busy ? 0 : 1
+    const sd = this.sceneSlot.desired
+    this.faceVis.target = this.iconSlot.busy || (sd !== null && SCENES[sd].hideFace) ? 0 : 1
     stepSpring(this.faceVis, dtMs)
 
     this.props = this.props.filter(p => now - p.born < (PROPS[p.id].life ?? 2000))
@@ -213,8 +216,12 @@ export class FaceAnimator {
     const dy = this.reduced ? 0 : 2 * Math.sin((2 * Math.PI * t) / 9000)
     const bob = this.reduced ? 0 : -6 * this.bob * Math.abs(Math.sin((2 * Math.PI * t) / 450))
     const sc = this.sceneSlot.frame()
-    const lift = sc.id ? SCENES[sc.id].lift * clamp(this.sceneSlot.spring.value, 0, 1) : 0
-    const scale = face.scale * (1 + breathe) * (1 - 0.2 * lift)
+    const sdef: SceneDef | null = sc.id ? SCENES[sc.id] : null
+    const su = clamp(this.sceneSlot.spring.value, 0, 1)
+    const lift = sdef ? sdef.lift * su : 0
+    const sx = sdef ? (sdef.fx ?? 0) * su : 0
+    const sy = sdef ? (sdef.fy ?? 0) * su : 0
+    const scale = face.scale * (1 + breathe) * (1 - 0.2 * lift + (sdef?.fs ?? 0) * su)
     const acc = this.accessorySlot.frame()
     return {
       eyeL: eyePath(eyeL, lx, ly, 'L'),
@@ -229,6 +236,10 @@ export class FaceAnimator {
       tongue: tonguePath(face, mx, my),
       tongueOpacity: clamp(face.tongue, 0, 1) * clamp(face.mouthOpen * 2, 0, 1),
       blush: clamp(face.blush, 0, 1),
+      deco: {
+        pupil: clamp(face.pupil, 0, 1), tear: clamp(face.tear, 0, 1), bubbleDots: clamp(face.bubbleDots, 0, 1),
+        bubbleQ: clamp(face.bubbleQ, 0, 1), rage: clamp(face.rage, 0, 1),
+      },
       glyphL: this.glyphL.frame(),
       glyphR: this.glyphR.frame(),
       mouthGlyph: this.mouthGlyphSlot.frame(),
@@ -237,7 +248,7 @@ export class FaceAnimator {
       accessory: { ...acc, dy: (1 - Math.max(0, Math.min(1.2, this.accessorySlot.spring.value))) * -30 },
       scene: { ...sc, p: this.sceneSlot.spring.value },
       props: this.props.map(pr => ({ key: pr.key, id: pr.id, age: t - pr.born })),
-      transform: `translate(${f2(100 + dx)} ${f2(70 + dy + face.bounce + bob - 20 * lift)}) rotate(${f2(face.tilt)}) scale(${f2(scale)}) translate(-100 -70)`,
+      transform: `translate(${f2(100 + dx + sx)} ${f2(70 + dy + sy + face.bounce + bob - 20 * lift)}) rotate(${f2(face.tilt)}) scale(${f2(scale)}) translate(-100 -70)`,
       expression: this.expr,
       t,
     }

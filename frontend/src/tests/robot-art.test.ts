@@ -13,7 +13,7 @@ describe('robot art', () => {
     expect(Object.keys(PROPS)).toEqual(expect.arrayContaining(['rocket', 'trophy']))
     expect(Object.keys(ACCESSORIES).sort()).toEqual(['chef-hat', 'headphones', 'nightcap', 'party-hat', 'scarf', 'sunglasses', 'wizard-hat'])
     expect(Object.keys(EYE_GLYPHS).sort()).toEqual(['dot', 'gt', 'heart', 'lt', 'spiral', 'star', 'x'])
-    expect(Object.keys(MOUTH_GLYPHS).sort()).toEqual(['pout', 'teeth'])
+    expect(Object.keys(MOUTH_GLYPHS).sort()).toEqual(['pout', 'round', 'teeth', 'zigzag'])
   })
 
   it('every art def has at least one element with geometry', () => {
@@ -160,5 +160,13 @@ describe('held props (DL-155 follow-up A)', () => {
     expect(artTransform('clockMin', 0)).not.toBe(artTransform('clockMin', 500))
     expect(artTransform('step', 100, 0)).not.toBe(artTransform('step', 300, 0))
     expect(artTransform('write', 0)).not.toBe(artTransform('write', 120))
+  })
+})
+
+describe('storyboard scenes (DL-155 follow-up B)', () => {
+  it('toon scenes carry a face placement and only sneakers hide the face', () => {
+    const toon = SCENE_IDS.filter(id => SCENES[id].toon)
+    expect(toon).toEqual(expect.arrayContaining(['typing', 'inspect', 'call', 'notes', 'relax', 'sneakers', 'chin', 'cheer', 'hello']))
+    expect(SCENE_IDS.filter(id => SCENES[id].hideFace)).toEqual(['sneakers'])
   })
 })

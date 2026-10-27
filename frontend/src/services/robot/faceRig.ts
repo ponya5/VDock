@@ -13,7 +13,7 @@ export type EyeKey = typeof EYE_KEYS[number]
 export type EyeParams = Record<EyeKey, number>
 
 export const FACE_KEYS = ['lookX', 'lookY', 'tilt', 'bounce', 'scale', 'mouthWidth', 'mouthOpen', 'mouthCurve',
-  'mouthSkew', 'mouthWave', 'mouthOpacity', 'tongue', 'blush'] as const
+  'mouthSkew', 'mouthWave', 'mouthOpacity', 'tongue', 'blush', 'pupil', 'tear', 'bubbleDots', 'bubbleQ', 'rage'] as const
 export type FaceKey = typeof FACE_KEYS[number]
 export type FaceScalars = Record<FaceKey, number>
 
@@ -25,6 +25,7 @@ export const DEFAULT_EYE: EyeParams = {
 export const DEFAULT_FACE: FaceScalars = {
   lookX: 0, lookY: 0, tilt: 0, bounce: 0, scale: 1,
   mouthWidth: 22, mouthOpen: 0, mouthCurve: 0.6, mouthSkew: 0, mouthWave: 0, mouthOpacity: 1, tongue: 0, blush: 0,
+  pupil: 0, tear: 0, bubbleDots: 0, bubbleQ: 0, rage: 0,
 }
 
 export function defaultParams(): FaceParams {
