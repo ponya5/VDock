@@ -115,4 +115,14 @@ describe('MoodEngine', () => {
     expect(e.state.reaction).toBe('pointerShake')
     expect(c.length).toBeGreaterThan(0)
   })
+
+  it('baselines respect the reaction-group toggles', () => {
+    const a = new MoodEngine({ mood: 'funny', quips: false, reactTo: { ...ALL, ambient: false }, rand: fixed })
+    a.step(sig({ hour: 23 }), [], 0, 0)
+    for (let t = 500; t <= 130_000; t += 500) a.step(sig({ hour: 23 }), [], 0, t)
+    expect(a.state.baseline).toBe('idle')
+    const b = new MoodEngine({ mood: 'funny', quips: false, reactTo: { ...ALL, agent: false }, rand: fixed })
+    b.step(sig({ agent: 'working' }), [], 0, 0)
+    expect(b.state.baseline).toBe('idle')
+  })
 })
