@@ -31,17 +31,17 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
   agentWorking: {
     funny: { icon: 'dots', expr: 'typing', scene: 'typing' },
     grumpy: { icon: 'dots', expr: 'squint' },
-    sarcastic: { icon: 'dots', expr: 'side-eye' },
+    sarcastic: { icon: 'dots', expr: 'side-eye', prop: 'clipboard' },
     sweet: { icon: 'dots', expr: 'typing', scene: 'typing', prop: 'heart' },
   },
   agentLong: {
-    funny: { icon: 'spinner', expr: 'focused', accessory: 'wizard-hat', prop: 'sparkles' },
-    grumpy: { expr: 'bored', seq: 'sigh' },
+    funny: { icon: 'spinner', expr: 'focused', accessory: 'wizard-hat', prop: 'magnifier', ms: 3200 },
+    grumpy: { expr: 'bored', seq: 'sigh', prop: 'clock', ms: 3400 },
     sarcastic: { expr: 'whistle', seq: 'whistle-away' },
     sweet: { icon: 'spinner', expr: 'puppy', prop: 'sparkles' },
   },
   agentNeeds: {
-    funny: { icon: 'exclaim', expr: 'joy', prop: 'wave', ms: 5000 },
+    funny: { icon: 'exclaim', expr: 'joy', prop: 'phone', ms: 5000 },
     grumpy: { icon: 'exclaim', expr: 'glare', prop: 'anger', ms: 5000 },
     sarcastic: { icon: 'exclaim', expr: 'unimpressed', seq: 'eye-roll', ms: 5000 },
     sweet: { icon: 'exclaim', expr: 'shy', prop: 'wave', ms: 5000 },
@@ -148,7 +148,7 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { icon: 'question', expr: 'sad', ms: 1800 },
   },
   pointerReturn: {
-    funny: { expr: 'cheeky', seq: 'cheeky-wink', prop: 'rocket', ms: 2000 },
+    funny: { expr: 'cheeky', seq: 'cheeky-wink', prop: 'sneakers', ms: 2000 },
     grumpy: { expr: 'unimpressed', ms: 1600 },
     sarcastic: { expr: 'surprised', seq: 'double-take', ms: 1800 },
     sweet: { expr: 'joy', prop: 'heart', ms: 2000 },

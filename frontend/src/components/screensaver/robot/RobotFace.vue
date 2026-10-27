@@ -60,8 +60,9 @@
     <RobotHands v-if="frame.scene.id" :scene="frame.scene.id" :p="frame.scene.p" :t="frame.t" :opacity="frame.scene.opacity" />
     <g v-for="p in frame.props" :key="p.key" :data-prop="p.id"
        :opacity="propEnvelope(p.age, PROPS[p.id].life ?? 2000).opacity"
-       :transform="`translate(${(PROPS[p.id].anchor ?? [170, 40])[0]} ${(PROPS[p.id].anchor ?? [170, 40])[1]}) scale(${propEnvelope(p.age, PROPS[p.id].life ?? 2000).scale * ((PROPS[p.id] as ArtDef).scale ?? 1)})`">
+       :transform="propTransform(p.id, PROPS[p.id].anchor ?? [170, 40], propEnvelope(p.age, PROPS[p.id].life ?? 2000).scale * ((PROPS[p.id] as ArtDef).scale ?? 1), p.age)">
       <RobotArt :def="PROPS[p.id]" :t="p.age" :level="level" />
+      <RobotHeldHand v-if="HELD[p.id]" :held="HELD[p.id]!" :slide="heldSlide(p.age, PROPS[p.id].life ?? 2000)" :t="p.age" />
     </g>
   </svg>
 </template>
@@ -69,6 +70,8 @@
 <script setup lang="ts">
 import RobotArt from './RobotArt.vue'
 import RobotHands from './RobotHands.vue'
+import RobotHeldHand from './RobotHeldHand.vue'
+import { HELD, heldSlide, propTransform } from '@/services/robot/heldProps'
 import { EYE_GLYPHS, MOUTH_GLYPHS, ICONS, PROPS, ACCESSORIES, GRADIENTS, propEnvelope, type ArtDef } from '@/services/robot/robotArt'
 import type { FaceFrame } from '@/services/robot/animator'
 
