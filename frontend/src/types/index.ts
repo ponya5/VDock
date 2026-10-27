@@ -76,7 +76,7 @@ export type IconLoop = 'squash' | 'bob' | 'spin' | 'pulse' | 'swing' | 'flip' | 
 
 export type BehaviourType = 'none' | 'pulse' | 'float' | 'breathe' | 'tilt'
 
-export type EffectType = ButtonEffect | 'fire' | 'plasma' | 'particles' | 'aurora' | 'scanline' | 'rain' | 'glowglass' | 'gem' | 'neonrim' | 'watermark' | 'deckkey' | 'statuskey' | 'fullart' | 'folder'
+export type EffectType = ButtonEffect | 'fire' | 'plasma' | 'particles' | 'aurora' | 'scanline' | 'rain' | 'glowglass' | 'gem' | 'neonrim' | 'watermark' | 'deckkey' | 'statuskey' | 'fullart' | 'folder' | 'sunset' | 'ocean' | 'candy' | 'terminal' | 'midnight' | 'paper' | 'outline'
 
 export interface ButtonLayers {
   fill?: { type: 'none' | 'solid' | 'gradient' | 'tint' | 'image' | 'video'; value?: string }
