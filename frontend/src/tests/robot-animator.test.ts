@@ -128,4 +128,14 @@ describe('FaceAnimator', () => {
     }
     expect(prev).toBeGreaterThan(0.9)
   })
+
+  it('stopSequence lets an external expression survive a running gag', () => {
+    const a = new FaceAnimator(seeded())
+    a.playSequence('hiccup')
+    let t = run(a, 300)
+    a.stopSequence()
+    a.setExpression('glare')
+    run(a, 3000, t)
+    expect(a.frame().expression).toBe('glare')
+  })
 })

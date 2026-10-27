@@ -124,6 +124,8 @@ export class FaceAnimator {
   setAccessory(id: AccessoryId | null): void { this.accessorySlot.desired = id }
   addProp(id: PropId): void { this.props.push({ key: ++this.propSeq, id, born: this.now }) }
   playSequence(id: SequenceId): void { this.player.start(id, this.now) }
+  /** Cancel a running sequence so it stops overwriting the face. */
+  stopSequence(): void { this.player.stop(); this.nudge = {} }
   setReducedMotion(on: boolean): void { this.reduced = on }
 
   step(dtMs: number, now: number): void {

@@ -75,9 +75,13 @@ function startLoop(): void { if (!raf) { last = -1; raf = requestAnimationFrame(
 function stopLoop(): void { if (raf) { cancelAnimationFrame(raf); raf = 0 } }
 
 function apply(cmds: RobotCommand[]): void {
-  for (const c of cmds) {
+  cmds.forEach((c, i) => {
     switch (c.type) {
-      case 'expr': animator.setExpression(c.id); break
+      case 'expr':
+        // a running gag must not keep overwriting a new face (unless a seq follows)
+        if (!cmds.slice(i + 1).some(x => x.type === 'seq')) animator.stopSequence()
+        animator.setExpression(c.id)
+        break
       case 'seq': animator.playSequence(c.id); break
       case 'icon': animator.setIcon(c.id); break
       case 'prop': animator.addProp(c.id); break
@@ -88,7 +92,7 @@ function apply(cmds: RobotCommand[]): void {
         quipTimer = setTimeout(() => { quip.value = null }, 3500)
         break
     }
-  }
+  })
 }
 
 function tick(): void {
@@ -114,7 +118,8 @@ function onPointerMove(e: PointerEvent): void {
   gestureQueue.push(...sense.move(p.x, p.y, performance.now()))
   animator.setLook(sense.look())
 }
-function onPointerLeave(): void {
+function onPointerLeave(e: PointerEvent): void {
+  if (e.pointerType !== 'mouse') { animator.setLook(null); return } // finger lift is not "pointer lost"
   gestureQueue.push(...sense.leave(performance.now()))
   animator.setLook(null)
 }

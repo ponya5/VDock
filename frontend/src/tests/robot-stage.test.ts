@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import RobotFace from '@/components/screensaver/robot/RobotFace.vue'
 import RobotBubble from '@/components/screensaver/robot/RobotBubble.vue'
 import { FaceAnimator } from '@/services/robot/animator'
+import { PointerSense } from '@/services/robot/pointerSense'
 import { setActivePinia, createPinia } from 'pinia'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -93,6 +94,22 @@ describe('RobotStage', () => {
     touch('touchstart', 100, 100)
     expect(touch('touchend', 102, 101).defaultPrevented).toBe(false)
     w.unmount()
+  })
+
+  it('a finger lift (touch pointerleave) is not a lost-pointer reaction; mouse leave is', async () => {
+    const leave = vi.spyOn(PointerSense.prototype, 'leave')
+    const w = mount(RobotStage, { attachTo: document.body })
+    const fire = (pointerType: string) => {
+      const e = new Event('pointerleave') as any
+      e.pointerType = pointerType
+      w.element.dispatchEvent(e)
+    }
+    fire('touch')
+    expect(leave).not.toHaveBeenCalled()
+    fire('mouse')
+    expect(leave).toHaveBeenCalledTimes(1)
+    w.unmount()
+    leave.mockRestore()
   })
 
   it('touchstart on the face does not reach the saver root', () => {
