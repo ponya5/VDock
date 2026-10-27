@@ -1,6 +1,6 @@
 // DL-153 — signal adapters: agent aggregation, weather mapping, daily random mood.
 import { describe, it, expect } from 'vitest'
-import { aggregateAgent, mapWeather, resolveMood } from '@/services/robot/signals'
+import { aggregateAgent, mapWeather, resolveMood, MonotonicCounter, updateIsAvailable } from '@/services/robot/signals'
 
 function memStorage() {
   const m = new Map<string, string>()
@@ -36,5 +36,22 @@ describe('robot signals', () => {
   it('random mood survives a throwing storage', () => {
     const bad = { getItem: () => { throw new Error('x') }, setItem: () => { throw new Error('x') } }
     expect(['funny', 'grumpy', 'sarcastic', 'sweet']).toContain(resolveMood('random', '2026-10-27', bad))
+  })
+
+  it('notification counter only grows with newer timestamps (survives the store cap and dismissals)', () => {
+    const c = new MonotonicCounter(100)
+    expect(c.update(100)).toBe(0)
+    expect(c.update(200)).toBe(1)
+    expect(c.update(150)).toBe(1)
+    expect(c.update(300)).toBe(2)
+    expect(c.update(null)).toBe(2)
+  })
+
+  it('update signal is true only when a newer version exists', () => {
+    expect(updateIsAvailable(null, '')).toBe(false)
+    expect(updateIsAvailable({ state: 'installing', available: true, latest: '2' }, '')).toBe(false)
+    expect(updateIsAvailable({ state: 'error', available: true, latest: '2' }, '')).toBe(false)
+    expect(updateIsAvailable({ state: 'idle', available: true, latest: '2' }, '2')).toBe(false)
+    expect(updateIsAvailable({ state: 'idle', available: true, latest: '2' }, '')).toBe(true)
   })
 })
