@@ -9,7 +9,7 @@ describe('robot art', () => {
   it('ships the spec catalogs', () => {
     expect(Object.keys(ICONS).sort()).toEqual(['battery', 'bubble', 'check', 'dots', 'download', 'envelope',
       'equalizer', 'exclaim', 'question', 'spinner', 'warning'])
-    expect(Object.keys(PROPS)).toHaveLength(21)
+    expect(Object.keys(PROPS)).toHaveLength(25)
     expect(Object.keys(PROPS)).toEqual(expect.arrayContaining(['rocket', 'trophy']))
     expect(Object.keys(ACCESSORIES).sort()).toEqual(['chef-hat', 'headphones', 'nightcap', 'party-hat', 'scarf', 'sunglasses', 'wizard-hat'])
     expect(Object.keys(EYE_GLYPHS).sort()).toEqual(['dot', 'gt', 'heart', 'lt', 'spiral', 'star', 'x'])
@@ -123,5 +123,42 @@ describe('scenes (DL-155)', () => {
     const b = handPoses('typing', 1, 137)[0].curl.join()
     expect(a).not.toBe(b)
     expect(SCENE_IDS.filter(id => SCENES[id].laptop)).toEqual(['typing'])
+  })
+})
+
+import { HELD, heldSlide, propTransform } from '@/services/robot/heldProps'
+
+describe('held props (DL-155 follow-up A)', () => {
+  it('only reference real props and keep motion bounded', () => {
+    for (const [id, h] of Object.entries(HELD)) {
+      expect(Object.keys(PROPS)).toContain(id)
+      for (let s = 0; s < 6; s += 0.1) {
+        const m = h!.motion(s)
+        expect(Math.abs(m.dx)).toBeLessThan(80)
+        expect(Math.abs(m.dy)).toBeLessThan(40)
+        expect(Math.abs(m.rot)).toBeLessThan(45)
+      }
+    }
+  })
+  it('actually moves over time', () => {
+    for (const h of Object.values(HELD)) {
+      const a = JSON.stringify(h!.motion(0.4))
+      const b = JSON.stringify(h!.motion(0.9))
+      expect(a).not.toBe(b)
+    }
+  })
+  it('arm slides in, holds, then slides out', () => {
+    expect(heldSlide(0, 3000)).toBe(0)
+    expect(heldSlide(1500, 3000)).toBe(1)
+    expect(heldSlide(2990, 3000)).toBeLessThan(0.1)
+  })
+  it('pivots a held prop about its grip; unheld props are a plain translate', () => {
+    expect(propTransform('magnifier', [100, 128], 1.2, 500)).toContain('rotate(')
+    expect(propTransform('heart', [166, 36], 1.4, 500)).not.toContain('rotate')
+  })
+  it('internal animations (clock, shoes, pen) change with time', () => {
+    expect(artTransform('clockMin', 0)).not.toBe(artTransform('clockMin', 500))
+    expect(artTransform('step', 100, 0)).not.toBe(artTransform('step', 300, 0))
+    expect(artTransform('write', 0)).not.toBe(artTransform('write', 120))
   })
 })

@@ -8,7 +8,7 @@ import type { EyeGlyph, MouthGlyph } from './expressions'
 
 export const COLORS = { white: '#fff', yellow: '#ffd84d', pink: '#ff6fa8', red: '#ff4d4d', blue: '#6cc7ff', orange: '#ff9a4d' } as const
 const W = COLORS.white
-export type ArtAnim = 'none' | 'bounce' | 'spin' | 'wave' | 'twinkle' | 'float' | 'drip' | 'pulse' | 'pop' | 'fall' | 'scan' | 'steam' | 'sway' | 'eq'
+export type ArtAnim = 'none' | 'bounce' | 'spin' | 'wave' | 'twinkle' | 'float' | 'drip' | 'pulse' | 'pop' | 'fall' | 'scan' | 'steam' | 'sway' | 'eq' | 'clockMin' | 'clockHr' | 'step' | 'write'
 export interface ArtEl { tag: 'path' | 'circle' | 'rect' | 'ellipse'; attrs: Record<string, string | number>; anim?: ArtAnim; phase?: number }
 export interface ArtDef { els: ArtEl[]; anim?: ArtAnim; anchor?: [number, number]; life?: number; /** Extra size on top of the pop-in envelope (DL-155). */ scale?: number }
 
@@ -148,7 +148,7 @@ export const PROPS = {
     els: [{ tag: 'circle', attrs: { cx: 0, cy: 0, r: 12, fill: G('blue'), opacity: 0.55 } },
       { tag: 'circle', attrs: { cx: 0, cy: 0, r: 12, fill: 'none', stroke: G('metal'), 'stroke-width': 4.5 } },
       line('M9 9 L20 20', COFFEE_BROWN, 6), shine(-4, -5, 3.5, 2)],
-    anim: 'scan', anchor: [100, 128], life: 3000, scale: 1.2,
+    anchor: [100, 128], life: 3200, scale: 1.2,
   },
   laptop: {
     els: [box(-17, -12, 34, 22, 3, G('metal-dark')), box(-14, -9, 28, 16, 1.5, G('screen')),
@@ -166,7 +166,7 @@ export const PROPS = {
   thermometer: {
     els: [box(-4, -18, 8, 26, 4, G('blue')), dot(0, 11, 7, G('red')), box(-1.6, -4, 3.2, 14, 1.6, COLORS.red),
       line('M6 -12 H10 M6 -6 H10 M6 0 H10', W, 1.8)],
-    anim: 'pulse', anchor: [166, 50], life: 2600, scale: 1.2,
+    anchor: [166, 50], life: 2600, scale: 1.2,
   },
   sun: {
     els: [dot(0, 0, 11, G('sun')), line('M0 -20 V-14 M0 14 V20 M-20 0 H-14 M14 0 H20 M-14 -14 L-10 -10 M10 10 L14 14 M-14 14 L-10 10 M10 -10 L14 -14', COLORS.yellow, 3.2),
@@ -177,7 +177,7 @@ export const PROPS = {
     els: [shape('M-22 2 Q-22 -20 0 -22 Q22 -20 22 2 Q15 -4 7 2 Q0 -4 -7 2 Q-15 -4 -22 2 Z', G('heart')),
       shape('M-7 2 Q0 -4 7 2 Q4 -12 0 -22 Q-4 -12 -7 2 Z', G('glass')),
       line('M0 2 V16 Q0 22 -5 20', COFFEE_BROWN, 3.2), dot(0, -23, 2, '#e8a317')],
-    anim: 'sway', anchor: [100, 0], life: 3200, scale: 1.1,
+    anchor: [100, 0], life: 3200, scale: 1.1,
   },
   snowflake: {
     els: [line('M0 -16 V16 M-14 -8 L14 8 M-14 8 L14 -8', G('ice'), 3), line('M-4 -13 L0 -9 L4 -13 M-4 13 L0 9 L4 13', COLORS.blue, 2), dot(0, 0, 3, W)],
@@ -196,6 +196,40 @@ export const PROPS = {
       line('M-12 -10 Q-22 -10 -20 -2 Q-18 4 -11 4 M12 -10 Q22 -10 20 -2 Q18 4 11 4', '#e8a317', 2.8),
       box(-2.5, 12, 5, 7, 1, G('gold')), box(-9, 19, 18, 5, 2, G('metal-dark')), shape(STAR4(0, -3, 0.9), W), shine(-6, -6, 2, 5)],
     anim: 'pop', anchor: [100, 4], life: 2600, scale: 1.2,
+  },
+  phone: {
+    els: [line('M-12 -13 Q10 0 -12 13', G('red'), 8), ell(-12, -13, 7.5, 5, G('metal-dark')), ell(-12, 13, 7.5, 5, G('metal-dark')),
+      shine(-13, -15, 3.5, 1.5),
+      animated(line('M-22 -7 Q-27 0 -22 7', W, 2.4), 'twinkle', 0), animated(line('M-28 -12 Q-36 0 -28 12', W, 2.2), 'twinkle', 1),
+      animated(line('M-34 -17 Q-45 0 -34 17', COLORS.blue, 2), 'twinkle', 2)],
+    anchor: [160, 84], life: 3200, scale: 1.3,
+  },
+  clipboard: {
+    els: [box(-21, -26, 42, 54, 4, G('sun')), box(-15, -19, 30, 41, 2, W), box(-8, -30, 16, 8, 3, G('metal')),
+      dot(-3, -26, 1.4, '#000'), dot(3, -26, 1.4, '#000'),
+      line('M-10 -10 H9 M-10 -3 H11 M-10 4 H3 M-10 11 H8', COLORS.blue, 2.2),
+      animated(line('M-6 20 L1 14 L12 -4', COLORS.pink, 2.4), 'write', 0),
+      animated(line('M-1 18 L14 -12', COLORS.blue, 4.5), 'write', 0), animated(dot(-1, 18, 2, '#000'), 'write', 0),
+      animated(ell(8, -2, 9, 8, G('skin')), 'write', 0), animated(ell(4, -6, 6, 3.2, G('skin')), 'write', 0),
+      animated(line('M12 4 L22 20', G('blue'), 7), 'write', 0)],
+    anchor: [58, 108], life: 3600, scale: 1.3,
+  },
+  clock: {
+    els: [dot(0, 0, 21, G('metal')), dot(0, 0, 17.5, W), dot(0, 0, 17.5, G('ice')),
+      line('M0 -14 V-11 M0 11 V14 M-14 0 H-11 M11 0 H14', COLORS.blue, 2),
+      animated(line('M0 0 V-8', '#000', 3), 'clockHr', 0), animated(line('M0 0 V-13', '#000', 2.2), 'clockMin', 0),
+      dot(0, 0, 2.2, G('red'))],
+    anchor: [28, 22], life: 3400, scale: 1.25,
+  },
+  sneakers: {
+    els: [
+      ...[-26, 26].flatMap((cx, i) => [
+        animated(shape(`M${cx - 22} 5 Q${cx - 22} -9 ${cx - 6} -9 L${cx + 4} -14 Q${cx + 14} -10 ${cx + 24} 0 Q${cx + 26} 4 ${cx + 22} 6 H${cx - 20} Z`, G('red')), 'step', i),
+        animated(box(cx - 23, 5, 47, 6, 3, G('metal-dark')), 'step', i),
+        animated(line(`M${cx - 4} -6 L${cx + 4} -1 M${cx} -9 L${cx + 8} -4`, W, 1.8), 'step', i),
+      ]),
+    ],
+    anchor: [100, 126], life: 3000, scale: 1.1,
   },
 } satisfies Record<string, ArtDef>
 export type PropId = keyof typeof PROPS
@@ -227,6 +261,15 @@ export function artTransform(anim: ArtAnim | undefined, tMs: number, phase = 0, 
     case 'pulse': return `scale(${f2(1 + 0.08 * Math.sin(s * 7))})`
     case 'pop': return 'scale(1)'
     case 'fall': return `translate(${f2(Math.sin(s * 3 + phase) * 6)} ${f2((s * 40 + phase * 9) % 60)}) rotate(${f2((s * 200 + phase * 50) % 360)})`
+    case 'clockMin': return `rotate(${f2((s * 270) % 360)})`
+    case 'clockHr': return `rotate(${f2((s * 22) % 360)})`
+    case 'step': {
+      // phase 0 = left shoe, 1 = right shoe: lift, tilt about its own centre, plant
+      const px = phase ? 26 : -26
+      const w = Math.sin(s * 7 + phase * Math.PI)
+      return `translate(${px} ${f2(-Math.max(0, w) * 9)}) rotate(${f2(-Math.max(0, w) * 14)}) translate(${-px} 0)`
+    }
+    case 'write': return `translate(${f2(Math.sin(s * 14) * 4)} ${f2(Math.cos(s * 9.5) * 2.5)})`
     case 'scan': return `translate(${f2(Math.sin(s * 1.6) * 30)} 0)`
     case 'steam': return `translate(0 ${f2(-(s * 6) % 6)})`
     case 'sway': return `rotate(${f2(Math.sin(s * 2.4) * 8)})`
