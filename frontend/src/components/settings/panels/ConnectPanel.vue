@@ -14,12 +14,17 @@
                 <p>Phone access is off, so nothing else on your Wi-Fi can reach your deck. Turn it on and VDock restarts once — then scan the code that appears here.</p>
               </div>
             </div>
-            <div v-if="!passwordSet && !skipPassword" class="phone-setup-pw">
+            <div v-if="!passwordSet && usePassword" class="phone-setup-pw">
               <label class="sr-only" for="phone-setup-pw">Deck password</label>
               <input id="phone-setup-pw" v-model="setupPassword" type="password" class="input" placeholder="Deck password" autocomplete="new-password" />
               <label class="sr-only" for="phone-setup-pw2">Confirm password</label>
               <input id="phone-setup-pw2" v-model="setupConfirm" type="password" class="input" placeholder="Confirm" autocomplete="new-password" @keyup.enter="enablePhoneAccess" />
-              <p class="muted phone-setup-hint">Recommended: devices on your Wi-Fi enter it once (or sign in by scanning the code). This {{ computerNoun }} never needs it.</p>
+              <p class="muted phone-setup-hint">Devices on your Wi-Fi enter it once (or sign in by scanning the code). This {{ computerNoun }} never needs it.</p>
+            </div>
+            <p v-else-if="!passwordSet" class="muted phone-setup-hint" data-testid="pair-only-note">Only devices you pair by scanning the code can connect — there is no password to type or guess.</p>
+            <div v-if="networkPublic" class="note warn" data-testid="public-network-setup">
+              <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+              <div>{{ PUBLIC_NETWORK_TEXT }}</div>
             </div>
             <p v-if="setupError" class="status-msg status-error">{{ setupError }}</p>
             <div class="phone-setup-actions">
@@ -27,8 +32,9 @@
                 <FontAwesomeIcon :icon="['fas', restarting ? 'spinner' : 'power-off']" :spin="restarting" />
                 {{ restarting ? 'Restarting VDock…' : 'Turn on phone access' }}
               </button>
-              <button v-if="!passwordSet && !skipPassword" type="button" class="btn link sm" @click="skipPassword = true">Continue without a password</button>
-              <span v-else-if="skipPassword" class="muted phone-setup-hint">No password: anyone on this Wi-Fi can press your keys. <button type="button" class="btn link sm" @click="skipPassword = false">Add one</button></span>
+              <button v-if="!passwordSet" type="button" class="btn link sm" data-action="toggle-password" @click="usePassword = !usePassword">
+                {{ usePassword ? 'Pair by scanning instead' : 'Use a password instead' }}
+              </button>
             </div>
           </div>
           <!-- DL-011: once phone access is live the code comes first - it is
@@ -52,7 +58,13 @@
               </div>
             </div>
           </div>
-          <div v-else-if="lanEnabled && !restartRequired" class="row">
+          <div v-if="networkPublic && lanEnabled" class="row" data-testid="public-network-warning">
+            <div class="note warn qr-offline">
+              <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
+              <div>{{ PUBLIC_NETWORK_TEXT }}</div>
+            </div>
+          </div>
+          <div v-if="lanEnabled && !restartRequired && !(lanUrl && phoneLive)" class="row">
             <div class="note warn qr-offline">
               <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" />
               <div>
@@ -84,24 +96,41 @@
               </button>
             </div>
           </div>
-          <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn">
+          <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn" data-testid="unprotected-row">
             <div class="row-text">
-              <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Protect it with a password</span>
-              <p>Without one, anyone on this Wi-Fi can press your keys and answer your agents. Each device enters it once.</p>
+              <span class="label"><FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> Phone access is unprotected</span>
+              <p>Right now anyone on this Wi-Fi can press your keys and answer your agents. Require pairing so only devices that scan the code can connect — or set a password instead.</p>
             </div>
             <div class="row-control">
+              <button type="button" class="btn sm primary" data-action="require-pairing" @click="requirePairing">Require pairing</button>
               <DeckPasswordForm :cancellable="false" />
             </div>
+          </div>
+          <div v-if="pairing && phoneLive" class="row stack" data-testid="devices">
+            <div class="row-text">
+              <span class="label">Connected devices</span>
+              <p v-if="!devices.length" class="muted">No device paired yet — scan the code above with a phone.</p>
+              <p v-else>Revoke a device to sign it out; it must scan a fresh code to come back.</p>
+            </div>
+            <ul v-if="devices.length" class="device-list">
+              <li v-for="d in devices" :key="d.id" class="device-item">
+                <span class="device-name">{{ d.label }}<span v-if="d.ip" class="muted"> · {{ d.ip }}</span></span>
+                <span class="muted device-meta">paired {{ timeAgo(d.paired_at) }} · seen {{ timeAgo(d.last_seen) }}</span>
+                <button type="button" class="btn sm" :data-revoke="d.id" @click="revoke(d.id)">Revoke</button>
+              </li>
+            </ul>
+            <button v-if="devices.length > 1" type="button" class="btn sm" data-action="revoke-all" @click="revokeAll">Sign out all devices</button>
           </div>
           <div class="row" v-if="lanUrl">
             <div class="row-text">
               <span class="label">Deck address</span>
-              <p>Scan the code on the device, or type the address into its browser.</p>
+              <p v-if="pairing">Scan the code on the device. A typed address alone won't get in — use <b>Copy pairing link</b> to send a one-time link.</p>
+              <p v-else>Scan the code on the device, or type the address into its browser.</p>
             </div>
             <div class="row-control">
               <code class="kv-code kv-accent">{{ lanUrl }}</code>
-              <button type="button" class="btn sm" @click="copyLanUrl">
-                <FontAwesomeIcon :icon="['fas', 'copy']" /> Copy
+              <button type="button" class="btn sm" data-action="copy-link" @click="copyLanUrl">
+                <FontAwesomeIcon :icon="['fas', 'copy']" /> {{ pairing ? 'Copy pairing link' : 'Copy' }}
               </button>
             </div>
           </div>
@@ -146,7 +175,10 @@ import { useServerConfig } from '@/composables/useServerConfig'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { copyText } from '@/utils/copyText'
 import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
-import { PAIR_REFRESH_MS, buildPairUrl, requestPairToken } from '@/services/pairing'
+import {
+  PAIR_REFRESH_MS, buildPairUrl, requestPairToken, fetchDevices, revokeDevice, revokeAllDevices, timeAgo,
+  type PairedDevice,
+} from '@/services/pairing'
 import { CONNECT_INSTALL_STEP } from '@/utils/installCopy'
 import { useBackendRestart } from '@/composables/useBackendRestart'
 import { useHostOs } from '@/composables/useHostOs'
@@ -166,13 +198,15 @@ const passwordSet = computed(() => !!serverConfig.value?.auth_password_set && !!
 // --- One-step phone setup (DL-008) --------------------------------------------
 const setupPassword = ref('')
 const setupConfirm = ref('')
-const skipPassword = ref(false)
+const usePassword = ref(false)
 const setupError = ref('')
 
 async function enablePhoneAccess() {
   setupError.value = ''
   const changes: Record<string, unknown> = { allow_lan: true }
-  if (!passwordSet.value && !skipPassword.value) {
+  if (!passwordSet.value && !usePassword.value) {
+    changes.pair_only = true
+  } else if (!passwordSet.value) {
     const pw = setupPassword.value.trim()
     if (pw.length < 4 || pw.length > 128) {
       setupError.value = 'Choose a password of 4–128 characters, or continue without one.'
@@ -194,6 +228,21 @@ async function enablePhoneAccess() {
   // Applies the new bind; the page reloads on this card with the QR showing.
   await restart()
   if (restartError.value) setupError.value = restartError.value
+}
+
+// Shared Wi-Fi: pairing codes and the deck travel unencrypted on it (DL-154).
+const PUBLIC_NETWORK_TEXT =
+  'Windows treats this Wi-Fi as a Public network (cafés, hotels, shared offices), where other people can see what your devices send — including pairing codes. '
+  + 'If this is your home Wi-Fi, set it to "Private" in Windows (Settings › Network & internet › Wi-Fi). Otherwise leave phone access off, or connect through a VPN such as Tailscale.'
+const networkPublic = computed(() => serverConfig.value?.network_profile === 'public')
+
+async function requirePairing() {
+  const ok = await settingsStore.updateServerConfig({ pair_only: true })
+  notificationsStore[ok ? 'success' : 'error'](
+    ok ? 'Pairing required' : 'Could not save',
+    ok ? 'Devices now have to scan the code to connect.' : 'Try again.',
+  )
+  if (ok) await settingsStore.loadServerConfig()
 }
 const { hostOs } = useHostOs()
 const computerNoun = computed(() => (hostOs.value === 'macos' ? 'Mac' : 'PC'))
@@ -304,10 +353,50 @@ async function saveDeckHost() {
   if (ok) { await nextTick(); renderQr() }
 }
 
+// Pairing deck: the copied link carries its own fresh one-time token, so it
+// never competes with the QR's token (DL-154).
 async function copyLanUrl() {
   if (!lanUrl.value) return
-  const ok = await copyText(lanUrl.value)
-  notificationsStore[ok ? 'success' : 'info'](ok ? 'Copied' : 'Copy failed', lanUrl.value)
+  let link = lanUrl.value
+  if (pairing.value) {
+    const token = await requestPairToken()
+    if (token) link = buildPairUrl(lanUrl.value, token)
+  }
+  const ok = await copyText(link)
+  const pairLink = link !== lanUrl.value
+  notificationsStore[ok ? 'success' : 'info'](
+    ok ? (pairLink ? 'Pairing link copied' : 'Copied') : 'Copy failed',
+    pairLink ? 'Works once, for the next 3 minutes.' : lanUrl.value,
+  )
+}
+
+// --- Connected devices (DL-154) -------------------------------------------------
+const devices = ref<PairedDevice[]>([])
+let knownDeviceIds: Set<string> | null = null
+
+async function loadDevices() {
+  if (!pairing.value) return
+  const rows = await fetchDevices()
+  if (!rows) return
+  const fresh = knownDeviceIds ? rows.filter(d => !knownDeviceIds!.has(d.id)) : []
+  knownDeviceIds = new Set(rows.map(d => d.id))
+  devices.value = rows
+  if (fresh.length) {
+    notificationsStore.success(`${fresh[0].label} paired`, 'It can now use this deck.')
+    void refreshPairToken() // the code that was just used is spent
+  }
+}
+
+async function revoke(id: string) {
+  const ok = await revokeDevice(id)
+  notificationsStore[ok ? 'success' : 'error'](ok ? 'Device signed out' : 'Could not sign it out')
+  await loadDevices()
+}
+
+async function revokeAll() {
+  const ok = await revokeAllDevices()
+  notificationsStore[ok ? 'success' : 'error'](ok ? 'All devices signed out' : 'Could not sign them out')
+  await loadDevices()
 }
 
 // Re-probe whenever the page is opened — the deck address may have come up
@@ -316,12 +405,16 @@ async function copyLanUrl() {
 // back (and appears if it drops).
 const LAN_PROBE_INTERVAL_MS = 5000
 let lanProbeTimer: ReturnType<typeof setInterval> | null = null
+let devicesTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   void probeLanReachability()
   lanProbeTimer = setInterval(probeLanReachability, LAN_PROBE_INTERVAL_MS)
+  void loadDevices()
+  devicesTimer = setInterval(loadDevices, LAN_PROBE_INTERVAL_MS)
 })
 onBeforeUnmount(() => {
   if (lanProbeTimer !== null) clearInterval(lanProbeTimer)
+  if (devicesTimer !== null) clearInterval(devicesTimer)
   if (pairTimer !== null) clearInterval(pairTimer)
 })
 
@@ -397,4 +490,12 @@ onMounted(() => { void settingsStore.loadServerConfig().then(renderQr) })
 }
 .qr-note { max-width: 22ch; }
 .qr-offline { margin-top: 8px; }
+.device-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; }
+.device-item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  padding: 8px 12px; border-radius: var(--r-md);
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+}
+.device-name { font-weight: 600; }
+.device-meta { flex: 1; font-size: var(--fs-sm); }
 </style>

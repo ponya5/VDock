@@ -36,6 +36,13 @@ _GUARDED_SETTINGS = (
 
 
 @pytest.fixture(autouse=True)
+def isolated_device_registry(tmp_path, monkeypatch):
+    """Logins register devices (DL-154); keep that out of the real data/ dir."""
+    from services import devices
+    monkeypatch.setattr(devices, '_path', lambda: tmp_path / 'devices.json')
+
+
+@pytest.fixture(autouse=True)
 def restore_config():
     """Start every test from a clean auth baseline, restore flags after.
 

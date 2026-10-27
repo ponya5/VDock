@@ -2,8 +2,8 @@ import type { Router } from 'vue-router'
 import apiClient from '@/api/client'
 import { authState, exchangePairToken } from '@/services/auth'
 
-/** Tokens live 10 minutes on the server; refresh the QR a minute early. */
-export const PAIR_REFRESH_MS = 9 * 60 * 1000
+/** Tokens live 3 minutes on the server; refresh the QR 30 s early. */
+export const PAIR_REFRESH_MS = 150 * 1000
 
 /** A pairing token from the signed-in desktop, or null when none is needed/possible. */
 export async function requestPairToken(): Promise<string | null> {
@@ -35,4 +35,50 @@ export async function consumePairQuery(router: Router): Promise<void> {
   authState.pairFailed = !(await exchangePairToken(token))
   const { pair: _used, ...rest } = route.query
   await router.replace({ path: route.path, query: rest, hash: route.hash })
+}
+
+export interface PairedDevice {
+  id: string
+  label: string
+  paired_at: number
+  last_seen: number
+  ip: string
+  current?: boolean
+}
+
+/** Devices signed in to this deck, most recently seen first; null when unavailable. */
+export async function fetchDevices(): Promise<PairedDevice[] | null> {
+  try {
+    const res = await apiClient.get('/auth/devices')
+    return Array.isArray(res.data?.devices) ? res.data.devices : null
+  } catch {
+    return null
+  }
+}
+
+export async function revokeDevice(id: string): Promise<boolean> {
+  try {
+    await apiClient.delete(`/auth/devices/${encodeURIComponent(id)}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function revokeAllDevices(): Promise<boolean> {
+  try {
+    await apiClient.delete('/auth/devices')
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** "just now", "5 min ago", "3 h ago", "2 d ago" for a unix-seconds timestamp. */
+export function timeAgo(unixSeconds: number, nowMs: number = Date.now()): string {
+  const seconds = Math.max(0, Math.round(nowMs / 1000 - unixSeconds))
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} h ago`
+  return `${Math.floor(seconds / 86400)} d ago`
 }

@@ -10,6 +10,7 @@ from config import (
 )
 from auth import require_auth
 from services.app_paths import validate_path
+from services.network_profile import network_profile
 
 config_bp = Blueprint('config', __name__)
 
@@ -40,6 +41,12 @@ def get_config():
             # Whether a password exists — never the password itself. Lets the
             # UI offer "enable" vs "set a password first" (DL-126).
             'auth_password_set': bool(Config.AUTH_PASSWORD),
+            # Phone access with no typed password: the password is generated
+            # and unknown, so a pairing token is the only way in (DL-154).
+            'pair_only': bool(config.get('pair_only')) and bool(Config.AUTH_PASSWORD),
+            # Windows network profile of the LAN adapter — 'public' triggers
+            # the shared-Wi-Fi warning. 'unknown' off Windows.
+            'network_profile': network_profile(),
             # Packaged app (PyInstaller inside VDock.app/VDock.exe) vs a
             # source checkout — the firewall prompt names the app, not
             # python.exe, and there is no launch.bat to restart with.
@@ -48,7 +55,7 @@ def get_config():
     })
 
 
-TOGGLE_KEYS = ('require_auth', 'allow_lan', 'use_ssl', 'enable_plugins')
+TOGGLE_KEYS = ('require_auth', 'allow_lan', 'use_ssl', 'enable_plugins', 'pair_only')
 
 
 @config_bp.route('/api/config', methods=['PUT'])
@@ -146,6 +153,21 @@ def update_config():
             ), 400
         auth_password_set = pw
 
+    # pair_only (DL-154): phone access protected by pairing tokens alone. The
+    # password is generated here and never shown — nobody can type it, so a
+    # scanned token is the only way in. Typing a real password turns it off.
+    pair_only = data.get('pair_only')
+    if auth_password_set is not None:
+        pair_only = False
+    elif pair_only is True:
+        if Config.AUTH_PASSWORD and not Config.load_config().get('pair_only'):
+            return jsonify(
+                {'error': 'A deck password is already set', 'success': False}
+            ), 400
+        if not Config.AUTH_PASSWORD:
+            auth_password_set = secrets.token_urlsafe(24)
+        data = {**data, 'require_auth': True}
+
     # Enabling auth with no password on file is a lockout — the same rule
     # Config.validate() enforces at boot, checked here at write time.
     wants_auth = data.get('require_auth')
@@ -180,6 +202,8 @@ def update_config():
     for key, value in data.items():
         if key in TOGGLE_KEYS:
             config[key] = value
+    if pair_only is not None:
+        config['pair_only'] = pair_only
     if deck_host_set is not None:
         config['deck_host'] = deck_host_set
     if app_paths_set is not None:

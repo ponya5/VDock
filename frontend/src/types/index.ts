@@ -336,6 +336,10 @@ export interface ServerConfig {
   restart_required?: boolean
   /** A deck password exists — the password itself is never returned (DL-126). */
   auth_password_set?: boolean
+  /** Phone access guarded by pairing tokens alone — the password is generated and hidden (DL-154). */
+  pair_only?: boolean
+  /** Windows network profile of the LAN adapter; 'unknown' off Windows (DL-154). */
+  network_profile?: 'public' | 'private' | 'domain' | 'unknown'
   /** Write-only: set/change the deck password via PUT /api/config (DL-126). */
   auth_password?: string
   /** True when running as the packaged app — firewall prompts name VDock, not Python. */
