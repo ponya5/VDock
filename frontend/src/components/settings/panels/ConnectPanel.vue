@@ -1,6 +1,4 @@
 <template>
-  <div class="content">
-    <div class="col">
       <section class="panel">
         <div class="panel-head"><h2>Connect a device</h2><span class="hint">Any phone or tablet on your Wi-Fi can be a second deck — no app to install.</span></div>
         <div class="panel-body">
@@ -153,8 +151,6 @@
           </div>
         </div>
       </section>
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">

@@ -74,8 +74,7 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'devices', name: 'Devices & network', icon: ['fas', 'mobile-screen-button'], tour: 'nav-server',
     pages: [
-      { id: 'connect', name: 'Connect a device', title: 'Connect a device', blurb: 'Turn a phone or tablet into a second deck.', panels: ['ConnectPanel'], anchors: [], tour: 'nav-connect', autosaves: true },
-      { id: 'security', name: 'Security & advanced', title: 'Security & advanced', blurb: 'The deck password, plus ports and host for advanced setups.', panels: ['SecurityPanel', 'PortsPanel'], anchors: ['security', 'connection'], autosaves: true },
+      { id: 'connect', name: 'Connect & security', title: 'Connect & security', blurb: 'Turn a phone or tablet into a second deck, and decide who may connect. Ports and host for advanced setups are at the bottom.', panels: ['ConnectPanel', 'SecurityPanel', 'PortsPanel'], anchors: ['security', 'connection'], tour: 'nav-connect', autosaves: true },
     ],
   },
   {
@@ -113,8 +112,8 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Command-line Tools', keywords: 'cli tools gh github cli claude code cli installed path', section: 'agents', page: 'accounts', anchor: 'tools', icon: ['fas', 'terminal'] },
   { label: 'Edit Keys', keywords: 'edit keys buttons change action dashboard edit mode', section: 'overview', page: 'overview', anchor: 'edit-keys', icon: ['fas', 'pen-to-square'] },
   { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck allow lan deck address', section: 'devices', page: 'connect', icon: ['fas', 'mobile-screen-button'] },
-  { label: 'Deck Password', keywords: 'password authentication auth login lock secure require unlock', section: 'devices', page: 'security', anchor: 'security', icon: ['fas', 'lock'] },
-  { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'security', anchor: 'connection', icon: ['fas', 'server'] },
+  { label: 'Deck Password', keywords: 'password authentication auth login lock secure require unlock', section: 'devices', page: 'connect', anchor: 'security', icon: ['fas', 'lock'] },
+  { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'connect', anchor: 'connection', icon: ['fas', 'server'] },
   { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', section: 'appearance', page: 'buttons', anchor: 'touch', icon: ['fas', 'hand-pointer'] },
   { label: 'Button Size & Transparency', keywords: 'button size labels tooltips transparency display', section: 'appearance', page: 'buttons', anchor: 'sizing', icon: ['fas', 'table-cells-large'] },
   { label: 'Apply to All Keys', keywords: 'apply all buttons keys undo reset default look review same appearance behaviour', section: 'appearance', page: 'buttons', anchor: 'apply-all', icon: ['fas', 'clone'] },
@@ -144,7 +143,7 @@ export const SEARCH: SearchEntry[] = [
 export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> = {
   appearance: { section: 'appearance' },
   templates: { section: 'agents', page: 'scenes' },
-  server: { section: 'devices', page: 'security' },
+  server: { section: 'devices', page: 'connect' },
   integration: { section: 'agents' },
   connect: { section: 'devices', page: 'connect' },
   logs: { section: 'system', page: 'logs' },
@@ -154,8 +153,8 @@ export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> 
 /** Pre-registry `?sub=` ids that changed name; the rest (`buttons`, `alerts`, ...) kept theirs. */
 export const LEGACY_SUBS: Record<string, string> = { apps: 'scenes' }
 
-/** Pages that were folded into another page (Advanced "ports" now lives under "security"). */
-export const LEGACY_PAGES: Record<string, string> = { ports: 'security', templates: 'scenes', mcp: 'alerts' }
+/** Pages that were folded into another page (Advanced "ports" and "security" now live under "connect"). */
+export const LEGACY_PAGES: Record<string, string> = { ports: 'connect', security: 'connect', templates: 'scenes', mcp: 'alerts' }
 
 /** Sections that were merged into another (Integrations now lives under Agents & automation). */
 export const LEGACY_SECTIONS: Record<string, SectionId> = { integrations: 'agents' }

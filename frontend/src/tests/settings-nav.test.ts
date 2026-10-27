@@ -72,7 +72,8 @@ describe('Settings shell navigation', () => {
   it('opens Devices > Connect for the legacy ?tab=connect link', async () => {
     const w = await openSettings('/settings?tab=connect')
     expect(activeSection(w)).toBe('Devices & network')
-    expect(activePage(w)).toBe('Connect a device')
+    // One page in the section, so there is no sub-tab bar: the page title is the proof.
+    expect(w.find('h1').text()).toBe('Connect & security')
   })
 
   it('opens a page named by ?section=&page=', async () => {
@@ -81,13 +82,14 @@ describe('Settings shell navigation', () => {
     expect(activePage(w)).toBe('AI agents')
   })
 
-  it('jumps to Security when the search result for "password" is picked', async () => {
+  it('jumps to Connect & security when the search result for "password" is picked', async () => {
     const w = await openSettings('/settings')
     await w.find('#setting-search').setValue('password')
     await w.find('.nav-result').trigger('click')
     await flushPromises()
     expect(activeSection(w)).toBe('Devices & network')
-    expect(activePage(w)).toBe('Security & advanced')
+    // One page in the section, so there is no sub-tab bar: the page title is the proof.
+    expect(w.find('h1').text()).toBe('Connect & security')
   })
 
   it('scrolls to the panel named by ?anchor=', async () => {

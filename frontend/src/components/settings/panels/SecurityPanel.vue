@@ -1,6 +1,6 @@
 <template>
   <section class="panel" id="security">
-    <div class="panel-head"><h2>Security</h2><span class="hint">The deck password every device unlocks with.</span></div>
+    <div class="panel-head"><h2>Who can connect</h2><span class="hint">Pairing or a deck password keeps other devices on your Wi-Fi out.</span></div>
     <div class="panel-body">
       <div v-if="serverConfig?.allow_lan && !serverConfig.require_auth" class="row row-warn" data-testid="unprotected-row">
         <div class="row-text">
