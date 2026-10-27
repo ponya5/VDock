@@ -134,4 +134,56 @@ describe('MoodEngine', () => {
     expect(c).toContain('icon:null')
     expect(c).toContain('expr:joy')
   })
+
+  it('re-emits the baseline expression once an idle gag has finished', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    let t = 500
+    let gag: RobotCommand | undefined
+    for (; t < 200_000 && !gag; t += 500) gag = e.step(sig(), [], 0, t).find(c => c.type === 'seq')
+    expect(gag).toBeDefined()
+    const gagAt = t - 500
+    const dur = SEQUENCES[(gag as { id: keyof typeof SEQUENCES }).id].duration
+    expect(types(e.step(sig(), [], 0, gagAt + 500))).not.toContain('expr:neutral')
+    const after = types(e.step(sig(), [], 0, gagAt + dur + 500))
+    expect(after).toContain('expr:neutral')
+  })
+
+  describe('morning / noon', () => {
+    const mem = () => {
+      const m = new Map<string, string>()
+      return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) }
+    }
+    const run = (e: MoodEngine, s: RobotSignals, from: number, to: number) => {
+      let out: RobotCommand[] = []
+      for (let t = from; t <= to; t += 500) out = out.concat(e.step(s, [], 0, t))
+      return types(out)
+    }
+    it('greets first, then fires morning once the greet is over; once per day per device', () => {
+      const storage = mem()
+      const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed, storage })
+      const first = types(e.step(sig({ hour: 8 }), [], 0, 0))
+      expect(e.state.reaction).toBe('greet')
+      expect(first).not.toContain('prop:coffee')
+      expect(run(e, sig({ hour: 8 }), 500, 20_000)).toContain('prop:coffee')
+      const e2 = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed, storage })
+      e2.step(sig({ hour: 8 }), [], 0, 0)
+      expect(run(e2, sig({ hour: 8 }), 500, 20_000)).not.toContain('prop:coffee')
+    })
+    it('fires noon at hour 12 with a chef hat', () => {
+      const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed, storage: mem() })
+      e.step(sig({ hour: 12 }), [], 0, 0)
+      expect(run(e, sig({ hour: 12 }), 500, 20_000)).toContain('accessory:chef-hat')
+    })
+  })
+
+  it('weather fires only on a known to different-known change', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    e.step(sig(), [], 0, 10_000)
+    e.step(sig({ weather: 'sunny' }), [], 0, 20_000)
+    expect(e.state.reaction).not.toBe('weather')
+    e.step(sig({ weather: 'rain' }), [], 0, 30_000)
+    expect(e.state.reaction).toBe('weather')
+  })
 })

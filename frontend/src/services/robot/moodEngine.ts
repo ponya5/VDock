@@ -14,6 +14,7 @@ import {
   type Mood, type RobotEvent, type BaselineState, type Reaction,
 } from './reactions'
 import { QUIPS } from './quips'
+import { SEQUENCES } from './sequences'
 
 export type WeatherKind = 'sunny' | 'rain' | 'snow' | 'cold' | 'other'
 export interface RobotSignals {
@@ -33,7 +34,13 @@ export type RobotCommand =
   | { type: 'expr'; id: ExpressionId } | { type: 'seq'; id: SequenceId }
   | { type: 'icon'; id: IconId | null } | { type: 'prop'; id: PropId }
   | { type: 'accessory'; id: AccessoryId | null } | { type: 'quip'; text: string }
-export interface EngineOptions { mood: Mood; quips: boolean; reactTo: RobotReactTo; rand?: () => number }
+type DayStorage = Pick<Storage, 'getItem' | 'setItem'>
+export interface EngineOptions {
+  mood: Mood; quips: boolean; reactTo: RobotReactTo; rand?: () => number
+  /** Per-device store for the morning/noon once-a-day marks (default: localStorage). */
+  storage?: DayStorage | null
+}
+const DAY_MARKS_KEY = 'vdock.robot.dayMarks'
 
 const GESTURE_EVENT: Record<PointerGesture, RobotEvent> = {
   enter: 'pointerEnter', eyes: 'pointerEyes', mouth: 'pointerMouth', shake: 'pointerShake', dizzy: 'pointerDizzy',
@@ -55,8 +62,8 @@ export class MoodEngine {
   private cpuSince: number | null = null
   private cpuArmed = true
   private batteryArmed = true
-  private morningDay = ''
-  private noonDay = ''
+  private marks: { morning?: string; noon?: string } = {}
+  private gagUntil = 0
   private baseline: BaselineState = 'idle'
   private shownBaseExpr: ExpressionId | null = null
   private shownBaseAcc: AccessoryId | null | undefined = undefined
@@ -65,7 +72,22 @@ export class MoodEngine {
   private nextGagAt = 0
   private iconUp = false
 
-  constructor(opts: EngineOptions) { this.opts = { rand: Math.random, ...opts } }
+  constructor(opts: EngineOptions) {
+    this.opts = {
+      rand: Math.random,
+      storage: typeof localStorage !== 'undefined' ? localStorage : null,
+      ...opts,
+    }
+    try {
+      const saved = JSON.parse(this.opts.storage?.getItem(DAY_MARKS_KEY) ?? 'null') as { morning?: string; noon?: string } | null
+      if (saved && typeof saved === 'object') this.marks = { morning: saved.morning, noon: saved.noon }
+    } catch { /* storage unavailable or corrupt — start fresh */ }
+  }
+
+  private markDay(kind: 'morning' | 'noon', day: string): void {
+    this.marks = { ...this.marks, [kind]: day }
+    try { this.opts.storage?.setItem(DAY_MARKS_KEY, JSON.stringify(this.marks)) } catch { /* ignore */ }
+  }
 
   configure(opts: Partial<EngineOptions>): void {
     this.opts = { ...this.opts, ...opts }
@@ -84,11 +106,12 @@ export class MoodEngine {
     if (first) {
       events.push('greet')
       if (s.agent === 'working') this.workingSince = now
-      if (s.hour >= 6 && s.hour <= 10) this.morningDay = s.day
-      if (s.hour === 12) this.noonDay = s.day
     } else {
       events.push(...this.edges(this.prev!, s, now))
     }
+    // morning / noon: pending until a reaction actually starts (marked in step below)
+    if (s.hour >= 6 && s.hour <= 10 && this.marks.morning !== s.day) events.push('morning')
+    if (s.hour === 12 && this.marks.noon !== s.day) events.push('noon')
     this.prev = s
 
     // baseline
@@ -111,7 +134,11 @@ export class MoodEngine {
       if (!active || PRIORITY[best] >= PRIORITY[this.reaction!]) {
         this.lastFired.set(best, now)
         const r = REACTIONS[best][this.opts.mood]
-        if (r) this.start(best, r, now, out)
+        if (r) {
+          this.start(best, r, now, out)
+          this.gagUntil = 0
+          if (best === 'morning' || best === 'noon') this.markDay(best, s.day)
+        }
       }
     }
 
@@ -131,6 +158,7 @@ export class MoodEngine {
       this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
     }
     if (!this.reaction) {
+      if (this.gagUntil > 0 && now >= this.gagUntil) { this.gagUntil = 0; this.shownBaseExpr = null }
       const expr = BASELINES[this.opts.mood][this.baseline]
       const acc = this.baselineAccessory(s, now)
       if (expr !== this.shownBaseExpr) { out.push({ type: 'expr', id: expr }); this.shownBaseExpr = expr }
@@ -139,7 +167,9 @@ export class MoodEngine {
         if (this.nextGagAt === 0) this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
         else if (now >= this.nextGagAt) {
           const gags = IDLE_GAGS[this.opts.mood]
-          out.push({ type: 'seq', id: gags[Math.floor(this.opts.rand() * gags.length) % gags.length] })
+          const id = gags[Math.floor(this.opts.rand() * gags.length) % gags.length]
+          out.push({ type: 'seq', id })
+          this.gagUntil = now + SEQUENCES[id].duration
           this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
         }
       }
@@ -199,9 +229,7 @@ export class MoodEngine {
     } else if (s.batteryCharging === true || (s.batteryPercent !== null && s.batteryPercent >= 25)) this.batteryArmed = true
     if (s.notificationCount > p.notificationCount) ev.push('notification')
     if (s.updateAvailable && !p.updateAvailable) ev.push('update')
-    if (s.hour >= 6 && s.hour <= 10 && this.morningDay !== s.day) { this.morningDay = s.day; ev.push('morning') }
-    if (s.hour === 12 && this.noonDay !== s.day) { this.noonDay = s.day; ev.push('noon') }
-    if (s.weather !== null && s.weather !== p.weather) ev.push('weather')
+    if (s.weather !== null && p.weather !== null && s.weather !== p.weather) ev.push('weather')
     return ev
   }
 
