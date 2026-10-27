@@ -21,13 +21,13 @@ beforeEach(() => {
 })
 
 describe('screensaverTypes registry', () => {
-  it('offers the four types — widgets first, shuffle last', () => {
+  it('offers the five types — widgets first, shuffle last', () => {
     expect(SAVER_TYPES.map(t => t.id)).toEqual(
-      ['widgets', 'spectrum', 'stats', 'shuffle'])
+      ['widgets', 'spectrum', 'stats', 'robot', 'shuffle'])
   })
 
   it('the shuffle pool holds real views only — never shuffle itself', () => {
-    expect(SHUFFLE_POOL).toEqual(['widgets', 'spectrum', 'stats'])
+    expect(SHUFFLE_POOL).toEqual(['widgets', 'spectrum', 'stats', 'robot'])
     expect(SHUFFLE_POOL).not.toContain('shuffle')
   })
 

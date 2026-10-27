@@ -44,6 +44,17 @@ export function migrateBackground(settings: LegacyBackgroundFields): string {
  * Factory defaults for user-adjustable settings. Single source of truth —
  * reset buttons in Settings → Appearance restore these values (DL-028).
  */
+export type RobotMood = 'funny' | 'grumpy' | 'sarcastic' | 'sweet' | 'random'
+export interface RobotReactTo { agent: boolean; music: boolean; system: boolean; ambient: boolean }
+export const ROBOT_MOODS: readonly RobotMood[] = ['funny', 'grumpy', 'sarcastic', 'sweet', 'random']
+
+/** DL-153: any missing/non-boolean group falls back to on. */
+export function sanitizeRobotReactTo(v: unknown): RobotReactTo {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
+  const pick = (k: keyof RobotReactTo) => (typeof o[k] === 'boolean' ? (o[k] as boolean) : true)
+  return { agent: pick('agent'), music: pick('music'), system: pick('system'), ambient: pick('ambient') }
+}
+
 export const SETTINGS_DEFAULTS = {
   buttonSize: 1.0,
   buttonTransparency: 0,
@@ -72,6 +83,11 @@ export const SETTINGS_DEFAULTS = {
   screensaverBackground: DEFAULT_SCREENSAVER_BACKGROUND_ID,
   screensaverStyle: 'widgets' as const,
   screensaverShuffleMinutes: 5,
+  // DL-153 robot buddy saver.
+  robotMood: 'funny' as RobotMood,
+  robotFaceSide: 'left' as 'left' | 'right',
+  robotQuips: true,
+  robotReactTo: { agent: true, music: true, system: true, ambient: true } as RobotReactTo,
   spectrumSkin: 'winamp',
   spectrumShuffle: false,
   spectrumShuffleMinutes: 10,
@@ -180,9 +196,14 @@ export interface PersistedUserSettings {
    * with the fullscreen audio visualizer + media bar; 'stats' swaps in the
    * fullscreen system monitor.
    */
-  screensaverStyle: 'widgets' | 'spectrum' | 'stats' | 'shuffle'
+  screensaverStyle: 'widgets' | 'spectrum' | 'stats' | 'robot' | 'shuffle'
   /** DL-133: shuffle type rotation cadence, in minutes. */
   screensaverShuffleMinutes: number
+  /** DL-153: robot saver personality, face side, quip bubbles, reaction groups. */
+  robotMood: RobotMood
+  robotFaceSide: 'left' | 'right'
+  robotQuips: boolean
+  robotReactTo: RobotReactTo
   /** Spectrum skin id — see services/spectrumSkins.ts registry. */
   spectrumSkin: string
   /** Ephemeral skin rotation while the spectrum saver is on. */
@@ -339,8 +360,12 @@ export const useSettingsStore = defineStore('settings', () => {
   // image URL paints behind the screensaver widgets.
   const screensaverBackground = ref<string>(DEFAULT_SCREENSAVER_BACKGROUND_ID)
   // DL-123 spectrum screensaver mode + skin/shuffle/media-bar prefs.
-  const screensaverStyle = ref<'widgets' | 'spectrum' | 'stats' | 'shuffle'>('widgets')
+  const screensaverStyle = ref<'widgets' | 'spectrum' | 'stats' | 'robot' | 'shuffle'>('widgets')
   const screensaverShuffleMinutes = ref(5)
+  const robotMood = ref<RobotMood>(SETTINGS_DEFAULTS.robotMood)
+  const robotFaceSide = ref<'left' | 'right'>(SETTINGS_DEFAULTS.robotFaceSide)
+  const robotQuips = ref(SETTINGS_DEFAULTS.robotQuips)
+  const robotReactTo = ref<RobotReactTo>({ ...SETTINGS_DEFAULTS.robotReactTo })
   const spectrumSkin = ref<string>('winamp')
   const spectrumShuffle = ref(false)
   const spectrumShuffleMinutes = ref(10)
@@ -549,6 +574,10 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverBackground: screensaverBackground.value,
       screensaverStyle: screensaverStyle.value,
       screensaverShuffleMinutes: screensaverShuffleMinutes.value,
+      robotMood: robotMood.value,
+      robotFaceSide: robotFaceSide.value,
+      robotQuips: robotQuips.value,
+      robotReactTo: { ...robotReactTo.value },
       spectrumSkin: spectrumSkin.value,
       spectrumShuffle: spectrumShuffle.value,
       spectrumShuffleMinutes: spectrumShuffleMinutes.value,
@@ -641,11 +670,18 @@ export const useSettingsStore = defineStore('settings', () => {
       settings.screensaverStyle === 'widgets' ||
       settings.screensaverStyle === 'spectrum' ||
       settings.screensaverStyle === 'stats' ||
+      settings.screensaverStyle === 'robot' ||
       settings.screensaverStyle === 'shuffle'
     ) {
       screensaverStyle.value = settings.screensaverStyle
     }
     if (settings.screensaverShuffleMinutes !== undefined) screensaverShuffleMinutes.value = settings.screensaverShuffleMinutes
+    if (ROBOT_MOODS.includes(settings.robotMood as RobotMood)) robotMood.value = settings.robotMood as RobotMood
+    if (settings.robotFaceSide === 'left' || settings.robotFaceSide === 'right') robotFaceSide.value = settings.robotFaceSide
+    if (typeof settings.robotQuips === 'boolean') robotQuips.value = settings.robotQuips
+    if (settings.robotReactTo !== undefined && settings.robotReactTo !== null && typeof settings.robotReactTo === 'object') {
+      robotReactTo.value = sanitizeRobotReactTo(settings.robotReactTo)
+    }
     if (settings.spectrumSkin !== undefined) spectrumSkin.value = settings.spectrumSkin
     if (settings.spectrumShuffle !== undefined) spectrumShuffle.value = settings.spectrumShuffle
     if (settings.spectrumShuffleMinutes !== undefined) spectrumShuffleMinutes.value = settings.spectrumShuffleMinutes
@@ -773,6 +809,10 @@ export const useSettingsStore = defineStore('settings', () => {
         screensaverBackground: settings.screensaverBackground ?? DEFAULT_SCREENSAVER_BACKGROUND_ID,
         screensaverStyle: settings.screensaverStyle ?? 'widgets',
         screensaverShuffleMinutes: settings.screensaverShuffleMinutes ?? 5,
+        robotMood: settings.robotMood ?? 'funny',
+        robotFaceSide: settings.robotFaceSide ?? 'left',
+        robotQuips: settings.robotQuips ?? true,
+        robotReactTo: sanitizeRobotReactTo(settings.robotReactTo),
         spectrumSkin: settings.spectrumSkin ?? 'winamp',
         spectrumShuffle: settings.spectrumShuffle === true,
         spectrumShuffleMinutes: settings.spectrumShuffleMinutes ?? 10,
@@ -1010,6 +1050,10 @@ export const useSettingsStore = defineStore('settings', () => {
       screensaverWeatherSize,
       screensaverStyle,
       screensaverShuffleMinutes,
+      robotMood,
+      robotFaceSide,
+      robotQuips,
+      robotReactTo,
       spectrumSkin,
       spectrumShuffle,
       spectrumShuffleMinutes,
@@ -1275,6 +1319,10 @@ export const useSettingsStore = defineStore('settings', () => {
     screensaverBackground,
     screensaverStyle,
     screensaverShuffleMinutes,
+    robotMood,
+    robotFaceSide,
+    robotQuips,
+    robotReactTo,
     spectrumSkin,
     spectrumShuffle,
     spectrumShuffleMinutes,
