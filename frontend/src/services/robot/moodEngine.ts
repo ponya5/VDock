@@ -63,12 +63,14 @@ export class MoodEngine {
   private lastQuipAt = -Infinity
   private lastQuip = ''
   private nextGagAt = 0
+  private iconUp = false
 
   constructor(opts: EngineOptions) { this.opts = { rand: Math.random, ...opts } }
 
   configure(opts: Partial<EngineOptions>): void {
     this.opts = { ...this.opts, ...opts }
     this.shownBaseExpr = null // re-emit the baseline in the new mood
+    this.shownBaseAcc = undefined
   }
 
   get state(): { reaction: RobotEvent | null; baseline: BaselineState; mood: Mood } {
@@ -92,6 +94,7 @@ export class MoodEngine {
     // baseline
     const nextBaseline = this.computeBaseline(s, lastPointerAt, now)
     if (nextBaseline === 'night' && this.baseline !== 'night' && !first) events.push('night')
+    if (nextBaseline === 'idle' && this.baseline !== 'idle') this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
     this.baseline = nextBaseline
 
     // pick the strongest allowed event
@@ -115,7 +118,10 @@ export class MoodEngine {
     // due scheduled commands
     const due = this.pending.filter(p => p.at <= now)
     this.pending = this.pending.filter(p => p.at > now)
-    for (const p of due) out.push(p.cmd)
+    for (const p of due) {
+      if (p.cmd.type === 'icon' && p.cmd.id === null) this.iconUp = false
+      out.push(p.cmd)
+    }
 
     // reaction ended → back to baseline; idle gags
     if (this.reaction && now >= this.reactionUntil) {
@@ -143,6 +149,7 @@ export class MoodEngine {
 
   private start(ev: RobotEvent, r: Reaction, now: number, out: RobotCommand[]): void {
     this.pending = []
+    if (!r.icon && this.iconUp) { out.push({ type: 'icon', id: null }); this.iconUp = false }
     this.reaction = ev
     const faceAt = r.icon ? now + ICON_MS : now
     this.reactionUntil = faceAt + (r.ms ?? 4000)
@@ -152,13 +159,12 @@ export class MoodEngine {
     if (r.accessory) face.push({ type: 'accessory', id: r.accessory })
     if (r.icon) {
       out.push({ type: 'icon', id: r.icon })
+      this.iconUp = true
       this.pending.push({ at: faceAt, cmd: { type: 'icon', id: null } })
       for (const c of face) this.pending.push({ at: faceAt, cmd: c })
     } else {
       out.push(...face)
     }
-    // the baseline accessory comes back when the reaction ends
-    this.shownBaseAcc = r.accessory ?? this.shownBaseAcc
     this.maybeQuip(ev, now, out)
   }
 

@@ -125,4 +125,13 @@ describe('MoodEngine', () => {
     b.step(sig({ agent: 'working' }), [], 0, 0)
     expect(b.state.baseline).toBe('idle')
   })
+
+  it('clears the status icon when a face-only reaction replaces an icon reaction', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    expect(types(e.step(sig({ agent: 'working' }), [], 0, 10_000))).toContain('icon:dots')
+    const c = types(e.step(sig({ agent: 'working' }), ['shake'], 10_000, 10_300))
+    expect(c).toContain('icon:null')
+    expect(c).toContain('expr:joy')
+  })
 })
