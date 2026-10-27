@@ -364,7 +364,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const screensaverShuffleMinutes = ref(5)
   const robotMood = ref<RobotMood>(SETTINGS_DEFAULTS.robotMood)
   const robotFaceSide = ref<'left' | 'right'>(SETTINGS_DEFAULTS.robotFaceSide)
-  const robotQuips = ref(SETTINGS_DEFAULTS.robotQuips)
+  const robotQuips = ref<boolean>(SETTINGS_DEFAULTS.robotQuips)
   const robotReactTo = ref<RobotReactTo>({ ...SETTINGS_DEFAULTS.robotReactTo })
   const spectrumSkin = ref<string>('winamp')
   const spectrumShuffle = ref(false)

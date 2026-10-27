@@ -46,6 +46,15 @@ describe('PointerSense', () => {
     expect(p.tick(4000)).toEqual([])
   })
 
+  it('linger re-arms after leave and re-enter', () => {
+    const p = new PointerSense()
+    p.move(0.5, 0.3, 0)
+    expect(p.tick(3100)).toContain('linger')
+    p.leave(3200)
+    p.move(0.5, 0.3, 4000)
+    expect(p.tick(7100)).toContain('linger')
+  })
+
   it('slow approach toward the face', () => {
     const p = new PointerSense()
     const track: Array<[number, number]> = []

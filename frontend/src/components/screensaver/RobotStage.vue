@@ -19,6 +19,7 @@
       @touchstart.stop="onFaceTouchStart"
       @touchmove="onFaceTouchMove"
       @touchend="onFaceTouchEnd"
+      @touchcancel="onFaceTouchCancel"
     >
       <div class="rs-face-box">
         <RobotFace ref="faceCmp" :frame="frame" :level="bobLevel" />
@@ -122,6 +123,10 @@ function onPointerLeave(): void {
 // browser's synthetic click bubbling to the saver root).
 let touchStart: { x: number; y: number; t: number } | null = null
 let touchMoved = 0
+function onFaceTouchCancel(): void {
+  touchStart = null
+  touchMoved = 0
+}
 function onFaceTouchStart(e: TouchEvent): void {
   const t = e.touches[0]
   touchStart = t ? { x: t.clientX, y: t.clientY, t: performance.now() } : null

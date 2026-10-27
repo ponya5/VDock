@@ -29,8 +29,8 @@
         <path data-part="eye" :d="frame.eyeR" fill="#fff" :opacity="frame.eyeOpacityR" />
         <path data-part="mouth" :d="frame.mouth" fill="#fff" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" :opacity="frame.mouthOpacity" />
         <path :d="frame.tongue" fill="#ff9a4d" :opacity="frame.tongueOpacity * frame.mouthOpacity" />
-        <ellipse :cx="frame.eyeLCenter[0] - 6" :cy="frame.eyeLCenter[1] + 34" rx="11" ry="5" fill="#ff6fa8" :opacity="frame.blush * 0.7" />
-        <ellipse :cx="frame.eyeRCenter[0] + 6" :cy="frame.eyeRCenter[1] + 34" rx="11" ry="5" fill="#ff6fa8" :opacity="frame.blush * 0.7" />
+        <ellipse cx="0" cy="0" :transform="`translate(${frame.eyeLCenter[0] - 6} ${frame.eyeLCenter[1] + 34})`" rx="11" ry="5" fill="#ff6fa8" :opacity="frame.blush * 0.7" />
+        <ellipse cx="0" cy="0" :transform="`translate(${frame.eyeRCenter[0] + 6} ${frame.eyeRCenter[1] + 34})`" rx="11" ry="5" fill="#ff6fa8" :opacity="frame.blush * 0.7" />
         <g v-if="frame.glyphL.id" :data-glyph="frame.glyphL.id" :opacity="frame.glyphL.opacity"
            :transform="`translate(${frame.eyeLCenter[0]} ${frame.eyeLCenter[1]}) scale(${frame.glyphL.scale * 1.5})`">
           <RobotArt :def="EYE_GLYPHS[frame.glyphL.id]" :t="frame.t" :level="level" />

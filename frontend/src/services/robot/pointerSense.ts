@@ -120,6 +120,7 @@ export class PointerSense {
 
   leave(_t: number): PointerGesture[] {
     this.pos = null
+    this.lingerFired = false
     this.inside = false
     this.region = null
     this.hist = []

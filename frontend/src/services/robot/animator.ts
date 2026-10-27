@@ -73,6 +73,7 @@ export class FaceAnimator {
   private readonly iconSlot = new Slot<IconId>()
   private readonly accessorySlot = new Slot<AccessoryId>(SPRINGS.bouncy)
   private readonly faceVis = createSpring(1, SPRINGS.fade)
+  private readonly mouthVis = createSpring(1, SPRINGS.fade)
   private readonly player = new SequencePlayer()
   private expr: ExpressionId = 'neutral'
   private base: FaceParams
@@ -164,6 +165,8 @@ export class FaceAnimator {
     }
     setEye(this.eyeL, this.base.eyeL, glyphOn(this.glyphL))
     setEye(this.eyeR, this.base.eyeR, glyphOn(this.glyphR))
+    this.mouthVis.target = this.mouthGlyphSlot.busy ? 0 : 1
+    stepSpring(this.mouthVis, dtMs)
     for (const s of [this.glyphL, this.glyphR, this.mouthGlyphSlot, this.iconSlot, this.accessorySlot]) s.step(dtMs)
     this.faceVis.target = this.iconSlot.busy ? 0 : 1
     stepSpring(this.faceVis, dtMs)
@@ -212,7 +215,7 @@ export class FaceAnimator {
       eyeOpacityR: clamp(eyeR.opacity, 0, 1),
       mouth: mouthPath(face, mx, my),
       mouthCenter: [mx, my],
-      mouthOpacity: clamp(face.mouthOpacity, 0, 1) * (this.mouthGlyphSlot.busy ? 0 : 1),
+      mouthOpacity: clamp(face.mouthOpacity, 0, 1) * clamp(this.mouthVis.value, 0, 1),
       tongue: tonguePath(face, mx, my),
       tongueOpacity: clamp(face.tongue, 0, 1) * clamp(face.mouthOpen * 2, 0, 1),
       blush: clamp(face.blush, 0, 1),
