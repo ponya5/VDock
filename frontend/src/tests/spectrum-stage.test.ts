@@ -297,7 +297,7 @@ describe('ScreenSaver integration (source contract)', () => {
     expect(src).toContain('widgetLayerOn')
     expect(src).toContain('spectrumOverlay')
     // nowplaying / mini-spectrum / systemstats never overlay the stage.
-    expect(src).toContain('v-if="!spectrumBackdrop"')
+    expect(src).toContain('v-if="!spectrumBackdrop && !robotMode"')
   })
 
   it('widget feeds follow the widget layer, not the stage', () => {
