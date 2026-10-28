@@ -2,8 +2,8 @@
   <div class="settings-app">
     <aside class="nav">
       <div class="nav-brand">
-        <span class="nav-mark"><img :src="'/assets/branding/vdock-logo.jpg'" alt="" class="nav-mark-img" /></span>
         <span class="nav-name">VDock</span>
+        <span class="nav-mark"><img :src="'/assets/branding/vdock-logo.jpg'" alt="" class="nav-mark-img" /></span>
       </div>
       <div class="nav-search">
         <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="nav-search-icon" />

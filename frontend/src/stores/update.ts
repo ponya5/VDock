@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getHealthVersion, getUpdateStatus, installUpdate, type UpdateStatus } from '@/api/update'
 import { useNotificationsStore } from '@/stores/notifications'
+import { confirmDialog } from '@/composables/useConfirm'
 import { reloadPage } from '@/utils/reloadPage'
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
@@ -50,6 +51,8 @@ export const useUpdateStore = defineStore('update', () => {
   }
 
   async function refresh(force = false) {
+    // An explicit "Check now" re-prompts even if "Later" hid this version.
+    if (force) dismissedVersion.value = ''
     checking.value = true
     try {
       status.value = await getUpdateStatus(force)
@@ -99,6 +102,15 @@ export const useUpdateStore = defineStore('update', () => {
   }
 
   async function install() {
+    const ok = await confirmDialog({
+      title: `Update to v${status.value?.latest ?? ''}?`,
+      message: 'VDock will download the new version, replace the current one and restart.',
+      confirmLabel: 'Update',
+      cancelLabel: 'Not now',
+      danger: false,
+      icon: 'download',
+    })
+    if (!ok) return
     forbidden.value = false
     installError.value = null
     try {

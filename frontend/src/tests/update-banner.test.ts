@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
 vi.mock('@/api/update', () => api)
 const reload = vi.hoisted(() => ({ reloadPage: vi.fn() }))
 vi.mock('@/utils/reloadPage', () => reload)
+vi.mock('@/composables/useConfirm', () => ({ confirmDialog: vi.fn().mockResolvedValue(true) }))
 
 import { useUpdateStore } from '@/stores/update'
 import UpdateBanner from '@/components/UpdateBanner.vue'

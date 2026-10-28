@@ -90,12 +90,14 @@ import { computed, onMounted } from 'vue'
 import { useUpdateStore } from '@/stores/update'
 import { useDeviceClass } from '@/composables/useDeviceClass'
 import { openLink } from '@/utils/openLink'
-import { version as appVersion } from '../../../../package.json'
+import { version as bundledVersion } from '../../../../package.json'
 
 const emit = defineEmits<{ (e: 'request-feature'): void }>()
 
 const router = useRouter()
 const update = useUpdateStore()
+// The running backend is the truth; the bundle can be older than it.
+const appVersion = computed(() => update.status?.current ?? bundledVersion)
 const { deviceClass } = useDeviceClass()
 const isPhone = computed(() => deviceClass.value === 'phone')
 const lastChecked = computed(() => {
