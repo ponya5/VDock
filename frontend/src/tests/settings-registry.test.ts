@@ -94,7 +94,7 @@ describe('resolveRoute', () => {
   it('keeps Devices & network to one page: connect, security and advanced together', () => {
     const devices = findSection('devices')!
     expect(devices.pages.map((page) => page.id)).toEqual(['connect'])
-    expect(findPage(devices, 'connect')!.panels).toEqual(['ConnectPanel', 'SecurityPanel', 'PortsPanel'])
+    expect(findPage(devices, 'connect')!.panels).toEqual(['PortsPanel', 'SecurityPanel'])
   })
 
   it('falls back to the landing section for unknown input', () => {

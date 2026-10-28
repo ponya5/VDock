@@ -40,6 +40,7 @@ def _device_token() -> str:
     """A login token bound to a freshly registered device (DL-154)."""
     device_id = devices.register(
         request.headers.get('User-Agent', ''), request.remote_addr or '',
+        request.headers.get('X-Device-Id', ''),
     )
     return AuthManager.generate_token({'authenticated': True, 'did': device_id})
 
@@ -162,11 +163,27 @@ def list_devices():
 
     @require_auth
     def _list():
-        current = getattr(request, 'auth_data', {}).get('did')
+        current = getattr(request, 'auth_data', {}).get('did') or request.headers.get('X-Device-Id')
         rows = [{**d, 'current': d['id'] == current} for d in devices.list_devices()]
         return jsonify({'devices': rows, 'success': True})
 
     return _list()
+
+
+@auth_bp.route('/api/auth/devices/<device_id>', methods=['PATCH'])
+def rename_device(device_id: str):
+    """Name a device (the phone does this on first connect)."""
+    from auth import require_auth
+
+    @require_auth
+    def _rename():
+        data = request.get_json(silent=True)
+        label = data.get('label') if isinstance(data, dict) else None
+        if not isinstance(label, str) or not devices.rename(device_id, label):
+            return jsonify({'error': 'Unknown device or empty name', 'success': False}), 400
+        return jsonify({'success': True})
+
+    return _rename()
 
 
 @auth_bp.route('/api/auth/devices/<device_id>', methods=['DELETE'])

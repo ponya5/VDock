@@ -27,6 +27,7 @@
     <ConnectionBanner v-if="!isStandaloneSettings" />
     <!-- The lock screen sits above everything, including standalone settings -->
     <AuthGate />
+    <DeviceNamePrompt />
   </div>
 </template>
 
@@ -48,6 +49,7 @@ import AgentAlertOverlay from '@/components/AgentAlertOverlay.vue'
 import AgentMissionControl from '@/components/AgentMissionControl.vue'
 import LiveActionMenu from '@/components/LiveActionMenu.vue'
 import AuthGate from '@/components/AuthGate.vue'
+import DeviceNamePrompt from '@/components/DeviceNamePrompt.vue'
 import ConnectionBanner from '@/components/ConnectionBanner.vue'
 import VersionWatermark from '@/components/VersionWatermark.vue'
 import { probeAuth } from '@/services/auth'

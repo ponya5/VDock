@@ -115,6 +115,15 @@ app.config.from_object(Config)
 # in memory/disk before the route's own size check ever runs.
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB (upload cap is 10MB)
 
+@app.before_request
+def note_device():
+    """List every other device that talks to the deck (see services.devices.seen)."""
+    if request.path.startswith('/api/') and request.method != 'OPTIONS':
+        from services import devices
+        devices.seen(request.headers.get('X-Device-Id', ''),
+                     request.headers.get('User-Agent', ''), request.remote_addr or '')
+
+
 # Add security headers
 @app.after_request
 def add_security_headers(response):

@@ -9,6 +9,7 @@ Stored in ``data/devices.json``; no raw User-Agent is kept, only a coarse
 label ("iPhone", "Windows PC").
 """
 import json
+import re
 import secrets
 import time
 from threading import Lock
@@ -28,6 +29,11 @@ _last_saved: Dict[str, float] = {}
 def label_from_user_agent(user_agent: str) -> str:
     """A short human label for a browser's User-Agent."""
     ua = (user_agent or '').lower()
+    model = re.search(r'android [\d.]+; ([^;)]+)', ua)
+    name = model.group(1).strip() if model else ''
+    # Chrome reduces the model to "K"; only a real model string is worth showing.
+    if name and name != 'k' and len(name) > 2:
+        return f'Android ({name.upper() if len(name) < 12 else name})'
     if 'iphone' in ua:
         return 'iPhone'
     if 'ipad' in ua:
@@ -73,10 +79,20 @@ def _save() -> None:
         pass  # in-memory state still works until the next restart
 
 
-def register(user_agent: str = '', ip: str = '') -> str:
-    """Add a device and return its id."""
+MAX_LABEL = 40
+
+
+CLIENT_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,40}$')
+
+
+def register(user_agent: str = '', ip: str = '', device_id: str = '') -> str:
+    """Add a device and return its id.
+
+    A device on this computer needs no name; any other starts unnamed and is
+    asked for one on its first screen (see ``rename``).
+    """
     now = time.time()
-    device_id = secrets.token_urlsafe(9)
+    device_id = device_id if CLIENT_ID_RE.match(device_id or '') else secrets.token_urlsafe(9)
     with _lock:
         devices = _devices()
         devices[device_id] = {
@@ -85,12 +101,29 @@ def register(user_agent: str = '', ip: str = '') -> str:
             'paired_at': now,
             'last_seen': now,
             'ip': ip or '',
+            'named': ip in ('127.0.0.1', '::1'),
         }
         while len(devices) > MAX_DEVICES:
             oldest = min(devices, key=lambda k: devices[k].get('last_seen', 0))
             del devices[oldest]
         _save()
     return device_id
+
+
+def seen(device_id: str, user_agent: str = '', ip: str = '') -> None:
+    """A browser's own id hit the API: record it (first sight) or touch it.
+
+    This is what lists a phone that connects with auth off, where no login
+    ever happens. Loopback (this computer) is never listed.
+    """
+    if not CLIENT_ID_RE.match(device_id or '') or ip in ('127.0.0.1', '::1', ''):
+        return
+    with _lock:
+        known = device_id in _devices()
+    if known:
+        touch(device_id, ip)
+    elif not Config.REQUIRE_AUTH:  # with auth on, only a login lists (and a revoke sticks)
+        register(user_agent, ip, device_id)
 
 
 def is_active(device_id: str) -> bool:
@@ -120,6 +153,21 @@ def list_devices() -> List[Dict[str, Any]]:
     with _lock:
         return sorted((dict(d) for d in _devices().values()),
                       key=lambda d: d.get('last_seen', 0), reverse=True)
+
+
+def rename(device_id: str, label: str) -> bool:
+    """Give a device a name the user recognises in the connected list."""
+    label = ' '.join((label or '').split())[:MAX_LABEL]
+    if not label:
+        return False
+    with _lock:
+        device = _devices().get(device_id)
+        if device is None:
+            return False
+        device['label'] = label
+        device['named'] = True
+        _save()
+        return True
 
 
 def revoke(device_id: str) -> bool:
