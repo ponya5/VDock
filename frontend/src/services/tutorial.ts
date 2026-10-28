@@ -98,7 +98,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     activate: '[data-tour="nav-server"]',
     target: '[data-tour="allow-lan"]',
     title: 'Use your phone or tablet',
-    text: 'Phone access is off until you turn it on, so no other device can reach your deck. Press "Turn on phone access" here (a password is recommended). VDock restarts once and shows a code to scan with your phone\'s camera.',
+    text: 'Phone access is off until you turn it on, so no other device can reach your deck. Flip "Allow phone & tablet access" here. If VDock asks for a restart, restart it once — then the QR code under Security is ready to scan with your phone\'s camera.',
     placement: 'bottom',
   },
   {

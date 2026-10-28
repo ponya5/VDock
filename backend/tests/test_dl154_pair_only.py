@@ -86,8 +86,9 @@ def test_phone_without_a_token_is_locked_out(client):
 
 def test_user_agent_labels():
     assert devices.label_from_user_agent(IPHONE_UA) == 'iPhone'
-    assert devices.label_from_user_agent('Mozilla/5.0 (Linux; Android 14; Pixel) Mobile') == 'Android phone'
-    assert devices.label_from_user_agent('Mozilla/5.0 (Linux; Android 14; Tab)') == 'Android tablet'
+    assert devices.label_from_user_agent('Mozilla/5.0 (Linux; Android 14; K) Mobile') == 'Android phone'
+    assert devices.label_from_user_agent('Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile') == 'Android (PIXEL 8)'
+    assert devices.label_from_user_agent('Mozilla/5.0 (Linux; Android 14; K)') == 'Android tablet'
     assert devices.label_from_user_agent('Mozilla/5.0 (Windows NT 10.0)') == 'Windows PC'
     assert devices.label_from_user_agent('') == 'Device'
 

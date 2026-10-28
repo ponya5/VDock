@@ -74,7 +74,7 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'devices', name: 'Devices & network', icon: ['fas', 'mobile-screen-button'], tour: 'nav-server',
     pages: [
-      { id: 'connect', name: 'Connect & security', title: 'Connect & security', blurb: 'Turn a phone or tablet into a second deck, and decide who may connect. Ports and host for advanced setups are at the bottom.', panels: ['ConnectPanel', 'SecurityPanel', 'PortsPanel'], anchors: ['security', 'connection'], tour: 'nav-connect', autosaves: true },
+      { id: 'connect', name: 'Connect & security', title: 'Connect & security', blurb: 'Network & ports: switch on phone access and set the address and ports. Security: the QR code, deck password and connected devices.', panels: ['PortsPanel', 'SecurityPanel'], anchors: ['security', 'connection'], tour: 'nav-connect', autosaves: true },
     ],
   },
   {
@@ -111,7 +111,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Quick Switches', keywords: 'quick switches toggles lan screensaver agent alerts auto scene', section: 'overview', page: 'overview', anchor: 'quick-switches', icon: ['fas', 'toggle-on'] },
   { label: 'Command-line Tools', keywords: 'cli tools gh github cli claude code cli installed path', section: 'agents', page: 'accounts', anchor: 'tools', icon: ['fas', 'terminal'] },
   { label: 'Edit Keys', keywords: 'edit keys buttons change action dashboard edit mode', section: 'overview', page: 'overview', anchor: 'edit-keys', icon: ['fas', 'pen-to-square'] },
-  { label: 'Connect a device', keywords: 'connect device phone tablet qr lan wifi pair second deck allow lan deck address', section: 'devices', page: 'connect', icon: ['fas', 'mobile-screen-button'] },
+  { label: 'Phone & tablet access', keywords: 'connect device phone tablet qr lan wifi pair second deck allow lan deck address connected devices rename', section: 'devices', page: 'connect', icon: ['fas', 'mobile-screen-button'] },
   { label: 'Deck Password', keywords: 'password authentication auth login lock secure require unlock', section: 'devices', page: 'connect', anchor: 'security', icon: ['fas', 'lock'] },
   { label: 'Ports & Host', keywords: 'server host port connection frontend backend address bind', section: 'devices', page: 'connect', anchor: 'connection', icon: ['fas', 'server'] },
   { label: 'Touch Mode', keywords: 'touch mode finger tablet target size', section: 'appearance', page: 'buttons', anchor: 'touch', icon: ['fas', 'hand-pointer'] },

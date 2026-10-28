@@ -8,10 +8,10 @@
         <h1 class="gate-title">VDock is locked</h1>
         <p v-if="authState.pairFailed" class="gate-sub gate-pair" data-testid="pair-failed">
           That sign-in code was already used or has expired. Scan the fresh code on your computer
-          (Settings › Connect a device){{ authState.pairOnly ? '.' : ', or enter the deck password.' }}
+          (Settings › Connect & security){{ authState.pairOnly ? '.' : ', or enter the deck password.' }}
         </p>
         <p v-else-if="authState.pairOnly" class="gate-sub" data-testid="pair-only-hint">
-          This device isn't paired yet. On your computer open VDock › Settings › Connect a device and scan the code with this device's camera.
+          This device isn't paired yet. On your computer open VDock › Settings › Connect & security and scan the code with this device's camera.
         </p>
         <p v-else class="gate-sub">Enter the deck password to continue. This device then stays signed in.</p>
         <form v-if="!authState.pairOnly" class="gate-form" @submit.prevent="submit">

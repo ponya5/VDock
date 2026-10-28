@@ -17,6 +17,20 @@ export function markNetworkResume(): void {
 
 const inResumeGrace = () => Date.now() < resumeGraceUntil
 
+/** Stable per-browser id so the computer can list (and name) this device. */
+function deviceId(): string {
+  try {
+    let id = localStorage.getItem('vdock.deviceId')
+    if (!id) {
+      id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, '')
+      localStorage.setItem('vdock.deviceId', id)
+    }
+    return id
+  } catch {
+    return ''
+  }
+}
+
 class ApiClient {
   private client: AxiosInstance
   private notificationsStore: any = null
@@ -37,6 +51,7 @@ class ApiClient {
         // For FormData, axios will automatically set the correct Content-Type with boundary
 
         // Bearer token when the deck is locked behind a password (DL-126).
+        config.headers['X-Device-Id'] = deviceId()
         const token = getAuthToken()
         if (token) {
           config.headers['Authorization'] = `Bearer ${token}`
@@ -267,6 +282,10 @@ class ApiClient {
 
   async put(url: string, data?: any) {
     return this.client.put(url, data)
+  }
+
+  async patch(url: string, data?: any) {
+    return this.client.patch(url, data)
   }
 
   async delete(url: string) {

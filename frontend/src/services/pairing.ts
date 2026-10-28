@@ -43,6 +43,7 @@ export interface PairedDevice {
   paired_at: number
   last_seen: number
   ip: string
+  named?: boolean
   current?: boolean
 }
 
@@ -53,6 +54,15 @@ export async function fetchDevices(): Promise<PairedDevice[] | null> {
     return Array.isArray(res.data?.devices) ? res.data.devices : null
   } catch {
     return null
+  }
+}
+
+export async function renameDevice(id: string, label: string): Promise<boolean> {
+  try {
+    await apiClient.patch(`/auth/devices/${encodeURIComponent(id)}`, { label })
+    return true
+  } catch {
+    return false
   }
 }
 

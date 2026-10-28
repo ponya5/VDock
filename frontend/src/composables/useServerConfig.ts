@@ -39,12 +39,24 @@ export function useServerConfig() {
 
   // The bind address is chosen at startup, so the change only lands after a
   // restart; the reloaded config's `restart_required` drives the Restart row.
+  // Turning phone access on never leaves it open: with no auth yet it also
+  // requires pairing (or re-enables auth when a password already exists).
   async function setAllowLan(enabled: boolean): Promise<boolean> {
-    const ok = await settingsStore.updateServerConfig({ allow_lan: enabled })
+    const cfg = serverConfig.value
+    const changes: Record<string, unknown> = { allow_lan: enabled }
+    if (enabled && !cfg?.require_auth) {
+      if (cfg?.auth_password_set) changes.require_auth = true
+      else changes.pair_only = true
+    }
+    const ok = await settingsStore.updateServerConfig(changes)
+    if (ok) await settingsStore.loadServerConfig()
     const notifications = useNotificationsStore()
+    const needsRestart = ok && settingsStore.serverConfig?.restart_required === true
     notifications[ok ? 'success' : 'error'](
-      ok ? 'LAN access ' + (enabled ? 'enabled' : 'disabled') : 'Could not save',
-      ok ? 'Restart VDock to apply — Settings › Connect a device has the button.' : 'Server rejected the change.'
+      ok ? 'Phone & tablet access ' + (enabled ? 'on' : 'off') : 'Could not save',
+      !ok ? 'Server rejected the change.'
+        : needsRestart ? 'Restart VDock for this to take effect — Settings › Connect & security has the button.'
+        : 'Applied.',
     )
     return ok
   }

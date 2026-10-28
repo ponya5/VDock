@@ -109,3 +109,37 @@ def test_tokens_never_reach_the_logs(client, locked_deck, caplog):
         client.post('/api/auth/pair', json={'token': token})
         client.post('/api/auth/pair', json={'token': token})
     assert token not in caplog.text
+
+
+def test_paired_device_starts_unnamed_and_can_be_renamed(client, locked_deck):
+    token = client.post('/api/auth/pair-token', headers=locked_deck).get_json()['token']
+    env = {'REMOTE_ADDR': '192.168.1.50'}
+    login = client.post('/api/auth/pair', json={'token': token}, environ_overrides=env).get_json()
+    phone = {'Authorization': f"Bearer {login['token']}"}
+    rows = client.get('/api/auth/devices', headers=phone).get_json()['devices']
+    me = next(d for d in rows if d['current'])
+    assert me['named'] is False
+    assert client.patch(f"/api/auth/devices/{me['id']}", json={'label': ''}, headers=phone).status_code == 400
+    assert client.patch(f"/api/auth/devices/{me['id']}", json={'label': ' Dan  iPhone '}, headers=phone).status_code == 200
+    rows = client.get('/api/auth/devices', headers=phone).get_json()['devices']
+    me = next(d for d in rows if d['current'])
+    assert (me['label'], me['named']) == ('Dan iPhone', True)
+
+
+def test_phone_is_listed_when_auth_is_off_and_a_revoke_sticks_when_on(client):
+    from services import devices
+    env = {'REMOTE_ADDR': '192.168.1.60'}
+    hdr = {'X-Device-Id': 'phone-abc-12345', 'User-Agent': 'Mozilla/5.0 (Linux; Android 14; SM-S918B) Mobile'}
+    Config.REQUIRE_AUTH = False
+    client.get('/api/health', headers=hdr, environ_overrides=env)
+    row = next(d for d in devices.list_devices() if d['id'] == 'phone-abc-12345')
+    assert row['label'] == 'Android (SM-S918B)' and row['named'] is False
+    # local requests are never listed
+    client.get('/api/health', headers={'X-Device-Id': 'desktop-xyz-12345'})
+    assert all(d['id'] != 'desktop-xyz-12345' for d in devices.list_devices())
+    # auth on: a revoked id is not resurrected by plain traffic
+    Config.REQUIRE_AUTH = True
+    devices.revoke('phone-abc-12345')
+    client.get('/api/health', headers=hdr, environ_overrides=env)
+    assert all(d['id'] != 'phone-abc-12345' for d in devices.list_devices())
+    Config.REQUIRE_AUTH = False
