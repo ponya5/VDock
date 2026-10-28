@@ -39,7 +39,7 @@
         </div>
 
         <p class="quick-deck-hint">
-          <kbd>`</kbd> or <kbd>Esc</kbd> to close · Electron: <kbd>Ctrl+Shift+D</kbd> summons at cursor
+          <kbd>`</kbd> or <kbd>Esc</kbd> to close · Desktop app: <kbd>Ctrl+Shift+D</kbd> summons at cursor
         </p>
       </div>
     </div>
