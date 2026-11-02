@@ -1,7 +1,13 @@
 <template>
   <div v-if="update.visible && update.status" class="update-banner" role="status" data-testid="update-banner">
     <template v-if="update.busy">
+      <span class="ub-spinner" aria-hidden="true"></span>
       <span class="ub-text" data-testid="update-progress">{{ progressText }}</span>
+    </template>
+    <template v-else-if="update.state === 'ready'">
+      <span class="ub-text" data-testid="update-ready">Restart VDock to finish updating</span>
+      <button v-if="!isPhone && !update.forbidden" type="button" class="ub-btn ub-primary" data-testid="update-restart" @click="update.restart()">Restart now</button>
+      <span v-else class="ub-hint" data-testid="update-pc-hint">Restart from your PC</span>
     </template>
     <template v-else-if="update.state === 'error'">
       <span class="ub-text ub-error" data-testid="update-error">{{ update.status.stateMessage || update.status.error || 'Update failed' }}</span>
@@ -30,9 +36,11 @@ const { deviceClass } = useDeviceClass()
 const isPhone = computed(() => deviceClass.value === 'phone')
 
 const progressText = computed(() => {
+  if (update.state === 'ready') return 'Restarting VDock…'
   const msg = update.status?.stateMessage
-  if (msg) return msg
+  if (msg && update.state !== 'idle') return msg
   switch (update.state) {
+    case 'idle': return 'Starting update…'
     case 'downloading': return 'Downloading update…'
     case 'installing': return 'Installing update…'
     default: return 'Restarting VDock…'
@@ -66,6 +74,15 @@ onMounted(() => update.start())
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 .ub-text { padding-right: 4px; }
+.ub-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--accent, #4f8cff);
+  animation: ub-spin 0.8s linear infinite;
+}
+@keyframes ub-spin { to { transform: rotate(360deg); } }
 .ub-error { color: #ffb4a8; }
 .ub-hint { color: var(--text-2, #aab4cc); font-weight: 500; }
 .ub-btn {
