@@ -26,14 +26,33 @@ def update_status():
     return jsonify(updater.get_status(force=force))
 
 
+def _may_install() -> bool:
+    return _is_local_request() or (Config.REQUIRE_AUTH and _bearer_ok())
+
+
+def _forbidden():
+    return jsonify({'error': 'Updates can only be installed from the PC VDock runs on, '
+                             'or by a signed-in device.'}), 403
+
+
 @update_bp.route('/api/update/install', methods=['POST'])
 def update_install():
-    if not (_is_local_request() or (Config.REQUIRE_AUTH and _bearer_ok())):
-        return jsonify({'error': 'Updates can only be installed from the PC VDock runs on, '
-                                 'or by a signed-in device.'}), 403
+    if not _may_install():
+        return _forbidden()
     started, reason = updater.begin_install()
     if not started:
         message = ('An update is already in progress.' if reason == 'busy'
                    else 'No update available to install.')
         return jsonify({'error': message, 'state': updater.get_state()['state']}), 409
     return jsonify({'state': updater.DOWNLOADING}), 202
+
+
+@update_bp.route('/api/update/restart', methods=['POST'])
+def update_restart():
+    if not _may_install():
+        return _forbidden()
+    started, _reason = updater.begin_restart()
+    if not started:
+        return jsonify({'error': 'No update is ready to apply.',
+                        'state': updater.get_state()['state']}), 409
+    return jsonify({'state': updater.RESTARTING}), 202

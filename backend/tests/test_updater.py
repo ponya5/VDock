@@ -286,6 +286,12 @@ def test_download_url_prefix_validation():
         'https://github.com/ponya5/VDock/releases/download/v1/a.exe')
 
 
+def _apply_staged():
+    """Run the staged restart synchronously (begin_restart threads it)."""
+    assert updater.get_state()['state'] == 'ready'
+    updater._pending_restart()
+
+
 def _fake_download(payload: bytes):
     def fake(url, dest):
         Path(dest).write_bytes(payload)
@@ -306,6 +312,10 @@ def test_windows_install_writes_cmd_launches_detached_and_exits_75(monkeypatch, 
     monkeypatch.setattr(updater, 'schedule_exit', lambda code, delay=1.5: exits.append(code))
 
     updater.run_install(info, 'windows-installer')
+    # Downloaded and staged; nothing launches until the user confirms.
+    assert updater.get_state()['state'] == 'ready'
+    assert popen_calls == [] and exits == []
+    _apply_staged()
 
     cmd = (tmp_path / 'run-update.cmd').read_text(encoding='utf-8')
     assert 'timeout /t 3 /nobreak >nul' in cmd
@@ -392,6 +402,9 @@ def test_source_happy_path_under_electron_exits_0(monkeypatch):
     monkeypatch.setattr(updater, '_spawn_detached', lambda *a, **k: pytest.fail('relaunched'))
 
     updater.run_install({}, 'source')
+    assert updater.get_state()['state'] == 'ready'
+    assert exits == []
+    _apply_staged()
 
     cmds = [c for c, _ in runs]
     assert cmds[1] == ['git', 'pull', '--ff-only']
@@ -411,6 +424,8 @@ def test_source_without_electron_spawns_relaunch(monkeypatch, tmp_path):
                         lambda args, **kw: spawned.append((args, kw)))
     monkeypatch.setattr(updater, 'schedule_exit', lambda code, delay=1.5: exits.append(code))
     updater.run_install({}, 'source')
+    assert spawned == [] and exits == []
+    _apply_staged()
     assert len(spawned) == 1
     args = spawned[0][0]
     if updater.sys.platform == 'win32':
@@ -437,3 +452,34 @@ def test_source_command_failure_sets_error(monkeypatch):
     state = updater.get_state()
     assert state['state'] == 'error'
     assert 'fast-forward' in state['message']
+
+
+# ---- staged restart ---------------------------------------------------------
+
+def test_restart_409_when_nothing_staged(client, monkeypatch):
+    resp = client.post('/api/update/restart', environ_overrides={'REMOTE_ADDR': '127.0.0.1'})
+    assert resp.status_code == 409
+
+
+def test_restart_403_for_non_loopback(client):
+    resp = client.post('/api/update/restart', environ_overrides={'REMOTE_ADDR': '192.168.1.50'})
+    assert resp.status_code == 403
+
+
+def test_restart_applies_staged_update_once(client, monkeypatch):
+    ran = []
+    updater._stage(lambda: ran.append(1))
+    monkeypatch.setattr(updater.threading, 'Thread',
+                        lambda target, args=(), **kw: type('T', (), {'start': lambda self: target(*args)})())
+    resp = client.post('/api/update/restart', environ_overrides={'REMOTE_ADDR': '127.0.0.1'})
+    assert resp.status_code == 202
+    assert ran == [1]
+    again = client.post('/api/update/restart', environ_overrides={'REMOTE_ADDR': '127.0.0.1'})
+    assert again.status_code == 409
+
+
+def test_install_409_while_update_is_staged(client, monkeypatch, stub_worker):
+    _prime(monkeypatch)
+    updater._stage(lambda: None)
+    resp = client.post('/api/update/install', environ_overrides={'REMOTE_ADDR': '127.0.0.1'})
+    assert resp.status_code == 409

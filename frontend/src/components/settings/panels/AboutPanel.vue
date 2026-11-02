@@ -56,7 +56,8 @@
                 <button type="button" class="btn sm" :disabled="update.checking || update.busy" data-testid="about-check" @click="update.refresh(true)">
                   {{ update.checking ? 'Checking…' : 'Check now' }}
                 </button>
-                <template v-if="update.status?.available">
+                <button v-if="update.state === 'ready' && !isPhone && !update.forbidden" type="button" class="btn primary sm" :disabled="update.busy" data-testid="about-restart" @click="update.restart()">Restart now</button>
+                <template v-else-if="update.status?.available">
                   <button v-if="update.status.canAutoInstall && !isPhone && !update.forbidden" type="button" class="btn primary sm" :disabled="update.busy" data-testid="about-update" @click="update.install()">Update now</button>
                   <span v-else-if="update.status.canAutoInstall" class="muted">Update from your PC</span>
                   <button v-else type="button" class="btn primary sm" data-testid="about-download" @click="openLink(update.status.downloadUrl)">Download</button>
@@ -64,7 +65,8 @@
               </dd>
             </div>
             <div v-if="update.status" class="kv"><dt>Last checked</dt><dd>{{ lastChecked }}</dd></div>
-            <div v-if="update.busy" class="kv"><dt>Status</dt><dd>{{ update.status?.stateMessage || update.state }}</dd></div>
+            <div v-if="update.state === 'ready'" class="kv"><dt>Status</dt><dd>Update downloaded - restart VDock to finish</dd></div>
+            <div v-if="update.busy" class="kv"><dt>Status</dt><dd>{{ update.state === 'idle' ? 'Starting update…' : (update.status?.stateMessage || update.state) }}</dd></div>
             <div v-if="update.status?.error || update.installError" class="kv"><dt>Update error</dt><dd class="upd-error" data-testid="about-error">{{ update.installError || update.status?.error }}</dd></div>
             <div class="kv"><dt>Licence</dt><dd>MIT — ponya5</dd></div>
             <div class="kv"><dt>Repository</dt><dd><a href="https://github.com/ponya5/VDock" target="_blank" rel="noopener">VDock on GitHub</a></dd></div>

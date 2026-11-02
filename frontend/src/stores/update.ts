@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { getHealthVersion, getUpdateStatus, installUpdate, type UpdateStatus } from '@/api/update'
+import { getHealthVersion, getUpdateStatus, installUpdate, restartUpdate, type UpdateStatus } from '@/api/update'
 import { useNotificationsStore } from '@/stores/notifications'
 import { confirmDialog } from '@/composables/useConfirm'
 import { reloadPage } from '@/utils/reloadPage'
@@ -16,19 +16,23 @@ export const useUpdateStore = defineStore('update', () => {
   const checking = ref(false)
   const forbidden = ref(false)
   const installError = ref<string | null>(null)
+  // True from the confirm click until the backend reports its own state, so
+  // the UI shows progress immediately instead of after the first poll.
+  const starting = ref(false)
 
   let started = false
   let checkTimer: ReturnType<typeof setInterval> | null = null
   let pollTimer: ReturnType<typeof setTimeout> | null = null
   let healthTimer: ReturnType<typeof setTimeout> | null = null
   let loadedVersion = ''
+  let readyToastId = ''
 
   const state = computed(() => status.value?.state ?? 'idle')
-  const busy = computed(() => ACTIVE.includes(state.value))
+  const busy = computed(() => starting.value || ACTIVE.includes(state.value))
   const visible = computed(() => {
     const s = status.value
     if (!s) return false
-    if (busy.value || s.state === 'error') return true
+    if (busy.value || s.state === 'error' || s.state === 'ready') return true
     return !!s.available && !!s.latest && s.latest !== dismissedVersion.value
   })
 
@@ -69,7 +73,43 @@ export const useUpdateStore = defineStore('update', () => {
       if (!loadedVersion) { loadedVersion = current; announceIfUpdated(current) }
       else if (current !== loadedVersion) { stop(); reloadPage(); return }
     }
+    announceReady()
     syncPolling()
+  }
+
+  /** The update is downloaded and staged: ask before restarting VDock. */
+  function announceReady() {
+    if (state.value !== 'ready') { readyToastId = ''; return }
+    // Asked once per staged update; after Cancel the banner keeps a Restart button.
+    if (readyToastId) return
+    const notifications = useNotificationsStore()
+    readyToastId = notifications.info(
+      `VDock ${status.value?.latest ?? ''} is ready`.replace('  ', ' '),
+      'To finish the update, VDock needs to restart.',
+      {
+        duration: 0,
+        important: true,
+        actions: [
+          { label: 'Restart now', primary: true, handler: () => { notifications.dismiss(readyToastId); void restart() } },
+          { label: 'Cancel', handler: () => notifications.dismiss(readyToastId) },
+        ],
+      },
+    )
+  }
+
+  async function restart() {
+    forbidden.value = false
+    installError.value = null
+    starting.value = true
+    try {
+      await restartUpdate()
+      await refresh()
+    } catch (e: any) {
+      if (e?.response?.status === 403) forbidden.value = true
+      else installError.value = e?.response?.data?.error || e?.message || 'Restart failed'
+    } finally {
+      starting.value = false
+    }
   }
 
   function syncPolling() {
@@ -113,12 +153,15 @@ export const useUpdateStore = defineStore('update', () => {
     if (!ok) return
     forbidden.value = false
     installError.value = null
+    starting.value = true
     try {
       await installUpdate()
       await refresh()
     } catch (e: any) {
       if (e?.response?.status === 403) forbidden.value = true
       else installError.value = e?.response?.data?.error || e?.message || 'Update failed'
+    } finally {
+      starting.value = false
     }
   }
 
@@ -143,5 +186,5 @@ export const useUpdateStore = defineStore('update', () => {
     checkTimer = pollTimer = healthTimer = null
   }
 
-  return { status, dismissedVersion, checking, forbidden, installError, state, busy, visible, refresh, install, dismiss, start, stop }
+  return { status, dismissedVersion, checking, forbidden, installError, starting, state, busy, visible, refresh, install, restart, dismiss, start, stop }
 })

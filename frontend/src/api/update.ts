@@ -1,6 +1,6 @@
 import apiClient from '@/api/client'
 
-export type UpdateState = 'idle' | 'downloading' | 'installing' | 'restarting' | 'error'
+export type UpdateState = 'idle' | 'downloading' | 'installing' | 'restarting' | 'ready' | 'error'
 
 export interface UpdateStatus {
   current: string
@@ -24,6 +24,11 @@ export async function getUpdateStatus(force = false): Promise<UpdateStatus> {
 
 export async function installUpdate(): Promise<{ state: UpdateState }> {
   const { data } = await apiClient.post('/update/install')
+  return data
+}
+
+export async function restartUpdate(): Promise<{ state: UpdateState }> {
+  const { data } = await apiClient.post('/update/restart')
   return data
 }
 

@@ -8,6 +8,7 @@ import type { UpdateStatus } from '@/api/update'
 const api = vi.hoisted(() => ({
   getUpdateStatus: vi.fn(),
   installUpdate: vi.fn(),
+  restartUpdate: vi.fn().mockResolvedValue({ state: 'restarting' }),
   getHealthVersion: vi.fn(),
 }))
 vi.mock('@/api/update', () => api)
@@ -16,6 +17,7 @@ vi.mock('@/utils/reloadPage', () => reload)
 vi.mock('@/composables/useConfirm', () => ({ confirmDialog: vi.fn().mockResolvedValue(true) }))
 
 import { useUpdateStore } from '@/stores/update'
+import { useNotificationsStore } from '@/stores/notifications'
 import UpdateBanner from '@/components/UpdateBanner.vue'
 
 const base: UpdateStatus = {
@@ -107,6 +109,33 @@ describe('UpdateBanner', () => {
     await flushPromises()
     expect(w.find('[data-testid="update-now"]').exists()).toBe(false)
     expect(w.find('[data-testid="update-pc-hint"]').text()).toBe('Update from your PC')
+  })
+
+  it('shows progress right after confirming, before the backend reports a state', async () => {
+    let release: () => void = () => {}
+    api.installUpdate.mockReturnValue(new Promise<void>((r) => { release = r }))
+    const w = await mountBanner()
+    await w.find('[data-testid="update-now"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="update-progress"]').text()).toBe('Starting update…')
+    release()
+    await flushPromises()
+    expect(useUpdateStore().starting).toBe(false)
+  })
+
+  it('asks to restart once the update is ready, with Restart now and Cancel', async () => {
+    const w = await mountBanner({ state: 'ready', stateMessage: 'Update ready' })
+    const notes = useNotificationsStore()
+    const toast = notes.notifications.find(n => n.title.includes('is ready'))!
+    expect(toast.actions?.map(a => a.label)).toEqual(['Restart now', 'Cancel'])
+    expect(w.find('[data-testid="update-ready"]').exists()).toBe(true)
+    toast.actions![1].handler()  // Cancel: no restart, banner keeps the button
+    expect(api.restartUpdate).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="update-restart"]').exists()).toBe(true)
+    await w.find('[data-testid="update-restart"]').trigger('click')
+    await flushPromises()
+    expect(api.restartUpdate).toHaveBeenCalledTimes(1)
+    useUpdateStore().stop()
   })
 
   it('shows progress text while installing', async () => {

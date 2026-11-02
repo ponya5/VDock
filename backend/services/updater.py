@@ -38,8 +38,8 @@ NOTES_MAX = 4096
 EXIT_FOR_UPDATE = 75
 EXIT_DELAY = 1.5
 
-IDLE, DOWNLOADING, INSTALLING, RESTARTING, ERROR = (
-    'idle', 'downloading', 'installing', 'restarting', 'error')
+IDLE, DOWNLOADING, INSTALLING, RESTARTING, ERROR, READY = (
+    'idle', 'downloading', 'installing', 'restarting', 'error', 'ready')
 BUSY_STATES = (DOWNLOADING, INSTALLING, RESTARTING)
 
 AUTO_INSTALL_KINDS = ('windows-installer', 'source')
@@ -52,6 +52,9 @@ _cache: Optional[Dict[str, Any]] = None   # last check result (raw release info)
 _cache_at: float = 0.0                    # monotonic time of last good/failed check
 _last_forced: float = 0.0
 _state: Dict[str, str] = {'state': IDLE, 'message': ''}
+# Set when an update is staged (READY): applying it restarts VDock, so it waits
+# for the user to confirm.
+_pending_restart: Optional[Callable[[], None]] = None
 _started = False
 
 
@@ -221,8 +224,9 @@ def get_status(force: bool = False) -> Dict[str, Any]:
 
 def reset_cache() -> None:
     """Test helper: forget cached check and rate-limit/state bookkeeping."""
-    global _cache, _cache_at, _last_forced
+    global _cache, _cache_at, _last_forced, _pending_restart
     with _lock:
+        _pending_restart = None
         _cache = None
         _cache_at = 0.0
         _last_forced = 0.0
@@ -280,7 +284,7 @@ def begin_install() -> Tuple[bool, str]:
     Returns (started, reason). reason is 'busy' / 'no-update' when refused.
     """
     with _lock:
-        if _state['state'] in BUSY_STATES:
+        if _state['state'] in BUSY_STATES or _state['state'] == READY:
             return False, 'busy'
         info = _cache
         kind = detect_install_kind()
@@ -291,6 +295,36 @@ def begin_install() -> Tuple[bool, str]:
     threading.Thread(target=run_install, args=(info, kind),
                      name='update-install', daemon=True).start()
     return True, ''
+
+
+def begin_restart() -> Tuple[bool, str]:
+    """Apply a staged update (restart VDock). reason 'not-ready' when none is staged."""
+    global _pending_restart
+    with _lock:
+        action = _pending_restart
+        if _state['state'] != READY or action is None:
+            return False, 'not-ready'
+        _pending_restart = None
+        _state.update(state=RESTARTING, message='Restarting VDock')
+    threading.Thread(target=_run_restart, args=(action,),
+                     name='update-restart', daemon=True).start()
+    return True, ''
+
+
+def _run_restart(action: Callable[[], None]) -> None:
+    try:
+        action()
+    except Exception as exc:
+        logger.exception('Update restart failed')
+        _set_state(ERROR, _short_error(exc))
+
+
+def _stage(action: Callable[[], None]) -> None:
+    """Mark the update ready; ``action`` runs when the user confirms the restart."""
+    global _pending_restart
+    with _lock:
+        _pending_restart = action
+        _state.update(state=READY, message='Update ready - restart VDock to finish')
 
 
 def run_install(info: Dict[str, Any], kind: str) -> None:
@@ -414,16 +448,18 @@ def install_windows(info: Dict[str, Any]) -> None:
             _safe_unlink(installer)
             raise UpdateError('Download corrupted (checksum mismatch)')
 
-    _set_state(INSTALLING, 'Installing update')
     cmd_path = folder / 'run-update.cmd'
     # Bytes, not write_text(newline=''): that keyword needs Python 3.10, and the
     # script's own \r\n must not be translated again on Windows.
     cmd_path.write_bytes(build_cmd_script(installer).encode('utf-8'))
 
-    _start_cmd_script(cmd_path)
+    def apply() -> None:
+        _set_state(INSTALLING, 'Installing update')
+        _start_cmd_script(cmd_path)
+        _set_state(RESTARTING, 'Restarting VDock')
+        schedule_exit(EXIT_FOR_UPDATE)
 
-    _set_state(RESTARTING, 'Restarting VDock')
-    schedule_exit(EXIT_FOR_UPDATE)
+    _stage(apply)
 
 
 def _safe_unlink(path: Path) -> None:
@@ -475,8 +511,11 @@ def install_source(info: Dict[str, Any]) -> None:
     _set_state(INSTALLING, 'Building frontend')
     _run([_npm(), 'run', 'build'], frontend, 900, 'npm run build')
 
-    _set_state(RESTARTING, 'Restarting VDock')
-    restart_self(root)
+    def apply() -> None:
+        _set_state(RESTARTING, 'Restarting VDock')
+        restart_self(root)
+
+    _stage(apply)
 
 
 def restart_self(root: Path) -> None:
