@@ -18,7 +18,7 @@ export function markNetworkResume(): void {
 const inResumeGrace = () => Date.now() < resumeGraceUntil
 
 /** Stable per-browser id so the computer can list (and name) this device. */
-function deviceId(): string {
+export function deviceId(): string {
   try {
     let id = localStorage.getItem('vdock.deviceId')
     if (!id) {

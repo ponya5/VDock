@@ -1,6 +1,6 @@
 import { isImageBackground, resolveBackground } from '@/data/backgrounds'
 
-export interface SceneBg { image?: string }
+export interface SceneBg { image?: string; preset?: string }
 
 export interface PageBg {
   type: 'solid' | 'gradient' | 'image'
@@ -30,6 +30,8 @@ export function backgroundClassFor(
 ): string {
   if (page) return ''
   if (scene?.image) return 'dashboard-bg-custom'
+  // A scene preset replaces the global background, css or component alike.
+  if (scene?.preset) background = scene.preset
   if (isImageBackground(background)) return 'dashboard-bg-custom'
 
   const option = resolveBackground(background)

@@ -43,3 +43,18 @@ describe('background precedence: page > scene > global', () => {
     expect(style.background).toBe('linear-gradient(90deg, #000, #fff)')
   })
 })
+
+describe('scene preset background (DL-030)', () => {
+  test('a css preset on the scene beats the global background', () => {
+    expect(backgroundClassFor('ocean-breeze', { preset: 'neon-grid' })).toBe('dashboard-bg-neon-grid')
+  })
+
+  test('a component preset contributes no class or style', () => {
+    expect(backgroundClassFor('ocean-breeze', { preset: 'silk' })).toBe('')
+    expect(backgroundStyleFor('ocean-breeze', { preset: 'silk' })).toEqual({})
+  })
+
+  test('a scene image still wins over a preset-less global', () => {
+    expect(backgroundClassFor('aurora', { image: '/x.png' })).toBe('dashboard-bg-custom')
+  })
+})

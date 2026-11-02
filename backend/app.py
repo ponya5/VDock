@@ -193,6 +193,9 @@ job_runner.set_spawner(socketio.start_background_task)
 set_agent_events_emitter(lambda event, payload: socketio.emit(event, payload))
 # Toggle side changes reach every client too — same deck, same switch state.
 set_actions_emitter(lambda event, payload: socketio.emit(event, payload))
+# A device new to the deck (login, pairing, first sight) toasts on every screen.
+from services import devices as devices_service
+devices_service.set_emitter(lambda event, payload: socketio.emit(event, payload))
 # Volume changed anywhere (keys, flyout, another surface) → every client
 # follows. Same spawn contract as job_runner: a thread the server did not
 # spawn cannot emit in threading mode.
