@@ -202,8 +202,9 @@ export interface GridConfig {
 }
 
 export interface Background {
-  type: 'solid' | 'gradient' | 'image'
+  type: 'solid' | 'gradient' | 'image' | 'preset'
   color?: string
+  preset?: string  // id from the dashboard background list (data/backgrounds.ts)
   gradient?: {
     from: string
     to: string

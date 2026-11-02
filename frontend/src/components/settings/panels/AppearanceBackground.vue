@@ -64,10 +64,16 @@
             <input type="checkbox" :checked="!scene.disableAppBackground" @change="toggleAppDefaultBackgroundFor(scene, $event)" />
             <span class="track"></span>
           </label>
+          <BackgroundPicker
+            :model-value="scene.background?.preset ?? ''"
+            :groups="scenePresetGroups"
+            placeholder="From list…"
+            @update:model-value="setScenePresetFor(scene, $event)"
+          />
           <button type="button" class="btn sm" :disabled="uploadingSceneBackground" @click="pickSceneBackground(scene)">
-            {{ scene.background?.image ? 'Change…' : 'Set background' }}
+            {{ scene.background?.image ? 'Change image…' : 'Upload image' }}
           </button>
-          <button v-if="scene.background?.image" type="button" class="btn quiet sm" :title="`Remove ${scene.name} override`" @click="removeSceneBackgroundFor(scene)">
+          <button v-if="scene.background" type="button" class="btn quiet sm" :title="`Remove ${scene.name} override`" @click="removeSceneBackgroundFor(scene)">
             <FontAwesomeIcon :icon="['fas', 'trash']" />
           </button>
         </div>
@@ -193,6 +199,7 @@ function sceneEffectiveImage(scene: Scene): string | undefined {
   return scene.disableAppBackground ? undefined : sceneAppEntryFor(scene)?.image
 }
 function sceneBackgroundDesc(scene: Scene): string {
+  if (scene.background?.preset) return `${resolveBackground(scene.background.preset).label} (from list)`
   if (scene.background?.image) return 'Custom image override'
   if (scene.disableAppBackground) return 'Using the dashboard background'
   const app = sceneAppEntryFor(scene)
@@ -205,6 +212,15 @@ function pickSceneBackground(scene: Scene) {
 function toggleAppDefaultBackgroundFor(scene: Scene, event: Event) {
   const enabled = (event.target as HTMLInputElement).checked
   dashboardStore.updateScene(scene.id, { disableAppBackground: !enabled })
+}
+const scenePresetGroups = computed<BackgroundPickerGroup[]>(() => [
+  { label: 'Default', options: backgroundsByGroup.value.default },
+  { label: 'Gradients', options: backgroundsByGroup.value.gradient },
+  { label: 'Animated', options: backgroundsByGroup.value.animated },
+])
+function setScenePresetFor(scene: Scene, id: string) {
+  dashboardStore.updateScene(scene.id, { background: { type: 'preset', preset: id } })
+  notificationsStore.success('Scene background updated', `${resolveBackground(id).label} applied to "${scene.name}".`)
 }
 function removeSceneBackgroundFor(scene: Scene) {
   dashboardStore.updateScene(scene.id, { background: undefined })

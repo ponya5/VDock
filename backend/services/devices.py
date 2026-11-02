@@ -13,7 +13,7 @@ import re
 import secrets
 import time
 from threading import Lock
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from config import Config
 from utils.atomic import atomic_write_text
@@ -24,6 +24,13 @@ _TOUCH_EVERY_S = 60
 _lock = Lock()
 _state: Dict[str, Any] = {'path': None, 'devices': {}}
 _last_saved: Dict[str, float] = {}
+_emit: Optional[Callable[[str, Dict[str, Any]], None]] = None
+
+
+def set_emitter(emit: Callable[[str, Dict[str, Any]], None]) -> None:
+    """Provide the Socket.IO broadcast used to announce a new device."""
+    global _emit
+    _emit = emit
 
 
 def label_from_user_agent(user_agent: str) -> str:
@@ -95,6 +102,7 @@ def register(user_agent: str = '', ip: str = '', device_id: str = '') -> str:
     device_id = device_id if CLIENT_ID_RE.match(device_id or '') else secrets.token_urlsafe(9)
     with _lock:
         devices = _devices()
+        is_new = device_id not in devices
         devices[device_id] = {
             'id': device_id,
             'label': label_from_user_agent(user_agent),
@@ -107,6 +115,13 @@ def register(user_agent: str = '', ip: str = '', device_id: str = '') -> str:
             oldest = min(devices, key=lambda k: devices[k].get('last_seen', 0))
             del devices[oldest]
         _save()
+        label = devices[device_id]['label'] if device_id in devices else ''
+    # Only a device the deck has not listed before, and never this computer.
+    if is_new and _emit and ip not in ('127.0.0.1', '::1', ''):
+        try:
+            _emit('device:new', {'id': device_id, 'label': label})
+        except Exception:
+            pass  # a toast must never break a login
     return device_id
 
 

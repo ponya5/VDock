@@ -158,6 +158,12 @@
               <img :src="editorAppBackground.image" :alt="`${editorAppBackground.label} default`" />
             </div>
             <div class="scene-bg-actions">
+              <BackgroundPicker
+                :model-value="editedScene.background?.preset ?? ''"
+                :groups="presetGroups"
+                placeholder="Pick from background list…"
+                @update:model-value="setScenePreset"
+              />
               <input
                 ref="sceneFileInput"
                 type="file"
@@ -169,7 +175,7 @@
                 <FontAwesomeIcon :icon="['fas', uploading ? 'spinner' : 'upload']" :spin="uploading" />
                 {{ uploading ? 'Uploading…' : (editedScene.background?.image ? 'Replace Image' : 'Upload Image') }}
               </button>
-              <button v-if="editedScene.background?.image" class="btn btn-danger btn-sm" @click="removeSceneBackground">
+              <button v-if="editedScene.background" class="btn btn-danger btn-sm" @click="removeSceneBackground">
                 <FontAwesomeIcon :icon="['fas', 'trash']" /> Remove
               </button>
             </div>
@@ -181,7 +187,7 @@
               />
               <span>Use {{ editorAppEntry.label }} default background</span>
             </label>
-            <p class="form-help">Set a custom background image for this scene only. It overrides the {{ editorAppEntry ? editorAppEntry.label + ' default and ' : '' }}global dashboard background.</p>
+            <p class="form-help">Pick a background from the list or upload an image for this scene only. It overrides the {{ editorAppEntry ? editorAppEntry.label + ' default and ' : '' }}global dashboard background.</p>
           </div>
         </div>
 
@@ -236,6 +242,8 @@ import { ref, computed } from 'vue'
 import type { Scene } from '@/types'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import IconPicker from './IconPicker.vue'
+import BackgroundPicker from './BackgroundPicker.vue'
+import { useBackgroundPreview } from '@/composables/useBackgroundPreview'
 import apiClient from '@/api/client'
 import { appForScene } from '@/data/appBackgrounds'
 import { useAppIntegrations } from '@/composables/useAppIntegrations'
@@ -371,6 +379,16 @@ async function handleSceneBackgroundUpload(event: Event) {
     uploading.value = false
     if (target) target.value = ''
   }
+}
+
+const { backgroundsByGroup } = useBackgroundPreview()
+const presetGroups = computed(() => [
+  { label: 'Default', options: backgroundsByGroup.value.default },
+  { label: 'Gradients', options: backgroundsByGroup.value.gradient },
+  { label: 'Animated', options: backgroundsByGroup.value.animated },
+])
+function setScenePreset(id: string) {
+  editedScene.value.background = { type: 'preset', preset: id }
 }
 
 function removeSceneBackground() {

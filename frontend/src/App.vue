@@ -39,6 +39,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useActionCatalogStore } from '@/stores/actionCatalog'
 import socketClient from '@/api/socket'
+import { deviceId } from '@/api/client'
 import apiClient from '@/api/client'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -109,6 +110,11 @@ onMounted(async () => {
   await actionCatalogStore.load()
 
   socketClient.connect()
+  // Another phone/PC just joined this deck (DL-030). Skip our own announcement.
+  socketClient.on('device:new', (d: { id?: string; label?: string }) => {
+    if (!d?.id || d.id === deviceId()) return
+    notificationsStore.info('New device connected', d.label || 'A new device joined this deck.', { duration: 8000 })
+  })
   stopConnectionResume = initConnectionResume()
   stopProfileSync = initProfileSync()
   useAgentAlerts().init()

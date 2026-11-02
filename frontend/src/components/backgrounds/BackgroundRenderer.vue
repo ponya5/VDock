@@ -13,6 +13,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useDashboardStore } from '@/stores/dashboard'
 import { resolveBackground } from '@/data/backgrounds'
 import BackgroundHost from './BackgroundHost.vue'
 
@@ -24,7 +25,12 @@ import BackgroundHost from './BackgroundHost.vue'
 // every 400ms and called $forceUpdate(), which left the dashboard transparent
 // for up to 400ms before the replacement effect mounted -- the flicker.
 const store = useSettingsStore()
-const current = computed(() => resolveBackground(store.background))
+const dashboard = useDashboardStore()
+// A scene preset wins over the global background; a scene photo hides the animation.
+const current = computed(() => {
+  const bg = dashboard.currentScene?.background
+  return resolveBackground(bg?.type === 'preset' && bg.preset ? bg.preset : store.background)
+})
 
 // Components that can't initialize (e.g. WebGPU backgrounds on a browser with
 // no adapter) report through their onError prop. Show a quiet gradient rather

@@ -84,6 +84,7 @@ export interface BackgroundPickerGroup {
 const props = defineProps<{
   modelValue: string
   groups: BackgroundPickerGroup[]
+  placeholder?: string
 }>()
 
 const emit = defineEmits<{
@@ -100,7 +101,7 @@ const panelStyle = ref<Record<string, string>>({})
 
 const allOptions = computed(() => props.groups.flatMap(g => g.options))
 const selectedLabel = computed(
-  () => allOptions.value.find(o => o.id === props.modelValue)?.label ?? props.modelValue
+  () => allOptions.value.find(o => o.id === props.modelValue)?.label ?? (props.modelValue || props.placeholder || '')
 )
 const activeId = computed(() =>
   highlightedId.value ? optionDomId(highlightedId.value) : undefined
