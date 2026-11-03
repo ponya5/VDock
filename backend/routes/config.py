@@ -11,6 +11,7 @@ from config import (
 from auth import require_auth
 from services.app_paths import validate_path
 from services.network_profile import network_profile
+from services import connection_check
 
 config_bp = Blueprint('config', __name__)
 
@@ -53,6 +54,13 @@ def get_config():
             'packaged': bool(getattr(sys, 'frozen', False)),
         }
     })
+
+
+@config_bp.route('/api/config/connection-check', methods=['GET'])
+@require_auth
+def get_connection_check():
+    """"Why can't my phone connect?" (DL-160) — read-only diagnosis."""
+    return jsonify({'success': True, 'checks': connection_check.run_checks()})
 
 
 TOGGLE_KEYS = ('require_auth', 'allow_lan', 'use_ssl', 'enable_plugins', 'pair_only')

@@ -46,6 +46,32 @@ def isolated_device_registry(tmp_path):
         yield
 
 
+_REAL_CONFIG = Path(__file__).resolve().parents[1] / 'data' / 'config.json'
+
+
+@pytest.fixture(autouse=True)
+def isolated_data_dir(tmp_path_factory):
+    """Config writes (PUT /api/config, save_config) go to a throwaway dir.
+
+    Without this the suite rewrote the developer's real data/config.json: a
+    stale deck_host (192.168.9.9) that broke QR pairing, and a pytest temp
+    path in app_paths. Not built on ``monkeypatch`` (teardown order, see
+    isolated_device_registry); the real file is also checked, like .env.
+    """
+    before = _REAL_CONFIG.read_bytes() if _REAL_CONFIG.exists() else None
+    saved = Config.DATA_DIR
+    Config.DATA_DIR = tmp_path_factory.mktemp('vdock-data')
+    try:
+        yield
+    finally:
+        Config.DATA_DIR = saved
+    after = _REAL_CONFIG.read_bytes() if _REAL_CONFIG.exists() else None
+    if after != before:
+        if before is not None:
+            _REAL_CONFIG.write_bytes(before)
+        pytest.fail('A test modified the real backend/data/config.json.')
+
+
 @pytest.fixture(autouse=True)
 def restore_config():
     """Start every test from a clean auth baseline, restore flags after.

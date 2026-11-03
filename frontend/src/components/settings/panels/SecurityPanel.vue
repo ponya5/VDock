@@ -45,6 +45,7 @@
           </div>
         </div>
       </div>
+      <ConnectionCheck />
       <div v-if="phoneLive" class="row stack" data-testid="devices">
         <div class="row-text">
           <span class="label">Connected devices</span>
@@ -111,6 +112,7 @@ import { useServerConfig } from '@/composables/useServerConfig'
 import { useDeckAuth } from '@/composables/useDeckAuth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import DeckPasswordForm from '@/components/settings/DeckPasswordForm.vue'
+import ConnectionCheck from '@/components/settings/ConnectionCheck.vue'
 import { confirmDialog } from '@/composables/useConfirm'
 import { copyText } from '@/utils/copyText'
 import {
