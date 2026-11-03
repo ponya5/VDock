@@ -20,6 +20,8 @@ const settingsState = {
   agentWaitingGlowEnabled: ref<boolean | undefined>(true),
   agentWaitingGlowStyle: ref<'flash' | 'pulse' | 'orbit' | 'aurora' | 'sonar' | 'laser'>('flash'),
   animationsEnabled: ref(true),
+  agentSnoozeMinutes: ref<number | undefined>(undefined),
+  agentSnoozeEnabled: ref<boolean | undefined>(undefined),
 }
 const dashboardState = {
   isEditMode: ref(false),
@@ -75,6 +77,8 @@ vi.mock('@/stores/settings', async importOriginal => {
     useSettingsStore: () => ({
       agentWaitingGlowEnabled: settingsState.agentWaitingGlowEnabled.value,
       agentWaitingGlowStyle: settingsState.agentWaitingGlowStyle.value,
+      agentSnoozeMinutes: settingsState.agentSnoozeMinutes.value,
+      agentSnoozeEnabled: settingsState.agentSnoozeEnabled.value,
       animationsEnabled: settingsState.animationsEnabled.value,
     }),
   }
@@ -97,6 +101,7 @@ vi.mock('@/stores/notifications', () => ({
 // `dismissedSources` simulates the snooze path end-to-end through the seam.
 const waitingSceneIds = ref<Set<string>>(new Set())
 const dismissedSources = ref<Set<string>>(new Set())
+const dismissMs: Array<number | undefined> = []
 const dismissCalls: string[] = []
 
 const fakeWaiting = (scene: Scene) =>
@@ -110,7 +115,8 @@ const fakeWaiting = (scene: Scene) =>
 vi.mock('@/services/agentWaiting', () => ({
   sceneAgentIsWaiting: (scene: Scene) => fakeWaiting(scene) !== null,
   sceneWaitingAgent: (scene: Scene) => fakeWaiting(scene),
-  dismissAgentWaiting: (source: string) => {
+  dismissAgentWaiting: (source: string, ms?: number) => {
+    dismissMs.push(ms)
     dismissCalls.push(source)
     dismissedSources.value.add(source)
   },
@@ -237,6 +243,27 @@ describe('AgentWaitingGlow', () => {
     await wrapper.find('[data-testid="dismiss-btn"]').trigger('click')
     expect(dismissCalls).toEqual(['claude'])
     expect(wrapper.find('.agent-waiting-snooze').exists()).toBe(false)
+  })
+
+  it('labels the Snooze button with the configured length (default 3)', async () => {
+    settingsState.agentSnoozeMinutes.value = 10
+    const wrapper = mountGlow()
+    expect(wrapper.find('.snooze-btn').text()).toBe('Snooze 10m')
+    dismissMs.length = 0
+    await wrapper.find('.snooze-btn').trigger('click')
+    expect(dismissMs).toEqual([600_000])
+    settingsState.agentSnoozeMinutes.value = undefined
+    expect(SETTINGS_DEFAULTS.agentSnoozeMinutes).toBe(3)
+  })
+
+  it('hides Snooze (keeps Dismiss) when disabled; clamps odd minutes', () => {
+    settingsState.agentSnoozeEnabled.value = false
+    expect(mountGlow().findAll('.snooze-btn').map(b => b.text())).toEqual(['Dismiss'])
+    settingsState.agentSnoozeEnabled.value = undefined
+    settingsState.agentSnoozeMinutes.value = 9999
+    expect(mountGlow().find('.snooze-btn').text()).toBe('Snooze 240m')
+    settingsState.agentSnoozeMinutes.value = undefined
+    expect(SETTINGS_DEFAULTS.agentSnoozeEnabled).toBe(true)
   })
 
   it('leaves nothing behind after Snooze — no resume/undo chip', async () => {

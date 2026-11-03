@@ -98,6 +98,8 @@ export const SETTINGS_DEFAULTS = {
   agentAlertsEnabled: true,
   agentWaitingGlowEnabled: true,
   agentWaitingGlowStyle: 'flash' as const,
+  agentSnoozeEnabled: true,
+  agentSnoozeMinutes: 3,
   agentWaitingDockEnabled: true,
   missionControlEnabled: true,
   agentAutoFocusScene: true,
@@ -219,6 +221,8 @@ export interface PersistedUserSettings {
   agentAlertsEnabled: boolean
   agentWaitingGlowEnabled: boolean
   agentWaitingGlowStyle: 'flash' | 'pulse' | 'orbit' | 'aurora' | 'sonar' | 'laser'
+  agentSnoozeEnabled: boolean
+  agentSnoozeMinutes: number
   agentWaitingDockEnabled: boolean
   /** Mission Control (all-sessions dialog + its entry points) on/off. */
   missionControlEnabled: boolean
@@ -384,6 +388,8 @@ export const useSettingsStore = defineStore('settings', () => {
   // Frame style for the waiting alert — flash double-blinks, pulse breathes
   // softly, orbit runs the travelling comet (DL-080 follow-up #2).
   const agentWaitingGlowStyle = ref<'flash' | 'pulse' | 'orbit' | 'aurora' | 'sonar' | 'laser'>('flash')
+  const agentSnoozeEnabled = ref(true)
+  const agentSnoozeMinutes = ref(3)
   const agentWaitingDockEnabled = ref(true)
   const missionControlEnabled = ref(true)
   const agentAutoFocusScene = ref(true)
@@ -592,6 +598,8 @@ export const useSettingsStore = defineStore('settings', () => {
       agentAlertsEnabled: agentAlertsEnabled.value,
       agentWaitingGlowEnabled: agentWaitingGlowEnabled.value,
       agentWaitingGlowStyle: agentWaitingGlowStyle.value,
+      agentSnoozeEnabled: agentSnoozeEnabled.value,
+      agentSnoozeMinutes: agentSnoozeMinutes.value,
       agentWaitingDockEnabled: agentWaitingDockEnabled.value,
       missionControlEnabled: missionControlEnabled.value,
       agentAutoFocusScene: agentAutoFocusScene.value,
@@ -697,6 +705,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
     if (settings.agentWaitingGlowEnabled !== undefined) agentWaitingGlowEnabled.value = settings.agentWaitingGlowEnabled
     if (settings.agentWaitingGlowStyle !== undefined) agentWaitingGlowStyle.value = settings.agentWaitingGlowStyle
+    if (settings.agentSnoozeEnabled !== undefined) agentSnoozeEnabled.value = settings.agentSnoozeEnabled
+    if (settings.agentSnoozeMinutes !== undefined) agentSnoozeMinutes.value = settings.agentSnoozeMinutes
     if (settings.agentWaitingDockEnabled !== undefined) agentWaitingDockEnabled.value = settings.agentWaitingDockEnabled
     if (settings.missionControlEnabled !== undefined) missionControlEnabled.value = settings.missionControlEnabled
     if (settings.agentAutoFocusScene !== undefined) agentAutoFocusScene.value = settings.agentAutoFocusScene
@@ -829,6 +839,8 @@ export const useSettingsStore = defineStore('settings', () => {
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         agentWaitingGlowEnabled: settings.agentWaitingGlowEnabled ?? true,
         agentWaitingGlowStyle: settings.agentWaitingGlowStyle ?? 'flash',
+        agentSnoozeEnabled: settings.agentSnoozeEnabled ?? true,
+        agentSnoozeMinutes: settings.agentSnoozeMinutes ?? 3,
         agentWaitingDockEnabled: settings.agentWaitingDockEnabled ?? true,
         missionControlEnabled: settings.missionControlEnabled ?? true,
         agentAutoFocusScene: settings.agentAutoFocusScene ?? true,
@@ -1082,6 +1094,8 @@ export const useSettingsStore = defineStore('settings', () => {
       agentAlertsEnabled,
       agentWaitingGlowEnabled,
       agentWaitingGlowStyle,
+      agentSnoozeEnabled,
+      agentSnoozeMinutes,
       agentWaitingDockEnabled,
     missionControlEnabled,
       missionControlEnabled,
@@ -1341,6 +1355,8 @@ export const useSettingsStore = defineStore('settings', () => {
     agentAlertsEnabled,
     agentWaitingGlowEnabled,
     agentWaitingGlowStyle,
+    agentSnoozeEnabled,
+    agentSnoozeMinutes,
     agentWaitingDockEnabled,
     agentAutoFocusScene,
     autoSceneClaudeInCursor,

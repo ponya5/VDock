@@ -90,6 +90,8 @@ ALLOWED_USER_SETTING_KEYS = {
     # DL-119: waiting glow on/off + style, and the pinned waiting-dock chips.
     'agentWaitingGlowEnabled',
     'agentWaitingGlowStyle',
+    'agentSnoozeEnabled',
+    'agentSnoozeMinutes',
     'agentWaitingDockEnabled',
     # Mission Control (all-sessions dialog) on/off.
     'missionControlEnabled',
