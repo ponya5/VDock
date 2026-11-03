@@ -113,6 +113,16 @@ html.reveal-fab-visible .agent-waiting-dock {
   );
 }
 
+/* The "waiting for input" pill (AgentWaitingGlow) fills the bottom-centre
+   strip — on a phone it reaches under this corner, so sit above it. */
+html.agent-pill-visible .agent-waiting-dock {
+  bottom: calc(
+    max(clamp(10px, 2.4vh, 22px), env(safe-area-inset-bottom, 0px))
+    + max(56px, calc(56px * min(var(--touch-multiplier, 1), 1.6)))
+    + 12px
+  );
+}
+
 html.reveal-fab-footer .agent-waiting-dock {
   bottom: calc(
     max(44px, calc(56px * var(--touch-multiplier, 1))) + 10px

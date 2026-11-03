@@ -26,6 +26,15 @@
             <label class="switch"><span class="sr-only">Enable auto switching</span><input type="checkbox" :checked="autoSwitchingEnabled" @change="toggleAutoSwitching" /><span class="track"></span></label>
           </div>
         </div>
+        <div v-if="autoSwitchingEnabled" class="row">
+          <div class="row-text">
+            <span class="label">Claude in Cursor → Claude scene</span>
+            <p>While Claude Code is running in Cursor's terminal (working, asking permission, or waiting for you), show the Claude scene instead of the Cursor scene. Back to Cursor when the session ends.</p>
+          </div>
+          <div class="row-control">
+            <label class="switch"><span class="sr-only">Claude in Cursor shows the Claude scene</span><input type="checkbox" :checked="settingsStore.autoSceneClaudeInCursor" @change="settingsStore.autoSceneClaudeInCursor = !settingsStore.autoSceneClaudeInCursor" /><span class="track"></span></label>
+          </div>
+        </div>
         <div v-if="autoSwitchingEnabled" class="row row-status-row">
           <div class="auto-switch-status">
             <FontAwesomeIcon :icon="['fas', 'circle-check']" class="status-icon success" />

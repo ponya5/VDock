@@ -190,7 +190,8 @@ export function useSystemStats() {
       cpuPerCore: Array.isArray(data?.cpu?.per_cpu_percent)
         ? data.cpu.per_cpu_percent.map((p: any) => num(p) ?? 0)
         : [],
-      cpuFreqMhz: num(data?.cpu?.frequency_current),
+      // 0 = the backend couldn't read it (Apple Silicon) — show nothing, not "0.0 GHz".
+      cpuFreqMhz: num(data?.cpu?.frequency_current) || null,
       memUsedGb: num(data?.memory?.used_gb),
       memTotalGb: num(data?.memory?.total_gb),
       diskPartitions: pickDiskPartitions(data?.disk),

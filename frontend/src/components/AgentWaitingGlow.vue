@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
@@ -90,6 +90,13 @@ const isWaiting = computed(() =>
   !dashboardStore.isEditMode &&
   waitingInfo.value !== null
 )
+
+// The snooze pill owns the bottom-centre strip; this html class lets the
+// bottom-right session chips (AgentWaitingDock) lift above it instead of
+// overlapping on phones/landscape.
+const PILL_CLASS = 'agent-pill-visible'
+watch(isWaiting, (on) => document.documentElement.classList.toggle(PILL_CLASS, on), { immediate: true })
+onUnmounted(() => document.documentElement.classList.remove(PILL_CLASS))
 
 const waitingLabel = computed(() => waitingInfo.value?.profile?.label ?? 'Agent')
 const brand = computed(() => agentBrandFor(waitingInfo.value?.entry.source))

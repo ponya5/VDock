@@ -151,6 +151,11 @@ onMounted(async () => {
     const idx = profile.scenes.findIndex(s => s.id === sceneId)
     if (idx >= 0) dashboardStore.setScene(idx)
   })
+  // DL-159: Claude CLI running in Cursor → the Claude scene (off via Settings).
+  autoSceneSwitcher.setClaudeSceneSource(
+    () => dashboardStore.currentProfile?.scenes.find(s => s.appId === 'claude-code')?.id ?? null,
+    () => useSettingsStore().autoSceneClaudeInCursor !== false,
+  )
   const syncAutoSwitch = () => {
     autoSceneSwitcher.updateIntegrations(integrationsRef.value)
     if (autoSwitchRef.value) void autoSceneSwitcher.enable()

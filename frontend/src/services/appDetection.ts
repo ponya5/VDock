@@ -26,6 +26,7 @@
  *
  * Module-level singleton: one poller no matter how many consumers.
  */
+import { exeKey } from '@/utils/appExe'
 import { ref, shallowRef, type Ref } from 'vue'
 import apiClient from '@/api/client'
 import type { AppProfileDto } from '@/api/appProfiles'
@@ -244,6 +245,10 @@ for (const cat of templateCategories) {
     if (t.logo) LOGO_BY_ID.set(t.id, t.logo)
   }
 }
+// Apps with a logo but no gallery template, keyed by exeKey() of the scene's app.
+const LOGO_BY_EXE: Record<string, string> = {
+  spotify: '/logos/spotify-color.png',
+}
 const PROFILE_TO_TEMPLATE_ID: Record<string, string> = {
   'copilot': 'github-copilot',
 }
@@ -265,6 +270,8 @@ export function sceneLogo(
       ?? LOGO_BY_ID.get(PROFILE_TO_TEMPLATE_ID[canonical] ?? '')
     if (viaProfile) return viaProfile
   }
+  const exeLogo = LOGO_BY_EXE[exeKey(sceneExe(scene, integrations))]
+  if (exeLogo) return exeLogo
   const profileId = resolveSceneProfileId(scene, integrations)
   if (!profileId) return null
   const tid = PROFILE_TO_TEMPLATE_ID[profileId] ?? profileId

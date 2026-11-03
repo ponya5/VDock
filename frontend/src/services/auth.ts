@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { deviceId } from '@/api/deviceId'
 import axios from 'axios'
 
 /**
@@ -167,7 +168,7 @@ export interface LoginResult {
 /** Trade a QR pairing token for a login (DL-147). True when this device is now signed in. */
 export async function exchangePairToken(pairToken: string): Promise<boolean> {
   try {
-    const res = await axios.post('/api/auth/pair', { token: pairToken }, { timeout: 10000 })
+    const res = await axios.post('/api/auth/pair', { token: pairToken }, { timeout: 10000, headers: { 'X-Device-Id': deviceId() } })
     const issued = res.data?.token
     if (!issued) return false
     setAuthToken(issued)
@@ -181,7 +182,7 @@ export async function exchangePairToken(pairToken: string): Promise<boolean> {
 
 export async function login(password: string): Promise<LoginResult> {
   try {
-    const res = await axios.post('/api/auth/login', { password }, { timeout: 10000 })
+    const res = await axios.post('/api/auth/login', { password }, { timeout: 10000, headers: { 'X-Device-Id': deviceId() } })
     const issued = res.data?.token
     if (!issued) return { ok: false, error: 'Server returned no token' }
     setAuthToken(issued)

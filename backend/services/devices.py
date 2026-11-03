@@ -103,13 +103,15 @@ def register(user_agent: str = '', ip: str = '', device_id: str = '') -> str:
     with _lock:
         devices = _devices()
         is_new = device_id not in devices
+        known = devices.get(device_id) or {}
         devices[device_id] = {
             'id': device_id,
-            'label': label_from_user_agent(user_agent),
-            'paired_at': now,
+            'label': known.get('label') or label_from_user_agent(user_agent),
+            'paired_at': known.get('paired_at', now),
             'last_seen': now,
             'ip': ip or '',
-            'named': ip in ('127.0.0.1', '::1'),
+            # A device that signs in again keeps the name the user gave it.
+            'named': bool(known.get('named')) or ip in ('127.0.0.1', '::1'),
         }
         while len(devices) > MAX_DEVICES:
             oldest = min(devices, key=lambda k: devices[k].get('last_seen', 0))
