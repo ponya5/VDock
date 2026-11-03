@@ -36,10 +36,14 @@ _GUARDED_SETTINGS = (
 
 
 @pytest.fixture(autouse=True)
-def isolated_device_registry(tmp_path, monkeypatch):
-    """Logins register devices (DL-154); keep that out of the real data/ dir."""
-    from services import devices
-    monkeypatch.setattr(devices, '_path', lambda: tmp_path / 'devices.json')
+def isolated_device_registry(tmp_path):
+    """Logins register devices (DL-154); keep that out of the real data/ dir.
+
+    Not built on ``monkeypatch``: requesting it from an autouse fixture changes
+    teardown order and breaks real_env_file_is_never_written.
+    """
+    with mock.patch('services.devices._path', lambda: tmp_path / 'devices.json'):
+        yield
 
 
 @pytest.fixture(autouse=True)
