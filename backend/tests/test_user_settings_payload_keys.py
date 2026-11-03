@@ -69,6 +69,8 @@ FULL_SETTINGS_PAYLOAD = {
     'agentAlertsEnabled': True,
     'agentWaitingGlowEnabled': True,
     'agentWaitingGlowStyle': 'pulse',
+    'agentSnoozeEnabled': False,
+    'agentSnoozeMinutes': 10,
     'agentWaitingDockEnabled': True,
     'missionControlEnabled': False,
     'agentAutoFocusScene': True,

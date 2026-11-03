@@ -38,7 +38,7 @@
         <img v-if="brand.logo" :src="brand.logo" alt="" class="snooze-logo" data-testid="snooze-logo" />
         <FontAwesomeIcon v-else :icon="['fas', 'robot']" class="snooze-icon" />
         <span class="snooze-label">{{ waitingLabel }} is waiting for input</span>
-        <button type="button" class="snooze-btn" @click="snooze">Snooze 3m</button>
+        <button v-if="settingsStore.agentSnoozeEnabled !== false" type="button" class="snooze-btn" @click="snooze">Snooze {{ snoozeMinutes }}m</button>
         <button type="button" class="snooze-btn is-secondary" data-testid="dismiss-btn" title="Silence until the agent is idle again" @click="dismiss">Dismiss</button>
       </div>
     </Transition>
@@ -105,8 +105,12 @@ const glowStyle = computed(() => settingsStore.agentWaitingGlowStyle ?? 'flash')
 // Styles drawn by the extra effect layer (the frame itself just holds steady).
 const fxStyle = computed(() => ['aurora', 'sonar', 'laser'].includes(glowStyle.value))
 
+const snoozeMinutes = computed(() => {
+  const m = Number(settingsStore.agentSnoozeMinutes)
+  return Number.isFinite(m) && m >= 1 ? Math.min(Math.round(m), 240) : 3
+})
 function snooze() {
-  dismissAgentWaiting(waitingInfo.value?.entry.source)
+  dismissAgentWaiting(waitingInfo.value?.entry.source, snoozeMinutes.value * 60_000)
 }
 // Full dismiss: no timer — stays quiet until the agent next goes idle.
 function dismiss() {

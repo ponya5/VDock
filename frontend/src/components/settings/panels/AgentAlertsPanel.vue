@@ -33,10 +33,28 @@
       <div class="row">
         <div class="row-text">
           <span class="label">Glow when an agent is waiting</span>
-          <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Snooze 3m on the frame to quiet it for 3 minutes, or Dismiss to silence it until the agent is idle again.</p>
+          <p>Flashes the dashboard frame while any agent session sits idle, rings that scene's pill, and flags the idle session. Tap Snooze on the frame to quiet it for the length set below, or Dismiss to silence it until the agent is idle again.</p>
         </div>
         <div class="row-control">
           <label class="switch"><span class="sr-only">Agent waiting glow</span><input type="checkbox" :checked="settingsStore.agentWaitingGlowEnabled" @change="toggleWaitingGlow" /><span class="track"></span></label>
+        </div>
+      </div>
+      <div class="row" v-if="settingsStore.agentWaitingGlowEnabled">
+        <div class="row-text">
+          <span class="label">Snooze button</span>
+          <p>Show a Snooze button on the waiting bar. Off leaves only Dismiss.</p>
+        </div>
+        <div class="row-control">
+          <label class="switch"><span class="sr-only">Snooze button</span><input type="checkbox" v-model="settingsStore.agentSnoozeEnabled" /><span class="track"></span></label>
+        </div>
+      </div>
+      <div class="row" v-if="settingsStore.agentWaitingGlowEnabled && settingsStore.agentSnoozeEnabled">
+        <div class="row-text">
+          <span class="label">Snooze length (minutes)</span>
+          <p>How long Snooze quiets the glow before a still-idle agent alerts again. 1 to 240.</p>
+        </div>
+        <div class="row-control">
+          <input type="number" min="1" max="240" step="1" v-model.number="settingsStore.agentSnoozeMinutes" class="select w-220" aria-label="Snooze length in minutes" />
         </div>
       </div>
       <div class="row" v-if="settingsStore.agentWaitingGlowEnabled">
