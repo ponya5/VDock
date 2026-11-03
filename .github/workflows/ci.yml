@@ -28,7 +28,8 @@ jobs:
         # skip everywhere else, so without windows-latest a Windows regression
         # from a macOS fix could never fail CI (DL-007).
         include:
-          - { os: ubuntu-latest, python-version: '3.9' }
+          # ubuntu-latest is Ubuntu 26.04, which has no Python 3.9 build.
+          - { os: ubuntu-24.04, python-version: '3.9' }
           - { os: ubuntu-latest, python-version: '3.12' }
           - { os: windows-latest, python-version: '3.12' }
           - { os: macos-latest, python-version: '3.12' }
