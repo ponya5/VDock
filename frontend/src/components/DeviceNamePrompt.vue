@@ -25,20 +25,33 @@ import { fetchDevices, renameDevice, type PairedDevice } from '@/services/pairin
 // marks loopback (this computer) as already named, so only phones see it.
 const current = ref<PairedDevice | null>(null)
 const name = ref('')
-const skipped = new Set<string>()
+// Remembered on this browser too: a re-sign-in (new device record) or "Not now"
+// must not bring the question back on every refresh.
+const LOCAL_KEY = 'vdock.deviceName'
+const SKIP_KEY = 'vdock.deviceNameSkipped'
+const read = (key: string) => { try { return localStorage.getItem(key) } catch { return null } }
+const write = (key: string, value: string) => { try { localStorage.setItem(key, value) } catch { /* ignore */ } }
 
 async function check() {
   if (authState.required && !authState.unlocked) return
   const me = (await fetchDevices())?.find(d => d.current && !d.named)
-  if (me && !skipped.has(me.id)) { current.value = me; name.value = me.label }
+  if (!me) return
+  const remembered = read(LOCAL_KEY)
+  if (remembered) { await renameDevice(me.id, remembered); return }
+  if (read(SKIP_KEY) === '1') return
+  current.value = me
+  name.value = me.label
 }
 watch(() => authState.unlocked, check, { immediate: true })
 
 async function save() {
-  if (current.value && await renameDevice(current.value.id, name.value)) current.value = null
+  if (current.value && await renameDevice(current.value.id, name.value)) {
+    write(LOCAL_KEY, name.value.trim())
+    current.value = null
+  }
 }
 function skip() {
-  if (current.value) skipped.add(current.value.id)
+  write(SKIP_KEY, '1')
   current.value = null
 }
 </script>

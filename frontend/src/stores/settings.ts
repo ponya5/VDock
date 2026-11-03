@@ -101,6 +101,7 @@ export const SETTINGS_DEFAULTS = {
   agentWaitingDockEnabled: true,
   missionControlEnabled: true,
   agentAutoFocusScene: true,
+  autoSceneClaudeInCursor: true,
   mcpEnabled: true,
   tutorialCompleted: false,
   activeProfileId: null as string | null,
@@ -222,6 +223,8 @@ export interface PersistedUserSettings {
   /** Mission Control (all-sessions dialog + its entry points) on/off. */
   missionControlEnabled: boolean
   agentAutoFocusScene: boolean
+  /** DL-159: Cursor in front + a live Claude CLI session → the Claude scene. */
+  autoSceneClaudeInCursor: boolean
   /** App->scene links + auto-switch toggle; shared across windows via the server. */
   appIntegrations?: AppIntegration[]
   autoSceneSwitching?: boolean
@@ -384,6 +387,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const agentWaitingDockEnabled = ref(true)
   const missionControlEnabled = ref(true)
   const agentAutoFocusScene = ref(true)
+  const autoSceneClaudeInCursor = ref(true)
   const mcpEnabled = ref(true)
   // Persisted onboarding flag — true once the tour is finished or skipped.
   // Server-backed (not localStorage) so it survives cache clears and is
@@ -591,6 +595,7 @@ export const useSettingsStore = defineStore('settings', () => {
       agentWaitingDockEnabled: agentWaitingDockEnabled.value,
       missionControlEnabled: missionControlEnabled.value,
       agentAutoFocusScene: agentAutoFocusScene.value,
+      autoSceneClaudeInCursor: autoSceneClaudeInCursor.value,
       appIntegrations: JSON.parse(JSON.stringify(useAppIntegrations().value)),
       autoSceneSwitching: useAutoSceneSwitching().value,
       mcpEnabled: mcpEnabled.value,
@@ -695,6 +700,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.agentWaitingDockEnabled !== undefined) agentWaitingDockEnabled.value = settings.agentWaitingDockEnabled
     if (settings.missionControlEnabled !== undefined) missionControlEnabled.value = settings.missionControlEnabled
     if (settings.agentAutoFocusScene !== undefined) agentAutoFocusScene.value = settings.agentAutoFocusScene
+    if (settings.autoSceneClaudeInCursor !== undefined) autoSceneClaudeInCursor.value = settings.autoSceneClaudeInCursor
     // Only adopt a server list that has content, so a fresh window never wipes
     // links this client still holds locally (they migrate up on the next save).
     if (Array.isArray(settings.appIntegrations) && settings.appIntegrations.length > 0) {
@@ -826,6 +832,7 @@ export const useSettingsStore = defineStore('settings', () => {
         agentWaitingDockEnabled: settings.agentWaitingDockEnabled ?? true,
         missionControlEnabled: settings.missionControlEnabled ?? true,
         agentAutoFocusScene: settings.agentAutoFocusScene ?? true,
+        autoSceneClaudeInCursor: settings.autoSceneClaudeInCursor ?? true,
         mcpEnabled: settings.mcpEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
         activeProfileId: settings.activeProfileId ?? null,
@@ -1079,6 +1086,7 @@ export const useSettingsStore = defineStore('settings', () => {
     missionControlEnabled,
       missionControlEnabled,
       agentAutoFocusScene,
+      autoSceneClaudeInCursor,
       mcpEnabled,
       tutorialCompleted,
       activeProfileId,
@@ -1335,6 +1343,7 @@ export const useSettingsStore = defineStore('settings', () => {
     agentWaitingGlowStyle,
     agentWaitingDockEnabled,
     agentAutoFocusScene,
+    autoSceneClaudeInCursor,
     mcpEnabled,
     tutorialCompleted,
     activeProfileId,

@@ -228,3 +228,19 @@ describe('useSystemStats honest states', () => {
     expect(s.error.value).toBeTruthy()
   })
 })
+
+describe('useSystemStats CPU frequency', () => {
+  it('maps 0 (Apple Silicon: backend cannot read it) to null, not "0.0 GHz"', async () => {
+    get.mockResolvedValue(payload({ cpu: { usage_percent: 10, frequency_current: 0 } }))
+    const s = useSystemStats()
+    await s.refresh()
+    expect(s.stats.value!.cpuFreqMhz).toBeNull()
+  })
+
+  it('keeps a real reading', async () => {
+    get.mockResolvedValue(payload({ cpu: { usage_percent: 10, frequency_current: 3400 } }))
+    const s = useSystemStats()
+    await s.refresh()
+    expect(s.stats.value!.cpuFreqMhz).toBe(3400)
+  })
+})
