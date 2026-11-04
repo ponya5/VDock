@@ -51,6 +51,19 @@ const aiAssistants: AppTemplate[] = [
     { label: "Recents", icon: ["fas","clock-rotate-left"], action: url("https://claude.ai/recents"), tooltip: "Recent chats" },
     { label: "Settings", icon: ["fas","gear"], action: url("https://claude.ai/settings"), tooltip: "Claude settings" },
   ]},
+  { id: "claude-cowork", name: "Claude Cowork", description: "Claude Cowork: agentic tasks on your files, scheduling, connectors and plugins", icon: ["fas","people-group"], logo: "/logos/claudecowork-color.png", color: "#d97757", buttons: [
+    // No official Cowork shortcuts or deep links exist (Anthropic docs), so every button is the app launcher or a documented claude.ai/claude.com page.
+    { label: "Open Claude", icon: ["fas","window-maximize"], action: prog("Claude"), tooltip: "Launch the Claude desktop app, then pick Cowork" },
+    { label: "Quick Entry", icon: ["fas","bolt"], action: hk(["ctrl","shift","space"]), tooltip: "Summon Claude from any app (unofficial shortcut; set it in Claude desktop settings)" },
+    { label: "Scheduled", icon: ["fas","clock"], action: url("https://claude.ai/scheduled"), tooltip: "View and manage scheduled tasks" },
+    { label: "Connectors", icon: ["fas","plug"], action: url("https://claude.ai/settings/connectors"), tooltip: "Slack, Drive, Notion, Gmail and other connectors" },
+    { label: "Plugins", icon: ["fas","puzzle-piece"], action: url("https://claude.com/plugins"), tooltip: "Browse plugins (skills, connectors, sub-agents)" },
+    { label: "Projects", icon: ["fas","folder-open"], action: url("https://claude.ai/projects"), tooltip: "Workspaces with their own files, instructions and memory" },
+    { label: "Cowork Settings", icon: ["fas","gear"], action: url("https://claude.ai/settings/cowork"), tooltip: "Global instructions, browser, permissions" },
+    { label: "Usage", icon: ["fas","gauge-high"], action: url("https://claude.ai/settings/usage"), tooltip: "Check your usage limits (Cowork tasks use a lot)" },
+    { label: "Download", icon: ["fas","download"], action: url("https://claude.com/download"), tooltip: "Get or update the Claude desktop app" },
+    { label: "Help", icon: ["fas","circle-question"], action: url("https://support.claude.com/en/articles/13345190-get-started-with-cowork"), tooltip: "Get started with Cowork" },
+  ]},
   { id: "gemini", name: "Gemini", description: "Google Gemini shortcuts", icon: ["fas","gem"], logo: "/logos/gemini-color.png", color: "#4285f4", buttons: [
     { label: "Open Gemini", icon: ["fas","arrow-up-right-from-square"], action: url("https://gemini.google.com"), tooltip: "Open Gemini" },
     // Real deep link — the web app has no new-chat keyboard shortcut, but

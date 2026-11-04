@@ -54,6 +54,15 @@ const logoPresets: ButtonPreset[] = [
     keywords: ['anthropic', 'chatbot']
   },
   {
+    id: 'claude-cowork',
+    name: 'Claude Cowork',
+    category: 'ai',
+    brand: { primary: '#D97757' },
+    icon: { type: 'logo', value: '/logos/claudecowork-color.png' },
+    action: { type: 'cross_platform', config: { action: 'open_app', path: 'Claude' } },
+    keywords: ['claude', 'anthropic', 'cowork', 'agent', 'desktop']
+  },
+  {
     id: 'claude-code',
     name: 'Claude Code',
     category: 'dev',
