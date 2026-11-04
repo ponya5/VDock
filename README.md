@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/fd467aec-f5a0-4614-b37c-757e29974d23
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/ponya5/VDock?color=6ea8ff)](https://github.com/ponya5/VDock/releases/latest)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#-install-in-3-minutes)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#-install-in-1-minute)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-join-the-community)
 
 <table>
@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/fd467aec-f5a0-4614-b37c-757e29974d23
 <td align="center"><a href="#-any-screen-is-a-deck"><b>Any screen</b></a></td>
 <td align="center"><a href="#-a-dashboard-you-design"><b>Your design</b></a></td>
 <td align="center"><a href="#-an-interactive-screensaver"><b>Screensaver</b></a></td>
-<td align="center"><a href="#-install-in-3-minutes"><b>Install</b></a></td>
+<td align="center"><a href="#-install-in-1-minute"><b>Install</b></a></td>
 <td align="center"><a href="#-join-the-community"><b>Contribute</b></a></td>
 </tr>
 </table>
@@ -163,7 +163,7 @@ VDock can press keys and type into your terminal, so trust matters. **Everything
 
 ---
 
-## 🚀 Install in 3 minutes
+## 🚀 Install in 1 minute
 
 **You need:** a Windows, macOS or Linux PC, and a screen to use as the deck (optional: the PC screen works too).
 
