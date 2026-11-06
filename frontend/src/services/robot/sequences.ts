@@ -59,6 +59,145 @@ export const SEQUENCES = {
   'what-now': { duration: 2600, steps: [{ at: 0, expr: 'confused' }, { at: 2200, expr: 'neutral' }] },
   'gasp-wink': { duration: 2200, steps: [{ at: 0, expr: 'gasp', nudge: { bounce: -8 } }, { at: 500, nudge: { bounce: 0 } }, { at: 1100, expr: 'startled' }, { at: 1700, expr: 'wink' }] },
   'evil-plan': { duration: 2400, steps: [{ at: 0, expr: 'smirk' }, { at: 900, expr: 'evil-grin' }, { at: 2000, expr: 'smirk' }] },
+  // DL-163: expanded event sequences (getting bored, typing a lot, nodding when AI agent is idle, etc.)
+  'bored-drum': {
+    duration: 3800,
+    steps: [
+      { at: 0, expr: 'bored-sigh', scene: 'bored-desk' },
+      { at: 900, nudge: { lookX: 0.5, lookY: -0.3 } },
+      { at: 1800, expr: 'yawn', nudge: { scale: 1.04 } },
+      { at: 2700, expr: 'bored-sigh', nudge: { scale: 1, lookX: -0.4 } },
+      { at: 3500, expr: 'bored', scene: null },
+    ],
+  },
+  'typing-frenzy': {
+    duration: 4400,
+    steps: [
+      { at: 0, expr: 'hyper-typing', scene: 'typing-frenzy', nudge: { lookX: -0.45, bounce: -2 } },
+      { at: 600, nudge: { lookX: 0.45, bounce: 1 } },
+      { at: 1200, prop: 'sweat', nudge: { lookX: -0.4, bounce: -3 } },
+      { at: 1900, nudge: { lookX: 0.5, bounce: 1 } },
+      { at: 2600, expr: 'determined', prop: 'bulb', nudge: { lookX: 0, bounce: -4 } },
+      { at: 3500, expr: 'proud', prop: 'sparkles', nudge: { bounce: 0 } },
+      { at: 4100, scene: null },
+    ],
+  },
+  'idle-nod': {
+    duration: 4000,
+    steps: [
+      { at: 0, expr: 'nodding', scene: 'nodding-off', nudge: { bounce: 2, tilt: 2 } },
+      { at: 650, expr: 'dozing', nudge: { bounce: 7, tilt: 6 } },
+      { at: 1200, expr: 'nodding', nudge: { bounce: 1, tilt: 1 } },
+      { at: 1850, expr: 'dozing', prop: 'zzz', nudge: { bounce: 9, tilt: 8 } },
+      { at: 2750, expr: 'jolt-awake', nudge: { bounce: -8, tilt: -3 } },
+      { at: 3350, expr: 'relieved', nudge: { bounce: 0, tilt: 0 } },
+      { at: 3750, scene: null },
+    ],
+  },
+  'agent-idle-nod': {
+    duration: 2800,
+    steps: [
+      { at: 0, expr: 'zen', scene: 'chin', nudge: { lookY: 0.5, bounce: 3 } },
+      { at: 450, nudge: { lookY: -0.1, bounce: -1 } },
+      { at: 900, nudge: { lookY: 0.5, bounce: 3 } },
+      { at: 1400, expr: 'content', nudge: { lookY: 0, bounce: 0 } },
+      { at: 2400, scene: null },
+    ],
+  },
+  'coffee-sip': {
+    duration: 3400,
+    steps: [
+      { at: 0, expr: 'content', scene: 'coffee-break' },
+      { at: 900, expr: 'zen', nudge: { lookY: 0.3, scale: 1.03 } },
+      { at: 2100, expr: 'relieved', prop: 'heart', nudge: { scale: 1 } },
+      { at: 3100, expr: 'happy', scene: null },
+    ],
+  },
+  'facepalm-sigh': {
+    duration: 2800,
+    steps: [
+      { at: 0, expr: 'exasperated', scene: 'facepalm', nudge: { bounce: 3, tilt: -6 } },
+      { at: 800, nudge: { lookX: -0.5, tilt: -8 } },
+      { at: 1500, nudge: { lookX: 0.5, tilt: -4 } },
+      { at: 2400, expr: 'unimpressed', scene: null, nudge: { bounce: 0, tilt: 0 } },
+    ],
+  },
+  'thumbs-up-pop': {
+    duration: 2800,
+    steps: [
+      { at: 0, expr: 'excited', scene: 'thumbs-up', prop: 'sparkles', nudge: { bounce: -6 } },
+      { at: 600, expr: 'wink-l', nudge: { bounce: 0 } },
+      { at: 1500, expr: 'proud' },
+      { at: 2500, expr: 'happy', scene: null },
+    ],
+  },
+  'big-stretch': {
+    duration: 3000,
+    steps: [
+      { at: 0, expr: 'yawn', scene: 'stretch', nudge: { bounce: -6, scale: 1.05 } },
+      { at: 1100, expr: 'relieved', nudge: { bounce: 2, scale: 0.98 } },
+      { at: 2000, expr: 'happy', prop: 'sparkles', nudge: { bounce: 0, scale: 1 } },
+      { at: 2700, scene: null },
+    ],
+  },
+  'music-jam': {
+    duration: 3400,
+    steps: [
+      { at: 0, expr: 'grooving', scene: 'jamming', prop: 'notes', nudge: { bounce: -5, tilt: -5 } },
+      { at: 500, nudge: { bounce: 1, tilt: 5 } },
+      { at: 1000, nudge: { bounce: -5, tilt: -5 } },
+      { at: 1500, nudge: { bounce: 1, tilt: 5 } },
+      { at: 2200, expr: 'joy', prop: 'sparkles', nudge: { bounce: -4, tilt: 0 } },
+      { at: 3100, expr: 'happy', scene: null, nudge: { bounce: 0 } },
+    ],
+  },
+  'rainy-day': {
+    duration: 3800,
+    steps: [
+      { at: 0, expr: 'surprised', scene: 'weather-rain', nudge: { lookY: -0.7 } },
+      { at: 900, expr: 'worried', nudge: { lookY: -0.4, lookX: 0.3 } },
+      { at: 1900, expr: 'cozy', nudge: { lookY: 0, lookX: 0 } },
+      { at: 3400, expr: 'content', scene: null },
+    ],
+  },
+  'snowy-day': {
+    duration: 3600,
+    steps: [
+      { at: 0, expr: 'shivering', scene: 'weather-snow', accessory: 'scarf', prop: 'snowflake', nudge: { tilt: -3 } },
+      { at: 400, nudge: { tilt: 3 } },
+      { at: 800, nudge: { tilt: -3 } },
+      { at: 1300, expr: 'cozy', nudge: { tilt: 0 } },
+      { at: 3200, expr: 'happy', scene: null },
+    ],
+  },
+  'sunny-day': {
+    duration: 3400,
+    steps: [
+      { at: 0, expr: 'relaxed', scene: 'weather-sunny', accessory: 'sunglasses', prop: 'sun' },
+      { at: 1400, expr: 'happy', nudge: { bounce: -3 } },
+      { at: 2900, expr: 'content', scene: null, nudge: { bounce: 0 } },
+    ],
+  },
+  'heavy-lift': {
+    duration: 3800,
+    steps: [
+      { at: 0, expr: 'straining', scene: 'heavy-load', nudge: { bounce: 3, scale: 0.97 } },
+      { at: 800, prop: 'sweat', nudge: { bounce: -4, scale: 1.04 } },
+      { at: 1700, expr: 'straining', nudge: { bounce: 3, scale: 0.98 } },
+      { at: 2600, expr: 'determined', prop: 'thermometer', nudge: { bounce: -2, scale: 1 } },
+      { at: 3400, expr: 'relieved', scene: null, nudge: { bounce: 0 } },
+    ],
+  },
+  'memory-full': {
+    duration: 3600,
+    steps: [
+      { at: 0, expr: 'overloaded', scene: 'brain-overload', nudge: { tilt: -4, bounce: -2 } },
+      { at: 700, prop: 'sweat', nudge: { tilt: 4, bounce: 2 } },
+      { at: 1500, expr: 'dizzy', nudge: { tilt: -3 } },
+      { at: 2400, expr: 'exasperated', nudge: { tilt: 0, bounce: 0 } },
+      { at: 3200, expr: 'relieved', scene: null },
+    ],
+  },
   // the whole reference storyboard, in order
   storyboard: {
     duration: 25500,

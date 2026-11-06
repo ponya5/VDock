@@ -91,6 +91,8 @@ export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLe
     agent: aggregateAgent(Object.values(agentStates)),
     musicPlaying: nowPlaying.playing.value,
     cpuPercent: sys.stats.value?.cpuPercent ?? null,
+    memPercent: sys.stats.value?.memPercent ?? null,
+    tempC: sys.stats.value?.tempC ?? null,
     batteryPercent: sys.stats.value?.batteryPercent ?? null,
     batteryCharging: sys.stats.value?.batteryCharging ?? null,
     notificationCount: notifCounter.update(newestNotification()),

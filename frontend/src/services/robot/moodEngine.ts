@@ -22,6 +22,8 @@ export interface RobotSignals {
   agent: 'idle' | 'working' | 'permission' | 'ready'
   musicPlaying: boolean
   cpuPercent: number | null
+  memPercent?: number | null
+  tempC?: number | null
   batteryPercent: number | null
   batteryCharging: boolean | null
   notificationCount: number
@@ -48,7 +50,10 @@ const GESTURE_EVENT: Record<PointerGesture, RobotEvent> = {
   annoyed: 'pointerAnnoyed', circle: 'pointerCircle', linger: 'pointerLinger', approach: 'pointerApproach',
   leave: 'pointerLeave', return: 'pointerReturn',
 }
+const TYPING_LOT_MS = 60_000
 const LONG_WORK_MS = 180_000
+const AGENT_IDLE_NOD_MS = 52_000
+const BORED_IDLE_MS = 75_000
 const NIGHT_IDLE_MS = 120_000
 
 export class MoodEngine {
@@ -59,9 +64,18 @@ export class MoodEngine {
   private reactionUntil = 0
   private pending: Array<{ at: number; cmd: RobotCommand }> = []
   private workingSince: number | null = null
+  private typingLotFired = false
   private longFired = false
+  private agentIdleSince: number | null = null
+  private agentIdleNodFired = false
+  private quietSince: number | null = null
+  private boredFired = false
   private cpuSince: number | null = null
   private cpuArmed = true
+  private heavySince: number | null = null
+  private heavyArmed = true
+  private memSince: number | null = null
+  private memArmed = true
   private batteryArmed = true
   private marks: { morning?: string; noon?: string } = {}
   private gagUntil = 0
@@ -109,8 +123,10 @@ export class MoodEngine {
     if (first) {
       events.push('greet')
       if (s.agent === 'working') this.workingSince = now
+      if (s.agent === 'idle') this.agentIdleSince = now
+      this.quietSince = now
     } else {
-      events.push(...this.edges(this.prev!, s, now))
+      events.push(...this.edges(this.prev!, s, lastPointerAt, now))
     }
     // morning / noon: pending until a reaction actually starts (marked in step below)
     if (s.hour >= 6 && s.hour <= 10 && this.marks.morning !== s.day) events.push('morning')
@@ -136,7 +152,7 @@ export class MoodEngine {
       const active = this.reaction && now < this.reactionUntil
       if (!active || PRIORITY[best] >= PRIORITY[this.reaction!]) {
         this.lastFired.set(best, now)
-        const r = REACTIONS[best][this.opts.mood]
+        const r = this.resolveReaction(best, s)
         if (r) {
           this.start(best, r, now, out)
           this.gagUntil = 0
@@ -163,11 +179,11 @@ export class MoodEngine {
     }
     if (!this.reaction) {
       if (this.gagUntil > 0 && now >= this.gagUntil) { this.gagUntil = 0; this.shownBaseExpr = null }
-      const expr = BASELINES[this.opts.mood][this.baseline]
+      const expr = this.baselineExpr(s, now)
       const acc = this.baselineAccessory(s, now)
       if (expr !== this.shownBaseExpr) { out.push({ type: 'expr', id: expr }); this.shownBaseExpr = expr }
       if (acc !== this.shownBaseAcc) { out.push({ type: 'accessory', id: acc }); this.shownBaseAcc = acc }
-      const scene = BASELINE_SCENE[this.opts.mood][this.baseline] ?? null
+      const scene = this.baselineScene(s, now)
       if (this.gagUntil === 0 && scene !== this.shownBaseScene) { out.push({ type: 'scene', id: scene }); this.shownBaseScene = scene }
       if (this.baseline === 'idle') {
         if (this.nextGagAt === 0) this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
@@ -181,6 +197,17 @@ export class MoodEngine {
       }
     }
     return out
+  }
+
+  private resolveReaction(ev: RobotEvent, s: RobotSignals): Reaction | null {
+    const base = REACTIONS[ev][this.opts.mood]
+    if (!base) return null
+    if (ev === 'weather') {
+      if (s.weather === 'rain') return { ...base, expr: 'cozy', seq: 'rainy-day', scene: 'weather-rain', ms: 3800 }
+      if (s.weather === 'snow' || s.weather === 'cold') return { ...base, expr: 'shivering', seq: 'snowy-day', scene: 'weather-snow', accessory: 'scarf', ms: 3600 }
+      if (s.weather === 'sunny') return { ...base, expr: 'relaxed', seq: 'sunny-day', scene: 'weather-sunny', accessory: 'sunglasses', ms: 3400 }
+    }
+    return base
   }
 
   private start(ev: RobotEvent, r: Reaction, now: number, out: RobotCommand[]): void {
@@ -215,13 +242,55 @@ export class MoodEngine {
     out.push({ type: 'quip', text })
   }
 
-  private edges(p: RobotSignals, s: RobotSignals, now: number): RobotEvent[] {
+  private edges(p: RobotSignals, s: RobotSignals, lastPointerAt: number, now: number): RobotEvent[] {
     const ev: RobotEvent[] = []
-    if (s.agent === 'working' && p.agent !== 'working') { ev.push('agentWorking'); this.workingSince = now; this.longFired = false }
+    if (s.agent === 'working' && p.agent !== 'working') {
+      ev.push('agentWorking')
+      this.workingSince = now
+      this.typingLotFired = false
+      this.longFired = false
+    }
     if (s.agent !== 'working') this.workingSince = null
-    if (this.workingSince !== null && !this.longFired && now - this.workingSince >= LONG_WORK_MS) { this.longFired = true; ev.push('agentLong') }
+    if (this.workingSince !== null && !this.typingLotFired && now - this.workingSince >= TYPING_LOT_MS) {
+      this.typingLotFired = true
+      ev.push('agentTypingLot')
+    }
+    if (this.workingSince !== null && !this.longFired && now - this.workingSince >= LONG_WORK_MS) {
+      this.longFired = true
+      ev.push('agentLong')
+    }
     if (s.agent === 'permission' && p.agent !== 'permission') ev.push('agentNeeds')
     if (p.agent === 'working' && (s.agent === 'ready' || s.agent === 'idle')) ev.push('agentDone')
+
+    // AI agent idle nodding: fires when agent transitions from ready -> idle, or sits idle for AGENT_IDLE_NOD_MS
+    if (p.agent === 'ready' && s.agent === 'idle') {
+      ev.push('agentIdleNod')
+      this.agentIdleSince = now
+      this.agentIdleNodFired = true
+    } else if (s.agent === 'idle') {
+      if (this.agentIdleSince === null) { this.agentIdleSince = now; this.agentIdleNodFired = false }
+      else if (!this.agentIdleNodFired && now - this.agentIdleSince >= AGENT_IDLE_NOD_MS) {
+        this.agentIdleNodFired = true
+        ev.push('agentIdleNod')
+      }
+    } else {
+      this.agentIdleSince = null
+      this.agentIdleNodFired = false
+    }
+
+    // Boredom progression when nothing is happening and pointer is away
+    const activePointer = lastPointerAt > 0 && now - lastPointerAt < 15_000
+    if (s.agent === 'idle' && !s.musicPlaying && !activePointer) {
+      if (this.quietSince === null) { this.quietSince = now; this.boredFired = false }
+      else if (!this.boredFired && now - this.quietSince >= BORED_IDLE_MS) {
+        this.boredFired = true
+        ev.push('bored')
+      }
+    } else {
+      this.quietSince = null
+      this.boredFired = false
+    }
+
     if (s.musicPlaying && !p.musicPlaying) ev.push('musicStart')
     if (!s.musicPlaying && p.musicPlaying) ev.push('musicStop')
     if (s.cpuPercent !== null && s.cpuPercent >= 95) {
@@ -229,11 +298,36 @@ export class MoodEngine {
       if (this.cpuArmed && now - this.cpuSince >= 10_000) { this.cpuArmed = false; ev.push('cpuHigh') }
     } else {
       this.cpuSince = null
-      if (s.cpuPercent === null || s.cpuPercent < 85) this.cpuArmed = true
+      if (!this.cpuArmed && (s.cpuPercent === null || s.cpuPercent < 65)) {
+        this.cpuArmed = true
+        ev.push('cpuRecovered')
+      } else if (s.cpuPercent === null || s.cpuPercent < 85) {
+        this.cpuArmed = true
+      }
     }
+    // Machine working hard (CPU 80-94% or combined CPU+RAM load)
+    const hardCpu = s.cpuPercent !== null && s.cpuPercent >= 80 && s.cpuPercent < 95
+    const hardCombo = (s.cpuPercent ?? 0) >= 68 && (s.memPercent ?? 0) >= 80
+    if (hardCpu || hardCombo) {
+      if (this.heavySince === null) this.heavySince = now
+      if (this.heavyArmed && now - this.heavySince >= 8000) { this.heavyArmed = false; ev.push('heavyLoad') }
+    } else {
+      this.heavySince = null
+      if ((s.cpuPercent ?? 0) < 65) this.heavyArmed = true
+    }
+    // High memory usage (RAM >= 85%)
+    if (s.memPercent !== undefined && s.memPercent !== null && s.memPercent >= 85) {
+      if (this.memSince === null) this.memSince = now
+      if (this.memArmed && now - this.memSince >= 8000) { this.memArmed = false; ev.push('memHigh') }
+    } else {
+      this.memSince = null
+      if (s.memPercent === undefined || s.memPercent === null || s.memPercent < 75) this.memArmed = true
+    }
+
     if (s.batteryPercent !== null && s.batteryPercent < 20 && s.batteryCharging !== true) {
       if (this.batteryArmed) { this.batteryArmed = false; ev.push('batteryLow') }
     } else if (s.batteryCharging === true || (s.batteryPercent !== null && s.batteryPercent >= 25)) this.batteryArmed = true
+    if (s.batteryCharging === true && p.batteryCharging === false) ev.push('batteryCharged')
     if (s.notificationCount > p.notificationCount) ev.push('notification')
     if (s.updateAvailable && !p.updateAvailable) ev.push('update')
     if (s.weather !== null && p.weather !== null && s.weather !== p.weather) ev.push('weather')
@@ -244,9 +338,35 @@ export class MoodEngine {
     const nightHour = s.hour >= 23 || s.hour < 6
     if (s.agent === 'permission' && this.opts.reactTo.agent) return 'waiting'
     if (s.agent === 'working' && this.opts.reactTo.agent) return 'working'
+    if (this.opts.reactTo.system && ((s.cpuPercent !== null && s.cpuPercent >= 82) || (s.memPercent !== undefined && s.memPercent !== null && s.memPercent >= 88))) {
+      return 'overworked'
+    }
     if (nightHour && this.opts.reactTo.ambient && !s.musicPlaying && now - lastPointerAt >= NIGHT_IDLE_MS) return 'night'
     if (s.musicPlaying && this.opts.reactTo.music) return 'music'
     return 'idle'
+  }
+
+  private baselineExpr(s: RobotSignals, _now: number): ExpressionId {
+    if (this.baseline === 'overworked' && (s.memPercent ?? 0) >= 88 && (s.cpuPercent ?? 0) < 82) {
+      return 'overloaded'
+    }
+    if (this.baseline === 'idle' && this.opts.reactTo.ambient) {
+      if (s.weather === 'rain') return 'cozy'
+      if (s.weather === 'snow' || s.weather === 'cold') return 'shivering'
+    }
+    return BASELINES[this.opts.mood][this.baseline]
+  }
+
+  private baselineScene(s: RobotSignals, _now: number): SceneId | null {
+    if (this.baseline === 'overworked' && (s.memPercent ?? 0) >= 88 && (s.cpuPercent ?? 0) < 82) {
+      return 'brain-overload'
+    }
+    if (this.baseline === 'idle' && this.opts.reactTo.ambient) {
+      if (s.weather === 'rain') return 'weather-rain'
+      if (s.weather === 'snow') return 'weather-snow'
+      if (s.weather === 'sunny' && s.isDay) return 'weather-sunny'
+    }
+    return BASELINE_SCENE[this.opts.mood][this.baseline] ?? null
   }
 
   private baselineAccessory(s: RobotSignals, now: number): AccessoryId | null {
@@ -257,7 +377,7 @@ export class MoodEngine {
       case 'idle':
         if (!this.opts.reactTo.ambient) return null
         if (s.weather === 'sunny' && s.isDay) return 'sunglasses'
-        if (s.weather === 'cold') return 'scarf'
+        if (s.weather === 'cold' || s.weather === 'snow') return 'scarf'
         return null
       default: return null
     }

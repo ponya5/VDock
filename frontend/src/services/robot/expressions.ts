@@ -82,6 +82,19 @@ export const EXPRESSIONS = {
   inspecting: { eyeL: { lidTop: 0.65, lidBottom: 0.15 }, eyeR: { h: 56, w: 34 }, face: { mouthCurve: -0.1, mouthOpen: 0.35, mouthWidth: 24, tongue: 1, lookX: 0.4, mouthSkew: -0.4 } },
   chatty: { eyes: { lidTop: 0.2 }, face: { mouthCurve: 0.2, mouthOpen: 0.7, mouthWidth: 22, lookX: 0.5 } },
   yawn: { eyes: { lidTop: 0.75, lidBottom: 0.2 }, face: { mouthWidth: 18, mouthOpen: 1, mouthCurve: -0.2 } },
+  // DL-163: expanded event expressions (boredom, hyper-typing, idle nodding, weather, machine load)
+  'bored-sigh': { eyes: { lidTop: 0.62, lidBottom: 0.1 }, face: { lookX: -0.35, lookY: 0.35, mouthCurve: -0.25, mouthWidth: 18, bubbleDots: 1, tilt: -4 } },
+  'hyper-typing': { eyes: { h: 52, w: 34, lidTop: 0.12, lidTilt: 0.35 }, face: { pupil: 1, lookY: 0.85, mouthCurve: 0.1, mouthOpen: 0.25, mouthWidth: 22, tongue: 0.8 } },
+  nodding: { eyes: { lidTop: 0.72, lidBottom: 0.15 }, face: { mouthCurve: 0.25, mouthWidth: 16, lookY: 0.35, tilt: 3 } },
+  dozing: { eyes: { lidTop: 0.78, curveDown: 0.75 }, face: { mouthOpen: 0.3, mouthWidth: 12, mouthCurve: 0.1, lookY: 0.45, tilt: 5, bounce: 2 } },
+  'jolt-awake': { eyes: { h: 58, w: 34 }, face: { pupil: 1, mouthOpen: 0.65, mouthWidth: 14, mouthCurve: -0.1, bounce: -7 } },
+  exasperated: { eyes: { lidTop: 0.55, lidTilt: -0.45 }, face: { mouthWave: 0.9, mouthCurve: -0.35, mouthWidth: 24, lookY: 0.3, tilt: -5 } },
+  grooving: { eyes: HAPPY_EYE, face: { mouthCurve: 1, mouthOpen: 0.45, mouthWidth: 28, blush: 0.45, tilt: 4 } },
+  zen: { eyes: CONTENT_EYE, face: { mouthCurve: 0.75, mouthWidth: 20, blush: 0.35, lookY: 0.1 } },
+  straining: { eyes: { lidTop: 0.38, lidBottom: 0.32, lidTilt: 0.65, h: 42 }, mouthGlyph: 'teeth', face: { mouthOpacity: 0, rage: 0.45, blush: 0.4, bounce: 2 } },
+  overloaded: { glyphs: ['spiral', 'dot'], face: { mouthWave: 1, mouthOpen: 0.4, mouthCurve: -0.3, mouthWidth: 24, bubbleQ: 1, rage: 0.35 } },
+  cozy: { eyes: CONTENT_EYE, face: { mouthCurve: 0.8, mouthWidth: 20, blush: 0.65, lookY: -0.15 } },
+  shivering: { eyes: { w: 28, h: 46, lidTilt: -0.45, lidTop: 0.15 }, face: { mouthWave: 1, mouthCurve: -0.15, mouthWidth: 22 } },
 } as const satisfies Record<string, ExpressionDef>
 
 export type ExpressionId = keyof typeof EXPRESSIONS

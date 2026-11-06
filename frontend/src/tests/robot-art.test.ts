@@ -163,10 +163,14 @@ describe('held props (DL-155 follow-up A)', () => {
   })
 })
 
-describe('storyboard scenes (DL-155 follow-up B)', () => {
+describe('storyboard scenes (DL-155 follow-up B & DL-163)', () => {
   it('toon scenes carry a face placement and only sneakers hide the face', () => {
     const toon = SCENE_IDS.filter(id => SCENES[id].toon)
-    expect(toon).toEqual(expect.arrayContaining(['typing', 'inspect', 'call', 'notes', 'relax', 'sneakers', 'chin', 'cheer', 'hello']))
+    expect(toon).toEqual(expect.arrayContaining([
+      'typing', 'inspect', 'call', 'notes', 'relax', 'sneakers', 'chin', 'cheer', 'hello',
+      'typing-frenzy', 'bored-desk', 'nodding-off', 'coffee-break', 'facepalm', 'thumbs-up', 'stretch', 'jamming',
+      'weather-rain', 'weather-snow', 'weather-sunny', 'heavy-load', 'brain-overload',
+    ]))
     expect(SCENE_IDS.filter(id => SCENES[id].hideFace)).toEqual(['sneakers'])
   })
 })
