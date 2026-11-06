@@ -23,6 +23,22 @@
     </div>
   </section>
 
+  <section class="panel" id="clock-format">
+    <div class="panel-head"><h2>Clocks</h2><span class="hint">Time format across the screensaver, session lists and logs.</span></div>
+    <div class="panel-body">
+      <div class="row">
+        <div class="row-text">
+          <span class="label">24-hour clocks</span>
+          <p>Show every clock in 24-hour time. Off follows this device's locale.</p>
+        </div>
+        <div class="row-control">
+          <label class="switch"><span class="sr-only">24-hour clocks</span><input v-model="settings.clock24h" type="checkbox" /><span class="track"></span></label>
+          <SettingResetButton label="24-hour clocks" :at-default="settings.clock24h === SETTINGS_DEFAULTS.clock24h" @reset="settings.clock24h = SETTINGS_DEFAULTS.clock24h" />
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" id="sidebar">
     <div class="panel-head"><h2>Docked sidebar</h2><span class="hint">A permanent column of keys down the left of the dashboard.</span></div>
     <div class="panel-body">

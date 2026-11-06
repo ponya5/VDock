@@ -78,6 +78,7 @@ export const SETTINGS_DEFAULTS = {
   // default; persisted lists always win for existing users.
   screensaverWidgets: ['weather', 'news', 'market'],
   screensaverClockEnabled: true,
+  clock24h: false,
   screensaverWeatherSize: 100,
   screensaverWidgetSize: 100,
   screensaverBackground: DEFAULT_SCREENSAVER_BACKGROUND_ID,
@@ -183,6 +184,8 @@ export interface PersistedUserSettings {
    * indistinguishable there.
    */
   screensaverClockEnabled: boolean
+  /** Force every locale-driven clock to 24-hour (false = follow the device locale). */
+  clock24h: boolean
   screensaverWeatherSize: number
   newsApiKey: string
   newsFeeds: string
@@ -344,6 +347,7 @@ export const useSettingsStore = defineStore('settings', () => {
   // The clock sits outside the widgets array (DL-098) — see the interface
   // comment above for why it can't share the list.
   const screensaverClockEnabled = ref(true)
+  const clock24h = ref(false)
   // Percentage scale for the screensaver's corner weather pill. 100 keeps the
   // desktop-size rendering; small touch panels push it up for glanceability.
   const screensaverWeatherSize = ref(100)
@@ -572,6 +576,7 @@ export const useSettingsStore = defineStore('settings', () => {
       // Spread for the same structured-clone reason as recentActions above.
       screensaverWidgets: [...screensaverWidgets.value],
       screensaverClockEnabled: screensaverClockEnabled.value,
+      clock24h: clock24h.value,
       screensaverWeatherSize: screensaverWeatherSize.value,
       newsApiKey: newsApiKey.value,
       newsFeeds: newsFeeds.value,
@@ -669,6 +674,7 @@ export const useSettingsStore = defineStore('settings', () => {
         .filter((id) => id !== 'spectrum' && id !== 'systemstats')
     }
     if (settings.screensaverClockEnabled !== undefined) screensaverClockEnabled.value = settings.screensaverClockEnabled
+    if (settings.clock24h !== undefined) clock24h.value = settings.clock24h
     if (settings.screensaverWeatherSize !== undefined) screensaverWeatherSize.value = settings.screensaverWeatherSize
     if (settings.newsApiKey !== undefined) newsApiKey.value = settings.newsApiKey
     if (settings.newsFeeds !== undefined) newsFeeds.value = settings.newsFeeds
@@ -813,6 +819,7 @@ export const useSettingsStore = defineStore('settings', () => {
         screensaverWidgets: settings.screensaverWidgets ?? [...SETTINGS_DEFAULTS.screensaverWidgets],
         // Missing key = written before the flag existed → keep the clock on.
         screensaverClockEnabled: settings.screensaverClockEnabled ?? true,
+        clock24h: settings.clock24h ?? false,
         screensaverWeatherSize: settings.screensaverWeatherSize ?? 100,
         newsApiKey: settings.newsApiKey ?? '',
         newsFeeds: settings.newsFeeds ?? '',
@@ -1066,6 +1073,8 @@ export const useSettingsStore = defineStore('settings', () => {
       buttonDefaultEffect,
       screensaverWidgets,
       screensaverClockEnabled,
+    clock24h,
+      clock24h,
       screensaverWeatherSize,
       screensaverStyle,
       screensaverShuffleMinutes,

@@ -138,6 +138,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useClockFormat } from '@/composables/useClockFormat'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useSystemStats } from '@/composables/useSystemStats'
 import GaugeDial from './GaugeDial.vue'
@@ -173,10 +174,11 @@ const netSparkPoints = computed(() => sparkPoints(netHistory.value, 1))
 
 /* Live clock — a per-second pulse keeps the board visibly fresh between
    the 2.5 s metric polls. */
+const clockFmt = useClockFormat()
 const now = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval> | null = null
 const clockText = computed(() =>
-  now.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+  now.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', ...clockFmt.value }),
 )
 
 onMounted(() => {

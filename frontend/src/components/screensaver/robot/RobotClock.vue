@@ -8,14 +8,16 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useClockFormat } from '@/composables/useClockFormat'
 
+const clockFmt = useClockFormat()
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
 onMounted(() => { timer = setInterval(() => { now.value = new Date() }, 1000) })
 onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 
 // Locale decides 12/24 h (same as the stats saver's clock).
-const parts = computed(() => new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit' }).formatToParts(now.value))
+const parts = computed(() => new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value }).formatToParts(now.value))
 const hh = computed(() => parts.value.find(p => p.type === 'hour')?.value ?? '')
 const mm = computed(() => parts.value.find(p => p.type === 'minute')?.value ?? '')
 const ampm = computed(() => parts.value.find(p => p.type === 'dayPeriod')?.value ?? '')

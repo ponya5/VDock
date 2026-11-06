@@ -114,9 +114,12 @@
 // re-tap and vibrates), so the picker emits the raw intent and the parent
 // applies it.
 import { computed, ref } from 'vue'
+import { useClockFormat } from '@/composables/useClockFormat'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { AgentSessionInfo, AgentSessionRow } from '@/composables/useAgentTargets'
 import { useDeviceClass } from '@/composables/useDeviceClass'
+
+const clockFmt = useClockFormat()
 
 const props = defineProps<{
   rows: AgentSessionRow[]
@@ -183,7 +186,7 @@ function rowSub(s: AgentSessionRow): string {
   if (s.title && s.title !== s.label) bits.push(s.title)
   if (s.started) {
     bits.push(`since ${new Date(s.started * 1000)
-      .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`)
+      .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value })}`)
   }
   return bits.join(' · ') || s.cwd || ''
 }
