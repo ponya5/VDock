@@ -209,4 +209,47 @@ describe('hands scenes (DL-155)', () => {
     e.step(sig(), [], 0, 0)
     expect(types(e.step(sig({ agent: 'working' }), [], 0, 10_000))).not.toContain('scene:typing')
   })
+
+  it('escalates to typing-frenzy when the agent types continuously for 60 s (DL-163)', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    e.step(sig({ agent: 'working' }), [], 0, 10_000)
+    const c = types(e.step(sig({ agent: 'working' }), [], 0, 71_000))
+    expect(e.state.reaction).toBe('agentTypingLot')
+    expect(c).toContain('scene:typing-frenzy')
+  })
+
+  it('nods off when the AI agent transitions from ready to idle or stays idle (DL-163)', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig({ agent: 'ready' }), [], 0, 0)
+    const c = types(e.step(sig({ agent: 'idle' }), [], 0, 10_000))
+    expect(e.state.reaction).toBe('agentIdleNod')
+    expect(c).toContain('scene:nodding-off')
+  })
+
+  it('gets bored and drums fingers on the desk after prolonged quiet idle (DL-163)', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    const c = types(e.step(sig(), [], 0, 76_000))
+    expect(e.state.reaction).toBe('bored')
+    expect(c).toContain('scene:bored-desk')
+  })
+
+  it('shows weather-specific scenes (rain umbrella, snow scarf, sunny shades) (DL-163)', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig({ weather: 'sunny' }), [], 0, 0)
+    const rainCmds = types(e.step(sig({ weather: 'rain' }), [], 0, 10_000))
+    expect(e.state.reaction).toBe('weather')
+    expect(rainCmds).toContain('scene:weather-rain')
+    expect(rainCmds).toContain('seq:rainy-day')
+  })
+
+  it('reacts to high memory (brain-overload) and heavy machine load (heavy-load) (DL-163)', () => {
+    const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
+    e.step(sig(), [], 0, 0)
+    e.step(sig({ memPercent: 90 }), [], 0, 10_000)
+    const memCmds = types(e.step(sig({ memPercent: 90 }), [], 0, 19_000))
+    expect(e.state.reaction).toBe('memHigh')
+    expect(memCmds).toContain('scene:brain-overload')
+  })
 })

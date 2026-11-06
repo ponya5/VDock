@@ -21,12 +21,16 @@
       </linearGradient>
     </defs>
     <g :transform="frame.transform">
+      <!-- Ambient audio / mood halo behind the original eyes + mouth -->
+      <g v-if="level > 0.02" :opacity="Math.min(0.32, level * 0.38) * (0.75 + 0.25 * Math.sin(frame.t / 1000 * 8))">
+        <ellipse cx="100" cy="72" rx="88" ry="58" fill="url(#rb-blue)" filter="url(#robot-glow)" />
+      </g>
       <g v-if="frame.deco.rage > 0.02" :opacity="frame.deco.rage * (0.32 + 0.14 * Math.sin(frame.t / 1000 * 9))">
         <ellipse cx="100" cy="72" rx="86" ry="56" fill="#ff2a2a" filter="url(#robot-glow)" />
       </g>
       <!-- glow copy (static filter) + crisp face, faded together while an icon shows -->
       <g :opacity="frame.faceOpacity">
-        <g filter="url(#robot-glow)" opacity="0.55">
+        <g filter="url(#robot-glow)" opacity="0.62">
           <path :d="frame.eyeL" fill="#fff" :opacity="frame.eyeOpacityL" />
           <path :d="frame.eyeR" fill="#fff" :opacity="frame.eyeOpacityR" />
           <path :d="frame.mouth" fill="#fff" stroke="#fff" stroke-width="5" stroke-linejoin="round" :opacity="frame.mouthOpacity" />
@@ -35,8 +39,8 @@
         <path data-part="eye" :d="frame.eyeR" fill="#fff" :opacity="frame.eyeOpacityR" />
         <path data-part="mouth" :d="frame.mouth" fill="#fff" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" :opacity="frame.mouthOpacity" />
         <path :d="frame.tongue" fill="#ff9a4d" :opacity="frame.tongueOpacity * frame.mouthOpacity" />
-        <ellipse cx="0" cy="0" :transform="`translate(${frame.eyeLCenter[0] - 6} ${frame.eyeLCenter[1] + 34})`" rx="11" ry="5" fill="#ff6fa8" :opacity="frame.blush * 0.7" />
-        <ellipse cx="0" cy="0" :transform="`translate(${frame.eyeRCenter[0] + 6} ${frame.eyeRCenter[1] + 34})`" rx="11" ry="5" fill="#ff6fa8" :opacity="frame.blush * 0.7" />
+        <ellipse cx="0" cy="0" :transform="`translate(${frame.eyeLCenter[0] - 6} ${frame.eyeLCenter[1] + 34})`" rx="11.5" ry="5.2" fill="#ff6fa8" :opacity="frame.blush * 0.75" />
+        <ellipse cx="0" cy="0" :transform="`translate(${frame.eyeRCenter[0] + 6} ${frame.eyeRCenter[1] + 34})`" rx="11.5" ry="5.2" fill="#ff6fa8" :opacity="frame.blush * 0.75" />
         <g v-if="frame.glyphL.id" :data-glyph="frame.glyphL.id" :opacity="frame.glyphL.opacity"
            :transform="`translate(${frame.eyeLCenter[0]} ${frame.eyeLCenter[1]}) scale(${frame.glyphL.scale * 1.5})`">
           <RobotArt :def="EYE_GLYPHS[frame.glyphL.id]" :t="frame.t" :level="level" />
@@ -80,7 +84,7 @@
        :transform="`translate(100 70) scale(${frame.icon.scale * 1.4})`">
       <RobotArt :def="ICONS[frame.icon.id]" :t="frame.t" :level="level" />
     </g>
-    <RobotScenery v-if="frame.scene.id && SCENES[frame.scene.id].toon" :scene="frame.scene.id" :p="frame.scene.p" :t="frame.t" :opacity="frame.scene.opacity" />
+    <RobotScenery v-if="frame.scene.id && SCENES[frame.scene.id].toon" :scene="frame.scene.id" :p="frame.scene.p" :t="frame.t" :opacity="frame.scene.opacity" :level="level" />
     <RobotHands v-else-if="frame.scene.id" :scene="frame.scene.id" :p="frame.scene.p" :t="frame.t" :opacity="frame.scene.opacity" />
     <g v-for="p in frame.props" :key="p.key" :data-prop="p.id"
        :opacity="propEnvelope(p.age, PROPS[p.id].life ?? 2000).opacity"

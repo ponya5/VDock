@@ -10,12 +10,14 @@ import type { RobotReactTo } from '@/stores/settings'
 
 export type Mood = 'funny' | 'grumpy' | 'sarcastic' | 'sweet'
 export type RobotEvent =
-  | 'greet' | 'agentWorking' | 'agentLong' | 'agentNeeds' | 'agentDone' | 'musicStart' | 'musicStop'
-  | 'cpuHigh' | 'batteryLow' | 'notification' | 'update' | 'morning' | 'noon' | 'night' | 'weather'
+  | 'greet' | 'agentWorking' | 'agentTypingLot' | 'agentLong' | 'agentNeeds' | 'agentDone' | 'agentIdleNod'
+  | 'musicStart' | 'musicStop'
+  | 'cpuHigh' | 'heavyLoad' | 'memHigh' | 'cpuRecovered' | 'batteryLow' | 'batteryCharged'
+  | 'notification' | 'update' | 'morning' | 'noon' | 'night' | 'weather' | 'bored'
   | 'pointerEnter' | 'pointerEyes' | 'pointerMouth' | 'pointerShake' | 'pointerDizzy' | 'pointerAnnoyed'
   | 'pointerCircle' | 'pointerLinger' | 'pointerApproach' | 'pointerLeave' | 'pointerReturn'
 export interface Reaction { icon?: IconId; expr: ExpressionId; seq?: SequenceId; prop?: PropId; accessory?: AccessoryId; scene?: SceneId; ms?: number }
-export type BaselineState = 'idle' | 'working' | 'waiting' | 'music' | 'night'
+export type BaselineState = 'idle' | 'working' | 'waiting' | 'music' | 'night' | 'overworked'
 
 export const ICON_MS = 1200
 
@@ -33,6 +35,12 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     grumpy: { icon: 'dots', expr: 'squint' },
     sarcastic: { icon: 'dots', expr: 'side-eye', prop: 'clipboard' },
     sweet: { icon: 'dots', expr: 'typing', scene: 'typing', prop: 'heart' },
+  },
+  agentTypingLot: {
+    funny: { expr: 'hyper-typing', seq: 'typing-frenzy', scene: 'typing-frenzy', prop: 'sweat', ms: 4400 },
+    grumpy: { expr: 'determined', seq: 'typing-frenzy', scene: 'typing-frenzy', prop: 'anger', ms: 4200 },
+    sarcastic: { expr: 'hyper-typing', seq: 'typing-frenzy', scene: 'typing-frenzy', prop: 'coffee', ms: 4200 },
+    sweet: { expr: 'hyper-typing', seq: 'typing-frenzy', scene: 'typing-frenzy', prop: 'sparkles', ms: 4400 },
   },
   agentLong: {
     funny: { icon: 'spinner', expr: 'focused', accessory: 'wizard-hat', prop: 'magnifier', ms: 3200 },
@@ -52,11 +60,23 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sarcastic: { icon: 'check', expr: 'smug', accessory: 'sunglasses' },
     sweet: { icon: 'check', expr: 'love', seq: 'clap', prop: 'sparkles', ms: 4000 },
   },
+  agentIdleNod: {
+    funny: { expr: 'nodding', seq: 'idle-nod', scene: 'nodding-off', prop: 'zzz', ms: 4000 },
+    grumpy: { expr: 'dozing', seq: 'idle-nod', scene: 'nodding-off', ms: 3800 },
+    sarcastic: { expr: 'bored-sigh', seq: 'agent-idle-nod', scene: 'chin', ms: 3200 },
+    sweet: { expr: 'nodding', seq: 'idle-nod', scene: 'nodding-off', prop: 'zzz', ms: 4000 },
+  },
+  bored: {
+    funny: { expr: 'bored-sigh', seq: 'bored-drum', scene: 'bored-desk', prop: 'clock', ms: 3800 },
+    grumpy: { expr: 'exasperated', seq: 'bored-drum', scene: 'bored-desk', ms: 3800 },
+    sarcastic: { expr: 'bored-sigh', seq: 'bored-drum', scene: 'bored-desk', ms: 3800 },
+    sweet: { expr: 'sleepy', seq: 'coffee-sip', scene: 'coffee-break', ms: 3600 },
+  },
   musicStart: {
-    funny: { icon: 'equalizer', expr: 'happy', prop: 'notes', ms: 3000 },
+    funny: { icon: 'equalizer', expr: 'grooving', seq: 'music-jam', scene: 'jamming', prop: 'notes', ms: 3400 },
     grumpy: { icon: 'equalizer', expr: 'unimpressed', ms: 2500 },
-    sarcastic: { icon: 'equalizer', expr: 'suspicious', ms: 3000 },
-    sweet: { icon: 'equalizer', expr: 'content', prop: 'notes', ms: 3000 },
+    sarcastic: { icon: 'equalizer', expr: 'suspicious', scene: 'jamming', ms: 3000 },
+    sweet: { icon: 'equalizer', expr: 'grooving', seq: 'music-jam', scene: 'jamming', prop: 'notes', ms: 3400 },
   },
   musicStop: {
     funny: { expr: 'bored', seq: 'look-around', ms: 2600 },
@@ -65,16 +85,40 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { expr: 'sad', ms: 2200 },
   },
   cpuHigh: {
-    funny: { icon: 'warning', expr: 'dizzy', prop: 'sweat' },
-    grumpy: { icon: 'warning', expr: 'angry', prop: 'thermometer' },
-    sarcastic: { icon: 'warning', expr: 'teeth-grit' },
-    sweet: { icon: 'warning', expr: 'worried', prop: 'sweat' },
+    funny: { icon: 'warning', expr: 'straining', seq: 'heavy-lift', scene: 'heavy-load', prop: 'sweat', ms: 3800 },
+    grumpy: { icon: 'warning', expr: 'angry', scene: 'heavy-load', prop: 'thermometer', ms: 3600 },
+    sarcastic: { icon: 'warning', expr: 'teeth-grit', seq: 'facepalm-sigh', scene: 'facepalm', ms: 3400 },
+    sweet: { icon: 'warning', expr: 'worried', scene: 'heavy-load', prop: 'sweat', ms: 3600 },
+  },
+  heavyLoad: {
+    funny: { expr: 'straining', seq: 'heavy-lift', scene: 'heavy-load', prop: 'sweat', ms: 3800 },
+    grumpy: { expr: 'angry', scene: 'heavy-load', prop: 'thermometer', ms: 3600 },
+    sarcastic: { expr: 'exasperated', seq: 'facepalm-sigh', scene: 'facepalm', ms: 3400 },
+    sweet: { expr: 'worried', seq: 'heavy-lift', scene: 'heavy-load', prop: 'sweat', ms: 3600 },
+  },
+  memHigh: {
+    funny: { expr: 'overloaded', seq: 'memory-full', scene: 'brain-overload', prop: 'sweat', ms: 3600 },
+    grumpy: { expr: 'angry', seq: 'memory-full', scene: 'brain-overload', prop: 'anger', ms: 3600 },
+    sarcastic: { expr: 'overloaded', seq: 'facepalm-sigh', scene: 'brain-overload', ms: 3400 },
+    sweet: { expr: 'dizzy', seq: 'memory-full', scene: 'brain-overload', prop: 'sweat', ms: 3600 },
+  },
+  cpuRecovered: {
+    funny: { expr: 'relieved', seq: 'big-stretch', scene: 'stretch', prop: 'sparkles', ms: 3000 },
+    grumpy: { expr: 'relieved', seq: 'sigh', ms: 2400 },
+    sarcastic: { expr: 'smug', seq: 'coffee-sip', scene: 'coffee-break', ms: 3200 },
+    sweet: { expr: 'relieved', seq: 'sweat-wipe', prop: 'heart', ms: 2600 },
   },
   batteryLow: {
     funny: { icon: 'battery', expr: 'sleepy', seq: 'yawn-sleep' },
     grumpy: { icon: 'battery', expr: 'glare' },
     sarcastic: { icon: 'battery', expr: 'dead' },
     sweet: { icon: 'battery', expr: 'worried' },
+  },
+  batteryCharged: {
+    funny: { expr: 'excited', seq: 'thumbs-up-pop', scene: 'thumbs-up', prop: 'sparkles', ms: 2800 },
+    grumpy: { expr: 'relieved', ms: 2200 },
+    sarcastic: { expr: 'smug', prop: 'coffee', ms: 2400 },
+    sweet: { expr: 'joy', seq: 'thumbs-up-pop', scene: 'thumbs-up', prop: 'heart', ms: 2800 },
   },
   notification: {
     funny: { icon: 'envelope', expr: 'surprised', seq: 'double-take', ms: 2500 },
@@ -156,46 +200,49 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
 }
 
 export const BASELINES: Record<Mood, Record<BaselineState, ExpressionId>> = {
-  funny: { idle: 'neutral', working: 'typing', waiting: 'puppy', music: 'happy', night: 'asleep' },
-  grumpy: { idle: 'bored', working: 'squint', waiting: 'glare', music: 'unimpressed', night: 'asleep' },
-  sarcastic: { idle: 'unimpressed', working: 'side-eye', waiting: 'side-eye', music: 'smug', night: 'asleep' },
-  sweet: { idle: 'content', working: 'typing', waiting: 'puppy', music: 'content', night: 'asleep' },
+  funny: { idle: 'neutral', working: 'typing', waiting: 'puppy', music: 'grooving', night: 'asleep', overworked: 'straining' },
+  grumpy: { idle: 'bored', working: 'squint', waiting: 'glare', music: 'unimpressed', night: 'asleep', overworked: 'angry' },
+  sarcastic: { idle: 'unimpressed', working: 'side-eye', waiting: 'side-eye', music: 'smug', night: 'asleep', overworked: 'teeth-grit' },
+  sweet: { idle: 'content', working: 'typing', waiting: 'puppy', music: 'grooving', night: 'asleep', overworked: 'worried' },
 }
 
-/** Scene held for as long as the baseline lasts (DL-155). */
+/** Scene held for as long as the baseline lasts (DL-155 / DL-163). */
 export const BASELINE_SCENE: Record<Mood, Partial<Record<BaselineState, SceneId>>> = {
-  funny: { working: 'typing' },
-  grumpy: {},
-  sarcastic: {},
-  sweet: { working: 'typing' },
+  funny: { working: 'typing', music: 'jamming', overworked: 'heavy-load' },
+  grumpy: { overworked: 'heavy-load' },
+  sarcastic: { overworked: 'brain-overload' },
+  sweet: { working: 'typing', music: 'jamming', overworked: 'heavy-load' },
 }
 
 export const IDLE_GAGS: Record<Mood, SequenceId[]> = {
-  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan'],
-  grumpy: ['sigh', 'head-shake', 'look-around', 'rage-fit', 'hand-on-chin'],
-  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect'],
-  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes'],
+  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan', 'bored-drum', 'idle-nod', 'typing-frenzy', 'coffee-sip', 'thumbs-up-pop', 'big-stretch'],
+  grumpy: ['sigh', 'head-shake', 'look-around', 'rage-fit', 'hand-on-chin', 'bored-drum', 'facepalm-sigh', 'idle-nod'],
+  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect', 'bored-drum', 'facepalm-sigh', 'coffee-sip', 'agent-idle-nod'],
+  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes', 'idle-nod', 'coffee-sip', 'thumbs-up-pop', 'big-stretch'],
 }
 
 export const PRIORITY: Record<RobotEvent, number> = {
-  agentNeeds: 100, agentDone: 90, cpuHigh: 80, batteryLow: 80,
+  agentNeeds: 100, agentDone: 90, cpuHigh: 80, memHigh: 78, heavyLoad: 76, batteryLow: 80, batteryCharged: 65, cpuRecovered: 58,
   pointerEnter: 70, pointerEyes: 70, pointerMouth: 70, pointerShake: 70, pointerDizzy: 72, pointerAnnoyed: 74,
   pointerCircle: 70, pointerLinger: 70, pointerApproach: 70, pointerLeave: 70, pointerReturn: 70,
-  notification: 60, update: 60, greet: 55, musicStart: 50, musicStop: 45, agentWorking: 40, agentLong: 40,
+  notification: 60, update: 60, greet: 55, musicStart: 50, musicStop: 45,
+  agentTypingLot: 44, agentWorking: 40, agentLong: 40, bored: 38, agentIdleNod: 35,
   morning: 30, noon: 30, night: 30, weather: 30,
 }
 
 export const COOLDOWN_MS: Record<RobotEvent, number> = {
-  greet: 0, agentWorking: 60_000, agentLong: 60_000, agentNeeds: 30_000, agentDone: 30_000,
-  musicStart: 60_000, musicStop: 60_000, cpuHigh: 120_000, batteryLow: 600_000, notification: 60_000, update: 600_000,
-  morning: 0, noon: 0, night: 0, weather: 600_000,
+  greet: 0, agentWorking: 60_000, agentTypingLot: 90_000, agentLong: 60_000, agentNeeds: 30_000, agentDone: 30_000, agentIdleNod: 90_000,
+  musicStart: 60_000, musicStop: 60_000,
+  cpuHigh: 120_000, heavyLoad: 120_000, memHigh: 120_000, cpuRecovered: 120_000, batteryLow: 600_000, batteryCharged: 60_000,
+  notification: 60_000, update: 600_000,
+  morning: 0, noon: 0, night: 0, weather: 600_000, bored: 120_000,
   pointerEnter: 6000, pointerEyes: 6000, pointerMouth: 6000, pointerShake: 6000, pointerDizzy: 6000,
   pointerAnnoyed: 6000, pointerCircle: 6000, pointerLinger: 6000, pointerApproach: 6000, pointerLeave: 6000, pointerReturn: 6000,
 }
 
 export const EVENT_GROUP: Partial<Record<RobotEvent, keyof RobotReactTo>> = {
-  agentWorking: 'agent', agentLong: 'agent', agentNeeds: 'agent', agentDone: 'agent',
+  agentWorking: 'agent', agentTypingLot: 'agent', agentLong: 'agent', agentNeeds: 'agent', agentDone: 'agent', agentIdleNod: 'agent',
   musicStart: 'music', musicStop: 'music',
-  cpuHigh: 'system', batteryLow: 'system',
-  morning: 'ambient', noon: 'ambient', night: 'ambient', weather: 'ambient',
+  cpuHigh: 'system', heavyLoad: 'system', memHigh: 'system', cpuRecovered: 'system', batteryLow: 'system', batteryCharged: 'system',
+  morning: 'ambient', noon: 'ambient', night: 'ambient', weather: 'ambient', bored: 'ambient',
 }

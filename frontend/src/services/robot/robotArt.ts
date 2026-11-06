@@ -238,8 +238,25 @@ export type PropId = keyof typeof PROPS
 
 // Accessories are drawn directly in face viewBox coordinates (anchor [0,0]).
 export const ACCESSORIES = {
-  headphones: { els: [line('M40 64 C40 -4 160 -4 160 64', W, 5), { tag: 'rect', attrs: { x: 28, y: 50, width: 16, height: 30, rx: 7, fill: W } }, { tag: 'rect', attrs: { x: 156, y: 50, width: 16, height: 30, rx: 7, fill: W } }] },
-  sunglasses: { els: [{ tag: 'path', attrs: { d: 'M50 48 H94 V64 Q94 76 82 76 H62 Q50 76 50 64 Z M106 48 H150 V64 Q150 76 138 76 H118 Q106 76 106 64 Z', fill: '#000', stroke: W, 'stroke-width': 4 } }, line('M94 54 H106', W, 4)] },
+  headphones: {
+    els: [
+      // Outer sculpted headband + soft top cushion
+      line('M36 58 C36 -10 164 -10 164 58', G('metal'), 6.5),
+      line('M66 6 C100 -10 134 6', G('cuff'), 7.5),
+      line('M42 54 C42 -4 158 -4 158 54', W, 2.2),
+      // Left earcup assembly (cushion + outer shell + pulsing neon ring)
+      box(32, 44, 10, 34, 5, G('cuff')),
+      box(22, 42, 16, 38, 8, G('metal-dark'), { stroke: W, 'stroke-width': 2.2 }),
+      animated(ell(29, 61, 4, 10, 'none', { stroke: COLORS.blue, 'stroke-width': 2.2 }), 'pulse'),
+      shine(26, 50, 2, 5),
+      // Right earcup assembly (cushion + outer shell + pulsing neon ring)
+      box(158, 44, 10, 34, 5, G('cuff')),
+      box(162, 42, 16, 38, 8, G('metal-dark'), { stroke: W, 'stroke-width': 2.2 }),
+      animated(ell(171, 61, 4, 10, 'none', { stroke: COLORS.pink, 'stroke-width': 2.2 }), 'pulse'),
+      shine(167, 50, 2, 5),
+    ],
+  },
+  sunglasses: { els: [{ tag: 'path', attrs: { d: 'M50 48 H94 V64 Q94 76 82 76 H62 Q50 76 50 64 Z M106 48 H150 V64 Q150 76 138 76 H118 Q106 76 106 64 Z', fill: '#000', stroke: W, 'stroke-width': 4 } }, line('M94 54 H106', W, 4), line('M56 54 L64 66 M112 54 L120 66', COLORS.blue, 2.2)] },
   'party-hat': { els: [line('M100 -16 L84 24 H116 Z', W, 4), line('M92 4 L108 0 M88 14 L112 10', COLORS.pink, 3), dot(100, -18, 4, COLORS.yellow)] },
   'wizard-hat': { els: [line('M62 28 H138 M76 28 L104 -26 L124 28', W, 4), shape(STAR4(104, 6, 0.7), COLORS.yellow)] },
   nightcap: { els: [line('M70 30 Q100 -10 142 18 L150 34 M70 30 H132', W, 4), dot(150, 37, 5)] },

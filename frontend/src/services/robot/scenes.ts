@@ -8,6 +8,10 @@
 export type SceneId =
   | 'typing' | 'cheer' | 'clap' | 'cover' | 'hello'
   | 'inspect' | 'call' | 'notes' | 'relax' | 'sneakers' | 'chin'
+  | 'typing-frenzy' | 'bored-desk' | 'nodding-off' | 'coffee-break'
+  | 'facepalm' | 'thumbs-up' | 'stretch' | 'jamming'
+  | 'weather-rain' | 'weather-snow' | 'weather-sunny'
+  | 'heavy-load' | 'brain-overload'
 
 export interface SceneDef {
   /** 0..1 — how far the face lifts/shrinks to make room (the laptop sits below it). */
@@ -34,6 +38,20 @@ export const SCENES = {
   relax: { lift: 0, laptop: false, toon: true, fx: -14 },
   sneakers: { lift: 0, laptop: false, toon: true, hideFace: true },
   chin: { lift: 0, laptop: false, toon: true, fx: 18, fs: -0.1 },
+  // DL-163: expanded event-driven scenes
+  'typing-frenzy': { lift: 0, laptop: false, toon: true, fx: 22, fy: -6, fs: -0.18 },
+  'bored-desk': { lift: 0, laptop: false, toon: true, fx: 14, fy: -6, fs: -0.12 },
+  'nodding-off': { lift: 0, laptop: false, toon: true, fx: 0, fy: -6, fs: -0.1 },
+  'coffee-break': { lift: 0, laptop: false, toon: true, fx: 0, fy: -12, fs: -0.1 },
+  facepalm: { lift: 0, laptop: false, toon: true, fx: -6, fy: 2, fs: -0.06 },
+  'thumbs-up': { lift: 0, laptop: false, toon: true, fx: -22, fy: -4, fs: -0.08 },
+  stretch: { lift: 0, laptop: false, toon: true, fx: 0, fy: 8, fs: -0.08 },
+  jamming: { lift: 0, laptop: false, toon: true, fx: 0, fy: -6, fs: -0.06 },
+  'weather-rain': { lift: 0, laptop: false, toon: true, fx: -12, fy: 8, fs: -0.12 },
+  'weather-snow': { lift: 0, laptop: false, toon: true, fx: 0, fy: -4, fs: -0.08 },
+  'weather-sunny': { lift: 0, laptop: false, toon: true, fx: -10, fy: 4, fs: -0.06 },
+  'heavy-load': { lift: 0, laptop: false, toon: true, fx: 0, fy: -12, fs: -0.1 },
+  'brain-overload': { lift: 0, laptop: false, toon: true, fx: -4, fy: 6, fs: -0.1 },
 } as const satisfies Record<SceneId, SceneDef>
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[]
 
@@ -93,7 +111,11 @@ export function handPoses(scene: SceneId, p: number, tMs: number): [HandPose, Ha
         { x: lerp(250, 136, u), y: lerp(100, 76 - peek * 4, u), rot: -90, mirror: true, curl: [10, 8, 10, 14], thumb: -20, visible: true },
       ]
     }
-    case 'inspect': case 'call': case 'notes': case 'relax': case 'sneakers': case 'chin': {
+    case 'inspect': case 'call': case 'notes': case 'relax': case 'sneakers': case 'chin':
+    case 'typing-frenzy': case 'bored-desk': case 'nodding-off': case 'coffee-break':
+    case 'facepalm': case 'thumbs-up': case 'stretch': case 'jamming':
+    case 'weather-rain': case 'weather-snow': case 'weather-sunny':
+    case 'heavy-load': case 'brain-overload': {
       const none: HandPose = { x: -100, y: 0, rot: 0, mirror: false, curl: OPEN, thumb: -40, visible: false }
       return [none, none]
     }

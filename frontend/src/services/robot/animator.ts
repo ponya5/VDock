@@ -215,6 +215,7 @@ export class FaceAnimator {
     const dx = this.reduced ? 0 : 3 * Math.sin((2 * Math.PI * t) / 7000)
     const dy = this.reduced ? 0 : 2 * Math.sin((2 * Math.PI * t) / 9000)
     const bob = this.reduced ? 0 : -6 * this.bob * Math.abs(Math.sin((2 * Math.PI * t) / 450))
+    const bobTilt = this.reduced ? 0 : 4.5 * this.bob * Math.sin((2 * Math.PI * t) / 900)
     const sc = this.sceneSlot.frame()
     const sdef: SceneDef | null = sc.id ? SCENES[sc.id] : null
     const su = clamp(this.sceneSlot.spring.value, 0, 1)
@@ -248,7 +249,7 @@ export class FaceAnimator {
       accessory: { ...acc, dy: (1 - Math.max(0, Math.min(1.2, this.accessorySlot.spring.value))) * -30 },
       scene: { ...sc, p: this.sceneSlot.spring.value },
       props: this.props.map(pr => ({ key: pr.key, id: pr.id, age: t - pr.born })),
-      transform: `translate(${f2(100 + dx + sx)} ${f2(70 + dy + sy + face.bounce + bob - 20 * lift)}) rotate(${f2(face.tilt)}) scale(${f2(scale)}) translate(-100 -70)`,
+      transform: `translate(${f2(100 + dx + sx)} ${f2(70 + dy + sy + face.bounce + bob - 20 * lift)}) rotate(${f2(face.tilt + bobTilt)}) scale(${f2(scale)}) translate(-100 -70)`,
       expression: this.expr,
       t,
     }
