@@ -93,12 +93,14 @@
 
 <script setup lang="ts">
 import { onMounted, computed, ref, nextTick } from 'vue'
+import { useClockFormat } from '@/composables/useClockFormat'
 import { useNotificationsStore } from '@/stores/notifications'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import apiClient from '@/api/client'
 import { confirmDialog } from '@/composables/useConfirm'
 
 const notificationsStore = useNotificationsStore()
+const clockFmt = useClockFormat()
 
 // ── Session Logs tab (DL-029) ──
 interface LogFileEntry { name: string; size: number; mtime: string }
@@ -206,7 +208,7 @@ async function refreshTail() {
       tail: logTailCount.value
     })
     logLines.value = data.lines ?? []
-    logsUpdatedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    logsUpdatedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value })
     await nextTick()
     if (logViewerEl.value) logViewerEl.value.scrollTop = logViewerEl.value.scrollHeight
   } catch {
