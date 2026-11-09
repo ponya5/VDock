@@ -5,7 +5,7 @@
       dashboardBackgroundClass,
       `device-${layoutClass}`,
       `orient-${orientation}`,
-      { mobile: isMobileViewport, 'layout-stacked': deckLayout.stacked, 'footer-open': footerVisible },
+      { mobile: isMobileViewport, 'chrome-docked': chromeDocked, 'layout-stacked': deckLayout.stacked, 'footer-open': footerVisible },
     ]"
     :style="dashboardBackgroundStyle"
   >
@@ -306,6 +306,7 @@ import DeckHeader from '@/components/DeckHeader.vue'
 import PhoneIntro from '@/components/PhoneIntro.vue'
 import DeckFooter from '@/components/DeckFooter.vue'
 import MobileDeckChrome from '@/components/MobileDeckChrome.vue'
+import { useMobileChromeRail } from '@/composables/useMobileChromeRail'
 import ScreenSaver from '@/components/ScreenSaver.vue'
 import EditSidebar from '@/components/EditSidebar.vue'
 import QuickAddPicker from '@/components/QuickAddPicker.vue'
@@ -842,6 +843,7 @@ const { deviceClass, layoutClass, orientation, viewportWidth } = useDeviceClass(
 // with no visible way to switch scenes). Phones and tablets reach Edit /
 // Settings from that menu, so the floating "Header" button only remains
 // on the 7" panel and desktops.
+const { docked: chromeDocked } = useMobileChromeRail()
 const usesMobileChrome = computed(() => isMobileViewport.value || deviceClass.value === 'tablet')
 const hidesHeaderFab = computed(() => deviceClass.value === 'phone' || deviceClass.value === 'tablet')
 const deckLayout = computed(() =>
@@ -1388,6 +1390,8 @@ onUnmounted(() => {
   overflow: hidden;
   box-sizing: border-box;
 }
+
+.dashboard-view.chrome-docked .deck-main { padding-right: calc(56px + env(safe-area-inset-right, 0px)); box-sizing: border-box; }
 
 .deck-main {
   flex: 1;

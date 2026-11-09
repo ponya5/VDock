@@ -72,8 +72,8 @@
 
     <div class="mac-main">
     <!-- DL-166: Groups / All switch, only when the scene splits into 2+ categories. -->
+    <div v-if="showViewToggle || showsGroups" class="mac-nav">
     <div v-if="showViewToggle" class="mac-shortcuts-head">
-      <span class="mac-shortcuts-title">Shortcuts</span>
       <AgentViewToggle :model-value="agentView.mode.value" always-labels @update:model-value="agentView.setMode" />
     </div>
     <AgentCategoryRail
@@ -84,6 +84,7 @@
       orientation="horizontal"
       @select="agentView.setCategory"
     />
+    </div>
 
     <div
       v-if="visibleShortcuts.length > 0"
@@ -625,19 +626,21 @@ trackAgentSurfaceVisibility(
 .mac-shortcut:disabled { opacity: 0.6; cursor: default; }
 
 /* --- DL-166: Groups / All header and the grouped tile region ---------------------- */
+.mac-nav {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mac-nav > .agent-cat-chips { order: 1; flex: 1 1 230px; min-width: 0; }
 .mac-shortcuts-head {
-  flex-shrink: 0;
+  order: 2;
+  flex: none;
+  margin-left: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.mac-shortcuts-title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
 }
 /* Links inside the tile grid keep their pill look, centred. */
 .mac-shortcuts .mac-link {

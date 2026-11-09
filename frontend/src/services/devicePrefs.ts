@@ -12,13 +12,16 @@ export interface DevicePrefs {
   touchMode: 'auto' | 'normal' | 'touch-friendly' | 'tablet'
   layout: 'fit' | 'designed'
   keepAwake: boolean
+  /** Seconds before the phone's scene bar folds away in short landscape; 0 = never. */
+  railAutoHide: number
 }
 
 export const DEVICE_PREFS_KEY = 'vdock_device_prefs'
 
-const DEFAULTS: DevicePrefs = { touchMode: 'auto', layout: 'fit', keepAwake: true }
+const DEFAULTS: DevicePrefs = { touchMode: 'auto', layout: 'fit', keepAwake: true, railAutoHide: 0 }
 
 const TOUCH_MODES: readonly DevicePrefs['touchMode'][] = ['auto', 'normal', 'touch-friendly', 'tablet']
+export const RAIL_AUTO_HIDE_CHOICES = [0, 5, 10, 20, 30] as const
 const LAYOUTS: readonly DevicePrefs['layout'][] = ['fit', 'designed']
 
 function read(): DevicePrefs {
@@ -29,6 +32,7 @@ function read(): DevicePrefs {
       touchMode: TOUCH_MODES.includes(raw.touchMode) ? raw.touchMode : DEFAULTS.touchMode,
       layout: LAYOUTS.includes(raw.layout) ? raw.layout : DEFAULTS.layout,
       keepAwake: typeof raw.keepAwake === 'boolean' ? raw.keepAwake : DEFAULTS.keepAwake,
+      railAutoHide: (RAIL_AUTO_HIDE_CHOICES as readonly number[]).includes(raw.railAutoHide) ? raw.railAutoHide : DEFAULTS.railAutoHide,
     }
   } catch {
     return { ...DEFAULTS }
