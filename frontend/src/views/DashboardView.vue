@@ -19,7 +19,7 @@
       v-if="usesMobileChrome && !settingsStore.showHeader"
       :scenes="currentProfile?.scenes || []"
       :current-scene-index="currentSceneIndex"
-      :total-pages="showsMobileAgentConsole ? 1 : currentScene?.pages.length || 1"
+      :total-pages="showsMobileAgentConsole || showsAgentGroups ? 1 : currentScene?.pages.length || 1"
       :current-page-index="currentPageIndex"
       :can-configure="deviceClass === 'tablet' || deviceClass === 'panel'"
       @set-scene="setScene"
@@ -85,7 +85,20 @@
             <MobileAgentConsole v-if="showsMobileAgentConsole" :scene="currentScene" />
             <template v-else>
               <AgentActionBar :scene="currentScene" />
-              <div class="deck-grid-host">
+              <!-- DL-166: groups view - category rail + a read-only grid of the selected category. -->
+              <AgentCategoryDeck
+                v-if="showsAgentGroups && currentScene"
+                :scene="currentScene"
+                :button-size="settingsStore.buttonSize * settingsStore.touchModeMultiplier"
+                :show-labels="settingsStore.showLabels"
+                :show-tooltips="settingsStore.showTooltips"
+                :compact="shouldUseCompactMode"
+                @button-click="handleButtonClick"
+                @button-press="handleButtonPress"
+                @button-release="handleButtonRelease"
+                @double-tap="handleButtonClick"
+              />
+              <div v-else class="deck-grid-host">
                 <DeckGrid
                   :page="currentPage"
                   :is-edit-mode="isEditMode"
@@ -301,6 +314,9 @@ import RotateToLandscape from '@/components/RotateToLandscape.vue'
 import AgentActionBar from '@/components/AgentActionBar.vue'
 import AgentWaitingGlow from '@/components/AgentWaitingGlow.vue'
 import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
+import AgentCategoryDeck from '@/components/AgentCategoryDeck.vue'
+import { groupSceneButtons } from '@/utils/agentCategories'
+import { useAgentSceneView } from '@/composables/useAgentSceneView'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { createDefaultProfile } from '@/utils/defaultProfile'
 import { useTutorial } from '@/services/tutorial'
@@ -814,7 +830,7 @@ watch(isEditMode, (editing) => { if (editing) editDrawerOpen.value = true })
 // or multi-page dots. The header reveal floats independently and lifts
 // above the strip via .above-footer whenever this is true.
 const footerVisible = computed(() =>
-  !isMobileViewport.value && (isEditMode.value || (currentScene.value?.pages.length || 1) > 1)
+  !isMobileViewport.value && (isEditMode.value || ((currentScene.value?.pages.length || 1) > 1 && !showsAgentGroups.value))
 )
 // Phones: hide the docked sidebar (config-bound dead width), let the
 // header overlay instead of squeezing the deck, and reserve a slim top
@@ -884,11 +900,23 @@ function closeSidebar() {
 const appIntegrations = useAppIntegrations()
 
 // Phones get a portrait console instead of the grid on agent scenes (DL-065).
-const showsMobileAgentConsole = computed(() => {
+// DL-166: an AI coding scene is one whose app profile carries state-aware agent actions.
+const isAgentCodingScene = computed(() => {
   const scene = currentScene.value
-  if (!isMobileViewport.value || !scene || isEditMode.value) return false
-  return Boolean(sceneAppProfile(scene, appIntegrations.value)?.state_actions)
+  return Boolean(scene && sceneAppProfile(scene, appIntegrations.value)?.state_actions)
 })
+const showsMobileAgentConsole = computed(() => {
+  if (!isMobileViewport.value || !currentScene.value || isEditMode.value) return false
+  return isAgentCodingScene.value
+})
+
+// DL-166: Groups view (category rail) on desktop / the 7" panel. Edit mode always shows the
+// positional All grid, and a scene with fewer than two categories has nothing to group.
+const agentView = useAgentSceneView(computed(() => currentScene.value?.id))
+const agentGroups = computed(() => (isAgentCodingScene.value ? groupSceneButtons(currentScene.value) : []))
+const showsAgentGroups = computed(() =>
+  isAgentCodingScene.value && !isEditMode.value && agentView.mode.value === 'groups' && agentGroups.value.length >= 2
+)
 
 // A reply or permission prompt reaching the phone console is what the user
 // is waiting for, so it wakes the screen like a touch would.
@@ -1174,7 +1202,7 @@ useSwipe(mainContentRef, {
       !isEditMode.value &&
       (currentProfile.value?.scenes.length ?? 0) > 1 &&
       !(e.target as HTMLElement).closest(
-        'input, textarea, select, [contenteditable="true"], .agent-target-popover, .onscreen-keypad, .slider-face'
+        'input, textarea, select, [contenteditable="true"], .agent-target-popover, .onscreen-keypad, .slider-face, .agent-cat-rail, .agent-cat-chips, .agent-view-toggle'
       )
     swipeAxisBlocked = sceneSwipeArmed
       ? scrollableAxes(e.target as HTMLElement)

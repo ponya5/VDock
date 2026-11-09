@@ -5,16 +5,18 @@
     :style="linkAccent ? { '--link-accent': linkAccent } : undefined"
     :aria-label="`${agentName} console`"
   >
-    <header class="mac-status" aria-live="polite">
-      <span v-if="linked" class="mac-link-badge" :style="{ background: linkAccent! }" :title="`Linked to ${linked.label}`">{{ linked.badge || '·' }}</span>
-      <span class="mac-status-dot" aria-hidden="true" />
-      <div class="mac-status-text">
-        <strong class="mac-agent-name">{{ agentName }}</strong>
-        <span class="mac-state-label">{{ statusLine }}</span>
-        <span v-if="othersSummary" class="mac-others" data-testid="others-summary">{{ othersSummary }}</span>
-      </div>
+    <AgentStatusBanner
+      variant="card"
+      :state="displayState"
+      :agent-name="agentName"
+      :detail="statusLine"
+      :since-ms="sinceMs"
+      :linked="linked"
+      :link-accent="linkAccent"
+      :others-summary="othersSummary"
+    >
       <!-- Session targeting (DL-071): a single chip that opens the shared
-           listbox sheet — the old wrap-visible chip strip ate a whole row
+           listbox sheet - the old wrap-visible chip strip ate a whole row
            of the status card once several sessions were live. -->
       <AgentSessionPicker
         v-if="showSessionPicker"
@@ -31,13 +33,13 @@
         @identify="identify"
         @opened="refreshTargets"
       />
-      <!-- Only when the picker is absent — otherwise it duplicates the
+      <!-- Only when the picker is absent - otherwise it duplicates the
            session chip's label (both read the project dir name). -->
       <span v-else-if="projectName" class="mac-project" :title="stateEntry?.cwd">
         <FontAwesomeIcon :icon="['fas', 'folder-open']" />
         {{ projectName }}
       </span>
-    </header>
+    </AgentStatusBanner>
 
     <div
       v-if="isAgentPossiblyRunning && visibleActions.length > 0"
@@ -66,13 +68,34 @@
       </button>
     </div>
 
-    <div v-if="shortcutTiles.length > 0" class="mac-shortcuts" aria-label="Shortcuts">
+    <!-- DL-166: Groups / All switch, only when the scene splits into 2+ categories. -->
+    <div v-if="showViewToggle" class="mac-shortcuts-head">
+      <span class="mac-shortcuts-title">Shortcuts</span>
+      <AgentViewToggle :model-value="agentView.mode.value" always-labels @update:model-value="agentView.setMode" />
+    </div>
+    <AgentCategoryRail
+      v-if="showsGroups"
+      :groups="railGroups"
+      :selected="selectedId"
+      :badge="sessionBadge"
+      orientation="horizontal"
+      @select="agentView.setCategory"
+    />
+
+    <div
+      v-if="visibleShortcuts.length > 0"
+      id="agent-cat-panel"
+      class="mac-shortcuts"
+      :class="{ 'in-groups': showsGroups }"
+      :role="showsGroups ? 'tabpanel' : undefined"
+      :aria-labelledby="showsGroups && selectedId ? `agent-cat-tab-${selectedId}` : undefined"
+      aria-label="Shortcuts"
+    >
       <button
-        v-for="shortcut in shortcutTiles"
+        v-for="shortcut in visibleShortcuts"
         :key="shortcut.button.id"
         type="button"
-        class="mac-shortcut"
-        :class="{ highlighted: shortcut.isHighlighted }"
+        :class="[isQuiet(shortcut) ? 'mac-link' : 'mac-shortcut', { highlighted: shortcut.isHighlighted }]"
         :disabled="runningShortcutId !== null"
         :title="shortcut.button.tooltip || shortcut.label"
         @click="runShortcut(shortcut)"
@@ -80,9 +103,9 @@
         <FontAwesomeIcon
           :icon="runningShortcutId === shortcut.button.id ? ['fas', 'spinner'] : shortcut.icon"
           :spin="runningShortcutId === shortcut.button.id"
-          class="mac-shortcut-icon"
+          :class="isQuiet(shortcut) ? undefined : 'mac-shortcut-icon'"
         />
-        <span class="mac-shortcut-label">{{ shortcut.label }}</span>
+        <span :class="isQuiet(shortcut) ? undefined : 'mac-shortcut-label'">{{ shortcut.label }}</span>
       </button>
     </div>
 
@@ -90,9 +113,9 @@
          they do not drive the session — kept aside from the action tiles
          and styled as quiet outline pills so they can't be mistaken for
          one. Rendered last so actions never reflow around them. -->
-    <div v-if="linkShortcuts.length > 0" class="mac-links" aria-label="Web links">
+    <div v-if="visibleLinks.length > 0" class="mac-links" aria-label="Web links">
       <button
-        v-for="link in linkShortcuts"
+        v-for="link in visibleLinks"
         :key="link.button.id"
         type="button"
         class="mac-link"
@@ -124,6 +147,13 @@ import { isAgentWaitingDismissed } from '@/services/agentWaiting'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import AgentSessionPicker from '@/components/AgentSessionPicker.vue'
+import AgentStatusBanner from '@/components/AgentStatusBanner.vue'
+import AgentViewToggle from '@/components/AgentViewToggle.vue'
+import AgentCategoryRail from '@/components/AgentCategoryRail.vue'
+import { selectedCategoryId, useAgentSceneView } from '@/composables/useAgentSceneView'
+import { useAgentStateSince } from '@/composables/useAgentStateSince'
+import { AGENT_CATEGORIES, PAGE_NAVIGATION_ACTIONS, resolveButtonCategory, type CategoryGroup } from '@/utils/agentCategories'
+import { summarizeOtherSessions, toAgentState } from '@/utils/agentSessionSummary'
 
 /**
  * Mobile agent console (DL-065): a portrait phone surface for driving a
@@ -149,8 +179,6 @@ interface ConsoleShortcut {
 
 const props = defineProps<{ scene: Scene | null }>()
 
-/** Page navigation means nothing on a surface without pages. */
-const PAGE_NAVIGATION_ACTIONS = new Set(['next_page', 'previous_page', 'home_page', 'goto_page'])
 /** Scene buttons that start the agent — highlighted while it isn't running. */
 const LAUNCH_ACTIONS = new Set(['claude_continue', 'program'])
 /** Buttons that open something OUTSIDE the session — web pages (url) and
@@ -194,21 +222,9 @@ const {
 
 // DL-165: which session the actions are linked to (shown in its colour) and what the others are doing.
 const linked = computed(() => targetRows.value.find(r => r.pid === effectiveSession.value?.pid) ?? null)
-function toAgentState(state: string | null | undefined): AgentStateName | null {
-  if (state === 'working' || state === 'permission') return state
-  if (state === 'ready' || state === 'idle') return 'ready'
-  return null
-}
 watchEffect(() => { stateOverride.value = linked.value ? toAgentState(linked.value.state) : null })
 const linkAccent = computed(() => linked.value?.accent ?? null)
-const othersSummary = computed(() => {
-  const others = targetRows.value.filter(r => r.pid !== linked.value?.pid)
-  if (!linked.value || !others.length) return ''
-  const counts: Record<string, number> = {}
-  for (const o of others) { const st = toAgentState(o.state) ?? 'unknown'; counts[st] = (counts[st] ?? 0) + 1 }
-  const parts = Object.entries(counts).map(([st, n]) => `${n} ${st === 'permission' ? 'needs permission' : st}`)
-  return `${others.length} other${others.length > 1 ? 's' : ''}: ${parts.join(', ')}`
-})
+const othersSummary = computed(() => summarizeOtherSessions(targetRows.value, linked.value?.pid))
 
 const showSessionPicker = computed(() =>
   Boolean(sessionMarker.value) &&
@@ -249,10 +265,15 @@ const hasLiveSession = computed(() => targetRows.value.length > 0)
 const statusLine = computed(() => {
   if (!stateEntry.value && hasLiveSession.value) return 'Session running'
   if (profile.value && !stateEntry.value && !isAgentDetected.value) return 'No open session'
-  return stateEntry.value?.message || stateLabel.value
+  // Blank falls through to the banner's own copy for the state.
+  return stateEntry.value?.message || ''
 })
 
 const displayState = computed(() => (isAgentPossiblyRunning.value ? currentState.value : 'offline'))
+const sinceMs = useAgentStateSince(
+  computed(() => `${profile.value?.status_source ?? 'agent'}:${linked.value?.pid ?? 'all'}`),
+  displayState,
+)
 
 /**
  * Interrupt (working) and Approve (permission) are the one thing to press;
@@ -292,6 +313,34 @@ const shortcuts = computed<ConsoleShortcut[]>(() => {
 const shortcutTiles = computed(() => shortcuts.value.filter(s => !s.isLink))
 /** Web links (claude.ai & friends) — rendered apart, styled differently. */
 const linkShortcuts = computed(() => shortcuts.value.filter(s => s.isLink))
+
+// DL-166: the shortcuts split into categories (Groups) or show whole (All).
+const agentView = useAgentSceneView(computed(() => props.scene?.id))
+const shortcutGroups = computed(() => {
+  const buckets = new Map<string, ConsoleShortcut[]>()
+  for (const shortcut of shortcuts.value) {
+    const id = resolveButtonCategory(shortcut.button)
+    buckets.set(id, [...(buckets.get(id) ?? []), shortcut])
+  }
+  return AGENT_CATEGORIES.filter(def => buckets.has(def.id)).map(def => ({ ...def, items: buckets.get(def.id)! }))
+})
+const railGroups = computed<CategoryGroup[]>(() =>
+  shortcutGroups.value.map(g => ({ id: g.id, label: g.label, icon: g.icon, buttons: g.items.map(i => i.button) })))
+const showViewToggle = computed(() => shortcutGroups.value.length >= 2)
+const showsGroups = computed(() => showViewToggle.value && agentView.mode.value === 'groups')
+const selectedId = computed(() => selectedCategoryId(agentView.category.value, shortcutGroups.value))
+const visibleShortcuts = computed(() =>
+  showsGroups.value
+    ? shortcutGroups.value.find(g => g.id === selectedId.value)?.items ?? []
+    : shortcutTiles.value)
+/** In Groups the links are a category, so the separate strip is not rendered. */
+const visibleLinks = computed(() => (showsGroups.value ? [] : linkShortcuts.value))
+/** Web links (and the whole Links category) keep the quiet outline-pill style. */
+function isQuiet(shortcut: ConsoleShortcut): boolean {
+  return shortcut.isLink || (showsGroups.value && selectedId.value === 'links')
+}
+const sessionBadge = computed<'working' | 'permission' | null>(() =>
+  displayState.value === 'working' || displayState.value === 'permission' ? displayState.value : null)
 
 async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
   if (runningShortcutId.value) return
@@ -335,56 +384,7 @@ trackAgentSurfaceVisibility(
 .mobile-agent-console.state-unknown { --agent-accent: #94a3b8; }
 .mobile-agent-console.state-offline { --agent-accent: #64748b; }
 
-/* --- Status card ------------------------------------------------------------ */
-.mac-status {
-  display: flex;
-  align-items: center;
-  /* Session chips live inside this row now — wrap lets them fall to a
-     second line inside the same card instead of forcing one long line. */
-  flex-wrap: wrap;
-  gap: 10px 12px;
-  flex-shrink: 0;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(15, 20, 28, 0.78);
-  border: 1px solid color-mix(in srgb, var(--agent-accent) 50%, transparent);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--agent-accent) 20%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.mac-status-dot {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--agent-accent);
-  box-shadow: 0 0 10px var(--agent-accent);
-}
-
-.state-working .mac-status-dot,
-.state-permission .mac-status-dot {
-  animation: mac-pulse 1.2s ease-in-out infinite;
-}
-
-.mac-status-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1.2;
-}
-
-.mac-agent-name {
-  font-size: clamp(1rem, 0.9rem + 0.6vw, 1.2rem);
-}
-
-.mac-state-label {
-  font-size: clamp(0.85rem, 0.8rem + 0.4vw, 1rem);
-  color: color-mix(in srgb, var(--agent-accent) 75%, #e5e7eb);
-}
-
+/* --- Status card: see AgentStatusBanner (DL-166) -------------------------------- */
 .mac-project {
   display: inline-flex;
   align-items: center;
@@ -516,6 +516,33 @@ trackAgentSurfaceVisibility(
 .mac-shortcut:active:not(:disabled) { transform: scale(0.96); }
 .mac-shortcut:disabled { opacity: 0.6; cursor: default; }
 
+/* --- DL-166: Groups / All header and the grouped tile region ---------------------- */
+.mac-shortcuts-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mac-shortcuts-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+/* A long category scrolls inside the console; the banner never scrolls away. */
+.mac-shortcuts.in-groups {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+  overscroll-behavior: contain;
+}
+.mac-shortcuts .mac-link {
+  justify-content: center;
+}
+
 /* --- Web links (claude.ai & friends) ----------------------------------------
    url-type scene buttons open a browser — they don't touch the session, so
    they render apart from the action tiles as quiet outline pills: dashed
@@ -557,25 +584,6 @@ trackAgentSurfaceVisibility(
     padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   }
 
-  .mac-status {
-    padding: 6px 12px;
-    border-radius: 14px;
-    gap: 6px 10px;
-  }
-
-  /* Chips share the status row now — slim them so the merged line stays
-     one compact band in landscape. */
-  .mac-session {
-    min-height: 36px;
-    padding: 4px 10px;
-  }
-
-  .mac-status-text {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 10px;
-  }
-
   .mac-action {
     min-height: 44px;
     flex-direction: row;
@@ -594,22 +602,10 @@ trackAgentSurfaceVisibility(
   }
 }
 
-@keyframes mac-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .mac-status-dot { animation: none !important; }
   .mac-session.waiting { animation: none; }
 }
 /* DL-165: the link to a session - badge, edge and a caption over the actions, in the session's colour. */
-.mac-link-badge {
-  display: inline-flex; align-items: center; justify-content: center; flex: none;
-  min-width: 2em; height: 1.7em; padding: 0 0.4em; border-radius: 7px;
-  color: #0b1220; font-weight: 800; font-size: clamp(0.62rem, 0.9vw + 0.35rem, 0.85rem);
-}
-.mac-others { display: block; font-size: clamp(0.6rem, 0.8vw + 0.32rem, 0.78rem); opacity: 0.75; }
 .mobile-agent-console.is-linked { border-left: 4px solid var(--link-accent); }
 .mac-actions-for {
   grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 6px;
