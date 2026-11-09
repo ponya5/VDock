@@ -34,7 +34,9 @@ const items = ref([
   { id: 'WEATHERAPI_KEY', label: 'WeatherAPI key', kind: 'secret', configured: false, builtin: true, builtin_label: 'Built-in (Open-Meteo)', reason: '', help_url: 'https://x', unlocks: 'Weather' },
 ])
 vi.mock('@/composables/useSetupStatus', () => ({
+  markKeyRejected: vi.fn(),
   useSetupStatus: () => ({
+    rejectedKeys: ref({}),
     secrets: items,
     tools: ref([]),
     envFile: ref('backend/.env'),

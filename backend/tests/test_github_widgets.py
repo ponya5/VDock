@@ -223,3 +223,18 @@ def test_api_uses_the_bearer_token(plugin, mocker):
 
 def test_github_api_constant_unchanged():
     assert github_pack.GITHUB_API == 'https://api.github.com'
+
+
+def test_401_is_reported_as_a_rejected_token(plugin, mocker):
+    """DL-167: a stale GITHUB_TOKEN must not look like a generic failure."""
+    import requests
+    response = requests.Response()
+    response.status_code = 401
+    mocker.patch.object(plugin, '_api',
+                        side_effect=requests.HTTPError('401', response=response))
+
+    result = plugin.execute_action('gh_widget_prs', {})
+
+    assert result['message'] == 'GitHub token rejected'
+    assert result['data']['auth_error'] == 'GITHUB_TOKEN'
+    assert result['data']['badge'] == '!'

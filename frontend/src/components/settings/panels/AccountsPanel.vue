@@ -7,10 +7,13 @@
           <div v-for="item in secrets" :key="item.id" class="row stack key-row" :data-key="item.id">
             <div class="key-top">
               <div class="row-text">
-                <span class="label">{{ item.label }} <span class="status" :class="item.configured || item.builtin ? 'is-ok' : 'is-off'">{{ item.configured ? 'Set' : item.builtin ? (item.builtin_label || 'Built-in') : 'Not set' }}</span>
+                <span class="label">{{ item.label }} <span class="status" :class="rejectedKeys[item.id] ? 'is-bad' : item.configured || item.builtin ? 'is-ok' : 'is-off'">{{ rejectedKeys[item.id] ? 'Rejected' : item.configured ? 'Set' : item.builtin ? (item.builtin_label || 'Built-in') : 'Not set' }}</span>
                   <button v-if="guideFor(item.id)" type="button" class="help-btn" data-action="help" :aria-expanded="helpOpenId === item.id" :aria-label="`How to use ${item.label}`" title="How to use this" @click="toggleHelp(item.id)">?</button>
                 </span>
                 <p>{{ item.unlocks }}</p>
+                <p v-if="rejectedKeys[item.id]" class="key-test is-bad" role="alert" data-testid="key-rejected">
+                  <FontAwesomeIcon :icon="['fas', 'triangle-exclamation']" /> The service rejected this key (expired or revoked), so features using it are not updating. Replace it, or remove it{{ item.id === 'GITHUB_TOKEN' ? ' to use your gh login' : '' }}.
+                </p>
                 <p v-if="testResults[item.id]" class="key-test" :class="testResults[item.id].ok ? 'is-ok' : 'is-bad'" role="status" data-testid="key-test-result">
                   <FontAwesomeIcon :icon="['fas', testResults[item.id].ok ? 'circle-check' : 'circle-xmark']" /> {{ testResults[item.id].message }}
                 </p>
@@ -98,7 +101,7 @@ import { nextTick, onMounted, ref } from 'vue'
 import apiClient from '@/api/client'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useNotificationsStore } from '@/stores/notifications'
-import { useSetupStatus, type IntegrationItem } from '@/composables/useSetupStatus'
+import { useSetupStatus, markKeyRejected, type IntegrationItem } from '@/composables/useSetupStatus'
 import { copyText } from '@/utils/copyText'
 import { useDashboardStore } from '@/stores/dashboard'
 import { guideFor } from '@/data/integrationGuides'
@@ -106,7 +109,7 @@ import { buildIntegrationScene, integrationSceneId } from '@/utils/integrationSc
 
 const notificationsStore = useNotificationsStore()
 const dashboardStore = useDashboardStore()
-const { secrets, tools, envFile, refresh } = useSetupStatus()
+const { secrets, tools, envFile, rejectedKeys, refresh } = useSetupStatus()
 
 // The backend only opens the file for requests from the PC itself.
 const isLocalDevice = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
@@ -149,6 +152,7 @@ async function save(item: IntegrationItem) {
     if (guideFor(item.id) && !sceneAdded(item.id)) offerSceneFor.value = item.id
     const { [item.id]: _stale, ...rest } = testResults.value // a new key makes the old result stale
     testResults.value = rest
+    markKeyRejected(item.id, false)
     await refresh()
     notificationsStore.success('Saved', 'Active now')
   } catch (e: any) {
@@ -200,6 +204,7 @@ async function testKey(item: IntegrationItem) {
   try {
     const response = await apiClient.post(`/config/integrations/${item.id}/test`)
     testResults.value = { ...testResults.value, [item.id]: response.data as KeyTestResult }
+    markKeyRejected(item.id, response.data?.status === 'invalid')
   } catch (e: any) {
     // 404/405 = the running backend predates the /test route.
     const stale = [404, 405].includes(e?.response?.status)
@@ -223,6 +228,7 @@ async function remove(item: IntegrationItem) {
   busy.value = true
   try {
     await apiClient.delete(`/config/integrations/${item.id}`)
+    markKeyRejected(item.id, false)
     cancelEdit()
     await refresh()
     notificationsStore.success('Removed', `${item.label} cleared`)
@@ -247,6 +253,7 @@ onMounted(refresh)
 <style scoped>
 .status { margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600; border: 1px solid var(--line); color: var(--text-3); }
 .status.is-ok { color: #7fd8a0; border-color: #1f5a3a; background: rgba(60, 200, 120, 0.08); }
+.status.is-bad { color: #ff8f8f; border-color: #6a2a2a; background: rgba(255, 100, 100, 0.08); }
 .status.is-off { color: #f2cd8d; border-color: #5c4a1f; background: rgba(245, 181, 71, 0.09); }
 .key-top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; width: 100%; }
 .key-edit { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }

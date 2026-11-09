@@ -26,6 +26,12 @@ const envFile = ref('')
 const hooksInstalled = ref<number | null>(null)
 const hooksTotal = ref(0)
 const loaded = ref(false)
+// Keys a live widget just saw GitHub/etc. reject (HTTP 401): saved, but not working (DL-167).
+export const rejectedKeys = ref<Record<string, boolean>>({})
+export function markKeyRejected(id: string, rejected = true) {
+  if (rejectedKeys.value[id] === rejected) return
+  rejectedKeys.value = { ...rejectedKeys.value, [id]: rejected }
+}
 // macOS only: Accessibility not granted, so every keystroke button fails (DL-007).
 const keystrokesBlocked = ref(false)
 // The Accessibility entry macOS checks — the app that started VDock's server
@@ -62,5 +68,5 @@ export function useSetupStatus() {
   const githubTokenMissing = computed(() => items.value.some((i) => i.id === 'GITHUB_TOKEN' && !i.configured))
   const hooksMissing = computed(() => hooksInstalled.value !== null && hooksInstalled.value < hooksTotal.value)
 
-  return { secrets, tools, envFile, hooksInstalled, hooksTotal, loaded, githubTokenMissing, hooksMissing, keystrokesBlocked, accessibilityApp, refresh }
+  return { secrets, tools, envFile, hooksInstalled, hooksTotal, loaded, githubTokenMissing, hooksMissing, keystrokesBlocked, accessibilityApp, rejectedKeys, refresh }
 }

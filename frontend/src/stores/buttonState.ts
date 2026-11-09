@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useNotificationsStore } from './notifications'
+import { markKeyRejected } from '@/composables/useSetupStatus'
 
 /**
  * Transient per-button state: what a button is doing right now.
@@ -47,6 +49,24 @@ export interface ButtonState {
 /** How long a success/error flash stays before fading back to idle. */
 const FLASH_MS = 2200
 
+/** Warn once per window when a live widget's saved key is rejected (DL-167). */
+const AUTH_TOAST_MS = 10 * 60 * 1000
+const lastAuthToast: Record<string, number> = {}
+function reportAuthError(keyId: unknown) {
+  if (typeof keyId !== 'string' || !keyId) return
+  markKeyRejected(keyId)
+  const now = Date.now()
+  if (now - (lastAuthToast[keyId] ?? 0) < AUTH_TOAST_MS) return
+  lastAuthToast[keyId] = now
+  useNotificationsStore().addNotification({
+    type: 'warning',
+    title: 'GitHub token rejected',
+    message: 'GitHub says the saved token is expired or revoked, so the GitHub buttons cannot update. Fix it in Settings > Accounts & keys, or remove it to use your gh login.',
+    duration: 15000,
+    dismissible: true,
+  })
+}
+
 export const useButtonStateStore = defineStore('buttonState', () => {
   const states = ref<Record<string, ButtonState>>({})
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -90,6 +110,7 @@ export const useButtonStateStore = defineStore('buttonState', () => {
     if (result?.cancelled) { clear(buttonId); return }
 
     const data = result?.data ?? {}
+    reportAuthError(data.auth_error)
     const hasBadge = data.badge !== undefined && data.badge !== null
 
     set(buttonId, {

@@ -466,6 +466,20 @@ class Plugin(BasePlugin):
             'data': {'badge': '!', 'status': 'error'},
         }
 
+    def _widget_failure(self, error: Exception) -> Dict[str, Any]:
+        """Turn a REST failure into a widget error; a 401 names the real cause."""
+        status = getattr(getattr(error, 'response', None), 'status_code', None)
+        if status == 401:
+            result = self._widget_error(
+                'GitHub token rejected',
+                'GitHub answered 401: the saved token is expired or revoked. '
+                'Update it in Settings > Accounts & keys, or remove it to use '
+                'your `gh auth login` instead.')
+            result['data']['auth_error'] = 'GITHUB_TOKEN'
+            return result
+        return self._widget_error('GitHub request failed',
+                                  secrets.redact(str(error)))
+
     def _widget_prs(self, config: Dict[str, Any]) -> Dict[str, Any]:
         slug = self._repo_slug(config)
         if not slug:
@@ -492,8 +506,7 @@ class Plugin(BasePlugin):
         except PermissionError as e:
             return self._widget_error('GitHub token missing', str(e))
         except Exception as e:
-            return self._widget_error('GitHub request failed',
-                                      secrets.redact(str(e)))
+            return self._widget_failure(e)
 
         return {
             'success': True,
@@ -526,8 +539,7 @@ class Plugin(BasePlugin):
         except PermissionError as e:
             return self._widget_error('GitHub token missing', str(e))
         except Exception as e:
-            return self._widget_error('GitHub request failed',
-                                      secrets.redact(str(e)))
+            return self._widget_failure(e)
 
         runs = data.get('workflow_runs') or []
         if not runs:
@@ -567,8 +579,7 @@ class Plugin(BasePlugin):
         except PermissionError as e:
             return self._widget_error('GitHub token missing', str(e))
         except Exception as e:
-            return self._widget_error('GitHub request failed',
-                                      secrets.redact(str(e)))
+            return self._widget_failure(e)
 
         count = len(data)
         return {
