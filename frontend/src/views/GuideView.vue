@@ -40,6 +40,7 @@
             >
               <FontAwesomeIcon :icon="item.icon" class="nav-ico" />
               <span>{{ item.title }}</span>
+              <span v-if="item.badge" class="hot-badge hot-badge-sm">{{ item.badge }}</span>
             </a>
           </div>
         </nav>
@@ -105,6 +106,7 @@
             @click.prevent="jumpTo(f.id)"
           >
             <FontAwesomeIcon :icon="f.icon" /> {{ f.title }}
+            <span v-if="f.badge" class="hot-badge hot-badge-sm">{{ f.badge }}</span>
           </a>
         </nav>
 
@@ -122,7 +124,7 @@
               <div class="feature-head">
                 <span class="feature-ico"><FontAwesomeIcon :icon="f.icon" /></span>
                 <div>
-                  <h2>{{ f.title }}</h2>
+                  <h2>{{ f.title }}<span v-if="f.badge" class="hot-badge">{{ f.badge }}</span></h2>
                   <p class="feature-tagline">{{ f.tagline }}</p>
                 </div>
               </div>
@@ -158,6 +160,8 @@ interface GuideFeature {
   id: string
   icon: [string, string]
   title: string
+  /** Short animated label next to the title and nav item, e.g. "HOT!!". */
+  badge?: string
   tagline: string
   body: string[]
   points?: string[]
@@ -181,10 +185,32 @@ const features: GuideFeature[] = [
       '<strong>Pages</strong> — a scene that outgrows its grid gets extra pages; flip with the dots or ‹ › under the grid.',
       '<strong>Swipe</strong> — left/right anywhere on the deck moves between scenes; up/down reveals or hides the header.',
       '<strong>Quick search</strong> — <code>Ctrl+F</code> in edit mode searches existing buttons and new actions.',
+      '<strong>Small windows</strong> — shrink the desktop window and keys turn icon-only and scale to fit; alerts and the agent bar shrink with them.',
     ],
     shot: 'guide-deck.png',
     shotCaption: 'The deck — a scene of live buttons on the 7″ panel.',
-    keywords: 'button grid edit mode drag resize page swipe gesture layout cell keyboard shortcut ctrl e f',
+    keywords: 'button grid edit mode drag resize page swipe gesture layout cell keyboard shortcut ctrl e f small window icon only',
+  },
+  {
+    id: 'mobile',
+    icon: ['fas', 'mobile-screen-button'],
+    title: 'Mobile View',
+    badge: 'HOT!!',
+    tagline: 'Your phone or tablet is a deck',
+    body: [
+      'Open VDock on any phone or tablet on your Wi-Fi — scan the QR code in <strong>Settings → Devices &amp; network → Connect &amp; security</strong>. No app store, no account. Add it to the Home Screen for a full-screen deck with no browser bars.',
+    ],
+    points: [
+      '<strong>Phone = a remote</strong> — a portrait grid sized for your thumb, a Claude Code console, and an approval remote: approve or deny a waiting agent from the couch.',
+      '<strong>Tablet = a full deck</strong> — portrait and landscape grids, editing on the device, and the screen stays awake.',
+      '<strong>Landscape phones</strong> get a slim header and a compact scene rail that can auto-hide; swipe left and right to change scenes.',
+      '<strong>Follows your work</strong> — auto scene switching works on the phone too: bring Cursor forward on the PC and the phone jumps to the Cursor scene.',
+      '<strong>Per device</strong> — Day mode, touch size and menu toggles are set on each phone, so the panel and your phone can look different.',
+      '<strong>Stays in sync</strong> — reconnects on its own, resumes on the right scene, and edits on one device show up on every other.',
+    ],
+    shot: 'guide-mobile.png',
+    shotCaption: 'Media on one phone, Claude Code on a phone and a tablet — same deck, same QR code.',
+    keywords: 'mobile phone tablet ipad android iphone remote portrait landscape touch thumb approval approve deny couch home screen pwa install wifi qr swipe rail keep awake day mode sync reconnect hot',
   },
   {
     id: 'scenes',
@@ -192,13 +218,27 @@ const features: GuideFeature[] = [
     title: 'Scenes & Profiles',
     tagline: 'A deck per context',
     body: [
-      'A <strong>scene</strong> is a screen of buttons — Media, Cursor, Claude Code, Websites. The pills in the header switch between them; in edit mode the <strong>+</strong> adds a new one.',
-      'Each scene has its own name, icon, accent color, grid size and button set. A scene can also be <em>app-linked</em>: give it buttons for Cursor or Claude Code and VDock learns to auto-switch to it when that app is running (see Integrations).',
+      'A <strong>scene</strong> is a screen of buttons — Media, Cursor, Claude Code, Websites. The pills in the header switch between them; in edit mode the <strong>+</strong> adds a new one. A live dot on a pill means that app is running.',
+      'Each scene has its own name, icon, accent color, grid size and button set. A scene can also be <em>app-linked</em>: VDock switches to it when that app comes to the front (see Integrations). Change the order of the pills from the scene editor.',
       '<strong>Profiles</strong> are whole decks — separate button sets you can swap from the Profiles page, duplicate, or export.',
     ],
     shot: 'guide-scene-editor.png',
     shotCaption: 'The scene editor — name, icon, color, grid, pages.',
-    keywords: 'scene pill profile switch new add editor icon color grid size page duplicate export import deck set',
+    keywords: 'scene pill profile switch new add editor icon color grid size page duplicate export import deck set order reorder live dot',
+  },
+  {
+    id: 'templates',
+    icon: ['fas', 'wand-magic-sparkles'],
+    title: 'App Templates',
+    tagline: 'Ready-made scenes for the tools you use',
+    body: [
+      'Start from a template instead of a blank grid. Claude Code, Claude Cowork, Cursor, VS Code, JetBrains, GitHub, OBS, Spotify, ChatGPT, Figma, n8n and dozens more come with sensible buttons.',
+      'The first-run tour asks which apps you use and builds a scene for each. Later, turning an app on in <strong>Agents &amp; automation → Apps &amp; scenes</strong> asks before it adds a scene, pre-filled with that app’s shortcuts when VDock knows them.',
+      'The <strong>GitHub</strong> scene drives the <code>gh</code> CLI: open PRs, review requests, CI, PR checks, issues, runs and “rerun failed”.',
+    ],
+    shot: 'guide-templates.png',
+    shotCaption: 'The GitHub scene, with every app scene in the top bar.',
+    keywords: 'template app scene starter preset claude code cowork cursor vscode jetbrains github gh pr ci checks issues runs obs spotify chatgpt figma n8n import pack',
   },
   {
     id: 'header',
@@ -206,12 +246,25 @@ const features: GuideFeature[] = [
     title: 'Header, Reveal & Auto-hide',
     tagline: 'Chrome that gets out of the way',
     body: [
-      'Hide the header from Appearance → Layout, and it slides away. A <strong>reveal chip</strong> waits in the bottom-right corner — tap it, or swipe down from the top edge, and the header glides back.',
-      'While the header is open, a <strong>countdown pill</strong> shows the seconds until it auto-hides — with an animated gradient ring so you can spot it at a glance. Tap the pill to <em>pin the header open</em>; tap again to resume the countdown.',
+      'Hide the header from <strong>Appearance → Layout &amp; sidebar</strong>, and it slides away. A <strong>reveal chip</strong> waits in the bottom-right corner — tap it, or swipe down from the top edge, and the header glides back.',
+      'While the header is open, a <strong>countdown pill</strong> shows the seconds until it auto-hides. Tap the pill to <em>pin the header open</em>; tap again to resume the countdown.',
+      'Phones get a slimmer landscape header and a compact scene rail; the scene bar can auto-hide too. These settings follow you across devices.',
     ],
     shot: 'guide-header.png',
     shotCaption: 'The countdown pill — tap to pin the header open.',
-    keywords: 'header reveal auto hide countdown timer pill pin swipe fab chrome navigation clock',
+    keywords: 'header reveal auto hide countdown timer pill pin swipe fab chrome navigation clock scene bar rail phone landscape',
+  },
+  {
+    id: 'appearance',
+    icon: ['fas', 'palette'],
+    title: 'Look & Feel',
+    tagline: 'Day mode, key designs, clocks',
+    body: [
+      '<strong>Day mode</strong> swaps the dark look for a light one — on, off, or Auto to follow each device’s own light/dark setting. It is set per device, so the panel can stay dark while your phone goes light.',
+      'Pick a <strong>key design</strong> in <strong>Appearance → Buttons</strong> (glass, Deck Key and more), then use <strong>Apply to all keys</strong> to restyle every button at once. It shows you what will change first and can be undone.',
+      'Under <strong>Clocks</strong>, choose 12- or 24-hour time for the screensaver, session lists and logs.',
+    ],
+    keywords: 'appearance day mode light dark theme auto key design style glass deck key apply all undo font typography clock 12 24 hour background wallpaper',
   },
   {
     id: 'media',
@@ -219,13 +272,13 @@ const features: GuideFeature[] = [
     title: 'Media & Now Playing',
     tagline: 'Your music, on the glass',
     body: [
-      'VDock reads Windows media sessions (SMTC), so the deck always knows what Spotify — or any player — is doing.',
-      'The <strong>Now Playing</strong> button is a two-cell card: album art, track, artist · source, a live progress bar — and <em>tapping it toggles play/pause</em>. Add it from the Media Controls list when editing a button.',
-      'The merged <strong>Play / Stop</strong> button shows what it will do — stop while playing, play while stopped — instead of two cells doing one job.',
+      'VDock reads the system media session (SMTC on Windows), so the deck always knows what Spotify — or any player — is doing.',
+      'The <strong>Now Playing</strong> card shows album art, track, artist · source and a live progress bar — and <em>tapping it toggles play/pause</em>. Add it from the Media Controls list when editing a button.',
+      'The merged <strong>Play / Stop</strong> button shows what it will do, and the <strong>volume slider</strong> drags the system volume with quick 25/50/75/100 stops.',
     ],
     shot: 'guide-media.png',
-    shotCaption: 'The Media scene — Now Playing card, transport, volume.',
-    keywords: 'media now playing spotify smtc track artist album art progress play pause stop volume slider music',
+    shotCaption: 'The Media scene — transport, volume slider, Now Playing.',
+    keywords: 'media now playing spotify smtc track artist album art progress play pause stop volume slider music mute next previous',
   },
   {
     id: 'screensaver',
@@ -233,12 +286,38 @@ const features: GuideFeature[] = [
     title: 'Screen Savers',
     tagline: 'Idle, but still useful',
     body: [
-      'Leave the deck alone and it becomes a glanceable display. The <strong>Stats saver</strong> tiles live widgets — clock, weather, news, system stats, now playing — each draggable on a snap grid.',
-      'The <strong>Spectrum saver</strong> is a Winamp-style audio visualizer with media controls baked in, in several skins (Aurora, Ember, Scope…). A tap wakes the deck.',
+      'Leave the deck alone and it becomes a glanceable display. Pick the type in <strong>Appearance → Screen saver</strong>; <strong>Test</strong> shows it right away and <strong>Customise layout</strong> lets you drag widgets around.',
+    ],
+    points: [
+      '<strong>Widget dashboard</strong> — clock, weather, news, sports, markets and world clocks, each draggable and resizable.',
+      '<strong>Spectrum visualizer</strong> — 16 skins from Winamp bars to Wave Grid and Neon Flight, reacting to whatever plays. Shuffle the skins on a timer and keep a Now Playing card with media controls on top.',
+      '<strong>System stats</strong> — a full-screen board of CPU, memory, disk and network gauges.',
+      '<strong>Robot buddy</strong> — Wingy and a big clock (see the next section).',
+      '<strong>Shuffle</strong> — rotates through the other types every few minutes.',
     ],
     shot: 'guide-screensaver.png',
-    shotCaption: 'The screensaver editor — pick widgets, drag to place.',
-    keywords: 'screensaver idle sleep stats widgets weather news clock system spectrum visualizer winamp aurora ember skin wake',
+    shotCaption: 'Screen saver settings — the spectrum skins and a live preview.',
+    keywords: 'screensaver idle sleep widgets weather news sports market clock system stats spectrum visualizer winamp aurora ember neon skin shuffle wake test customise layout',
+  },
+  {
+    id: 'wingy',
+    icon: ['fas', 'face-smile'],
+    title: 'Wingy, the Robot Buddy',
+    tagline: 'A screensaver that knows what you’re up to',
+    body: [
+      'Choose <strong>Robot buddy</strong> as the screensaver type and Wingy takes one half of the screen, with a big clock on the other. Wingy shows what the PC is doing:',
+    ],
+    points: [
+      '<strong>Coding agents</strong> — types along on a laptop while Claude Code or Cursor works, waves a phone at you when the agent waits, and celebrates with a party hat when it’s done.',
+      '<strong>Music</strong> — puts on headphones and dances, in time with the beat.',
+      '<strong>System load</strong> — sweats through CPU spikes and complains about a low battery.',
+      '<strong>Time &amp; weather</strong> — morning coffee, sleepy nights, sunglasses on sunny days.',
+      '<strong>Poke it</strong> — its eyes follow your finger or mouse; tickle its mouth, circle around it or linger and it reacts.',
+      '<strong>Moods</strong> — Funny, Grumpy, Sarcastic, Sweet, or a random one each day, with optional speech bubbles. Choose Wingy’s side and switch each kind of reaction on or off.',
+    ],
+    shot: 'guide-wingy.png',
+    shotCaption: 'Wingy with headphones on while music plays.',
+    keywords: 'wingy robot buddy screensaver face eyes mouth mood funny grumpy sarcastic sweet random quips speech bubble music beat agent coding cpu battery weather poke pet tickle',
   },
   {
     id: 'agents',
@@ -246,13 +325,25 @@ const features: GuideFeature[] = [
     title: 'Agent Awareness',
     tagline: 'See what your agents need',
     body: [
-      'Scenes bound to agents (Claude Code, Cursor, Devin, Copilot…) get an <strong>action bar</strong> under the header — live session state plus one-tap actions like Continue, Stop or New Chat, sent straight into the running IDE or terminal.',
-      'When an agent needs you — permission prompt, question, finished task — a <strong>waiting alert</strong> glows on the deck. Tap it to jump to the session.',
-      'With multiple sessions running, the session picker lets you pin which one the bar controls; VDock focuses that window before it types, so keystrokes never land in the wrong place.',
+      'AI coding scenes (Claude Code, Cursor, Codex, Devin, Copilot…) open with a <strong>status tile</strong> — READY, WORKING or WAITING — next to the session picker and one-tap actions like Submit, Continue, Mode, New Session and Compact, sent straight into the running session.',
+      'Flip between <strong>Groups</strong> and <strong>All</strong>: Groups sorts the buttons into a sidebar (Session, Review &amp; Ship, Mode &amp; Model, Context); All shows them in one grid.',
+      'When an agent needs you, a <strong>waiting bar</strong> appears at the bottom with <strong>Snooze</strong> and <strong>Dismiss</strong>, and a toast follows each state change. Set the snooze length, or turn Snooze off, in <strong>Agents &amp; automation → Alerts</strong>.',
+      'VDock focuses the session’s window before it types, so keystrokes never land in the wrong place.',
     ],
     shot: 'guide-agents.png',
-    shotCaption: 'The Cursor scene — agent action bar above the buttons.',
-    keywords: 'agent session claude cursor devin copilot bar waiting alert permission focus pin prompt submit continue stop new chat keystroke',
+    shotCaption: 'The Claude Code scene — status tile, session actions, Groups view and the waiting bar.',
+    keywords: 'agent session claude cursor codex devin copilot status ready working waiting tile groups all category waiting bar snooze dismiss toast permission focus pin prompt submit continue mode compact new session keystroke',
+  },
+  {
+    id: 'mission-control',
+    icon: ['fas', 'satellite-dish'],
+    title: 'Mission Control',
+    tagline: 'Every agent session in one place',
+    body: [
+      'Open <strong>Mission Control</strong> from the header or the chip on the deck to see every agent session at once: working, waiting or done, with the project each one runs in.',
+      'Approve, deny or open a waiting session right from the list — from your phone too — and the answer goes into the <em>live</em> session, not a new one.',
+    ],
+    keywords: 'mission control sessions agents list approve deny open waiting working done inbox approval remote phone',
   },
   {
     id: 'mcp',
@@ -275,13 +366,41 @@ const features: GuideFeature[] = [
     title: 'Integrations & Triggers',
     tagline: 'The deck reacts on its own',
     body: [
-      '<strong>Auto scene switching</strong> watches running apps: open Cursor and its scene appears; close it and the deck returns. Monitored apps and per-scene bindings live under Agents &amp; automation → Apps &amp; scenes.',
+      '<strong>Auto scene switching</strong> watches the app in front: bring Cursor forward and its scene appears, on the panel and on your phone. Pick the apps and their scenes under <strong>Agents &amp; automation → Apps &amp; scenes</strong>; a link to a deleted scene repairs itself.',
       '<strong>Triggers</strong> fire actions without a tap — on a schedule, when an app launches, when an agent finishes, or when a webhook arrives. Each trigger pairs an event with any deck action.',
       '<strong>Agent alerts</strong> tune how the waiting glow appears: banner, chips, dock — pick what you notice.',
     ],
     shot: 'guide-integrations.png',
     shotCaption: 'Integrations — apps, alerts, triggers, MCP.',
-    keywords: 'integration trigger schedule automation app foreground switch scene webhook agent alert glow banner dock running apps monitor',
+    keywords: 'integration trigger schedule automation app foreground switch scene webhook agent alert glow banner dock running apps monitor auto',
+  },
+  {
+    id: 'connect',
+    icon: ['fas', 'shield-halved'],
+    title: 'Connect & Security',
+    tagline: 'Your phone or tablet as a second deck',
+    body: [
+      'Any browser on your Wi-Fi can be a deck — the 7″ panel, a phone, a tablet next to the keyboard. Open <strong>Settings → Devices &amp; network → Connect &amp; security</strong>, turn on <strong>Allow phone &amp; tablet access</strong>, and scan the QR code. Add VDock to the Home Screen for a full-screen deck.',
+      'Lock it down with <strong>Require pairing</strong> (only devices that scan the code get in) or a deck password. The same token protects the HTTP API, the socket and the MCP endpoint.',
+      'Every device that joins is listed with its name and when it was last seen — <strong>Rename</strong> or <strong>Revoke</strong> it — and a toast announces each new one. Phone can’t connect? <strong>Check connection</strong> tests the address, phone access and the firewall and offers a one-click fix.',
+      '<strong>Ask before pushing or committing code</strong> makes push, commit, merge and deploy buttons ask “Are you sure?” first.',
+    ],
+    shot: 'guide-connect.png',
+    shotCaption: 'Connect & security — QR code, pairing, connected devices (address masked).',
+    keywords: 'connect device phone tablet qr lan wifi remote second deck mirror pair pairing security password auth token lock revoke rename check connection firewall push commit confirm',
+  },
+  {
+    id: 'updates',
+    icon: ['fas', 'cloud-arrow-down'],
+    title: 'Updates',
+    tagline: 'New versions in one tap',
+    body: [
+      'VDock checks GitHub for a new release each time it starts. A prompt offers <strong>Update now</strong> (the Windows installer and source checkouts update themselves) or <strong>Download</strong> on other installs; <strong>Later</strong> hides it until the next launch.',
+      'After an update, VDock restarts on its own and shows an <strong>Updated to vX</strong> toast. The current version sits in the bottom-left corner of the deck and in <strong>Settings → About</strong>, where <strong>Check now</strong> looks again.',
+    ],
+    code: `vdock-backend --version   # installed app: prints "VDock x.y.z"
+launch.bat --version      # source checkout (launch.sh on macOS / Linux)`,
+    keywords: 'update upgrade release version new installer download check now later about toast watermark command line version flag',
   },
   {
     id: 'settings',
@@ -289,47 +408,25 @@ const features: GuideFeature[] = [
     title: 'Settings',
     tagline: 'Organized, searchable',
     body: [
-      'Settings is grouped into sections — Appearance, Agents &amp; automation, Integrations, Devices &amp; network, System — and each section breaks into <strong>top sub-tabs</strong>, so every panel is one click away, not a scroll away.',
-      'The sidebar search jumps straight to a setting: “spectrum”, “sidebar”, “MCP” — hit it and you land on the exact panel.',
+      'Settings opens on an <strong>Overview</strong> of what needs attention, then groups everything into Appearance, Agents &amp; automation, Devices &amp; network, System and About. Each section breaks into <strong>top sub-tabs</strong>, so every panel is one click away.',
+      'The sidebar search jumps straight to a setting: “spectrum”, “day mode”, “MCP” — hit it and you land on the exact panel. Changes save as you go, and <strong>Reset section</strong> puts a panel back to its defaults.',
     ],
     shot: 'guide-settings.png',
     shotCaption: 'Settings — sidebar tabs plus top sub-tabs.',
-    keywords: 'settings appearance sub tabs sidebar background touch mode theme color search preferences options',
-  },
-  {
-    id: 'security',
-    icon: ['fas', 'lock'],
-    title: 'Security',
-    tagline: 'Lock the deck when you need to',
-    body: [
-      'Turn on <strong>Settings → Devices &amp; network → Security</strong> and every screen — the panel and every browser — lands on a lock gate until it’s unlocked. Setting a password the first time is one inline form; changing it later is a row in the same section.',
-      'The same token protects the HTTP API, the socket, and the MCP endpoint, so an agent on your network can’t press buttons unless you gave it access.',
-    ],
-    keywords: 'security password auth authentication lock screen token gate login protect api mcp bearer',
+    keywords: 'settings overview appearance agents automation devices network system about sub tabs sidebar search reset preferences options',
   },
   {
     id: 'tour',
     icon: ['fas', 'route'],
     title: 'Onboarding Tour',
-    tagline: 'Nine stops, at your pace',
+    tagline: 'A one-minute start',
     body: [
-      'First run offers a guided tour that spotlights each area — scenes, the deck, settings, this page. It only moves when <em>you</em> press Next, Back or Skip; if a step’s target is hidden (say, the header is tucked away) it waits as a card instead of skipping ahead.',
-      'Replay it any time from <strong>Settings → System → About → Launch tutorial</strong>.',
+      'First run offers a short tour: pick the apps you use (each gets a ready-made scene), then meet scenes, the deck, Agents &amp; automation and phone access. It only moves when <em>you</em> press Next, Back or Skip.',
+      'Replay it any time from <strong>Settings → About → Launch tutorial</strong>.',
     ],
     shot: 'guide-tour.png',
     shotCaption: 'The tour spotlighting the scene pills.',
-    keywords: 'tour tutorial onboarding walkthrough guide help first run steps skip next back',
-  },
-  {
-    id: 'connect',
-    icon: ['fas', 'mobile-screen-button'],
-    title: 'Connect a Device',
-    tagline: 'A second deck on the same Wi-Fi',
-    body: [
-      'Any browser on your network can be a deck — the 7″ panel, a phone, a tablet next to the keyboard. <strong>Settings → Devices &amp; network → Connect a device</strong> shows the LAN URL and a QR code; open it and the device mirrors the same profile in real time.',
-      'With authentication on, each device unlocks once with the deck password.',
-    ],
-    keywords: 'connect device phone tablet qr lan wifi remote second deck mirror pair',
+    keywords: 'tour tutorial onboarding walkthrough guide help first run steps skip next back apps picker phone',
   },
 ]
 
@@ -342,10 +439,10 @@ const sections = new Map<string, Element>()
 
 /** Sidebar grouping — the "sub tabs" under which sections cluster. */
 const NAV_GROUPS: Array<{ label: string; ids: string[] }> = [
-  { label: 'The Deck', ids: ['deck', 'scenes', 'header'] },
-  { label: 'Media & Display', ids: ['media', 'screensaver'] },
-  { label: 'Agents & Automation', ids: ['agents', 'mcp', 'integrations'] },
-  { label: 'System', ids: ['settings', 'security', 'tour', 'connect'] },
+  { label: 'The Deck', ids: ['deck', 'mobile', 'scenes', 'templates', 'header', 'appearance'] },
+  { label: 'Media & Display', ids: ['media', 'screensaver', 'wingy'] },
+  { label: 'Agents & Automation', ids: ['agents', 'mission-control', 'mcp', 'integrations'] },
+  { label: 'System', ids: ['connect', 'updates', 'settings', 'tour'] },
 ]
 
 function registerSection(id: string, el: Element | ComponentPublicInstance | null) {
@@ -700,6 +797,37 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 .feature-head h2 { margin: 2px 0 3px; font-size: calc(var(--fs-lg) * 1.25); font-weight: 700; letter-spacing: -0.01em; }
 .feature-tagline { margin: 0; color: var(--text-3); font-size: var(--fs-sm); }
+
+/* "HOT!!" badge — moving fire gradient, a heartbeat pulse and a glow. */
+.hot-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  vertical-align: middle;
+  font-size: 0.6em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(90deg, #ff3d3d, #ff8a00, #ffd400, #ff8a00, #ff3d3d);
+  background-size: 300% 100%;
+  box-shadow: 0 0 0 0 rgba(255, 90, 0, 0.6);
+  animation: hot-flow 2.4s linear infinite, hot-pulse 1.4s ease-in-out infinite;
+}
+.hot-badge-sm { margin-left: 6px; padding: 1px 6px; font-size: 0.62rem; }
+.nav-item .hot-badge { margin-left: auto; }
+
+@keyframes hot-flow {
+  to { background-position: 300% 0; }
+}
+@keyframes hot-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 90, 0, 0.55); }
+  50% { transform: scale(1.08) rotate(-2deg); box-shadow: 0 0 14px 3px rgba(255, 90, 0, 0.45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hot-badge { animation: none; }
+}
 .feature-para { margin: 0 0 10px; color: var(--text-2); line-height: 1.6; font-size: var(--fs-md); }
 .feature-para :deep(code), .feature-points :deep(code) {
   font-family: var(--mono);
