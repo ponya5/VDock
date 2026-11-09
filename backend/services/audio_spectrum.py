@@ -97,6 +97,23 @@ _enabled.set()  # a started monitor monitors; set_enabled(False) pauses it
 _started = False
 _lock = threading.Lock()
 
+# Watchdog (DL-164): a WASAPI recorder can hang inside ``record()`` without
+# raising (endpoint format change when a player such as Spotify opens a
+# stream, driver hiccup). Nothing then emits, and the screensaver reports
+# "Audio capture unavailable". The capture loop stamps ``_last_chunk_at`` on
+# every chunk; the watchdog respawns the loop under a new generation when the
+# stamp goes stale. The abandoned loop retires itself if it ever unblocks.
+WATCHDOG_STALE_S = 6.0
+WATCHDOG_POLL_S = 2.0
+_generation = 0
+_last_chunk_at = 0.0
+# True once a capture loop got past the dependency check — the watchdog only
+# supervises a loop that exists (no deps / non-Windows / test spawner = inert).
+_loop_running = False
+# Newest payload, replayed to a client that connects mid-stream so it never
+# waits out a heartbeat gap before its first frame.
+_last_payload: Optional[Dict[str, Any]] = None
+
 
 def set_emitter(emit: Callable[[str, Dict[str, Any]], None]) -> None:
     """Provide the Socket.IO broadcast function."""
@@ -124,13 +141,43 @@ def is_enabled() -> bool:
 
 def start() -> bool:
     """Spawn the capture loop once. Returns False if already running."""
-    global _started
+    global _started, _last_chunk_at
     with _lock:
         if _started:
             return False
         _started = True
-    _spawn(_capture_loop)
+        _last_chunk_at = time.time()
+    _spawn(_capture_loop, _generation)
+    threading.Thread(target=_watchdog, daemon=True,
+                     name='audio-spectrum-watchdog').start()
     return True
+
+
+def last_payload() -> Optional[Dict[str, Any]]:
+    """Newest emitted frame (for replay to a newly connected client)."""
+    return _last_payload
+
+
+def _watchdog() -> None:
+    """Respawn a capture loop that stopped producing chunks."""
+    global _generation, _last_chunk_at
+    while True:
+        time.sleep(WATCHDOG_POLL_S)
+        if not _enabled.is_set() or not _loop_running:
+            _last_chunk_at = time.time()  # paused / not started ≠ hung
+            continue
+        if time.time() - _last_chunk_at < WATCHDOG_STALE_S:
+            continue
+        with _lock:
+            _generation += 1
+            gen = _generation
+            _last_chunk_at = time.time()
+        logger.warning('Audio spectrum capture stalled; restarting (gen %d)',
+                       gen)
+        try:
+            _spawn(_capture_loop, gen)
+        except Exception as e:  # pragma: no cover - spawner failure
+            logger.error('Could not restart spectrum capture: %s', e)
 
 
 # --- pure DSP --------------------------------------------------------------
@@ -373,6 +420,8 @@ def _next_capture_mic(sc: Any, np: Any, current: Any) -> Any:
 
 
 def _emit_payload(payload: Dict[str, Any]) -> None:
+    global _last_payload
+    _last_payload = payload
     if _emit is None:
         return
     try:
@@ -381,18 +430,21 @@ def _emit_payload(payload: Dict[str, Any]) -> None:
         logger.error('Could not broadcast spectrum: %s', e)
 
 
-def _capture_loop() -> None:
+def _capture_loop(gen: int = 0) -> None:
+    global _last_chunk_at, _loop_running
     np, sc = _import_deps()
     if np is None:
         logger.info('Audio spectrum idle: numpy/soundcard not installed')
         return
     _patch_soundcard_propvariant(sc)
+    _loop_running = True
+    _last_chunk_at = time.time()
     emit_state: Dict[str, Any] = {}
     live_state: Dict[str, float] = {}
     prev_bands = [0] * NUM_BANDS
     last_device_error: Optional[str] = None
     mic: Any = None
-    while True:
+    while gen == _generation:
         if not _enabled.is_set():
             _enabled.wait(DISABLED_POLL_SECONDS)
             continue
@@ -415,8 +467,11 @@ def _capture_loop() -> None:
                 last_device_error = None
                 last_loud_at = time.time()
                 last_probe_at = 0.0
-                while _enabled.is_set():
+                while _enabled.is_set() and gen == _generation:
                     frames = recorder.record(numframes=CHUNK_FRAMES)
+                    if gen != _generation:
+                        return  # superseded while blocked in record()
+                    _last_chunk_at = time.time()
                     band_amps, peak = chunk_band_amps(np, frames)
                     values = [amp_to_value(a) for a in band_amps]
                     prev_bands = bands_envelope(values, prev_bands)

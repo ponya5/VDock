@@ -12,6 +12,7 @@ export interface TutorialApp {
 
 export const TUTORIAL_APPS: TutorialApp[] = [
   { id: 'claude-code', label: 'Claude Code', source: 'claude-code', icon: ['fas', 'terminal'] },
+  { id: 'claude-cowork', label: 'Claude Cowork', source: 'claude-cowork', icon: ['fas', 'people-group'] },
   { id: 'cursor', label: 'Cursor', source: 'cursor', icon: ['fas', 'code'] },
   { id: 'codex', label: 'Codex', source: 'codex', icon: ['fas', 'terminal'] },
   { id: 'github-copilot', label: 'GitHub Copilot', source: 'github-copilot', icon: ['fas', 'code'] },

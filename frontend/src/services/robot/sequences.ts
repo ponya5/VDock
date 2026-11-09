@@ -140,6 +140,51 @@ export const SEQUENCES = {
       { at: 2700, scene: null },
     ],
   },
+  // DL-164: chat typing, DJ deck, karaoke, reading
+  'chat-typing': {
+    duration: 5200,
+    steps: [
+      { at: 0, expr: 'focused', scene: 'texting', icon: 'dots' },
+      { at: 900, expr: 'typing', icon: null, nudge: { lookY: 0.5 } },
+      { at: 2200, expr: 'chatty', nudge: { lookY: 0.3 } },
+      { at: 3400, expr: 'joy', prop: 'heart', nudge: { lookY: 0 } },
+      { at: 4800, expr: 'happy', scene: null },
+    ],
+  },
+  'dj-scratch': {
+    duration: 4200,
+    steps: [
+      { at: 0, expr: 'grooving', scene: 'dj', prop: 'notes', nudge: { bounce: -4, tilt: -5 } },
+      { at: 450, nudge: { bounce: 1, tilt: 5 } },
+      { at: 900, nudge: { bounce: -4, tilt: -5 } },
+      { at: 1350, nudge: { bounce: 1, tilt: 5 } },
+      { at: 2400, expr: 'joy', prop: 'sparkles', nudge: { bounce: -3, tilt: 0 } },
+      { at: 3900, expr: 'happy', scene: null, nudge: { bounce: 0 } },
+    ],
+  },
+  'sing-along': {
+    duration: 4400,
+    steps: [
+      { at: 0, expr: 'chatty', scene: 'karaoke', prop: 'notes' },
+      { at: 600, nudge: { mouthOpen: 0.9, tilt: -3 } },
+      { at: 1100, nudge: { mouthOpen: 0.2, tilt: 3 } },
+      { at: 1700, nudge: { mouthOpen: 0.9, tilt: -3 } },
+      { at: 2300, nudge: { mouthOpen: 0.3, tilt: 3 } },
+      { at: 2900, expr: 'joy', nudge: { mouthOpen: 0.8, tilt: 0 } },
+      { at: 4100, expr: 'proud', scene: null, nudge: { mouthOpen: 0 } },
+    ],
+  },
+  'reading-book': {
+    duration: 5200,
+    steps: [
+      { at: 0, expr: 'focused', scene: 'reading', nudge: { lookY: 0.7 } },
+      { at: 1500, nudge: { lookX: 0.5, lookY: 0.7 } },
+      { at: 2400, nudge: { lookX: -0.5, lookY: 0.7 } },
+      { at: 3300, expr: 'surprised', nudge: { lookX: 0, lookY: 0.6 } },
+      { at: 3900, expr: 'content', nudge: { lookY: 0.7 } },
+      { at: 4900, expr: 'happy', scene: null, nudge: { lookY: 0 } },
+    ],
+  },
   'music-jam': {
     duration: 3400,
     steps: [

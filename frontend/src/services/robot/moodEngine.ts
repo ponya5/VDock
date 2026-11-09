@@ -11,7 +11,7 @@ import type { AccessoryId, IconId, PropId } from './robotArt'
 import type { SceneId } from './scenes'
 import type { PointerGesture } from './pointerSense'
 import {
-  REACTIONS, BASELINES, BASELINE_SCENE, IDLE_GAGS, PRIORITY, COOLDOWN_MS, EVENT_GROUP, ICON_MS,
+  REACTIONS, BASELINES, BASELINE_SCENE, MUSIC_SCENES, MUSIC_ROTATE_MS, IDLE_GAGS, PRIORITY, COOLDOWN_MS, EVENT_GROUP, ICON_MS,
   type Mood, type RobotEvent, type BaselineState, type Reaction,
 } from './reactions'
 import { QUIPS } from './quips'
@@ -365,6 +365,10 @@ export class MoodEngine {
       if (s.weather === 'rain') return 'weather-rain'
       if (s.weather === 'snow') return 'weather-snow'
       if (s.weather === 'sunny' && s.isDay) return 'weather-sunny'
+    }
+    if (this.baseline === 'music') {
+      const cycle = MUSIC_SCENES[this.opts.mood]
+      if (cycle?.length) return cycle[Math.floor(_now / MUSIC_ROTATE_MS) % cycle.length]
     }
     return BASELINE_SCENE[this.opts.mood][this.baseline] ?? null
   }

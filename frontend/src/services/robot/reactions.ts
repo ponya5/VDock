@@ -75,8 +75,8 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
   musicStart: {
     funny: { icon: 'equalizer', expr: 'grooving', seq: 'music-jam', scene: 'jamming', prop: 'notes', ms: 3400 },
     grumpy: { icon: 'equalizer', expr: 'unimpressed', ms: 2500 },
-    sarcastic: { icon: 'equalizer', expr: 'suspicious', scene: 'jamming', ms: 3000 },
-    sweet: { icon: 'equalizer', expr: 'grooving', seq: 'music-jam', scene: 'jamming', prop: 'notes', ms: 3400 },
+    sarcastic: { icon: 'equalizer', expr: 'suspicious', seq: 'dj-scratch', scene: 'dj', ms: 4200 },
+    sweet: { icon: 'equalizer', expr: 'grooving', seq: 'sing-along', scene: 'karaoke', prop: 'notes', ms: 4400 },
   },
   musicStop: {
     funny: { expr: 'bored', seq: 'look-around', ms: 2600 },
@@ -121,10 +121,10 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { expr: 'joy', seq: 'thumbs-up-pop', scene: 'thumbs-up', prop: 'heart', ms: 2800 },
   },
   notification: {
-    funny: { icon: 'envelope', expr: 'surprised', seq: 'double-take', ms: 2500 },
+    funny: { icon: 'envelope', expr: 'surprised', seq: 'chat-typing', scene: 'texting', ms: 5000 },
     grumpy: { icon: 'envelope', expr: 'bored', ms: 2000 },
     sarcastic: { icon: 'envelope', expr: 'unimpressed', seq: 'eye-roll', ms: 2200 },
-    sweet: { icon: 'envelope', expr: 'happy', ms: 2200 },
+    sweet: { icon: 'envelope', expr: 'happy', seq: 'chat-typing', scene: 'texting', ms: 5000 },
   },
   update: {
     funny: { icon: 'download', expr: 'starstruck' },
@@ -210,15 +210,23 @@ export const BASELINES: Record<Mood, Record<BaselineState, ExpressionId>> = {
 export const BASELINE_SCENE: Record<Mood, Partial<Record<BaselineState, SceneId>>> = {
   funny: { working: 'typing', music: 'jamming', overworked: 'heavy-load' },
   grumpy: { overworked: 'heavy-load' },
-  sarcastic: { overworked: 'brain-overload' },
+  sarcastic: { music: 'dj', overworked: 'brain-overload' },
   sweet: { working: 'typing', music: 'jamming', overworked: 'heavy-load' },
 }
 
+/** DL-164: a long listening session rotates through these, one per MUSIC_ROTATE_MS slot. */
+export const MUSIC_SCENES: Partial<Record<Mood, readonly SceneId[]>> = {
+  funny: ['jamming', 'dj', 'karaoke'],
+  sarcastic: ['dj', 'jamming'],
+  sweet: ['jamming', 'karaoke', 'dj'],
+}
+export const MUSIC_ROTATE_MS = 35_000
+
 export const IDLE_GAGS: Record<Mood, SequenceId[]> = {
-  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan', 'bored-drum', 'idle-nod', 'typing-frenzy', 'coffee-sip', 'thumbs-up-pop', 'big-stretch'],
+  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan', 'bored-drum', 'idle-nod', 'typing-frenzy', 'coffee-sip', 'thumbs-up-pop', 'big-stretch', 'chat-typing', 'reading-book', 'dj-scratch', 'sing-along'],
   grumpy: ['sigh', 'head-shake', 'look-around', 'rage-fit', 'hand-on-chin', 'bored-drum', 'facepalm-sigh', 'idle-nod'],
-  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect', 'bored-drum', 'facepalm-sigh', 'coffee-sip', 'agent-idle-nod'],
-  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes', 'idle-nod', 'coffee-sip', 'thumbs-up-pop', 'big-stretch'],
+  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect', 'bored-drum', 'facepalm-sigh', 'coffee-sip', 'agent-idle-nod', 'chat-typing', 'reading-book'],
+  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes', 'idle-nod', 'coffee-sip', 'thumbs-up-pop', 'big-stretch', 'chat-typing', 'reading-book', 'sing-along'],
 }
 
 export const PRIORITY: Record<RobotEvent, number> = {

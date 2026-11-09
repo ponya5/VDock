@@ -44,6 +44,7 @@ FULL_SETTINGS_PAYLOAD = {
     'buttonDefaultEffect': 'none',
     'screensaverWidgets': ['weather', 'news', 'market'],
     'screensaverClockEnabled': True,
+    'clock24h': True,
     'screensaverWeatherSize': 1.0,
     'newsApiKey': '',
     'newsFeeds': '',

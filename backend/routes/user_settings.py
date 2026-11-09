@@ -50,6 +50,8 @@ ALLOWED_USER_SETTING_KEYS = {
     # entry — saved lists predate 'clock', so gating on the array would hide
     # the clock for every existing user (DL-098).
     'screensaverClockEnabled',
+    # 24-hour clocks toggle — missing here, every save silently dropped it.
+    'clock24h',
     'screensaverWeatherSize',
     'newsFeeds',
     'sportsFeeds',

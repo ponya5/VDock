@@ -111,7 +111,7 @@
       @pointerdown="startDrag('clock', $event)"
     >
       <div class="ss-time">
-        <span>{{ hourStr }}</span><span class="ss-time-colon">:</span><span>{{ minuteStr }}</span>
+        <span>{{ hourStr }}</span><span class="ss-time-colon">:</span><span>{{ minuteStr }}</span><span v-if="dayPeriodStr" class="ss-time-ampm">{{ dayPeriodStr }}</span>
       </div>
       <div class="ss-date-line">
         <span class="ss-rule"></span>
@@ -362,6 +362,7 @@ import {
 } from '@/services/newsService'
 import { useMarket } from '@/composables/useMarket'
 import { useSettingsStore } from '@/stores/settings'
+import { useClockFormat } from '@/composables/useClockFormat'
 import { resolveBackground, DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
@@ -448,8 +449,14 @@ function openArticle(item: NewsHeadline, pauseFn: () => void = pauseRotation) {
 }
 
 // Split parts so the colon can carry the accent colour, like the mockup.
-const hourStr = computed(() => String(time.value.getHours()).padStart(2, '0'))
-const minuteStr = computed(() => String(time.value.getMinutes()).padStart(2, '0'))
+// "24-hour clocks" on → HH:mm; off → the device locale decides (12 h + AM/PM
+// on en-US). Previously this was hard-wired to 24 h and ignored the toggle.
+const clockFmt = useClockFormat()
+const clockParts = computed(() =>
+  new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value }).formatToParts(time.value))
+const hourStr = computed(() => clockParts.value.find(p => p.type === 'hour')?.value ?? '')
+const minuteStr = computed(() => clockParts.value.find(p => p.type === 'minute')?.value ?? '')
+const dayPeriodStr = computed(() => clockParts.value.find(p => p.type === 'dayPeriod')?.value ?? '')
 const dateStr = computed(() => {
   const d = time.value
   const weekday = d.toLocaleDateString([], { weekday: 'long' })
@@ -1088,7 +1095,7 @@ const worldClocks = computed(() =>
       try {
         return {
           label: z.label,
-          time: new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: z.tz }).format(time.value),
+          time: new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value, timeZone: z.tz }).format(time.value),
         }
       } catch {
         return null // invalid zone entry — drop it rather than break the widget
@@ -1310,6 +1317,13 @@ onUnmounted(() => {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.94);
+}
+
+.ss-time-ampm {
+  font-size: 0.28em;
+  margin-left: 0.25em;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
 }
 
 .ss-time-colon {

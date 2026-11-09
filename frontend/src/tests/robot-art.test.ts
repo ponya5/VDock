@@ -170,6 +170,7 @@ describe('storyboard scenes (DL-155 follow-up B & DL-163)', () => {
       'typing', 'inspect', 'call', 'notes', 'relax', 'sneakers', 'chin', 'cheer', 'hello',
       'typing-frenzy', 'bored-desk', 'nodding-off', 'coffee-break', 'facepalm', 'thumbs-up', 'stretch', 'jamming',
       'weather-rain', 'weather-snow', 'weather-sunny', 'heavy-load', 'brain-overload',
+      'texting', 'dj', 'karaoke', 'reading',
     ]))
     expect(SCENE_IDS.filter(id => SCENES[id].hideFace)).toEqual(['sneakers'])
   })

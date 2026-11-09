@@ -197,6 +197,123 @@
       </g>
     </g>
 
+    <!-- texting (DL-164): WhatsApp-style chat on a phone — incoming bubble with bouncing "typing…" dots,
+         then the robot's own green reply typing out, thumbs tapping the screen -->
+    <g v-else-if="scene === 'texting'" :transform="`translate(${f((1 - u) * 90)} 0)`">
+      <g transform="rotate(7 158 84)">
+        <rect x="128" y="22" width="60" height="116" rx="9" fill="#10151d" stroke-width="2.4" />
+        <rect x="132" y="30" width="52" height="100" rx="4" fill="#0b141a" stroke-width="1" opacity="0.95" />
+        <!-- chat header -->
+        <rect x="132" y="30" width="52" height="11" rx="3" fill="#075e54" stroke="none" />
+        <circle cx="139" cy="35.5" r="3" fill="#cfd8dc" stroke="none" />
+        <path d="M145 34 h14 M145 37.5 h9" stroke="#e6f2f0" stroke-width="1.4" />
+        <!-- earlier messages -->
+        <rect x="136" y="46" width="24" height="9" rx="3.5" fill="#202c33" stroke="none" />
+        <path d="M139 50.5 h14" stroke="#8696a0" stroke-width="1.3" />
+        <rect x="150" y="59" width="30" height="9" rx="3.5" fill="#005c4b" stroke="none" />
+        <path d="M153 63.5 h18" stroke="#d9fdd3" stroke-width="1.3" />
+        <!-- incoming "typing" bubble with bouncing dots (first half of each 4.2 s loop) -->
+        <g :opacity="(t % 4200) < 2100 ? 1 : 0">
+          <rect x="136" y="73" width="26" height="11" rx="5" fill="#202c33" stroke="none" />
+          <circle v-for="i in 3" :key="`td-${i}`" :cx="142 + (i - 1) * 6" :cy="f(78.5 - 2.6 * Math.max(0, Math.sin(t / 170 - i * 0.9)))" r="1.7" fill="#8696a0" stroke="none" />
+        </g>
+        <!-- the robot's reply grows as it is typed, then sends (second half) -->
+        <g :opacity="(t % 4200) >= 2100 ? 1 : 0">
+          <rect :x="f(180 - (10 + 24 * Math.min(1, ((t % 4200) - 2100) / 1500)))" y="73" :width="f(10 + 24 * Math.min(1, ((t % 4200) - 2100) / 1500))" height="10" rx="4" fill="#005c4b" stroke="none" />
+          <path :d="`M${f(184 - (10 + 24 * Math.min(1, ((t % 4200) - 2100) / 1500)) + 6)} 78 h${f(4 + 18 * Math.min(1, ((t % 4200) - 2100) / 1500))}`" stroke="#d9fdd3" stroke-width="1.3" />
+          <path v-if="(t % 4200) > 3700" d="M170 80 l2 2 l4 -4 M173 80 l2 2 l4 -4" stroke="#53bdeb" stroke-width="1.1" />
+        </g>
+        <!-- input bar -->
+        <rect x="135" y="118" width="46" height="9" rx="4.5" fill="#202c33" stroke="none" />
+        <path :d="`M139 122.5 h${f(4 + 22 * Math.abs(Math.sin(t / 700)))}`" stroke="#8696a0" stroke-width="1.3" />
+        <circle cx="176" cy="122.5" r="3.2" fill="#00a884" stroke="none" />
+      </g>
+      <!-- thumbs tapping the keyboard area -->
+      <g :transform="`translate(${f(150 + Math.sin(t / 150) * 2)} ${f(134 + Math.abs(Math.sin(t / 110)) * -2.5)}) scale(0.82)`">
+        <ToonHand kind="typing" :t="t" :phase="0" tap />
+      </g>
+      <g :transform="`translate(${f(172 + Math.cos(t / 140) * 2)} ${f(136 + Math.abs(Math.cos(t / 100)) * -2.5)}) scale(-0.82 0.82)`">
+        <ToonHand kind="typing" :t="t" :phase="2.2" tap />
+      </g>
+    </g>
+
+    <!-- dj (DL-164): the robot spins a deck — vinyl rotates, hand scratches, EQ bars + sound rings -->
+    <g v-else-if="scene === 'dj'" :transform="`translate(0 ${f((1 - u) * 50)})`">
+      <rect x="22" y="120" width="156" height="24" rx="5" fill="#23262e" stroke-width="2" />
+      <!-- left platter -->
+      <ellipse cx="62" cy="128" rx="29" ry="8.5" fill="#0f1116" />
+      <ellipse cx="62" cy="128" rx="19" ry="5.4" stroke="#6cc7ff" stroke-width="1.2" :opacity="0.7" />
+      <circle :cx="f(62 + Math.cos(t / 260) * 15)" :cy="f(128 + Math.sin(t / 260) * 4.2)" r="2.2" fill="#ff6fa8" stroke="none" />
+      <circle cx="62" cy="128" r="2.4" fill="#fff" stroke="none" />
+      <!-- right platter (turns the other way) -->
+      <ellipse cx="138" cy="128" rx="29" ry="8.5" fill="#0f1116" />
+      <ellipse cx="138" cy="128" rx="19" ry="5.4" stroke="#ff6fa8" stroke-width="1.2" :opacity="0.7" />
+      <circle :cx="f(138 + Math.cos(-t / 300) * 15)" :cy="f(128 + Math.sin(-t / 300) * 4.2)" r="2.2" fill="#6cc7ff" stroke="none" />
+      <circle cx="138" cy="128" r="2.4" fill="#fff" stroke="none" />
+      <!-- mixer + crossfader -->
+      <rect x="88" y="122" width="24" height="18" rx="3" fill="#323644" stroke-width="1.4" />
+      <path d="M92 134 h16" stroke="#9aa0b4" stroke-width="1.4" />
+      <rect :x="f(97 + Math.sin(t / 380) * 6)" y="131.5" width="6" height="5" rx="1.5" fill="#ffd84d" stroke="none" />
+      <circle cx="94" cy="126.5" r="1.8" fill="#6cc7ff" stroke="none" />
+      <circle cx="106" cy="126.5" r="1.8" fill="#ff6fa8" stroke="none" />
+      <!-- scratching hand on the left platter, free hand on the fader -->
+      <g :transform="`translate(${f(62 + Math.sin(t / 130) * 12)} ${f(112 + Math.abs(Math.sin(t / 130)) * 1.5)}) scale(0.92)`">
+        <ToonHand kind="drum" :t="t" :phase="0" />
+      </g>
+      <g :transform="`translate(${f(144 + Math.sin(t / 380) * 5)} 110) scale(-0.9 0.9)`">
+        <ToonHand kind="peace" :t="t" :phase="0.8" />
+      </g>
+      <!-- EQ bars flanking the face + sound rings -->
+      <g stroke="none">
+        <rect v-for="b in 5" :key="`dl-${b}`" :x="14 + b * 6" :y="f(96 - (5 + 24 * amp * Math.abs(Math.sin(t / 120 + b))))" width="4" :height="f(5 + 24 * amp * Math.abs(Math.sin(t / 120 + b)))" rx="2" :fill="b % 2 ? '#6cc7ff' : '#ffd84d'" />
+        <rect v-for="b in 5" :key="`dr-${b}`" :x="150 + b * 6" :y="f(96 - (5 + 24 * amp * Math.abs(Math.cos(t / 120 + b))))" width="4" :height="f(5 + 24 * amp * Math.abs(Math.cos(t / 120 + b)))" rx="2" :fill="b % 2 ? '#ff6fa8' : '#6cc7ff'" />
+      </g>
+      <path :d="`M100 20 m-${f(10 + ((t / 30) % 26))} 0 a${f(10 + ((t / 30) % 26))} ${f(10 + ((t / 30) % 26))} 0 0 1 ${f(2 * (10 + ((t / 30) % 26)))} 0`" stroke="#ffd84d" stroke-width="1.8" :opacity="f(1 - ((t / 30) % 26) / 26)" />
+    </g>
+
+    <!-- karaoke (DL-164): hand-held mic, bouncing notes and a lyric bar that fills as it is sung -->
+    <g v-else-if="scene === 'karaoke'" :transform="`translate(${f((1 - u) * 80)} 0)`">
+      <g :transform="`rotate(${f(-18 + Math.sin(t / 420) * 4)} 150 96)`">
+        <path d="M150 96 L160 140" stroke="#cfd3dc" stroke-width="6" />
+        <path d="M150 96 L160 140" stroke="#2b2f3a" stroke-width="2.4" />
+        <circle cx="147" cy="82" r="11" fill="#9aa0b4" />
+        <path d="M138 80 h18 M139 85 h16 M147 71 v22" stroke="#4a5062" stroke-width="1.2" />
+      </g>
+      <g :transform="`translate(${f(158 + Math.sin(t / 420) * 1.5)} 128) scale(-1.0 1.0)`">
+        <ToonHand kind="fist" :t="t" :phase="0" />
+      </g>
+      <!-- notes pouring out towards the audience -->
+      <g v-for="n in 4" :key="`kn-${n}`"
+         :transform="`translate(${f(120 + ((t / 24 + n * 18) % 70))} ${f(70 - ((t / 40 + n * 12) % 46) + Math.sin(t / 260 + n) * 4)})`"
+         :opacity="f(1 - ((t / 24 + n * 18) % 70) / 70)">
+        <path d="M-4 6 V-6 L6 -8 V4" :stroke="n % 2 ? '#ff6fa8' : '#6cc7ff'" stroke-width="2.2" />
+        <ellipse cx="-6" cy="6" rx="3" ry="2.3" :fill="n % 2 ? '#ff6fa8' : '#6cc7ff'" stroke="none" />
+        <ellipse cx="4" cy="4" rx="3" ry="2.3" :fill="n % 2 ? '#ff6fa8' : '#6cc7ff'" stroke="none" />
+      </g>
+      <!-- karaoke lyric bar -->
+      <rect x="30" y="144" width="140" height="9" rx="4.5" stroke-width="1.6" />
+      <rect x="30" y="144" :width="f(6 + 134 * (((t / 4400) % 1)))" height="9" rx="4.5" fill="#ffd84d" stroke="none" opacity="0.9" />
+      <path d="M38 148.5 h14 M58 148.5 h22 M86 148.5 h12 M104 148.5 h26 M136 148.5 h20" stroke="#14204a" stroke-width="1.6" />
+    </g>
+
+    <!-- reading (DL-164): nose in a book, pages turning, eyes sweeping the lines -->
+    <g v-else-if="scene === 'reading'" :transform="`translate(0 ${f((1 - u) * 60)})`">
+      <!-- open book -->
+      <path d="M100 138 Q70 126 26 132 L26 98 Q70 92 100 104 Z" fill="#f4efe0" stroke-width="2" />
+      <path d="M100 138 Q130 126 174 132 L174 98 Q130 92 100 104 Z" fill="#ece5d0" stroke-width="2" />
+      <path d="M34 108 Q60 104 92 112 M34 115 Q60 111 92 119 M34 122 Q60 118 92 126" stroke="#8a7f66" stroke-width="1.2" />
+      <path d="M108 112 Q140 104 166 108 M108 119 Q140 111 166 115 M108 126 Q140 118 166 122" stroke="#8a7f66" stroke-width="1.2" />
+      <!-- page turning every 2.6 s -->
+      <path v-if="(t % 2600) < 700"
+            :d="`M100 138 L100 104 Q${f(100 + 52 * Math.cos(((t % 2600) / 700) * Math.PI))} ${f(92 - 6 * Math.sin(((t % 2600) / 700) * Math.PI))} ${f(100 + 74 * Math.cos(((t % 2600) / 700) * Math.PI))} 98 L${f(100 + 74 * Math.cos(((t % 2600) / 700) * Math.PI))} 132 Q${f(100 + 52 * Math.cos(((t % 2600) / 700) * Math.PI))} 126 100 138 Z`"
+            fill="#fffbee" stroke-width="1.6" />
+      <!-- hands steadying the book -->
+      <g transform="translate(22 124) rotate(-12)"><ToonHand kind="mitten" :t="t" :phase="0" /></g>
+      <g transform="translate(178 124) scale(-1 1) rotate(-12)"><ToonHand kind="mitten" :t="t" :phase="1" /></g>
+      <!-- tiny floating "idea" sparkles when a good line lands -->
+      <path :d="spark(160, 70 - ((t / 50) % 16), 0.8)" fill="#ffd84d" stroke="none" :opacity="(t % 2600) < 700 ? 1 : 0.25" />
+    </g>
+
     <!-- weather-rain: robot buddy under a rain cloud holding an umbrella -->
     <g v-else-if="scene === 'weather-rain'" :transform="`translate(0 ${f(-(1 - u) * 80)})`">
       <!-- Fluffy dark rain clouds at the top -->

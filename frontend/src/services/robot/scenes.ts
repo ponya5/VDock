@@ -12,6 +12,8 @@ export type SceneId =
   | 'facepalm' | 'thumbs-up' | 'stretch' | 'jamming'
   | 'weather-rain' | 'weather-snow' | 'weather-sunny'
   | 'heavy-load' | 'brain-overload'
+  // DL-164: chat typing, DJ deck, karaoke, reading
+  | 'texting' | 'dj' | 'karaoke' | 'reading'
 
 export interface SceneDef {
   /** 0..1 — how far the face lifts/shrinks to make room (the laptop sits below it). */
@@ -52,6 +54,11 @@ export const SCENES = {
   'weather-sunny': { lift: 0, laptop: false, toon: true, fx: -10, fy: 4, fs: -0.06 },
   'heavy-load': { lift: 0, laptop: false, toon: true, fx: 0, fy: -12, fs: -0.1 },
   'brain-overload': { lift: 0, laptop: false, toon: true, fx: -4, fy: 6, fs: -0.1 },
+  // DL-164
+  texting: { lift: 0, laptop: false, toon: true, fx: -26, fy: -2, fs: -0.14 },
+  dj: { lift: 0, laptop: false, toon: true, fx: 0, fy: -14, fs: -0.14 },
+  karaoke: { lift: 0, laptop: false, toon: true, fx: -20, fy: -4, fs: -0.1 },
+  reading: { lift: 0, laptop: false, toon: true, fx: 0, fy: -16, fs: -0.14 },
 } as const satisfies Record<SceneId, SceneDef>
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[]
 
@@ -115,7 +122,8 @@ export function handPoses(scene: SceneId, p: number, tMs: number): [HandPose, Ha
     case 'typing-frenzy': case 'bored-desk': case 'nodding-off': case 'coffee-break':
     case 'facepalm': case 'thumbs-up': case 'stretch': case 'jamming':
     case 'weather-rain': case 'weather-snow': case 'weather-sunny':
-    case 'heavy-load': case 'brain-overload': {
+    case 'heavy-load': case 'brain-overload':
+    case 'texting': case 'dj': case 'karaoke': case 'reading': {
       const none: HandPose = { x: -100, y: 0, rot: 0, mirror: false, curl: OPEN, thumb: -40, visible: false }
       return [none, none]
     }

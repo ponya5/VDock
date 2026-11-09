@@ -415,6 +415,11 @@ def handle_connect(auth):
         logger.info(f"Client connected: {request.sid}")
 
     emit('connected', {'message': 'Connected to VDock server'})
+    # Late joiner: hand it the newest spectrum frame now instead of making
+    # it wait for the next heartbeat (DL-164).
+    frame = audio_spectrum.last_payload()
+    if frame is not None:
+        emit('audio_spectrum', frame)
 
 
 @socketio.on('disconnect')

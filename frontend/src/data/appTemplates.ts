@@ -55,6 +55,11 @@ const aiAssistants: AppTemplate[] = [
     // No official Cowork shortcuts or deep links exist (Anthropic docs), so every button is the app launcher or a documented claude.ai/claude.com page.
     { label: "Open Claude", icon: ["fas","window-maximize"], action: prog("Claude"), tooltip: "Launch the Claude desktop app, then pick Cowork" },
     { label: "Quick Entry", icon: ["fas","bolt"], action: hk(["ctrl","shift","space"]), tooltip: "Summon Claude from any app (unofficial shortcut; set it in Claude desktop settings)" },
+    // Desktop-window controls: keystrokes go to the focused Claude window, so a task can be steered from the deck without touching the PC.
+    { label: "New Task", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "Start a new task / conversation" },
+    { label: "Send", icon: ["fas","paper-plane"], action: hk(["enter"]), tooltip: "Send the prompt you typed (Enter)" },
+    { label: "Stop", icon: ["fas","hand"], action: hk(["escape"]), tooltip: "Stop the current response (Esc)" },
+    { label: "Attach", icon: ["fas","paperclip"], action: hk(["ctrl","u"]), tooltip: "Attach a file or folder to the task" },
     { label: "Scheduled", icon: ["fas","clock"], action: url("https://claude.ai/scheduled"), tooltip: "View and manage scheduled tasks" },
     { label: "Connectors", icon: ["fas","plug"], action: url("https://claude.ai/settings/connectors"), tooltip: "Slack, Drive, Notion, Gmail and other connectors" },
     { label: "Plugins", icon: ["fas","puzzle-piece"], action: url("https://claude.com/plugins"), tooltip: "Browse plugins (skills, connectors, sub-agents)" },

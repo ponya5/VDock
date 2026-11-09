@@ -78,6 +78,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { TimeOptionType } from '@/types'
+import { useClockFormat } from '@/composables/useClockFormat'
 
 interface Props {
   timeOption: TimeOptionType
@@ -98,6 +99,7 @@ const props = withDefaults(defineProps<Props>(), {
   iconSize: 32
 })
 
+const clockFmt = useClockFormat()
 const currentDateTime = ref(new Date())
 const timerElapsed = ref(0)
 const timerRunning = ref(false)
@@ -125,19 +127,19 @@ const headerTitle = computed(() => {
 // World Time
 const currentTime = computed(() => {
   if (props.timezone === 'local' || !props.timezone) {
-    return currentDateTime.value.toLocaleTimeString('en-US', {
+    return currentDateTime.value.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
+      ...clockFmt.value
     })
   }
   
-  return currentDateTime.value.toLocaleTimeString('en-US', {
+  return currentDateTime.value.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
+    ...clockFmt.value,
     timeZone: props.timezone
   })
 })
