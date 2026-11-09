@@ -89,6 +89,7 @@ export const GRADIENTS: readonly GradientDef[] = [
   { id: 'rb-red', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#ff7a7a'], [1, '#e02a2a']] },
   { id: 'rb-blue', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#bfe6ff'], [1, '#3f9bff']] },
   { id: 'rb-sun', x1: 0.2, y1: 0.2, x2: 0.8, y2: 0.8, stops: [[0, '#fff3a0'], [1, '#ff9a4d']] },
+  { id: 'rb-wood', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#c98159'], [1, '#8a4a2b']] },
   { id: 'rb-hat-purple', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#b58cff'], [1, '#4b2bb8']] },
   { id: 'rb-hat-tan', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#f1c98a'], [1, '#a8692f']] },
   { id: 'rb-hat-navy', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#7f9bff'], [1, '#2a3a9e']] },

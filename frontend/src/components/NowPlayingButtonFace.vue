@@ -43,6 +43,7 @@ const stateText = computed(() => {
 
 <template>
   <div class="np-face" :class="{ compact: props.compact }">
+   <div class="np-inner">
     <template v-if="track">
       <div class="np-art" :class="{ 'is-paused': !playing }">
         <img v-if="artUrl && !artFailed" :src="artUrl" alt="" class="np-art-img" @error="artFailed = true" />
@@ -66,17 +67,26 @@ const stateText = computed(() => {
         <span>{{ stateText }}</span>
       </div>
     </template>
+   </div>
   </div>
 </template>
 
 <style scoped>
 .np-face {
+  width: 100%;
+  height: 100%;
+  /* DL-165: the card measures itself, so the art and text grow with the button. */
+  container-type: size;
+}
+
+.np-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: clamp(10px, 3cqh, 28px);
   width: 100%;
   height: 100%;
   padding: 6px 8px;
+  box-sizing: border-box;
   overflow: hidden;
   text-align: left;
 }
@@ -84,9 +94,9 @@ const stateText = computed(() => {
 .np-art {
   position: relative;
   flex: none;
-  width: clamp(40px, 30%, 64px);
+  width: clamp(40px, min(40cqw, 84cqh), 560px);
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: clamp(8px, 3cqh, 20px);
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
   display: flex;
@@ -103,7 +113,7 @@ const stateText = computed(() => {
 }
 
 .np-art-fallback {
-  font-size: 1.4em;
+  font-size: clamp(1.4em, 12cqh, 5em);
   opacity: 0.5;
 }
 
@@ -115,14 +125,14 @@ const stateText = computed(() => {
 .np-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: clamp(2px, 1cqh, 8px);
   min-width: 0;
   flex: 1;
 }
 
 .np-title {
   font-weight: 700;
-  font-size: 0.92em;
+  font-size: clamp(0.92em, 8cqh, 3.6em);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -130,7 +140,7 @@ const stateText = computed(() => {
 }
 
 .np-artist {
-  font-size: 0.78em;
+  font-size: clamp(0.78em, 5.6cqh, 2.4em);
   opacity: 0.78;
   white-space: nowrap;
   overflow: hidden;
@@ -141,7 +151,7 @@ const stateText = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.66em;
+  font-size: clamp(0.66em, 4cqh, 1.5em);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -149,7 +159,9 @@ const stateText = computed(() => {
 }
 
 .np-progress {
-  height: 3px;
+  height: clamp(3px, 1.4cqh, 9px);
+  width: 100%;
+  max-width: clamp(80px, 62%, 560px);
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.14);
   overflow: hidden;
@@ -172,6 +184,15 @@ const stateText = computed(() => {
   width: 100%;
   font-size: 0.8em;
   opacity: 0.55;
+}
+
+/* Tall / square cards: the art takes the top, big and centred, with the text below it. */
+@container (max-aspect-ratio: 1/1) {
+  .np-inner { flex-direction: column; justify-content: center; text-align: center; }
+  .np-art { width: min(86cqw, 56cqh); }
+  .np-meta { flex: none; align-items: center; width: 100%; }
+  .np-state { justify-content: center; }
+  .np-progress { max-width: 80%; }
 }
 
 .compact .np-artist,

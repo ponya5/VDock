@@ -15,7 +15,7 @@ import { useUpdateStore } from '@/stores/update'
 import type { RobotMood } from '@/stores/settings'
 import type { RobotSignals, WeatherKind } from './moodEngine'
 import type { Mood } from './reactions'
-import { BeatTracker, type BeatInfo, type Tempo, type Vibe } from './beatTracker'
+import { BeatTracker, type BeatInfo } from './beatTracker'
 
 const MOODS: Mood[] = ['funny', 'grumpy', 'sarcastic', 'sweet']
 const ACTIVE_UPDATE = ['downloading', 'installing', 'restarting']
@@ -26,6 +26,11 @@ export function aggregateAgent(entries: Array<{ state: string; prompted?: boolea
   if (entries.some(e => e.state === 'working')) return 'working'
   if (entries.some(e => e.state === 'ready' && e.prompted === true)) return 'ready'
   return 'idle'
+}
+
+/** True when at least one agent session exists and none is working or waiting on a permission. */
+export function hasIdleAgent(entries: Array<{ state: string }>): boolean {
+  return entries.length > 0 && !entries.some(e => e.state === 'working' || e.state === 'permission')
 }
 
 export function mapWeather(w: { code: number; temperature: number } | null): WeatherKind | null {
@@ -86,25 +91,19 @@ export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLe
     notifications.notifications.reduce((m, n) => Math.max(m, new Date(n.timestamp).getTime()), 0) || null
   const notifCounter = new MonotonicCounter(newestNotification() ?? 0)
   const clock = ref(new Date())
-  // DL-165: beat tracking off the live spectrum; tempo/vibe buckets are reactive, the per-frame pulse is polled via beat()
+  // DL-165: beat tracking off the live spectrum; the per-frame pulse (head bounce) is polled via beat()
   const tracker = new BeatTracker()
-  const tempo = ref<Tempo | null>(null)
-  const vibe = ref<Vibe>('calm')
   const stopBeatWatch = watch(() => spectrum.lastSeenAt, () => {
     const now = performance.now()
     if (!nowPlaying.playing.value || !spectrum.live) tracker.reset()
     else tracker.feed(spectrum.bands, spectrum.level, now)
-    const b = tracker.read(now)
-    if (b.tempo !== tempo.value) tempo.value = b.tempo
-    if (b.vibe !== vibe.value) vibe.value = b.vibe
   })
   let timer: ReturnType<typeof setInterval> | null = null
 
   const signals = computed<RobotSignals>(() => ({
     agent: aggregateAgent(Object.values(agentStates)),
     musicPlaying: nowPlaying.playing.value,
-    tempo: tempo.value,
-    vibe: vibe.value,
+    agentIdle: hasIdleAgent(Object.values(agentStates)),
     cpuPercent: sys.stats.value?.cpuPercent ?? null,
     memPercent: sys.stats.value?.memPercent ?? null,
     tempC: sys.stats.value?.tempC ?? null,

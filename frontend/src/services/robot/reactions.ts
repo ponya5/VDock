@@ -17,7 +17,7 @@ export type RobotEvent =
   | 'pointerEnter' | 'pointerEyes' | 'pointerMouth' | 'pointerShake' | 'pointerDizzy' | 'pointerAnnoyed'
   | 'pointerCircle' | 'pointerLinger' | 'pointerApproach' | 'pointerLeave' | 'pointerReturn'
 export interface Reaction { icon?: IconId; expr: ExpressionId; seq?: SequenceId; prop?: PropId; accessory?: AccessoryId; scene?: SceneId; ms?: number }
-export type BaselineState = 'idle' | 'working' | 'waiting' | 'music' | 'night' | 'overworked'
+export type BaselineState = 'idle' | 'working' | 'waiting' | 'music' | 'night' | 'overworked' | 'agentIdle'
 
 export const ICON_MS = 1200
 
@@ -75,8 +75,8 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
   musicStart: {
     funny: { icon: 'equalizer', expr: 'grooving', seq: 'music-jam', scene: 'jamming', prop: 'notes', ms: 3400 },
     grumpy: { icon: 'equalizer', expr: 'unimpressed', ms: 2500 },
-    sarcastic: { icon: 'equalizer', expr: 'suspicious', seq: 'dj-scratch', scene: 'dj', ms: 4200 },
-    sweet: { icon: 'equalizer', expr: 'grooving', seq: 'sing-along', scene: 'karaoke', prop: 'notes', ms: 4400 },
+    sarcastic: { icon: 'equalizer', expr: 'suspicious', scene: 'jamming', ms: 3000 },
+    sweet: { icon: 'equalizer', expr: 'grooving', seq: 'music-jam', scene: 'jamming', prop: 'notes', ms: 3400 },
   },
   musicStop: {
     funny: { expr: 'bored', seq: 'look-around', ms: 2600 },
@@ -121,13 +121,13 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { expr: 'joy', seq: 'thumbs-up-pop', scene: 'thumbs-up', prop: 'heart', ms: 2800 },
   },
   notification: {
-    funny: { icon: 'envelope', expr: 'surprised', seq: 'chat-typing', scene: 'texting', ms: 5000 },
+    funny: { icon: 'envelope', expr: 'surprised', seq: 'double-take', ms: 2500 },
     grumpy: { icon: 'envelope', expr: 'bored', ms: 2000 },
     sarcastic: { icon: 'envelope', expr: 'unimpressed', seq: 'eye-roll', ms: 2200 },
-    sweet: { icon: 'envelope', expr: 'happy', seq: 'chat-typing', scene: 'texting', ms: 5000 },
+    sweet: { icon: 'envelope', expr: 'happy', ms: 2200 },
   },
   update: {
-    funny: { icon: 'download', expr: 'starstruck' },
+    funny: { icon: 'download', expr: 'excited' },
     grumpy: { icon: 'download', expr: 'bored', seq: 'sigh' },
     sarcastic: { icon: 'download', expr: 'suspicious' },
     sweet: { icon: 'download', expr: 'happy', prop: 'sparkles' },
@@ -200,57 +200,27 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
 }
 
 export const BASELINES: Record<Mood, Record<BaselineState, ExpressionId>> = {
-  funny: { idle: 'neutral', working: 'typing', waiting: 'puppy', music: 'grooving', night: 'asleep', overworked: 'straining' },
-  grumpy: { idle: 'bored', working: 'squint', waiting: 'glare', music: 'unimpressed', night: 'asleep', overworked: 'angry' },
-  sarcastic: { idle: 'unimpressed', working: 'side-eye', waiting: 'side-eye', music: 'smug', night: 'asleep', overworked: 'teeth-grit' },
-  sweet: { idle: 'content', working: 'typing', waiting: 'puppy', music: 'grooving', night: 'asleep', overworked: 'worried' },
+  // DL-165: music = the same "listening" look (headphones + head-bopping) in every mood; agentIdle = an AI agent is
+  // sitting idle (waiting for your next prompt) - a relaxed, waiting face with its own scene (BASELINE_SCENE below).
+  funny: { idle: 'neutral', working: 'typing', waiting: 'puppy', music: 'grooving', night: 'asleep', overworked: 'straining', agentIdle: 'whistle' },
+  grumpy: { idle: 'bored', working: 'squint', waiting: 'glare', music: 'grooving', night: 'asleep', overworked: 'angry', agentIdle: 'bored-sigh' },
+  sarcastic: { idle: 'unimpressed', working: 'side-eye', waiting: 'side-eye', music: 'grooving', night: 'asleep', overworked: 'teeth-grit', agentIdle: 'bored-sigh' },
+  sweet: { idle: 'content', working: 'typing', waiting: 'puppy', music: 'grooving', night: 'asleep', overworked: 'worried', agentIdle: 'relaxed' },
 }
 
 /** Scene held for as long as the baseline lasts (DL-155 / DL-163). */
 export const BASELINE_SCENE: Record<Mood, Partial<Record<BaselineState, SceneId>>> = {
-  funny: { working: 'typing', music: 'jamming', overworked: 'heavy-load' },
-  grumpy: { overworked: 'heavy-load' },
-  sarcastic: { music: 'dj', overworked: 'brain-overload' },
-  sweet: { working: 'typing', music: 'jamming', overworked: 'heavy-load' },
-}
-
-/** DL-164: a long listening session rotates through these, one per MUSIC_ROTATE_MS slot. */
-export const MUSIC_SCENES: Partial<Record<Mood, readonly SceneId[]>> = {
-  funny: ['jamming', 'dj', 'karaoke'],
-  sarcastic: ['dj', 'jamming'],
-  sweet: ['jamming', 'karaoke', 'dj'],
-}
-export const MUSIC_ROTATE_MS = 35_000
-
-/** DL-165: face while music plays, by detected feel — hype/calm loudness win over tempo. Missing key = keep the mood's baseline. */
-export const MUSIC_FEEL: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast' | 'hype' | 'calm', ExpressionId>>>> = {
-  funny: { slow: 'dreamy', mid: 'grooving', fast: 'excited', hype: 'starstruck', calm: 'relaxed' },
-  sweet: { slow: 'dreamy', mid: 'grooving', fast: 'joy', hype: 'excited', calm: 'content' },
-  sarcastic: { slow: 'smug', mid: 'smug', fast: 'smirk', hype: 'smirk' },
-  grumpy: { fast: 'unimpressed', hype: 'smirk' },
-}
-/** DL-165: what Wingy wears while music plays, by feel - layers combine (ears + face + head). */
-export const MUSIC_OUTFIT: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast' | 'hype', readonly AccessoryId[]>>>> = {
-  funny: { slow: ['headphones', 'beret'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'party-hat'] },
-  sweet: { slow: ['headphones', 'beret'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'heart-glasses', 'crown'] },
-  sarcastic: { slow: ['headphones', 'monocle'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'top-hat'] },
-  grumpy: { fast: ['headphones'], hype: ['headphones'] },
-}
-/** Minimum time a music face / scene / outfit stays up before the feel may change it again. */
-export const MUSIC_DWELL_MS = 20_000
-
-/** DL-165: scene by detected tempo (beats the timed rotation while a tempo is locked). */
-export const TEMPO_SCENES: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast', SceneId>>>> = {
-  funny: { slow: 'karaoke', mid: 'jamming', fast: 'dj' },
-  sweet: { slow: 'karaoke', mid: 'jamming', fast: 'dj' },
-  sarcastic: { slow: 'jamming', mid: 'jamming', fast: 'dj' },
+  funny: { working: 'typing', music: 'jamming', overworked: 'heavy-load', agentIdle: 'coffee-break' },
+  grumpy: { music: 'jamming', overworked: 'heavy-load', agentIdle: 'chin' },
+  sarcastic: { music: 'jamming', overworked: 'brain-overload', agentIdle: 'chin' },
+  sweet: { working: 'typing', music: 'jamming', overworked: 'heavy-load', agentIdle: 'coffee-break' },
 }
 
 export const IDLE_GAGS: Record<Mood, SequenceId[]> = {
-  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan', 'bored-drum', 'idle-nod', 'typing-frenzy', 'coffee-sip', 'thumbs-up-pop', 'big-stretch', 'chat-typing', 'reading-book', 'dj-scratch', 'sing-along'],
+  funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan', 'bored-drum', 'idle-nod', 'typing-frenzy', 'coffee-sip', 'thumbs-up-pop', 'big-stretch'],
   grumpy: ['sigh', 'head-shake', 'look-around', 'rage-fit', 'hand-on-chin', 'bored-drum', 'facepalm-sigh', 'idle-nod'],
-  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect', 'bored-drum', 'facepalm-sigh', 'coffee-sip', 'agent-idle-nod', 'chat-typing', 'reading-book'],
-  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes', 'idle-nod', 'coffee-sip', 'thumbs-up-pop', 'big-stretch', 'chat-typing', 'reading-book', 'sing-along'],
+  sarcastic: ['eye-roll', 'whistle-away', 'look-around', 'shrug', 'evil-plan', 'what-now', 'inspect', 'bored-drum', 'facepalm-sigh', 'coffee-sip', 'agent-idle-nod'],
+  sweet: ['giggle', 'look-around', 'nod', 'wink', 'hello-hand', 'cover-eyes', 'relax', 'sad-moment', 'take-notes', 'idle-nod', 'coffee-sip', 'thumbs-up-pop', 'big-stretch'],
 }
 
 export const PRIORITY: Record<RobotEvent, number> = {

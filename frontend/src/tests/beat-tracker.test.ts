@@ -66,12 +66,6 @@ describe('beat tracker', () => {
 })
 
 import { FaceAnimator } from '@/services/robot/animator'
-import { MoodEngine, type RobotSignals } from '@/services/robot/moodEngine'
-
-const sig = (o: Partial<RobotSignals> = {}): RobotSignals => ({
-  agent: 'idle', musicPlaying: true, cpuPercent: 10, batteryPercent: 80, batteryCharging: null,
-  notificationCount: 0, updateAvailable: false, weather: null, isDay: true, hour: 14, day: '2026-11-09', ...o,
-})
 
 describe('beat-driven robot (DL-165)', () => {
   it('head bounces on the beat only when a tempo is locked', () => {
@@ -84,32 +78,41 @@ describe('beat-driven robot (DL-165)', () => {
     a.setBeat({ pulse: 0, beatIndex: 1, confidence: 0.1, energy: 0.8 })
     expect(a.frame().transform).toBe(t1) // untrusted beat is ignored
   })
-
-  it('picks scene and face from tempo and vibe', () => {
-    const mk = () => new MoodEngine({ mood: 'funny', quips: false, reactTo: { music: true, agent: true, system: true, ambient: true, notifications: true } as never, storage: null, rand: () => 0.5 })
-    const run = (s: Partial<RobotSignals>) => {
-      const e = mk(); e.step(sig({ musicPlaying: false }), [], 0, 0)
-      const out = [...e.step(sig(s), [], 0, 70_000), ...e.step(sig(s), [], 0, 80_000)]
-      return out
-    }
-    expect(run({ tempo: 'fast', vibe: 'groove' })).toContainEqual({ type: 'scene', id: 'dj' })
-    expect(run({ tempo: 'slow', vibe: 'groove' })).toContainEqual({ type: 'scene', id: 'karaoke' })
-    expect(run({ tempo: 'slow', vibe: 'hype' })).toContainEqual({ type: 'expr', id: 'starstruck' })
-  })
 })
 
-describe('combined outfit and calm pacing (DL-165)', () => {
-  const reactTo = { music: true, agent: true, system: true, ambient: true, notifications: true } as never
-  const mk = () => new MoodEngine({ mood: 'funny', quips: false, reactTo, storage: null, rand: () => 0.5 })
+import { hasIdleAgent } from '@/services/robot/signals'
+import { MoodEngine as Engine, type RobotSignals as Sig } from '@/services/robot/moodEngine'
 
-  it('does not swap face/scene/outfit again within the hold time', () => {
-    const e = mk()
-    e.step(sig({ musicPlaying: false }), [], 0, 0)
-    e.step(sig({ tempo: 'slow', vibe: 'groove' }), [], 0, 70_000)
-    e.step(sig({ tempo: 'slow', vibe: 'groove' }), [], 0, 90_000) // settles into the slow look
-    const quick = e.step(sig({ tempo: 'fast', vibe: 'hype' }), [], 0, 95_000)
-    expect(quick.filter(c => c.type === 'expr' || c.type === 'scene' || c.type === 'accessory')).toEqual([])
-    const later = e.step(sig({ tempo: 'fast', vibe: 'hype' }), [], 0, 120_000)
-    expect(later.some(c => c.type === 'expr')).toBe(true)
+describe('baselines for music and an idle agent (DL-165)', () => {
+  const base = (o: Partial<Sig> = {}): Sig => ({
+    agent: 'idle', musicPlaying: false, cpuPercent: 10, batteryPercent: 80, batteryCharging: null,
+    notificationCount: 0, updateAvailable: false, weather: null, isDay: true, hour: 14, day: '2026-11-09', ...o,
+  })
+  const reactTo = { music: true, agent: true, system: true, ambient: true, notifications: true } as never
+  const settle = (mood: 'funny' | 'grumpy' | 'sarcastic' | 'sweet', s: Sig) => {
+    const e = new Engine({ mood, quips: false, reactTo, storage: null, rand: () => 0.5 })
+    e.step(base(), [], 0, 0)
+    return [...e.step(s, [], 0, 5_000), ...e.step(s, [], 0, 12_000)]
+  }
+
+  it('detects an idle agent session', () => {
+    expect(hasIdleAgent([])).toBe(false)
+    expect(hasIdleAgent([{ state: 'ready' }])).toBe(true)
+    expect(hasIdleAgent([{ state: 'idle' }, { state: 'working' }])).toBe(false)
+  })
+
+  it.each(['funny', 'grumpy', 'sarcastic', 'sweet'] as const)('%s: music shows the listening look', (mood) => {
+    const out = settle(mood, base({ musicPlaying: true }))
+    expect(out).toContainEqual({ type: 'expr', id: 'grooving' })
+    expect(out).toContainEqual({ type: 'scene', id: 'jamming' })
+    expect(out.some(c => c.type === 'accessory' && c.id === 'headphones')).toBe(true)
+  })
+
+  it('an idle agent gets its own face and scene; music still wins over it', () => {
+    const idle = settle('funny', base({ agentIdle: true }))
+    expect(idle).toContainEqual({ type: 'expr', id: 'whistle' })
+    expect(idle).toContainEqual({ type: 'scene', id: 'coffee-break' })
+    const both = settle('funny', base({ agentIdle: true, musicPlaying: true }))
+    expect(both).toContainEqual({ type: 'expr', id: 'grooving' })
   })
 })
