@@ -121,7 +121,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all key design', section: 'appearance', page: 'buttons', anchor: 'design', icon: ['fas', 'sliders'] },
   { label: 'Motion & Animation', keywords: 'motion animation press idle icon tilt wiggle', section: 'appearance', page: 'buttons', anchor: 'motion', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Press Sound', keywords: 'sound audio click feedback labels tooltips', section: 'appearance', page: 'buttons', anchor: 'feedback', icon: ['fas', 'volume-high'] },
-  { label: 'Display (this device)', keywords: 'display this device light dark', section: 'appearance', page: 'layout', anchor: 'display', icon: ['fas', 'display'] },
+  { label: 'Display', keywords: 'display light dark', section: 'appearance', page: 'layout', anchor: 'display', icon: ['fas', 'display'] },
   { label: 'Day mode', keywords: 'day mode light theme bright white sunlight', section: 'appearance', page: 'layout', anchor: 'day-mode', icon: ['fas', 'sun'] },
   { label: 'Hide the scene bar', keywords: 'hide scene bar header auto hide landscape phone timer', section: 'appearance', page: 'layout', anchor: 'rail-autohide', icon: ['fas', 'eye-slash'] },
   { label: 'Typography', keywords: 'font typography typeface text dashboard', section: 'appearance', page: 'layout', anchor: 'typography', icon: ['fas', 'font'] },

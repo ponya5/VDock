@@ -1,9 +1,9 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useDevicePrefs } from '@/services/devicePrefs'
+import { useSettingsStore } from '@/stores/settings'
 
 /** Day (light) look, per device: On, Off, or Auto (follows the system's light/dark setting). */
 export function useDayMode() {
-  const prefs = useDevicePrefs()
+  const settings = useSettingsStore()
   const systemLight = ref(false)
   let query: MediaQueryList | null = null
   const sync = () => { systemLight.value = Boolean(query?.matches) }
@@ -14,6 +14,6 @@ export function useDayMode() {
     query.addEventListener?.('change', sync)
   })
   onUnmounted(() => query?.removeEventListener?.('change', sync))
-  const isDay = computed(() => prefs.dayMode === 'on' || (prefs.dayMode === 'auto' && systemLight.value))
+  const isDay = computed(() => settings.dayMode === 'on' || (settings.dayMode === 'auto' && systemLight.value))
   return { isDay }
 }

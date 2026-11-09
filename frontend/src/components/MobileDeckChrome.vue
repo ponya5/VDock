@@ -100,6 +100,15 @@
       <span v-if="needsYou > 0" class="mc-more-badge" aria-hidden="true"></span>
     </button>
 
+    <span
+      v-if="countdownActive && !railHidden"
+      :key="countdownKey"
+      class="mc-countdown"
+      :style="{ animationDuration: `${autoHideSeconds}s` }"
+      data-testid="mc-countdown"
+      aria-hidden="true"
+    ></span>
+
     <div v-if="!isStandalone" class="mc-fullscreen-wrap">
       <div
         v-if="!isFullscreen && showFullscreenCallout"
@@ -159,11 +168,21 @@
           type="button"
           role="menuitem"
           class="mc-menu-item"
+          data-testid="mc-menu-day-mode"
+          @click="cycleDayMode"
+        >
+          <FontAwesomeIcon :icon="['fas', settingsStore.dayMode === 'off' ? 'moon' : 'sun']" />
+          <span>Look: {{ { off: 'Dark', on: 'Day', auto: 'Auto' }[settingsStore.dayMode ?? 'off'] }}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
           data-testid="mc-menu-rail-autohide"
           @click="cycleRailAutoHide"
         >
           <FontAwesomeIcon :icon="['fas', 'eye-slash']" />
-          <span>Auto-hide scenes: {{ devicePrefs.railAutoHide ? `${devicePrefs.railAutoHide}s` : 'Off' }}</span>
+          <span>Auto-hide scenes: {{ autoHideSeconds ? `${autoHideSeconds}s` : 'Off' }}</span>
         </button>
         <button
           type="button"
@@ -249,7 +268,8 @@ import { sceneSwipe } from '@/services/sceneSwipe'
 import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import { useNeedsYouCount } from '@/composables/useNeedsYouCount'
-import { RAIL_AUTO_HIDE_CHOICES, useDevicePrefs } from '@/services/devicePrefs'
+import { useDevicePrefs } from '@/services/devicePrefs'
+import { RAIL_AUTO_HIDE_CHOICES } from '@/utils/sceneBarAutoHide'
 import { useMobileChromeRail } from '@/composables/useMobileChromeRail'
 import { hasWakeLockApi } from '@/services/keepAwake'
 import { openMissionControl } from '@/services/missionControl'
@@ -285,6 +305,10 @@ const devicePrefs = useDevicePrefs()
 // per device). Fullscreen and the menu button stay docked on the right.
 const { docked: railDocked } = useMobileChromeRail()
 const railHidden = ref(false)
+const autoHideSeconds = computed(() => settingsStore.sceneBarAutoHideSeconds ?? 0)
+/** Bumped each time the idle countdown (re)starts so the progress line restarts. */
+const countdownKey = ref(0)
+const countdownActive = ref(false)
 const shortLandscape = ref(false)
 let railTimer: ReturnType<typeof setTimeout> | null = null
 function updateShortLandscape() {
@@ -293,25 +317,36 @@ function updateShortLandscape() {
 function stopRailTimer() {
   if (railTimer) clearTimeout(railTimer)
   railTimer = null
+  countdownActive.value = false
 }
 function restartRailTimer() {
   stopRailTimer()
-  if (!shortLandscape.value || !devicePrefs.railAutoHide || railHidden.value) return
+  if (!shortLandscape.value || !autoHideSeconds.value || railHidden.value) return
+  countdownKey.value++
+  countdownActive.value = true
   railTimer = setTimeout(() => {
     if (menuOpen.value) { restartRailTimer(); return }
     railHidden.value = true
-  }, devicePrefs.railAutoHide * 1000)
+    countdownActive.value = false
+  }, autoHideSeconds.value * 1000)
 }
 function revealRail() {
   railHidden.value = false
   restartRailTimer()
 }
 function cycleRailAutoHide() {
-  const i = RAIL_AUTO_HIDE_CHOICES.indexOf(devicePrefs.railAutoHide as typeof RAIL_AUTO_HIDE_CHOICES[number])
-  devicePrefs.railAutoHide = RAIL_AUTO_HIDE_CHOICES[(i + 1) % RAIL_AUTO_HIDE_CHOICES.length]
+  const i = RAIL_AUTO_HIDE_CHOICES.indexOf(autoHideSeconds.value as typeof RAIL_AUTO_HIDE_CHOICES[number])
+  settingsStore.sceneBarAutoHideSeconds = RAIL_AUTO_HIDE_CHOICES[(i + 1) % RAIL_AUTO_HIDE_CHOICES.length]
+  void settingsStore.saveSettings()
 }
-watch([shortLandscape, () => devicePrefs.railAutoHide, () => props.currentSceneIndex], () => {
-  if (!shortLandscape.value || !devicePrefs.railAutoHide) railHidden.value = false
+function cycleDayMode() {
+  const order = ['off', 'on', 'auto'] as const
+  const i = order.indexOf((settingsStore.dayMode ?? 'off') as typeof order[number])
+  settingsStore.dayMode = order[(i + 1) % order.length]
+  void settingsStore.saveSettings()
+}
+watch([shortLandscape, autoHideSeconds, () => props.currentSceneIndex], () => {
+  if (!shortLandscape.value || !autoHideSeconds.value) railHidden.value = false
   restartRailTimer()
 })
 watch([railHidden, shortLandscape], () => { railDocked.value = railHidden.value && shortLandscape.value }, { immediate: true })
@@ -748,6 +783,22 @@ onUnmounted(() => {
   .mc-glider { top: 3px; bottom: 3px; }
   .mc-fullscreen-btn, .mc-more-btn, .mc-reveal-btn, .mc-page-btn { width: 40px; height: 40px; }
 }
+
+/* Idle countdown: a thin line under the bar that drains until it folds away. */
+.mc-countdown {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #38bdf8;
+  transform-origin: left center;
+  animation: mc-countdown-drain linear forwards;
+  pointer-events: none;
+}
+@keyframes mc-countdown-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .mc-countdown { animation-timing-function: steps(10, end); } }
 
 /* Folded: the bar leaves the layout; the buttons dock top-right in a column
    and the deck keeps a gutter for them (DashboardView .chrome-docked). */

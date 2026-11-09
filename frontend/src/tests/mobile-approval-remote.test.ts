@@ -136,10 +136,10 @@ describe('phone overflow menu', () => {
     expect(wrapper.find('.mc-menu').exists()).toBe(false)
   })
 
-  it('keeps the phone menu to six items - Exit only exists in the desktop app (DL-011)', async () => {
+  it('keeps the phone menu to seven items - Exit only exists in the desktop app (DL-011)', async () => {
     const wrapper = mountChrome()
     await wrapper.find('.mc-more-btn').trigger('click')
-    expect(wrapper.findAll('.mc-menu-item')).toHaveLength(6)
+    expect(wrapper.findAll('.mc-menu-item')).toHaveLength(7)
     expect(wrapper.text()).not.toContain('Exit VDock')
     expect(wrapper.find('[data-testid="mc-menu-edit"]').exists()).toBe(false)
   })
