@@ -5,6 +5,7 @@
     :style="linkAccent ? { '--link-accent': linkAccent } : undefined"
     :aria-label="`${agentName} console`"
   >
+    <div class="mac-side">
     <AgentStatusBanner
       variant="card"
       :state="displayState"
@@ -45,7 +46,7 @@
       v-if="isAgentPossiblyRunning && visibleActions.length > 0"
       class="mac-actions"
       :class="{ 'emphasizes-primary': emphasizesPrimaryAction }"
-      :style="{ '--secondary-action-count': Math.max(visibleActions.length - 1, 1) }"
+      :style="{ '--secondary-action-count': Math.max(visibleActions.length - 1, 1), '--action-count': visibleActions.length }"
     >
       <span v-if="linked" class="mac-actions-for" data-testid="actions-for">
         <FontAwesomeIcon :icon="['fas', 'link']" /> acts on {{ linked.label }}
@@ -67,7 +68,9 @@
         <span>{{ action.label }}</span>
       </button>
     </div>
+    </div>
 
+    <div class="mac-main">
     <!-- DL-166: Groups / All switch, only when the scene splits into 2+ categories. -->
     <div v-if="showViewToggle" class="mac-shortcuts-head">
       <span class="mac-shortcuts-title">Shortcuts</span>
@@ -85,8 +88,10 @@
     <div
       v-if="visibleShortcuts.length > 0"
       id="agent-cat-panel"
+      ref="tilesEl"
       class="mac-shortcuts"
-      :class="{ 'in-groups': showsGroups }"
+      :style="fitStyle"
+      :class="{ 'in-groups': showsGroups, compact: (fit?.rowH ?? 99) < 64 }"
       :role="showsGroups ? 'tabpanel' : undefined"
       :aria-labelledby="showsGroups && selectedId ? `agent-cat-tab-${selectedId}` : undefined"
       aria-label="Shortcuts"
@@ -130,11 +135,12 @@
         <span>{{ link.label }}</span>
       </button>
     </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRef, watchEffect } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch, watchEffect } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Button, Scene } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
@@ -360,6 +366,57 @@ async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
   }
 }
 
+// Fit the tiles to the room: pick a column count so every tile fits without
+// scrolling, with a readable minimum size; only when even that cannot fit does
+// the region scroll. Rows get an explicit height so tiles never balloon.
+const tilesEl = ref<HTMLElement | null>(null)
+const fit = ref<{ cols: number; rowH: number } | null>(null)
+const FIT_GAP = 8
+function computeFit(): void {
+  const el = tilesEl.value
+  const n = visibleShortcuts.value.length
+  if (!el || n === 0) { fit.value = null; return }
+  const landscape = window.innerWidth > window.innerHeight
+  const W = el.clientWidth
+  const H = el.clientHeight
+  const minW = landscape ? 96 : 84
+  const minH = 48
+  const maxH = 92
+  let best: { cols: number; rowH: number; score: number } | null = null
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols)
+    const tw = (W - FIT_GAP * (cols - 1)) / cols
+    const th = (H - FIT_GAP * (rows - 1)) / rows
+    if (tw < minW || th < minH) continue
+    const score = Math.min(tw, 170) * Math.min(th, maxH)
+    if (!best || score > best.score) best = { cols, rowH: Math.min(th, maxH), score }
+  }
+  if (!best) {
+    // Cannot fit: most columns that still respect the minimum width; scroll vertically.
+    const cols = Math.max(1, Math.min(n, Math.floor((W + FIT_GAP) / (minW + FIT_GAP))))
+    best = { cols, rowH: minH, score: 0 }
+  }
+  fit.value = { cols: best.cols, rowH: Math.floor(best.rowH) }
+}
+const fitStyle = computed(() => fit.value
+  ? { gridTemplateColumns: `repeat(${fit.value.cols}, minmax(0, 1fr))`, gridAutoRows: `${fit.value.rowH}px` }
+  : undefined)
+let fitObserver: ResizeObserver | null = null
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined') {
+    fitObserver = new ResizeObserver(() => computeFit())
+    if (tilesEl.value) fitObserver.observe(tilesEl.value)
+  }
+  void nextTick(computeFit)
+})
+onBeforeUnmount(() => fitObserver?.disconnect())
+watch(tilesEl, (el, prev) => {
+  if (prev) fitObserver?.unobserve(prev)
+  if (el) fitObserver?.observe(el)
+  void nextTick(computeFit)
+})
+watch(() => visibleShortcuts.value.length, () => void nextTick(computeFit))
+
 trackAgentSurfaceVisibility(
   computed(() => profile.value?.status_source),
   computed(() => isAgentPossiblyRunning.value),
@@ -378,6 +435,25 @@ trackAgentSurfaceVisibility(
   overscroll-behavior: contain;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   color: #e5e7eb;
+}
+
+/* Two regions: status + state actions (.mac-side) and the shortcuts (.mac-main).
+   Portrait stacks them; a landscape phone puts them side by side so the tiles
+   get the full height and nothing needs scrolling. */
+.mac-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.mac-main {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .mobile-agent-console.state-ready { --agent-accent: #22c55e; }
@@ -416,11 +492,13 @@ trackAgentSurfaceVisibility(
 .mac-actions {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  grid-template-columns: repeat(var(--action-count, 3), minmax(0, 1fr));
   gap: 8px;
 }
 
 .mac-action {
+  min-width: 0;
+  overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
   min-height: 60px;
@@ -434,7 +512,7 @@ trackAgentSurfaceVisibility(
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(15, 20, 28, 0.78);
   color: inherit;
-  font-size: clamp(0.78rem, 0.74rem + 0.3vw, 0.9rem);
+  font-size: clamp(0.74rem, 0.7rem + 0.3vw, 0.88rem);
   font-weight: 600;
   line-height: 1.15;
   text-align: center;
@@ -444,6 +522,17 @@ trackAgentSurfaceVisibility(
 
 .mac-action > svg {
   font-size: 1.3em;
+  flex: none;
+}
+.mac-action > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .mac-action.primary {
@@ -474,22 +563,30 @@ trackAgentSurfaceVisibility(
    `auto-fit`/`minmax` reflows the tile count per row to whatever the screen
    actually fits, wrapping to more rows rather than ever hiding a button. */
 .mac-shortcuts {
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
+  /* JS (computeFit) overrides columns and row height so every tile fits. */
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: 10px;
+  grid-auto-rows: 68px;
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mac-shortcut {
   -webkit-user-select: none;
   user-select: none;
-  min-height: 68px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 6px;
+  gap: 4px;
+  padding: 4px 6px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
@@ -507,8 +604,17 @@ trackAgentSurfaceVisibility(
 }
 
 .mac-shortcut-label {
+  min-width: 0;
+  max-width: 100%;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
+.mac-shortcuts.compact .mac-shortcut { flex-direction: row; gap: 8px; padding: 4px 10px; }
+.mac-shortcuts.compact .mac-shortcut-icon { flex: none; }
 
 .mac-shortcut.highlighted {
   border-color: var(--agent-accent);
@@ -533,15 +639,7 @@ trackAgentSurfaceVisibility(
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
 }
-/* A long category scrolls inside the console; the banner never scrolls away. */
-.mac-shortcuts.in-groups {
-  flex: 1;
-  /* A short landscape panel keeps at least one full row of tiles; the console scrolls instead. */
-  min-height: min(150px, 40vh);
-  overflow-y: auto;
-  align-content: start;
-  overscroll-behavior: contain;
-}
+/* Links inside the tile grid keep their pill look, centred. */
 .mac-shortcuts .mac-link {
   justify-content: center;
 }
@@ -578,31 +676,23 @@ trackAgentSurfaceVisibility(
 .mac-link:active:not(:disabled) { transform: scale(0.96); }
 .mac-link:disabled { opacity: 0.6; cursor: default; }
 
-/* Landscape phones (~390px tall): every row slims down so the action
-   buttons and shortcuts stay comfortably reachable in a shorter viewport. */
-@media (max-height: 480px) {
+/* Landscape phones: status + actions on the left, shortcuts on the right. */
+@media (orientation: landscape) and (max-height: 520px) {
   .mobile-agent-console {
-    gap: 6px;
-    padding-top: 6px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .mac-action {
-    min-height: 44px;
     flex-direction: row;
-    gap: 6px;
+    gap: 10px;
+    overflow: hidden;
+    padding: 6px calc(10px + env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
   }
-
-  .mac-shortcuts {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  .mac-side {
+    flex: 0 0 clamp(230px, 36%, 340px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
-
-  .mac-shortcut {
-    min-height: 44px;
-    flex-direction: row;
-    gap: 8px;
-    padding: 8px 10px;
-  }
+  .mac-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mac-action { min-height: 44px; flex-direction: row; gap: 6px; padding: 6px; }
+  .emphasizes-primary .mac-action.primary { min-height: 52px; }
+  .mac-actions.emphasizes-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
