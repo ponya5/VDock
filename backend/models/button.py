@@ -181,6 +181,8 @@ class Button:
     # DL-165: ask "Are you sure?" before running -- 'default' follows the
     # global code-action setting, 'always' / 'never' override it per button.
     confirm: str = 'default'
+    # DL-166: optional agent-scene category override ('' = auto-resolve on the client).
+    category: str = ''
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -215,6 +217,7 @@ class Button:
             tooltip=data.get('tooltip', ''),
             enabled=data.get('enabled', True),
             rules=data.get('rules') or [],
-            confirm=data.get('confirm') if data.get('confirm') in ('always', 'never') else 'default'
+            confirm=data.get('confirm') if data.get('confirm') in ('always', 'never') else 'default',
+            category=data.get('category') or ''
         )
 
