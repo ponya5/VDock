@@ -1,7 +1,7 @@
 {
   "id": "dev-claude-code",
   "name": "Claude Code",
-  "description": "Drive Claude Code without leaving the keyboard: prompts, reviews, commits and sessions.",
+  "description": "Drive Claude Code without leaving the keyboard: prompts, reviews, commits, interrupts and sessions.",
   "icon": "fa-robot",
   "color": "#D97757",
   "category": "development",
@@ -109,11 +109,11 @@
           "secondary_label": "/commit"
         },
         {
-          "id": "btn-claude_prompt-0-3",
-          "label": "Explain",
+          "id": "btn-cc_interrupt-0-3",
+          "label": "Interrupt",
           "icon": [
             "fas",
-            "circle-question"
+            "hand"
           ],
           "icon_type": "fontawesome",
           "position": {
@@ -131,20 +131,18 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
-            "config": {
-              "prompt": "Explain what this code does:\n\n{clipboard}",
-              "output": "both"
-            }
+            "type": "cc_interrupt",
+            "config": {}
           },
-          "tooltip": "Explains whatever is on the clipboard"
+          "tooltip": "Stop the current response",
+          "secondary_label": "Esc"
         },
         {
-          "id": "btn-claude_prompt-0-4",
-          "label": "Write Tests",
+          "id": "btn-cc_queue-0-4",
+          "label": "Queue",
           "icon": [
             "fas",
-            "vial"
+            "hourglass-half"
           ],
           "icon_type": "fontawesome",
           "position": {
@@ -162,12 +160,11 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
-            "config": {
-              "prompt": "Write tests for this code:\n\n{clipboard}",
-              "output": "both"
-            }
-          }
+            "type": "cc_queue",
+            "config": {}
+          },
+          "tooltip": "Run the typed message after the current turn",
+          "secondary_label": "Ctrl+X, Enter"
         },
         {
           "id": "btn-claude_prompt-1-0",
@@ -227,14 +224,15 @@
               "prompt": "continue",
               "continue_session": true
             }
-          }
+          },
+          "secondary_label": "continue"
         },
         {
-          "id": "btn-claude_prompt-1-2",
-          "label": "Fix Tests",
+          "id": "btn-cc_background-1-2",
+          "label": "Background",
           "icon": [
             "fas",
-            "screwdriver-wrench"
+            "layer-group"
           ],
           "icon_type": "fontawesome",
           "position": {
@@ -252,12 +250,11 @@
           },
           "enabled": true,
           "action": {
-            "type": "claude_prompt",
-            "config": {
-              "prompt": "The tests are failing. Find and fix the cause.",
-              "output": "notify"
-            }
-          }
+            "type": "cc_background",
+            "config": {}
+          },
+          "tooltip": "Move the running task to the background",
+          "secondary_label": "Ctrl+B"
         },
         {
           "id": "btn-claude_prompt-1-3",
@@ -379,7 +376,8 @@
                 }
               ]
             }
-          }
+          },
+          "secondary_label": "Ctrl+C"
         },
         {
           "id": "btn-macro-2-2",
@@ -412,14 +410,15 @@
                 }
               ]
             }
-          }
+          },
+          "secondary_label": "Ctrl+V"
         },
         {
-          "id": "btn-metric_cpu_usage-2-3",
-          "label": "CPU",
+          "id": "btn-cc_mode-2-3",
+          "label": "Mode",
           "icon": [
             "fas",
-            "microchip"
+            "arrows-rotate"
           ],
           "icon_type": "fontawesome",
           "position": {
@@ -432,21 +431,23 @@
           },
           "shape": "rounded",
           "style": {
-            "backgroundColor": "#334155",
+            "backgroundColor": "#D97757",
             "textColor": "#ffffff"
           },
           "enabled": true,
           "action": {
-            "type": "metric_cpu_usage",
+            "type": "cc_mode",
             "config": {}
-          }
+          },
+          "tooltip": "Cycle normal / auto-accept / plan mode",
+          "secondary_label": "Shift+Tab"
         },
         {
-          "id": "btn-metric_memory-2-4",
-          "label": "Memory",
+          "id": "btn-cc_todos-2-4",
+          "label": "To-dos",
           "icon": [
             "fas",
-            "memory"
+            "list-check"
           ],
           "icon_type": "fontawesome",
           "position": {
@@ -459,14 +460,16 @@
           },
           "shape": "rounded",
           "style": {
-            "backgroundColor": "#334155",
+            "backgroundColor": "#D97757",
             "textColor": "#ffffff"
           },
           "enabled": true,
           "action": {
-            "type": "metric_memory",
+            "type": "cc_todos",
             "config": {}
-          }
+          },
+          "tooltip": "Show or hide Claude's to-do list",
+          "secondary_label": "Ctrl+T"
         },
         {
           "id": "btn-previous_page-3-0",
@@ -521,6 +524,64 @@
             "type": "next_page",
             "config": {}
           }
+        },
+        {
+          "id": "btn-cc_clear-3-2",
+          "label": "New Session",
+          "icon": [
+            "fas",
+            "plus"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 2
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cc_clear",
+            "config": {}
+          },
+          "tooltip": "Start a fresh session (clears context)",
+          "secondary_label": "/clear"
+        },
+        {
+          "id": "btn-cc_compact-3-3",
+          "label": "Compact",
+          "icon": [
+            "fas",
+            "compress"
+          ],
+          "icon_type": "fontawesome",
+          "position": {
+            "row": 3,
+            "col": 3
+          },
+          "size": {
+            "rows": 1,
+            "cols": 1
+          },
+          "shape": "rounded",
+          "style": {
+            "backgroundColor": "#D97757",
+            "textColor": "#ffffff"
+          },
+          "enabled": true,
+          "action": {
+            "type": "cc_compact",
+            "config": {}
+          },
+          "tooltip": "Compact the conversation to free context",
+          "secondary_label": "/compact"
         },
         {
           "id": "btn-time_world_clock-3-4",

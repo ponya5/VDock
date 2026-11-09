@@ -161,7 +161,8 @@
           "action": {
             "type": "gh_status",
             "config": {}
-          }
+          },
+          "secondary_label": "gh status"
         },
         {
           "id": "btn-gh_pr_list-1-0",
@@ -190,7 +191,8 @@
             "config": {
               "limit": 10
             }
-          }
+          },
+          "secondary_label": "gh pr list"
         },
         {
           "id": "btn-gh_pr_create-1-1",
@@ -220,7 +222,8 @@
               "web": true
             }
           },
-          "tooltip": "Opens the PR form in the browser"
+          "tooltip": "Opens the PR form in the browser",
+          "secondary_label": "gh pr create"
         },
         {
           "id": "btn-gh_pr_checkout-1-2",
@@ -248,7 +251,8 @@
             "type": "gh_pr_checkout",
             "config": {}
           },
-          "tooltip": "Set the PR number in the button config"
+          "tooltip": "Set the PR number in the button config",
+          "secondary_label": "gh pr checkout"
         },
         {
           "id": "btn-gh_pr_view-1-3",
@@ -275,7 +279,8 @@
           "action": {
             "type": "gh_pr_view",
             "config": {}
-          }
+          },
+          "secondary_label": "gh pr view"
         },
         {
           "id": "btn-gh_pr_checks-1-4",
@@ -302,7 +307,8 @@
           "action": {
             "type": "gh_pr_checks",
             "config": {}
-          }
+          },
+          "secondary_label": "gh pr checks"
         },
         {
           "id": "btn-gh_issue_list-2-0",
@@ -331,7 +337,8 @@
             "config": {
               "limit": 10
             }
-          }
+          },
+          "secondary_label": "gh issue list"
         },
         {
           "id": "btn-gh_issue_create-2-1",
@@ -361,7 +368,8 @@
               "title": "",
               "web": true
             }
-          }
+          },
+          "secondary_label": "gh issue create"
         },
         {
           "id": "btn-gh_run_list-2-2",
@@ -390,7 +398,8 @@
             "config": {
               "limit": 10
             }
-          }
+          },
+          "secondary_label": "gh run list"
         },
         {
           "id": "btn-gh_run_rerun-2-3",
@@ -417,7 +426,8 @@
           "action": {
             "type": "gh_run_rerun",
             "config": {}
-          }
+          },
+          "secondary_label": "gh run rerun"
         },
         {
           "id": "btn-claude_slash-2-4",
@@ -446,7 +456,8 @@
             "config": {
               "command": "/code-review"
             }
-          }
+          },
+          "secondary_label": "/code-review"
         },
         {
           "id": "btn-previous_page-3-0",

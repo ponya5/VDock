@@ -95,6 +95,7 @@
             <div class="list-header">
               <span>Application</span><span>Status</span><span>Scene</span><span>Actions</span>
             </div>
+            <div class="app-scroll" data-testid="app-scroll">
             <div v-if="filteredApps.length === 0" class="empty-state app-filter-empty">
               <FontAwesomeIcon :icon="['fas', 'search']" /><p>No apps match "{{ appSearch }}"</p>
             </div>
@@ -122,6 +123,7 @@
                 <button v-if="isAppIntegrationEnabled(app.exe)" class="btn-icon" @click="$emit('manage-shortcuts', app)" title="Manage Shortcuts"><FontAwesomeIcon :icon="['fas', 'cog']" /></button>
                 <button v-if="isAppIntegrationEnabled(app.exe) && !getAppScene(app.exe)" class="btn-icon btn-icon-primary" @click="createSceneForApp(app)" title="Create Scene"><FontAwesomeIcon :icon="['fas', 'plus']" /></button>
               </div>
+            </div>
             </div>
           </div>
           <div v-if="appIntegrations.length > 0" class="integration-summary">

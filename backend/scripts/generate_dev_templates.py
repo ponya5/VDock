@@ -87,9 +87,11 @@ def template(
 
 
 def claude_code_deck() -> Dict[str, Any]:
+    # The Interrupt / Queue / Background / Mode / To-dos / New Session / Compact buttons are the same actions the
+    # live agent bar offers (DL-064); here they are regular keys, each labelled with the shortcut it sends.
     return template(
         'dev-claude-code', 'Claude Code', 'Drive Claude Code without leaving '
-        'the keyboard: prompts, reviews, commits and sessions.',
+        'the keyboard: prompts, reviews, commits, interrupts and sessions.',
         'fa-robot', CLAUDE, triggered_by='WindowsTerminal.exe',
         buttons=[
             button(0, 0, 'Open Claude', 'window-maximize', 'claude_continue',
@@ -101,23 +103,20 @@ def claude_code_deck() -> Dict[str, Any]:
             button(0, 2, 'Commit', 'code-commit', 'claude_slash',
                    {'command': '/commit', 'output': 'notify'},
                    secondary='/commit', colour=CLAUDE),
-            button(0, 3, 'Explain', 'circle-question', 'claude_prompt',
-                   {'prompt': 'Explain what this code does:\n\n{clipboard}',
-                    'output': 'both'}, colour=CLAUDE,
-                   tooltip='Explains whatever is on the clipboard'),
-            button(0, 4, 'Write Tests', 'vial', 'claude_prompt',
-                   {'prompt': 'Write tests for this code:\n\n{clipboard}',
-                    'output': 'both'}, colour=CLAUDE),
+            button(0, 3, 'Interrupt', 'hand', 'cc_interrupt', {},
+                   colour=CLAUDE, tooltip='Stop the current response'),
+            button(0, 4, 'Queue', 'hourglass-half', 'cc_queue', {},
+                   colour=CLAUDE,
+                   tooltip='Run the typed message after the current turn'),
 
             button(1, 0, 'Ask', 'comment-dots', 'claude_prompt',
                    {'prompt': 'In {project} on branch {branch}: ',
                     'output': 'both'}, colour=CLAUDE),
             button(1, 1, 'Continue', 'forward', 'claude_prompt',
                    {'prompt': 'continue', 'continue_session': True},
-                   colour=CLAUDE),
-            button(1, 2, 'Fix Tests', 'screwdriver-wrench', 'claude_prompt',
-                   {'prompt': 'The tests are failing. Find and fix the cause.',
-                    'output': 'notify'}, colour=CLAUDE),
+                   secondary='continue', colour=CLAUDE),
+            button(1, 2, 'Background', 'layer-group', 'cc_background', {},
+                   colour=CLAUDE, tooltip='Move the running task to the background'),
             button(1, 3, 'Summarise Diff', 'file-lines', 'claude_prompt',
                    {'prompt': 'Summarise the staged changes in {repo}.',
                     'output': 'both'}, colour=CLAUDE),
@@ -130,11 +129,17 @@ def claude_code_deck() -> Dict[str, Any]:
                    {'steps': [{'type': 'clipboard_copy'}]}),
             button(2, 2, 'Paste', 'paste', 'macro',
                    {'steps': [{'type': 'clipboard_paste'}]}),
-            button(2, 3, 'CPU', 'microchip', 'metric_cpu_usage', {}),
-            button(2, 4, 'Memory', 'memory', 'metric_memory', {}),
+            button(2, 3, 'Mode', 'arrows-rotate', 'cc_mode', {},
+                   colour=CLAUDE, tooltip='Cycle normal / auto-accept / plan mode'),
+            button(2, 4, 'To-dos', 'list-check', 'cc_todos', {},
+                   colour=CLAUDE, tooltip="Show or hide Claude's to-do list"),
 
             button(3, 0, 'Prev Page', 'chevron-left', 'previous_page', {}),
             button(3, 1, 'Next Page', 'chevron-right', 'next_page', {}),
+            button(3, 2, 'New Session', 'plus', 'cc_clear', {},
+                   colour=CLAUDE, tooltip='Start a fresh session (clears context)'),
+            button(3, 3, 'Compact', 'compress', 'cc_compact', {},
+                   colour=CLAUDE, tooltip='Compact the conversation to free context'),
             button(3, 4, 'Clock', 'clock', 'time_world_clock', {}),
         ],
     )
@@ -403,8 +408,74 @@ def known_action_types() -> set:
     return types
 
 
+_KEY_NAMES = {
+    'escape': 'Esc', 'enter': 'Enter', 'ctrl': 'Ctrl', 'shift': 'Shift', 'alt': 'Alt', 'tab': 'Tab',
+    'backspace': 'Backspace', 'delete': 'Del', 'space': 'Space', 'win': 'Win', 'cmd': 'Cmd',
+}
+
+
+def fmt_keys(keys) -> str:
+    """('ctrl', 'shift', 'f5') -> 'Ctrl+Shift+F5'."""
+    parts = []
+    for k in keys:
+        k = str(k)
+        parts.append(_KEY_NAMES.get(k.lower(), k.upper() if len(k) <= 2 else k.capitalize()))
+    return '+'.join(parts)
+
+
+def _command_index() -> Dict[str, Any]:
+    """Every keymap Command by id (Claude Code, Cursor, VS Code, ...)."""
+    import importlib
+    import pkgutil
+    from integrations import keymaps
+    from integrations.keymaps.base import Command
+
+    index: Dict[str, Any] = {}
+    for mod in pkgutil.iter_modules(keymaps.__path__):
+        module = importlib.import_module(f'integrations.keymaps.{mod.name}')
+        for value in vars(module).values():
+            if isinstance(value, tuple) and value and all(isinstance(c, Command) for c in value):
+                for cmd in value:
+                    index.setdefault(cmd.id, cmd)
+    return index
+
+
+def shortcut_for(action_type: str, config: Dict[str, Any], commands: Dict[str, Any]) -> str:
+    """The key chord / command a button really sends, shown under its name (Windows keys)."""
+    if action_type == 'hotkey':
+        return fmt_keys(config.get('keys') or [])
+    if action_type == 'claude_slash':
+        return str(config.get('command') or '')
+    if action_type == 'cross_platform' and config.get('action') == 'run_command':
+        return str(config.get('command') or '')
+    if action_type == 'macro':
+        steps = [st.get('type') for st in config.get('steps', [])]
+        if steps == ['clipboard_copy']:
+            return 'Ctrl+C'
+        if steps == ['clipboard_paste']:
+            return 'Ctrl+V'
+    if config.get('text') or config.get('prompt'):
+        return ''  # a typed prompt, not a shortcut
+    cmd = commands.get(action_type)
+    if cmd is not None:
+        if getattr(cmd, 'keys', ()):
+            label = fmt_keys(cmd.keys)
+            if getattr(cmd, 'repeat', 1) and cmd.repeat > 1:
+                label = f'{label} x{cmd.repeat}'
+            for chord in getattr(cmd, 'after_keys', ()) or ():
+                label += ', ' + fmt_keys(chord)
+            return label
+        text = getattr(cmd, 'types_text', '') or ''
+        if text and len(text) <= 16 and not text.endswith('.'):
+            return text
+    if action_type.startswith('gh_') and not action_type.startswith('gh_widget_'):
+        return 'gh ' + action_type[3:].replace('_', ' ')
+    return ''
+
+
 def main() -> int:
     known = known_action_types()
+    commands = _command_index()
     TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
     problems = []
@@ -416,6 +487,10 @@ def main() -> int:
             seen = set()
             for btn in page['buttons']:
                 action_type = btn['action']['type']
+                if not btn.get('secondary_label'):
+                    label = shortcut_for(action_type, btn['action'].get('config') or {}, commands)
+                    if label:
+                        btn['secondary_label'] = label
                 if action_type not in known:
                     problems.append(f"{deck['id']}: unknown action {action_type!r}")
                 cell = (btn['position']['row'], btn['position']['col'])

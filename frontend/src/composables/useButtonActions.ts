@@ -170,6 +170,12 @@ export function useButtonActions() {
     runButtonAction(button)
   }
 
+  /** "Volume Up · cross_platform" - readable, and unique per button+action. */
+  function recentActionLabel(button: Button): string {
+    const type = button.action?.type ?? ''
+    return button.label ? `${button.label} · ${type}` : type
+  }
+
   function runButtonAction(button: Button) {
     // Show the press on the button face. A Claude prompt can run for half a
     // minute; without this the deck looks like it ignored the tap.
@@ -178,6 +184,10 @@ export function useButtonActions() {
     dashboardStore.executeButtonAction(button).then((result) => {
       buttonStateStore.markFinished(button.id, result)
       showActionResult(result)
+      // The Recent actions list (Settings) is fed by every successful press.
+      if (result?.success && !(result as { cancelled?: boolean }).cancelled) {
+        settingsStore.addRecentAction?.(recentActionLabel(button))
+      }
       // A GitHub widget that knows where its data lives (the latest CI run,
       // the PR list) takes you there: a red build is one tap from its log.
       const url = result?.success ? result.data?.url : undefined

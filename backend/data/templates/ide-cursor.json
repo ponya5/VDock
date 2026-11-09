@@ -349,6 +349,7 @@
         {
           "id": "btn-cursor-git-push",
           "label": "Git Push",
+          "secondary_label": "Ctrl+Shift+G",
           "icon": ["fas", "upload"],
           "icon_type": "fontawesome",
           "position": { "row": 3, "col": 1 },

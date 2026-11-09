@@ -216,7 +216,8 @@
           "action": {
             "type": "cursor_followup",
             "config": {}
-          }
+          },
+          "secondary_label": "Ctrl+Shift+Y"
         },
         {
           "id": "btn-cursor_prompt-1-2",
@@ -390,7 +391,8 @@
                 }
               ]
             }
-          }
+          },
+          "secondary_label": "Ctrl+C"
         },
         {
           "id": "btn-metric_cpu_usage-2-3",

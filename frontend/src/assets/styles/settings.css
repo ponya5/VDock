@@ -35,6 +35,14 @@
   overflow: hidden;
 }
 
+/* The app list scrolls on its own (header stays put) instead of growing the page without bound. */
+:where(.settings-app) .app-scroll:not(.settings-isolate *) {
+  max-height: min(58vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 :where(.settings-app) .list-header:not(.settings-isolate *) {
   display: grid;
   grid-template-columns: 1fr 80px 1fr 80px;
@@ -1159,9 +1167,10 @@
   :where(.settings-app) .list-header:not(.settings-isolate *),
 :where(.settings-app) .app-item:not(.settings-isolate *) { grid-template-columns: 1fr 60px; }
   :where(.settings-app) .list-header span:nth-child(3):not(.settings-isolate *),
-:where(.settings-app) .list-header span:nth-child(4):not(.settings-isolate *),
-:where(.settings-app) .app-item .app-scene:not(.settings-isolate *),
-:where(.settings-app) .app-item .app-actions:not(.settings-isolate *) { display: none; }
+:where(.settings-app) .list-header span:nth-child(4):not(.settings-isolate *) { display: none; }
+  /* Narrow screens: the scene picker and its buttons drop to a second row instead of disappearing. */
+  :where(.settings-app) .app-item .app-scene:not(.settings-isolate *) { grid-column: 1; grid-row: 2; }
+  :where(.settings-app) .app-item .app-actions:not(.settings-isolate *) { grid-column: 2; grid-row: 2; display: flex; justify-content: flex-end; gap: 6px; }
   :where(.settings-app) .grid-3:not(.settings-isolate *) { grid-template-columns: 1fr; }
   :where(.settings-app) .about-meta:not(.settings-isolate *) { margin-left: 0; text-align: left; }
 }
