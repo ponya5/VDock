@@ -2,17 +2,21 @@
   <div
     v-if="isVisible"
     class="agent-action-bar"
-    :class="`state-${currentState}`"
+    :class="[`state-${displayState}`, { 'is-linked': !!linkAccent, 'is-working': displayState === 'working' }]"
+    :style="linkAccent ? { '--link-accent': linkAccent } : undefined"
     role="toolbar"
     :aria-label="`${profile?.label} actions`"
   >
-    <div class="agent-state-pill" :title="stateEntry?.message || stateLabel">
-      <span class="agent-state-dot" />
-      <span class="agent-state-text">
-        <strong>{{ profile?.label }}</strong>
-        <span>{{ stateLabel }}</span>
-      </span>
-    </div>
+    <AgentStatusBanner
+      variant="bar"
+      :state="displayState"
+      :agent-name="profile?.label ?? 'Agent'"
+      :detail="stateEntry?.message || ''"
+      :since-ms="sinceMs"
+      :linked="linked"
+      :link-accent="linkAccent"
+      :others-summary="othersSummary"
+    />
     <AgentSessionPicker
       v-if="sessionMarker"
       :rows="sessionRows"
@@ -21,11 +25,21 @@
       :waiting-glow-on="waitingGlowOn"
       :target-label="targetLabel"
       :effective-session="effectiveSession"
+      :linked-accent="linkAccent"
+      :linked-badge="linked?.badge"
       @pick="chooseTarget"
       @identify="identify"
       @opened="refreshTargets"
     />
-    <div class="agent-actions">
+    <AgentViewToggle
+      v-if="showViewToggle"
+      :model-value="agentView.mode.value"
+      @update:model-value="agentView.setMode"
+    />
+    <div v-if="actionsVisible" class="agent-actions" :class="{ linked: !!linkAccent }">
+      <span v-if="linked" class="agent-actions-for" data-testid="actions-for" :title="`These buttons act on ${linked.label}`">
+        <FontAwesomeIcon :icon="['fas', 'link']" /> {{ linked.label }}
+      </span>
       <button
         v-for="action in visibleActions"
         :key="action.id"
@@ -44,13 +58,16 @@
         <span class="agent-action-label">{{ action.label }}</span>
       </button>
     </div>
+    <!-- DL-166: an indeterminate stripe along the whole bar's bottom edge while the agent works: the across-the-desk cue. -->
+    <span v-if="displayState === 'working'" class="agent-bar-stripe" aria-hidden="true" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed, ref, toRef, watchEffect } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
+import type { AgentStateName } from '@/api/appProfiles'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
@@ -60,6 +77,12 @@ import {
 } from '@/composables/useAgentTargets'
 import { isAgentWaitingDismissed } from '@/services/agentWaiting'
 import AgentSessionPicker from '@/components/AgentSessionPicker.vue'
+import AgentStatusBanner from '@/components/AgentStatusBanner.vue'
+import AgentViewToggle from '@/components/AgentViewToggle.vue'
+import { useAgentSceneView } from '@/composables/useAgentSceneView'
+import { useAgentStateSince } from '@/composables/useAgentStateSince'
+import { groupSceneButtons } from '@/utils/agentCategories'
+import { summarizeOtherSessions, toAgentState } from '@/utils/agentSessionSummary'
 
 /**
  * Agent action bar (DL-064): on a Claude Code / Cursor / Devin scene, shows
@@ -71,6 +94,8 @@ import AgentSessionPicker from '@/components/AgentSessionPicker.vue'
 const props = defineProps<{ scene: Scene | null }>()
 
 const dashboardStore = useDashboardStore()
+// The linked session's own state drives the buttons (set below, once the session list is known).
+const stateOverride = ref<AgentStateName | null>(null)
 const settingsStore = useSettingsStore()
 const {
   profile,
@@ -82,11 +107,18 @@ const {
   runningActionId,
   flashActionId,
   runAction,
-} = useAgentSession(toRef(props, 'scene'))
+} = useAgentSession(toRef(props, 'scene'), stateOverride)
 
-const isVisible = computed(() =>
-  !dashboardStore.isEditMode && isAgentPossiblyRunning.value && visibleActions.value.length > 0
-)
+// DL-166: the bar (status banner + view toggle) shows on every AI coding scene outside edit mode, so
+// "No session" / "Running" are visible too. The state-aware action buttons keep the old, stricter condition.
+const isAgentScene = computed(() => Boolean(profile.value?.state_actions))
+const isVisible = computed(() => !dashboardStore.isEditMode && isAgentScene.value)
+const actionsVisible = computed(() => isAgentPossiblyRunning.value && visibleActions.value.length > 0)
+const displayState = computed(() => (isAgentPossiblyRunning.value ? currentState.value : 'offline'))
+
+// Groups / All toggle: only meaningful when the scene splits into 2+ categories.
+const agentView = useAgentSceneView(computed(() => props.scene?.id))
+const showViewToggle = computed(() => groupSceneButtons(props.scene).length >= 2)
 
 // DL-071: when several agent sessions run at once, this picker pins which one
 // the buttons drive. The marker comes from the profile's commands ('claude',
@@ -117,7 +149,17 @@ async function chooseTarget(pid: number | null) {
   await setTarget(pid)
 }
 
-trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisible)
+// DL-165: which session the buttons are linked to, shown in its colour; the buttons follow *its* state.
+const linked = computed(() => sessionRows.value.find(r => r.pid === effectiveSession.value?.pid) ?? null)
+watchEffect(() => { stateOverride.value = linked.value ? toAgentState(linked.value.state) : null })
+const linkAccent = computed(() => linked.value?.accent ?? null)
+const othersSummary = computed(() => summarizeOtherSessions(sessionRows.value, linked.value?.pid))
+const sinceMs = useAgentStateSince(
+  computed(() => `${profile.value?.status_source ?? 'agent'}:${linked.value?.pid ?? 'all'}`),
+  displayState,
+)
+
+trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), actionsVisible)
 </script>
 
 <style scoped>
@@ -140,52 +182,14 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   color: #e5e7eb;
+  position: relative;
 }
 
 .agent-action-bar.state-ready { --agent-accent: #22c55e; }
 .agent-action-bar.state-working { --agent-accent: #38bdf8; }
 .agent-action-bar.state-permission { --agent-accent: #f59e0b; }
 .agent-action-bar.state-unknown { --agent-accent: #94a3b8; }
-
-.agent-state-pill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 0 0 auto;
-  padding: 0 clamp(6px, 1vw, 12px);
-}
-
-.agent-state-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--agent-accent);
-  box-shadow: 0 0 8px var(--agent-accent);
-  flex-shrink: 0;
-}
-
-.state-working .agent-state-dot,
-.state-permission .agent-state-dot {
-  animation: agent-pulse 1.2s ease-in-out infinite;
-}
-
-.agent-state-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1.15;
-  font-size: clamp(0.85rem, 2.6vh, 1.05rem);
-  white-space: nowrap;
-}
-
-.agent-state-text strong {
-  font-size: clamp(1rem, 3vh, 1.25rem);
-}
-
-.agent-state-text span {
-  color: color-mix(in srgb, var(--agent-accent) 70%, #e5e7eb);
-}
+.agent-action-bar.state-offline { --agent-accent: #64748b; }
 
 .agent-actions {
   display: flex;
@@ -257,11 +261,6 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   opacity: 1;
 }
 
-@keyframes agent-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
 /* Portrait / narrow panels: the state gets its own row and the actions wrap
    into equal columns rather than shrinking below a touchable width. */
 @media (max-width: 720px) {
@@ -289,8 +288,18 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
   }
 }
 
+/* DL-166: working stripe across the whole bar (the across-the-desk cue). */
+.agent-bar-stripe {
+  position: absolute; left: 16px; right: 16px; bottom: 0; height: 4px; overflow: hidden;
+  border-radius: 4px 4px 0 0; background: rgba(56, 189, 248, 0.22); pointer-events: none;
+}
+.agent-bar-stripe::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 35%; background: #38bdf8;
+  animation: agent-bar-sweep 1.6s ease-in-out infinite;
+}
+@keyframes agent-bar-sweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 @media (prefers-reduced-motion: reduce) {
-  .agent-state-dot { animation: none !important; }
+  .agent-bar-stripe::after { animation: none; width: 100%; }
 }
 
 /* A shrunk desktop window: one slim bar - status and target on a line, the action
@@ -301,9 +310,6 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
     flex-direction: row; flex-wrap: wrap; gap: 6px;
     margin: 6px 6px 0; padding: 6px; border-radius: 12px;
   }
-  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-state-dot { width: 10px; height: 10px; }
-  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-state-text strong { font-size: 0.85rem; }
-  html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-state-text span { font-size: 0.72rem; }
   html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-actions { display: flex; flex: 1 1 100%; gap: 6px; }
   html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-action {
     flex: 1 1 56px; min-width: 0; flex-direction: row; gap: 6px;
@@ -314,5 +320,15 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
 }
+/* DL-165: the link to a session - its colour on the badge, the chip edge, a tab over the buttons and each button's top edge. */
+.agent-actions.linked { position: relative; padding-top: 6px; }
+.agent-actions-for {
+  position: absolute; top: -13px; left: 10px; z-index: 2; max-width: 70%;
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 8px 8px 0 0;
+  background: var(--link-accent); color: #0b1220; font-weight: 700;
+  font-size: clamp(0.6rem, 0.8vw + 0.34rem, 0.8rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-actions.linked .agent-action { border-top: 3px solid var(--link-accent); }
+.agent-action-bar.is-linked { border-left: 4px solid var(--link-accent); }
 .agent-action.done { background: #16a34a; border-color: #4ade80; color: #fff; }
 </style>

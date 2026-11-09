@@ -10,6 +10,7 @@ import router from './router'
 import { installSessionLog } from './services/sessionLog'
 import { consumePairQuery } from './services/pairing'
 import './assets/styles/main.css'
+import './assets/styles/day-mode.css'
 
 // Add all icons to the library
 library.add(fas, fab)

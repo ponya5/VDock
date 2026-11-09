@@ -73,6 +73,8 @@ FULL_SETTINGS_PAYLOAD = {
     'appScanningEnabled': True,
     'agentAlertsEnabled': True,
     'agentWaitingGlowEnabled': True,
+    'dayMode': 'off',
+    'sceneBarAutoHideSeconds': 0,
     'agentWaitingGlowStyle': 'pulse',
     'agentSnoozeEnabled': False,
     'agentSnoozeMinutes': 10,

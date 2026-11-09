@@ -8,6 +8,7 @@ import type { AgentStateName, AppProfileDto } from '@/api/appProfiles'
 import type { AgentStateEntry } from '@/services/agentState'
 import type { Button, Scene } from '@/types'
 import MobileAgentConsole from '@/components/MobileAgentConsole.vue'
+import { resetAgentSceneViews, useAgentSceneView } from '@/composables/useAgentSceneView'
 
 const sessionState = {
   profile: ref<Partial<AppProfileDto> | null>(null),
@@ -116,14 +117,37 @@ const CLAUDE_SCENE = {
   }],
 } as Scene
 
-function mountConsole() {
+// DL-166: a scene whose buttons split into several categories (Session / Mode & Model / Context / Links).
+const RICH_SCENE = {
+  id: 'scene-rich',
+  name: 'Claude Code',
+  pages: [{
+    id: 'page-1',
+    name: 'Main',
+    grid_config: { rows: 2, cols: 4 },
+    buttons: [
+      makeButton('open', 'Open Claude', 'claude_continue'),
+      makeButton('int', 'Interrupt', 'cc_interrupt'),
+      makeButton('mode', 'Mode', 'cc_mode'),
+      makeButton('clear', 'New Session', 'cc_clear'),
+      makeButton('compact', 'Compact', 'cc_compact'),
+      makeButton('docs', 'Docs', 'url'),
+    ],
+  }],
+} as Scene
+
+function mountConsole(scene: Scene = CLAUDE_SCENE) {
   return mount(MobileAgentConsole, {
-    props: { scene: CLAUDE_SCENE },
+    props: { scene },
     global: { stubs: { FontAwesomeIcon: true } },
   })
 }
 
 beforeEach(() => {
+  // DL-166: tests that count every tile read the All view; Groups has its own cases below.
+  resetAgentSceneViews()
+  useAgentSceneView(ref('scene-claude')).setMode('all')
+  useAgentSceneView(ref('scene-rich')).setMode('groups')
   sessionState.profile.value = { id: 'claude-code', label: 'Claude Code', prompt_command: 'cc_prompt', status_source: 'claude' }
   sessionState.stateEntry.value = { prompt: 'Fix the tests', reply: 'All 12 tests pass now.', project: 'VDock2', message: '' }
   sessionState.currentState.value = 'ready'
@@ -200,6 +224,52 @@ describe('MobileAgentConsole', () => {
     await wrapper.findAll('.mac-shortcut')[1].trigger('click')
     await flushPromises()
     expect(executeButtonAction).toHaveBeenCalledWith(expect.objectContaining({ id: 'review' }))
+  })
+
+  // --- DL-166: Groups / All ------------------------------------------------
+
+  it('groups mode shows the chips and only the selected group tiles', async () => {
+    const wrapper = mountConsole(RICH_SCENE)
+    const chips = wrapper.findAll('.agent-cat-chips [role="tab"]')
+    expect(chips.map(c => c.attributes('data-category'))).toEqual(['session', 'control', 'context', 'links'])
+    expect(wrapper.findAll('.mac-shortcut').map(n => n.text())).toEqual(['Open Claude', 'Interrupt'])
+    expect(wrapper.find('.mac-links').exists()).toBe(false)
+
+    await wrapper.find('[data-category="context"]').trigger('click')
+    expect(wrapper.findAll('.mac-shortcut').map(n => n.text())).toEqual(['New Session', 'Compact'])
+  })
+
+  it('the links category renders with the quiet .mac-link style', async () => {
+    const wrapper = mountConsole(RICH_SCENE)
+    await wrapper.find('[data-category="links"]').trigger('click')
+    expect(wrapper.findAll('.mac-shortcut')).toHaveLength(0)
+    expect(wrapper.findAll('.mac-link').map(n => n.text())).toEqual(['Docs'])
+  })
+
+  it('switching to All restores every tile and the links strip, and back to Groups restores the category', async () => {
+    const wrapper = mountConsole(RICH_SCENE)
+    await wrapper.find('[data-category="context"]').trigger('click')
+    await wrapper.find('[data-testid="agent-view-toggle"] [data-mode="all"]').trigger('click')
+    expect(wrapper.find('.agent-cat-chips').exists()).toBe(false)
+    expect(wrapper.findAll('.mac-shortcut').map(n => n.text())).toEqual(['Open Claude', 'Interrupt', 'Mode', 'New Session', 'Compact'])
+    expect(wrapper.findAll('.mac-links .mac-link').map(n => n.text())).toEqual(['Docs'])
+
+    await wrapper.find('[data-testid="agent-view-toggle"] [data-mode="groups"]').trigger('click')
+    expect(wrapper.find('[data-category="context"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.findAll('.mac-shortcut').map(n => n.text())).toEqual(['New Session', 'Compact'])
+  })
+
+  it('hides the toggle and chips when the scene has fewer than two categories', () => {
+    const wrapper = mountConsole(CLAUDE_SCENE)
+    expect(wrapper.find('[data-testid="agent-view-toggle"]').exists()).toBe(false)
+    expect(wrapper.find('.agent-cat-chips').exists()).toBe(false)
+  })
+
+  it('the banner card reflects the state with its word and glyph', () => {
+    sessionState.currentState.value = 'working'
+    const wrapper = mountConsole()
+    expect(wrapper.find('[data-testid="agent-status-banner"]').classes()).toContain('state-working')
+    expect(wrapper.find('.asb-word').text()).toBe('Working')
   })
 
   // --- DL-071: session target picker ---------------------------------------

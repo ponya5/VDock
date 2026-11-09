@@ -4,14 +4,15 @@
     class="theme-dark"
     :data-ui-font="settingsStore.dashboardFont"
     :class="{
-      'bg-animated': !isStandaloneSettings && settingsStore.background !== 'default',
+      'bg-animated': !isStandaloneSettings && !isDay && settingsStore.background !== 'default',
+      'theme-day': isDay,
       'settings-standalone-mode': isStandaloneSettings,
       'settings-route': route.path === '/settings',
     }"
   >
     <!-- Suspended while the screensaver covers the deck — an animated
          background under the opaque saver only burns frame budget. -->
-    <BackgroundRenderer v-if="!isStandaloneSettings && !screensaverCovered" />
+    <BackgroundRenderer v-if="!isStandaloneSettings && !screensaverCovered && !isDay" />
     <router-view />
     <VersionWatermark v-if="showVersionWatermark" />
     <!-- Toasts render in standalone settings too — the test buttons and
@@ -35,6 +36,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
+import { useDayMode } from '@/composables/useDayMode'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useActionCatalogStore } from '@/stores/actionCatalog'
@@ -70,6 +72,7 @@ import { screensaverCovered } from '@/services/screensaverState'
 const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const { isDay } = useDayMode()
 const notificationsStore = useNotificationsStore()
 const dashboardStore = useDashboardStore()
 const actionCatalogStore = useActionCatalogStore()

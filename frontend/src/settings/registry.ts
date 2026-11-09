@@ -57,7 +57,7 @@ export const SECTIONS: SettingsSection[] = [
     id: 'appearance', name: 'Appearance', icon: ['fas', 'palette'], tour: 'nav-appearance',
     pages: [
       { id: 'buttons', name: 'Buttons', title: 'Buttons', blurb: 'Sizing, motion and press feedback for every deck key.', panels: ['AppearanceButtons'], anchors: ['sizing', 'touch', 'design', 'apply-all', 'motion', 'feedback'] },
-      { id: 'layout', name: 'Layout & sidebar', title: 'Layout & sidebar', blurb: 'The docked sidebar and dashboard font.', panels: ['AppearanceLayout'], anchors: ['typography', 'clock-format', 'sidebar'] },
+      { id: 'layout', name: 'Layout & sidebar', title: 'Layout & sidebar', blurb: 'The docked sidebar and dashboard font.', panels: ['AppearanceLayout'], anchors: ['display', 'day-mode', 'rail-autohide', 'typography', 'clock-format', 'sidebar'] },
       { id: 'background', name: 'Background', title: 'Background', blurb: 'Dashboard wallpaper and per-scene overrides.', panels: ['AppearanceBackground'], anchors: ['dashboard-bg', 'scene-bg'] },
       { id: 'screensaver', name: 'Screen saver', title: 'Screen saver', blurb: 'Idle screen widgets, timing and its own backdrop.', panels: ['ScreensaverPanel'], anchors: ['ss-general', 'ss-spectrum', 'ss-background', 'ss-widgets'], tour: 'subtab-screensaver' },
     ],
@@ -82,7 +82,7 @@ export const SECTIONS: SettingsSection[] = [
     id: 'system', name: 'System', icon: ['fas', 'screwdriver-wrench'], tour: 'nav-logs',
     pages: [
       { id: 'logs', name: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.', panels: ['LogsPanel'], anchors: [], autosaves: true },
-      { id: 'startup', name: 'Startup', title: 'Startup', blurb: 'Launcher behaviour, settings navigation and recent actions.', panels: ['StartupPanel', 'RecentActionsPanel'], anchors: ['startup', 'recent-actions'] },
+      { id: 'startup', name: 'Startup', title: 'Startup', blurb: 'Launcher behaviour and settings navigation.', panels: ['StartupPanel'], anchors: ['startup'] },
     ],
   },
   {
@@ -121,6 +121,9 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Button Behaviour', keywords: 'button animation icon loop effect style apply all key design', section: 'appearance', page: 'buttons', anchor: 'design', icon: ['fas', 'sliders'] },
   { label: 'Motion & Animation', keywords: 'motion animation press idle icon tilt wiggle', section: 'appearance', page: 'buttons', anchor: 'motion', icon: ['fas', 'wand-magic-sparkles'] },
   { label: 'Press Sound', keywords: 'sound audio click feedback labels tooltips', section: 'appearance', page: 'buttons', anchor: 'feedback', icon: ['fas', 'volume-high'] },
+  { label: 'Display', keywords: 'display light dark', section: 'appearance', page: 'layout', anchor: 'display', icon: ['fas', 'display'] },
+  { label: 'Day mode', keywords: 'day mode light theme bright white sunlight', section: 'appearance', page: 'layout', anchor: 'day-mode', icon: ['fas', 'sun'] },
+  { label: 'Hide the scene bar', keywords: 'hide scene bar header auto hide landscape phone timer', section: 'appearance', page: 'layout', anchor: 'rail-autohide', icon: ['fas', 'eye-slash'] },
   { label: 'Typography', keywords: 'font typography typeface text dashboard', section: 'appearance', page: 'layout', anchor: 'typography', icon: ['fas', 'font'] },
   { label: '24-hour Clocks', keywords: 'clock time 24h 24-hour 12-hour am pm format', section: 'appearance', page: 'layout', anchor: 'clock-format', icon: ['fas', 'clock'] },
   { label: 'Docked Sidebar', keywords: 'sidebar docked width column', section: 'appearance', page: 'layout', anchor: 'sidebar', icon: ['fas', 'table-columns'] },
@@ -136,7 +139,6 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', section: 'system', page: 'logs', icon: ['fas', 'file-lines'] },
   { label: 'Startup', keywords: 'launcher terminal close debug startup', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'up-right-from-square'] },
-  { label: 'Recent Actions', keywords: 'recent actions history picker clear', section: 'system', page: 'startup', anchor: 'recent-actions', icon: ['fas', 'clock-rotate-left'] },
   { label: 'About VDock', keywords: 'version about info build tutorial', section: 'about', page: 'about', icon: ['fas', 'circle-info'] },
   { label: 'User Guide', keywords: 'help guide tutorial how to documentation swipe gestures troubleshooting', section: 'guide', icon: ['fas', 'circle-question'] },
 ]

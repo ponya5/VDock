@@ -1,6 +1,41 @@
 <template>
         <div class="content has-rail">
 <div class="col">
+  <section class="panel" id="display">
+    <div class="panel-head">
+      <h2>Display</h2>
+      <span class="hint">Day mode swaps the dark look for a light one. Applies to every connected device, phones included.</span>
+      <span class="spacer"></span>
+      <SettingResetButton label="Day mode" :at-default="settingsStore.dayMode === 'off'" @reset="settingsStore.dayMode = 'off'" />
+    </div>
+    <div class="panel-body">
+      <div class="row" id="day-mode">
+        <div class="row-text">
+          <span class="label">Day mode</span>
+          <p>Auto follows this device's light or dark setting. Day mode turns the animated wallpaper off.</p>
+        </div>
+        <div class="row-control">
+          <div class="seg" role="radiogroup" aria-label="Day mode">
+            <label><input type="radio" value="off" v-model="settingsStore.dayMode" @change="settingsStore.saveSettings()" /><span>Dark</span></label>
+            <label><input type="radio" value="on" v-model="settingsStore.dayMode" @change="settingsStore.saveSettings()" /><span>Day</span></label>
+            <label><input type="radio" value="auto" v-model="settingsStore.dayMode" @change="settingsStore.saveSettings()" /><span>Auto</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="rail-autohide">
+        <div class="row-text">
+          <span class="label">Hide the scene bar (phone, landscape)</span>
+          <p>Folds the scene bar away after a few idle seconds. Fullscreen and the menu button stay put; a thin line under the bar counts down. Phone in landscape only.</p>
+        </div>
+        <div class="row-control">
+          <div class="seg" role="radiogroup" aria-label="Hide the scene bar">
+            <label v-for="s in RAIL_AUTO_HIDE_CHOICES" :key="s"><input type="radio" :value="s" v-model.number="settingsStore.sceneBarAutoHideSeconds" @change="settingsStore.saveSettings()" /><span>{{ s ? `${s}s` : 'Never' }}</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" id="typography">
     <div class="panel-head">
       <h2>Typography</h2>
@@ -120,6 +155,7 @@ import { useSettingsStore, SETTINGS_DEFAULTS } from '@/stores/settings'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import SettingResetButton from '@/components/SettingResetButton.vue'
 import { sliderFill } from '@/utils/sliderFill'
+import { RAIL_AUTO_HIDE_CHOICES } from '@/utils/sceneBarAutoHide'
 
 const settingsStore = useSettingsStore()
 const settings = computed(() => settingsStore)

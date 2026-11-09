@@ -240,9 +240,14 @@ export function sceneAppProfile(
    auto-created scenes. Profile ids that don't share a template id are
    aliased below. No logo asset → null → callers keep the FA icon. */
 const LOGO_BY_ID = new Map<string, string>()
+// Scenes made by hand carry no appId; a scene named like a gallery app ("GitHub") still gets its logo.
+const LOGO_BY_NAME = new Map<string, string>()
 for (const cat of templateCategories) {
   for (const t of cat.templates) {
-    if (t.logo) LOGO_BY_ID.set(t.id, t.logo)
+    if (t.logo) {
+      LOGO_BY_ID.set(t.id, t.logo)
+      LOGO_BY_NAME.set(t.name.trim().toLowerCase(), t.logo)
+    }
   }
 }
 // Apps with a logo but no gallery template, keyed by exeKey() of the scene's app.
@@ -273,7 +278,7 @@ export function sceneLogo(
   const exeLogo = LOGO_BY_EXE[exeKey(sceneExe(scene, integrations))]
   if (exeLogo) return exeLogo
   const profileId = resolveSceneProfileId(scene, integrations)
-  if (!profileId) return null
+  if (!profileId) return LOGO_BY_NAME.get((scene.name ?? '').trim().toLowerCase()) ?? null
   const tid = PROFILE_TO_TEMPLATE_ID[profileId] ?? profileId
   return LOGO_BY_ID.get(tid) ?? null
 }

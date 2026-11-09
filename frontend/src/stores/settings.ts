@@ -99,6 +99,8 @@ export const SETTINGS_DEFAULTS = {
   appScanningEnabled: false,
   agentAlertsEnabled: true,
   agentWaitingGlowEnabled: true,
+  dayMode: 'off' as 'off' | 'on' | 'auto',
+  sceneBarAutoHideSeconds: 0,
   agentWaitingGlowStyle: 'flash' as const,
   agentSnoozeEnabled: true,
   agentSnoozeMinutes: 3,
@@ -229,6 +231,8 @@ export interface PersistedUserSettings {
   appScanningEnabled: boolean
   agentAlertsEnabled: boolean
   agentWaitingGlowEnabled: boolean
+  dayMode: 'off' | 'on' | 'auto'
+  sceneBarAutoHideSeconds: number
   agentWaitingGlowStyle: 'flash' | 'pulse' | 'orbit' | 'aurora' | 'sonar' | 'laser'
   agentSnoozeEnabled: boolean
   agentSnoozeMinutes: number
@@ -400,6 +404,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const agentAlertsEnabled = ref(true)
   // Edge-glow on agent scenes while a session sits idle (DL-080).
   const agentWaitingGlowEnabled = ref(true)
+  const dayMode = ref<'off' | 'on' | 'auto'>('off')
+  const sceneBarAutoHideSeconds = ref(0)
   // Frame style for the waiting alert — flash double-blinks, pulse breathes
   // softly, orbit runs the travelling comet (DL-080 follow-up #2).
   const agentWaitingGlowStyle = ref<'flash' | 'pulse' | 'orbit' | 'aurora' | 'sonar' | 'laser'>('flash')
@@ -617,6 +623,8 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled: appScanningEnabled.value,
       agentAlertsEnabled: agentAlertsEnabled.value,
       agentWaitingGlowEnabled: agentWaitingGlowEnabled.value,
+      dayMode: dayMode.value,
+      sceneBarAutoHideSeconds: sceneBarAutoHideSeconds.value,
       agentWaitingGlowStyle: agentWaitingGlowStyle.value,
       agentSnoozeEnabled: agentSnoozeEnabled.value,
       agentSnoozeMinutes: agentSnoozeMinutes.value,
@@ -729,6 +737,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.appScanningEnabled !== undefined) appScanningEnabled.value = settings.appScanningEnabled
     if (settings.agentAlertsEnabled !== undefined) agentAlertsEnabled.value = settings.agentAlertsEnabled
     if (settings.agentWaitingGlowEnabled !== undefined) agentWaitingGlowEnabled.value = settings.agentWaitingGlowEnabled
+    if (settings.dayMode === 'off' || settings.dayMode === 'on' || settings.dayMode === 'auto') dayMode.value = settings.dayMode
+    if (typeof settings.sceneBarAutoHideSeconds === 'number') sceneBarAutoHideSeconds.value = settings.sceneBarAutoHideSeconds
     if (settings.agentWaitingGlowStyle !== undefined) agentWaitingGlowStyle.value = settings.agentWaitingGlowStyle
     if (settings.agentSnoozeEnabled !== undefined) agentSnoozeEnabled.value = settings.agentSnoozeEnabled
     if (settings.agentSnoozeMinutes !== undefined) agentSnoozeMinutes.value = settings.agentSnoozeMinutes
@@ -868,6 +878,8 @@ export const useSettingsStore = defineStore('settings', () => {
         appScanningEnabled: settings.appScanningEnabled === true,
         agentAlertsEnabled: settings.agentAlertsEnabled ?? true,
         agentWaitingGlowEnabled: settings.agentWaitingGlowEnabled ?? true,
+        dayMode: settings.dayMode ?? 'off',
+        sceneBarAutoHideSeconds: settings.sceneBarAutoHideSeconds ?? 0,
         agentWaitingGlowStyle: settings.agentWaitingGlowStyle ?? 'flash',
         agentSnoozeEnabled: settings.agentSnoozeEnabled ?? true,
         agentSnoozeMinutes: settings.agentSnoozeMinutes ?? 3,
@@ -1128,6 +1140,8 @@ export const useSettingsStore = defineStore('settings', () => {
       appScanningEnabled,
       agentAlertsEnabled,
       agentWaitingGlowEnabled,
+      dayMode,
+      sceneBarAutoHideSeconds,
       agentWaitingGlowStyle,
       agentSnoozeEnabled,
       agentSnoozeMinutes,
@@ -1397,6 +1411,8 @@ export const useSettingsStore = defineStore('settings', () => {
     appScanningEnabled,
     agentAlertsEnabled,
     agentWaitingGlowEnabled,
+    dayMode,
+    sceneBarAutoHideSeconds,
     agentWaitingGlowStyle,
     agentSnoozeEnabled,
     agentSnoozeMinutes,

@@ -1,3 +1,4 @@
+import type { AgentCategoryId } from '@/utils/agentCategories'
 export interface TemplateButton {
   label: string
   icon: string[]
@@ -6,6 +7,8 @@ export interface TemplateButton {
   tooltip?: string
   /** Text under the name (the shortcut the key sends); derived from the action / tooltip when absent. */
   secondary?: string
+  /** DL-166: agent-scene category override, for actions whose type alone can't say (generic hotkeys, empty prompts). */
+  category?: AgentCategoryId
 }
 export interface AppTemplate {
   id: string
@@ -127,7 +130,7 @@ const aiCoding: AppTemplate[] = [
   ]},
   { id: "cursor", name: "Cursor", description: "Cursor AI editor agent controls", icon: ["fas","i-cursor"], logo: "/logos/cursor.png", color: "#000000", buttons: [
     // Live controls: keystrokes into the focused Cursor window.
-    { label: "New Agent", icon: ["fas","paper-plane"], action: { type: "cursor_prompt", config: {} }, tooltip: "New agent chat + prompt (Ctrl+Shift+L)" },
+    { label: "New Agent", icon: ["fas","paper-plane"], action: { type: "cursor_prompt", config: {} }, tooltip: "New agent chat + prompt (Ctrl+Shift+L)", category: "session" },
     { label: "Continue", icon: ["fas","forward"], action: { type: "cursor_followup", config: { text: "continue" } }, tooltip: "Type \"continue\" and send it" },
     { label: "Submit", icon: ["fas","check"], action: { type: "cursor_submit", config: {} }, tooltip: "Send the typed prompt" },
     { label: "Stop", icon: ["fas","hand"], action: { type: "cursor_cancel", config: {} }, tooltip: "Cancel generation (Ctrl+Shift+Backspace)" },
@@ -137,9 +140,9 @@ const aiCoding: AppTemplate[] = [
     { label: "Accept", icon: ["fas","check-double"], action: { type: "cursor_accept", config: {} }, tooltip: "Accept diff (Ctrl+Enter)" },
     { label: "Reject", icon: ["fas","xmark"], action: { type: "cursor_reject", config: {} }, tooltip: "Reject diff (Ctrl+Shift+Backspace)" },
     { label: "Terminal", icon: ["fas","terminal"], action: { type: "cursor_toggle_terminal", config: {} }, tooltip: "Toggle terminal (Ctrl+`)" },
-    { label: "Mode", icon: ["fas","arrows-rotate"], action: hk(["shift","tab"]), tooltip: "Rotate agent modes (Shift+Tab)" },
-    { label: "Agent Layout", icon: ["fas","table-columns"], action: hk(["mod","e"]), tooltip: "Toggle the agent layout (Ctrl+E)" },
-    { label: "Models", icon: ["fas","brain"], action: hk(["mod","/"]), tooltip: "Loop between AI models (Ctrl+/)" },
+    { label: "Mode", icon: ["fas","arrows-rotate"], action: hk(["shift","tab"]), tooltip: "Rotate agent modes (Shift+Tab)", category: "control" },
+    { label: "Agent Layout", icon: ["fas","table-columns"], action: hk(["mod","e"]), tooltip: "Toggle the agent layout (Ctrl+E)", category: "tools" },
+    { label: "Models", icon: ["fas","brain"], action: hk(["mod","/"]), tooltip: "Loop between AI models (Ctrl+/)", category: "control" },
     { label: "Palette", icon: ["fas","terminal"], action: { type: "cursor_command_palette", config: {} }, tooltip: "Command palette (Ctrl+Shift+P)" },
   ]},
   { id: "claude-code", name: "Claude Code", description: "Anthropic Claude Code CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/claudecode-color.png", color: "#d97757", buttons: [

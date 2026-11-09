@@ -43,7 +43,7 @@ export const REACTIONS: Record<RobotEvent, Record<Mood, Reaction | null>> = {
     sweet: { expr: 'hyper-typing', seq: 'typing-frenzy', scene: 'typing-frenzy', prop: 'sparkles', ms: 4400 },
   },
   agentLong: {
-    funny: { icon: 'spinner', expr: 'focused', accessory: 'wizard-hat', prop: 'magnifier', ms: 3200 },
+    funny: { icon: 'spinner', expr: 'focused', prop: 'magnifier', ms: 3200 },
     grumpy: { expr: 'bored', seq: 'sigh', prop: 'clock', ms: 3400 },
     sarcastic: { expr: 'whistle', seq: 'whistle-away' },
     sweet: { icon: 'spinner', expr: 'puppy', prop: 'sparkles' },

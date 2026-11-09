@@ -3,8 +3,13 @@
        a phone deck actually needs — switching scenes and flipping pages —
        one tap away, with everything else behind an overflow menu. No
        configuration affordances on this surface (DL-061). -->
-  <header class="mobile-chrome">
+  <header
+    class="mobile-chrome"
+    :class="{ 'rail-hidden': railHidden }"
+    @pointerdown.capture="restartRailTimer"
+  >
     <div
+      v-show="!railHidden"
       ref="railRef"
       class="mc-scene-rail"
       :class="{ 'wipe-next': wipeDir === 'next', 'wipe-prev': wipeDir === 'prev' }"
@@ -60,7 +65,7 @@
       </button>
     </div>
 
-    <div v-if="totalPages > 1" class="mc-pages">
+    <div v-if="totalPages > 1 && !railHidden" class="mc-pages">
       <button type="button" class="mc-page-btn" aria-label="Previous page" @click="emit('previousPage')">
         <FontAwesomeIcon :icon="['fas', 'chevron-left']" />
       </button>
@@ -82,6 +87,28 @@
          Hidden entirely once already running standalone (launched from an
          iOS Home Screen icon or an installed PWA) — there's no browser
          chrome left to hide in that case (DL-067 second follow-up). -->
+    <button
+      v-if="railHidden"
+      type="button"
+      class="mc-reveal-btn"
+      aria-label="Show scenes"
+      title="Show scenes"
+      data-testid="mc-reveal-rail"
+      @click="revealRail"
+    >
+      <FontAwesomeIcon :icon="['fas', 'bars']" />
+      <span v-if="needsYou > 0" class="mc-more-badge" aria-hidden="true"></span>
+    </button>
+
+    <span
+      v-if="countdownActive && !railHidden"
+      :key="countdownKey"
+      class="mc-countdown"
+      :style="{ animationDuration: `${autoHideSeconds}s` }"
+      data-testid="mc-countdown"
+      aria-hidden="true"
+    ></span>
+
     <div v-if="!isStandalone" class="mc-fullscreen-wrap">
       <div
         v-if="!isFullscreen && showFullscreenCallout"
@@ -107,11 +134,11 @@
       <button
         type="button"
         class="mc-more-btn"
-        aria-label="More actions"
+        aria-label="Mission Control and more"
         :aria-expanded="menuOpen ? 'true' : 'false'"
         @click="menuOpen = !menuOpen"
       >
-        <FontAwesomeIcon :icon="['fas', 'ellipsis-vertical']" />
+        <FontAwesomeIcon :icon="['fas', 'satellite-dish']" />
         <span v-if="needsYou > 0" class="mc-more-badge" aria-hidden="true"></span>
       </button>
       <div v-if="menuOpen" class="mc-menu" role="menu">
@@ -136,6 +163,26 @@
         >
           <FontAwesomeIcon :icon="['fas', 'table-cells-large']" />
           <span>Layout: {{ devicePrefs.layout === 'fit' ? 'Fit to screen' : 'As designed' }}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
+          data-testid="mc-menu-day-mode"
+          @click="cycleDayMode"
+        >
+          <FontAwesomeIcon :icon="['fas', settingsStore.dayMode === 'off' ? 'moon' : 'sun']" />
+          <span>Look: {{ { off: 'Dark', on: 'Day', auto: 'Auto' }[settingsStore.dayMode ?? 'off'] }}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="mc-menu-item"
+          data-testid="mc-menu-rail-autohide"
+          @click="cycleRailAutoHide"
+        >
+          <FontAwesomeIcon :icon="['fas', 'eye-slash']" />
+          <span>Auto-hide scenes: {{ autoHideSeconds ? `${autoHideSeconds}s` : 'Off' }}</span>
         </button>
         <button
           type="button"
@@ -222,6 +269,8 @@ import { normalizeFaIcon } from '@/utils/normalizeFaIcon'
 import { vibrate } from '@/utils/haptics'
 import { useNeedsYouCount } from '@/composables/useNeedsYouCount'
 import { useDevicePrefs } from '@/services/devicePrefs'
+import { RAIL_AUTO_HIDE_CHOICES } from '@/utils/sceneBarAutoHide'
+import { useMobileChromeRail } from '@/composables/useMobileChromeRail'
 import { hasWakeLockApi } from '@/services/keepAwake'
 import { openMissionControl } from '@/services/missionControl'
 import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSupport'
@@ -251,6 +300,66 @@ const appIntegrations = useAppIntegrations()
 const settingsStore = useSettingsStore()
 const needsYou = useNeedsYouCount()
 const devicePrefs = useDevicePrefs()
+
+// Short landscape: the scene bar folds away after a few idle seconds (opt-in,
+// per device). Fullscreen and the menu button stay docked on the right.
+const { docked: railDocked } = useMobileChromeRail()
+const railHidden = ref(false)
+const autoHideSeconds = computed(() => settingsStore.sceneBarAutoHideSeconds ?? 0)
+/** Bumped each time the idle countdown (re)starts so the progress line restarts. */
+const countdownKey = ref(0)
+const countdownActive = ref(false)
+const shortLandscape = ref(false)
+let railTimer: ReturnType<typeof setTimeout> | null = null
+function updateShortLandscape() {
+  shortLandscape.value = window.innerWidth > window.innerHeight && window.innerHeight <= 520
+}
+function stopRailTimer() {
+  if (railTimer) clearTimeout(railTimer)
+  railTimer = null
+  countdownActive.value = false
+}
+function restartRailTimer() {
+  stopRailTimer()
+  if (!shortLandscape.value || !autoHideSeconds.value || railHidden.value) return
+  countdownKey.value++
+  countdownActive.value = true
+  railTimer = setTimeout(() => {
+    if (menuOpen.value) { restartRailTimer(); return }
+    railHidden.value = true
+    countdownActive.value = false
+  }, autoHideSeconds.value * 1000)
+}
+function revealRail() {
+  railHidden.value = false
+  restartRailTimer()
+}
+function cycleRailAutoHide() {
+  const i = RAIL_AUTO_HIDE_CHOICES.indexOf(autoHideSeconds.value as typeof RAIL_AUTO_HIDE_CHOICES[number])
+  settingsStore.sceneBarAutoHideSeconds = RAIL_AUTO_HIDE_CHOICES[(i + 1) % RAIL_AUTO_HIDE_CHOICES.length]
+  void settingsStore.saveSettings()
+}
+function cycleDayMode() {
+  const order = ['off', 'on', 'auto'] as const
+  const i = order.indexOf((settingsStore.dayMode ?? 'off') as typeof order[number])
+  settingsStore.dayMode = order[(i + 1) % order.length]
+  void settingsStore.saveSettings()
+}
+watch([shortLandscape, autoHideSeconds, () => props.currentSceneIndex], () => {
+  if (!shortLandscape.value || !autoHideSeconds.value) railHidden.value = false
+  restartRailTimer()
+})
+watch([railHidden, shortLandscape], () => { railDocked.value = railHidden.value && shortLandscape.value }, { immediate: true })
+onMounted(() => {
+  updateShortLandscape()
+  window.addEventListener('resize', updateShortLandscape)
+  restartRailTimer()
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', updateShortLandscape)
+  stopRailTimer()
+  railDocked.value = false
+})
 const { quitApp, isElectron, toggleFullscreen: toggleElectronFullscreen, isFullscreen: getElectronFullscreen } = useElectron()
 
 // The desktop pill owns this watcher — on mobile it doesn't mount, so the
@@ -665,6 +774,61 @@ onUnmounted(() => {
   box-sizing: border-box;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* Short landscape phones: a slimmer bar to give the deck its height back. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .mobile-chrome { height: 46px; padding: 3px 8px; }
+  .mc-scene-rail { padding: 3px; border-radius: 14px; }
+  .mc-seg { min-height: 36px; padding: 4px 12px; }
+  .mc-glider { top: 3px; bottom: 3px; }
+  .mc-fullscreen-btn, .mc-more-btn, .mc-reveal-btn, .mc-page-btn { width: 40px; height: 40px; }
+}
+
+/* Idle countdown: a thin line under the bar that drains until it folds away. */
+.mc-countdown {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #38bdf8;
+  transform-origin: left center;
+  animation: mc-countdown-drain linear forwards;
+  pointer-events: none;
+}
+@keyframes mc-countdown-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .mc-countdown { animation-timing-function: steps(10, end); } }
+
+/* Folded: the bar leaves the layout; the buttons dock top-right in a column
+   and the deck keeps a gutter for them (DashboardView .chrome-docked). */
+.mobile-chrome.rail-hidden {
+  position: fixed;
+  top: 6px;
+  right: calc(6px + env(safe-area-inset-right, 0px));
+  width: 44px;
+  height: auto;
+  padding: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border-bottom: none;
+}
+.mc-reveal-btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(8, 10, 28, 0.7);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+.mc-reveal-btn:active { transform: scale(0.94); }
 
 /* --- Scene rail ---------------------------------------------------------- */
 .mc-scene-rail {

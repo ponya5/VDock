@@ -95,6 +95,9 @@ ALLOWED_USER_SETTING_KEYS = {
     'agentAlertsEnabled',
     # DL-119: waiting glow on/off + style, and the pinned waiting-dock chips.
     'agentWaitingGlowEnabled',
+    # Day (light) look and the phone scene bar's idle auto-hide seconds.
+    'dayMode',
+    'sceneBarAutoHideSeconds',
     'agentWaitingGlowStyle',
     'agentSnoozeEnabled',
     'agentSnoozeMinutes',

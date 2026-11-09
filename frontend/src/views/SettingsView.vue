@@ -217,7 +217,6 @@ import StartupPanel from '@/components/settings/panels/StartupPanel.vue'
 import NotificationsPanel from '@/components/settings/panels/NotificationsPanel.vue'
 import McpPanel from '@/components/settings/panels/McpPanel.vue'
 import AgentAlertsPanel from '@/components/settings/panels/AgentAlertsPanel.vue'
-import RecentActionsPanel from '@/components/settings/panels/RecentActionsPanel.vue'
 import SceneSwitchingPanel from '@/components/settings/panels/SceneSwitchingPanel.vue'
 import ScreensaverPanel from '@/components/settings/panels/ScreensaverPanel.vue'
 import AppearanceBackground from '@/components/settings/panels/AppearanceBackground.vue'
@@ -285,12 +284,12 @@ const PANELS: Record<string, Component> = {
   AppearanceButtons, AppearanceLayout, AppearanceBackground, ScreensaverPanel,
   SceneSwitchingPanel, AgentAlertsPanel, NotificationsPanel, TriggersPanel, McpPanel,
   TemplatesPanel, SecurityPanel, PortsPanel,
-  LogsPanel, StartupPanel, RecentActionsPanel, AboutPanel,
+  LogsPanel, StartupPanel, AboutPanel,
 }
 // Panels that are bare sections (no content column of their own).
 const STACKED_PANELS = new Set([
   'SceneSwitchingPanel', 'AgentAlertsPanel', 'NotificationsPanel', 'TriggersPanel', 'McpPanel',
-  'StartupPanel', 'RecentActionsPanel', 'SecurityPanel', 'PortsPanel',
+  'StartupPanel', 'SecurityPanel', 'PortsPanel',
 ])
 const pageIsStacked = computed(() => activePage.value.panels.every((name) => STACKED_PANELS.has(name)))
 

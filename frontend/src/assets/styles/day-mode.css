@@ -1,0 +1,70 @@
+/* Day mode (per device, Settings -> Appearance -> Layout & sidebar -> Display).
+   `#app.theme-day` rides on top of `.theme-dark` (kept so teleports still resolve),
+   re-pointing the tokens to a light palette and re-colouring the surfaces that
+   hard-code a dark look. The animated wallpaper is switched off in day mode. */
+#app.theme-dark.theme-day {
+  color-scheme: light;
+  --color-background: #eef2f9;
+  --app-backdrop: linear-gradient(160deg, #f4f7fc 0%, #e3eaf6 55%, #d6e0f2 100%);
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-solid: #ffffff;
+  --color-primary: #1f6fd1;
+  --color-primary-light: rgba(31, 111, 209, 0.12);
+  --color-secondary: #475569;
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-border: rgba(15, 23, 42, 0.16);
+  --color-accent: #1f6fd1;
+  --color-surface-hover: rgba(15, 23, 42, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(15, 23, 42, 0.14);
+  --glass-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  --glass-glow: 0 0 16px rgba(31, 111, 209, 0.18);
+  color: #0f172a;
+}
+
+/* --- Phone chrome ----------------------------------------------------------- */
+#app.theme-day .mobile-chrome { border-bottom-color: rgba(15, 23, 42, 0.1); }
+#app.theme-day .mc-scene-rail { background: rgba(255, 255, 255, 0.78); border-color: rgba(15, 23, 42, 0.14); }
+#app.theme-day .mc-seg { color: #334155; }
+#app.theme-day .mc-seg.is-active { color: #fff; }
+#app.theme-day .mc-fullscreen-btn,
+#app.theme-day .mc-more-btn,
+#app.theme-day .mc-reveal-btn,
+#app.theme-day .mc-page-btn { background: rgba(255, 255, 255, 0.85); border-color: rgba(15, 23, 42, 0.16); color: #1e293b; }
+#app.theme-day .mc-page-ind { color: #334155; }
+
+/* --- Agent console ----------------------------------------------------------- */
+#app.theme-day .mobile-agent-console { color: #0f172a; }
+#app.theme-day .mac-action { background: rgba(255, 255, 255, 0.85); border-color: rgba(15, 23, 42, 0.16); color: #0f172a; }
+#app.theme-day .mac-action.primary { color: #0b1015; }
+#app.theme-day .mac-shortcut { background: rgba(255, 255, 255, 0.78); border-color: rgba(15, 23, 42, 0.16); color: #0f172a; }
+#app.theme-day .mac-shortcut.highlighted { background: color-mix(in srgb, var(--agent-accent) 22%, white); }
+#app.theme-day .mac-link { color: #475569; background: rgba(71, 85, 105, 0.08); border-color: rgba(71, 85, 105, 0.45); }
+#app.theme-day .mac-project { background: rgba(15, 23, 42, 0.07); color: #334155; }
+
+/* --- Status banner: the state words stay unmistakable on a light surface ---- */
+#app.theme-day .agent-status-banner { --asb-sub: #1e293b; }
+#app.theme-day .agent-status-banner.state-working { --asb-fill: rgba(14, 165, 233, 0.16); --asb-edge: #0284c7; --asb-word: #0369a1; }
+#app.theme-day .agent-status-banner.state-ready { --asb-fill: rgba(34, 197, 94, 0.16); --asb-edge: #16a34a; --asb-word: #166534; }
+#app.theme-day .agent-status-banner.state-unknown { --asb-fill: rgba(100, 116, 139, 0.12); --asb-edge: #64748b; --asb-word: #334155; }
+#app.theme-day .agent-status-banner.state-offline { --asb-fill: rgba(100, 116, 139, 0.10); --asb-edge: #94a3b8; --asb-word: #475569; }
+#app.theme-day .agent-status-banner.state-permission { --asb-sub: #1a1203; }
+
+/* --- Category rail, chips and Groups/All toggle ------------------------------ */
+#app.theme-day .agent-cat-rail { background: rgba(255, 255, 255, 0.7); border-color: rgba(15, 23, 42, 0.12); }
+#app.theme-day .acr-item { color: #334155; }
+#app.theme-day .acr-item.selected { color: #0f172a; }
+#app.theme-day .agent-cat-rail .acr-item.selected { background: rgba(31, 111, 209, 0.14); box-shadow: inset 4px 0 0 #1f6fd1; }
+#app.theme-day .acr-count { background: rgba(15, 23, 42, 0.1); }
+#app.theme-day .agent-cat-chips .acr-item { background: rgba(255, 255, 255, 0.8); color: #1e293b; }
+#app.theme-day .agent-cat-chips .acr-item.selected { background: #0f172a; color: #fff; }
+#app.theme-day .agent-cat-chips .acr-item.selected .acr-count { background: rgba(255, 255, 255, 0.22); }
+#app.theme-day .agent-view-toggle { background: rgba(255, 255, 255, 0.78); border-color: rgba(15, 23, 42, 0.16); }
+#app.theme-day .avt-seg { color: #334155; }
+#app.theme-day .avt-seg.selected { background: #0f172a; color: #fff; }
+
+/* --- Desktop deck header and scene pill -------------------------------------- */
+#app.theme-day .header-background { background: rgba(255, 255, 255, 0.72); border-bottom-color: rgba(15, 23, 42, 0.12); }
+#app.theme-day .deck-header { color: #0f172a; }
+#app.theme-day .btn-icon-circle { background: rgba(255, 255, 255, 0.85); border-color: rgba(15, 23, 42, 0.16); color: #1e293b; }

@@ -1540,6 +1540,15 @@
           <p class="form-help">Push, commit, merge and deploy buttons ask by default; this overrides it for this button.</p>
         </div>
 
+        <div v-if="isAgentCodingScene" class="form-group">
+          <label>Category (Groups view)</label>
+          <select v-model="categoryModel" class="input" data-testid="agent-category">
+            <option value="">Auto ({{ autoCategoryLabel }})</option>
+            <option v-for="c in namedCategories" :key="c.id" :value="c.id">{{ c.label }}</option>
+          </select>
+          <p class="form-help">Which group this button appears in on AI coding scenes. Auto picks it from the action.</p>
+        </div>
+
         <!-- Conditional style (DL-122): "when X, then restyle" rules.
              First matching rule wins; evaluated live on the client. -->
         <div class="rules-editor">
@@ -1717,6 +1726,9 @@ import type { ButtonTemplate } from '@/data/buttonTemplates'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useHostOs, nativeKeys } from '@/composables/useHostOs'
 import apiClient from '@/api/client'
+import { useAppIntegrations } from '@/composables/useAppIntegrations'
+import { sceneAppProfile } from '@/services/appDetection'
+import { AGENT_CATEGORIES, resolveButtonCategory, agentCategoryDef } from '@/utils/agentCategories'
 
 interface Props {
   button: Button
@@ -1731,6 +1743,23 @@ const emit = defineEmits<{
 }>()
 
 const editedButton = ref<Button>(JSON.parse(JSON.stringify(props.button)))
+
+// DL-166: the Category override only matters on AI coding scenes (those with state-aware agent actions).
+const sceneStore = useDashboardStore()
+const appIntegrationsForCategory = useAppIntegrations()
+const isAgentCodingScene = computed(() => {
+  const scene = sceneStore.currentScene
+  return Boolean(scene && sceneAppProfile(scene, appIntegrationsForCategory.value)?.state_actions)
+})
+const categoryModel = computed<string>({
+  get: () => editedButton.value.category || '',
+  set: (v) => { editedButton.value.category = v as Button['category'] },
+})
+const namedCategories = AGENT_CATEGORIES.filter(c => c.id !== 'other')
+const autoCategoryLabel = computed(() => {
+  const withoutOverride = { ...editedButton.value, category: undefined } as Button
+  return agentCategoryDef(resolveButtonCategory(withoutOverride)).label
+})
 
 // The design picker binds the EFFECT layer. layers.effect is what DeckButton
 // renders first (resolveButtonVisual precedence), so it must be written here —
