@@ -63,8 +63,12 @@ Plenty of tools give you buttons. VDock is different: it **watches your AI agent
 | ✅ **Approve from the couch** | Approve, deny or answer from your phone. Input goes into your **live** session, not a new one. |
 | 🔀 **Scenes follow your work** | Open Cursor and the Cursor scene appears. Jump to your terminal and Claude Code takes over. |
 | 🧭 **Mission Control** | Every agent session in one place: working, waiting, done. |
-| 🤖 **Wingy** | A screensaver companion that reacts to your agents, music and the weather. |
+| 🤖 **Wingy** | A screensaver buddy that types along while your agent codes, puts on headphones when music plays, and reacts when you poke it. |
 | 🏠 **100% local and free** | No cloud, no account, no hardware to buy. MIT licensed. |
+
+<img src="docs/assets/screens/scene-claude-code.jpg" alt="VDock's Claude Code scene: a live READY status tile ('Waiting for your prompt'), the auto-picked session, Submit, Continue, Mode, New Session and Compact in the header, a sidebar of Session, Review & Ship, Mode & Model and Context groups, and Open Claude, Interrupt, Continue and Queue keys, with a 'Claude Code is waiting for input' banner offering Snooze 3m and Dismiss" width="820" />
+
+*The Claude Code scene: live session status up top, the session's keys below, and a banner the moment it waits for you.*
 
 <img src="docs/assets/screens/mission-control.jpg" alt="VDock Mission Control with a simulated session: one Claude Code session needing approval with Approve, Deny and Open buttons, and a second one working" width="820" />
 
@@ -90,9 +94,9 @@ It knows your repo too: branch, changed files and diffs, test runs, dev servers,
 - **Stays in sync.** Reconnects on its own, resumes on the right scene, and edits show up on every device.
 - **Install it as an app** on the Home Screen for a full-screen, no-browser-bars deck.
 
-<img src="docs/assets/screens/connect-page.jpg" alt="VDock Settings, Connect a device: setup steps, Allow LAN access switch, password prompt and the deck address (masked in this screenshot)" width="820" />
+<img src="docs/assets/screens/connect-security.jpg" alt="VDock Settings, Devices & network, Connect & security: a 'Phone access is unprotected' warning with Require pairing and Use a password instead buttons, the deck QR code and address (masked in this screenshot), a Check connection button, the Connected devices list with Rename and Revoke, and an 'Ask before pushing or committing code' switch" width="820" />
 
-Open **Settings > Devices & network > Connect a device**, turn on **Allow LAN access**, and scan the QR code.
+Open **Settings > Devices & network > Connect & security**, turn on **Allow phone & tablet access**, and scan the QR code. **Require pairing** (only devices that scan the code get in) or set a deck password, and **Check connection** walks through the address, phone access and firewall if a phone can't connect. Every phone that joins is listed, so you can rename or revoke it.
 
 > **Security:** LAN access is off by default. Anyone on your Wi-Fi who can reach the deck can press your keys, so **set a deck password before turning it on**. See [Security](#-security-and-privacy).
 
@@ -116,7 +120,13 @@ Tap the pencil to edit. Tap a **+** to search every action, drag keys to reorder
 
 Start from an **app template** instead of a blank grid. Scenes for Claude Code, Claude Cowork, Cursor, VS Code, JetBrains, GitHub, OBS, ChatGPT, Figma, n8n and dozens more come with sensible buttons, or import a scene pack someone shared. Beyond apps, VDock has built-in actions for hotkeys, media, system controls, webhooks and anything with an HTTP endpoint (Home Assistant, Zapier).
 
-<img src="docs/assets/screens/deck.png" alt="VDock's Media scene with mute, volume up and down, a draggable volume slider, and transport controls" width="820" />
+<img src="docs/assets/screens/scene-github.jpg" alt="VDock's GitHub scene: the scene bar across the top (Websites, Media, Claude Code, Cursor, Spotify, GitHub, Claude, Claude Cowork) with live dots on running apps, and keys for Open PRs, Review Me, CI, Inbox, My Work, Pull Requests, New PR, Open PR, PR Checks, Issues, Runs and Rerun Failed" width="820" />
+
+*One scene per app in the top bar. The GitHub scene runs `gh` for PRs, checks and reruns.*
+
+<img src="docs/assets/screens/scene-media.jpg" alt="VDock's Media scene: Mute, Volume Down and Volume Up keys, a Volume Slider at 57%, Previous, Play/Stop and Next keys, and a Now Playing card showing the album art, title and artist of the Spotify track that's playing" width="820" />
+
+*The Media scene with a live Now Playing card for whatever's playing on the PC.*
 
 ---
 
@@ -124,16 +134,45 @@ Start from an **app template** instead of a blank grid. Scenes for Claude Code, 
 
 When the deck is idle it comes alive.
 
-<!-- TODO: add the Wingy video here once it is in docs/assets/ -->
-**Meet Wingy**, VDock's little companion. Poke it, and it reacts to the weather, your agents and what you're doing.
+### Meet Wingy
+
+<div align="center">
+<img src="docs/assets/screens/wingy.gif" alt="Wingy, VDock's robot screensaver: on the left a glowing robot face, on the right a large clock reading 23:34, Monday 9 November. Wingy types on a laptop while an agent codes, then puts on headphones and flashes peace signs with a dancing equalizer while music plays, then squints happily when the pointer pets it" width="820" />
+</div>
+
+**Wingy** is a robot buddy that shares the screen with a big clock and shows what your PC is up to:
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/screens/wingy-coding.jpg" alt="Wingy at a desk typing on a laptop labelled 'buddy UI' while a coding agent works, next to the clock" /></td>
+<td width="50%"><img src="docs/assets/screens/wingy-music.jpg" alt="Wingy wearing headphones with happy closed eyes, blushing cheeks, peace-sign hands, music notes and a colourful equalizer, next to the clock" /></td>
+</tr>
+<tr>
+<td align="center"><em>Your agent is coding</em></td>
+<td align="center"><em>Music is playing</em></td>
+</tr>
+</table>
+
+- **Coding agents:** types along while Claude Code or Cursor works, waves a phone at you when the agent is waiting, and puts on a party hat with a trophy when it's done.
+- **Music:** headphones on and dancing while something plays.
+- **System load:** sweats through CPU spikes and complains about a low battery.
+- **Time and weather:** morning coffee, sleepy nights, sunglasses on sunny days.
+- **Poke it:** its eyes follow your finger or mouse. Tickle its mouth and it giggles, circle around it and it gets dizzy, linger and it turns shy.
+- **Pick a personality:** Funny, Grumpy, Sarcastic, Sweet, or a random one each day, with optional speech bubbles.
+
+Turn it on in **Settings > Appearance > Screen saver** by choosing **Robot buddy**. You can choose which side Wingy sits on and switch each kind of reaction on or off.
+
+### Ambient dashboard and music spectrum
 
 <img src="docs/assets/screens/screensaver.png" alt="VDock screensaver: a large serif clock, date, weather, market price, four news headlines, four sports headlines and three world clocks on a dark background with a soft amber glow" width="820" />
 
 - **Ambient dashboard:** clock, weather, news and sports headlines, stock and crypto quotes, and world clocks. No API keys required.
-- **Music spectrum:** 16 animated skins, from classic Winamp bars to 3D wave grids, reacting to whatever's playing on the PC.
+- **Music spectrum:** 16 animated skins, from classic Winamp bars to 3D wave grids and Neon Flight, reacting to whatever's playing on the PC. Shuffle the skins on a timer and keep a Now Playing card with media controls on top.
+- **System stats:** a full-screen sensor board of CPU, memory, disk and network gauges.
+- **Shuffle:** rotate through all the screensaver types while the deck is idle.
 - **Yours to arrange:** toggle each widget and drag-and-resize the layout.
 
-<img src="docs/assets/screens/settings-screensaver.png" alt="VDock Settings, Screen saver: idle-delay slider, Test and Customise layout buttons, a toggle and Options for each widget, widget text size, and a live screensaver preview" width="820" />
+<img src="docs/assets/screens/settings-screensaver.jpg" alt="VDock Settings, Appearance, Screen saver: the idle-delay slider, Test and Customise layout buttons, the Spectrum visualizer skin grid (Winamp, Mono Bars, UV Bars, RGB Bars, Iso Field, Scope, Aurora, Ember, Rotor 3D, Swarm, Waveform, Wave Ring, Mirror Bars, Radial Pulse, Wave Grid, Neon Flight), Shuffle skins and Media controls switches, and a live screensaver preview" width="820" />
 
 If an agent needs you while the screensaver is up, the alert appears on top of it.
 
@@ -181,7 +220,7 @@ Launch it from the Start menu, Launchpad or desktop icon. A short tour drops you
 
 ### Step 3. Add your phone or tablet (optional)
 
-Go to **Settings > Devices & network > Connect a device**, set a deck password, turn on **Allow LAN access**, and scan the QR code.
+Go to **Settings > Devices & network > Connect & security**, turn on **Allow phone & tablet access**, choose **Require pairing** or set a deck password, and scan the QR code.
 
 <details>
 <summary><strong>Prefer to build from source?</strong></summary>
@@ -219,7 +258,7 @@ For the installed app, remove it like any other app (your profiles are kept; rem
 - **macOS blocks the launcher:** right-click `VDock.app` and choose **Open**, first time only
 - **Claude / GitHub buttons greyed out:** hover for the reason, usually the CLI isn't installed or `gh auth login` hasn't run
 - **Keystroke actions do nothing:** they only fire when the target editor is focused. On macOS, allow the app that starts VDock under **System Settings > Privacy & Security** (**Accessibility** for hotkeys and windows, **Automation** for Spotify/Music, **Screen & System Audio Recording** for screenshots), then relaunch
-- **Phone can't reach VDock:** allow LAN access in **Settings > Devices & network**, relaunch, allow the Windows firewall prompt for `python.exe`, and check both devices are on the same Wi-Fi
+- **Phone can't reach VDock:** turn on **Allow phone & tablet access** in **Settings > Devices & network > Connect & security** and press **Check connection**, or relaunch, allow the Windows firewall prompt for `python.exe`, and check both devices are on the same Wi-Fi
 - **UI looks like an old build:** hard-refresh once
 - **Something else:** **Settings > Logs** to tail or export logs, and include them with your issue
 
