@@ -1530,6 +1530,16 @@
           <input v-model="editedButton.tooltip" type="text" class="input" placeholder="Button description" />
         </div>
 
+        <div class="form-group">
+          <label>Ask "Are you sure?" before running</label>
+          <select v-model="editedButton.confirm" class="input" data-testid="confirm-mode">
+            <option :value="undefined">Default (follow Settings → Security)</option>
+            <option value="always">Always ask</option>
+            <option value="never">Never ask</option>
+          </select>
+          <p class="form-help">Push, commit, merge and deploy buttons ask by default; this overrides it for this button.</p>
+        </div>
+
         <!-- Conditional style (DL-122): "when X, then restyle" rules.
              First matching rule wins; evaluated live on the client. -->
         <div class="rules-editor">

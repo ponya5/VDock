@@ -194,6 +194,8 @@ export interface Button {
   tooltip?: string
   enabled: boolean
   rules?: ButtonRule[]
+  /** DL-165: ask "Are you sure?" before running. 'default' follows Settings -> Security. */
+  confirm?: 'default' | 'always' | 'never'
 }
 
 export interface GridConfig {

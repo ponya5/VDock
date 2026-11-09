@@ -321,15 +321,6 @@ export const ACCESSORIES = {
     gloss('M76 -4 Q82 -14 92 -14', 0.5, 2.8),
   ] },
   // DL-165: more wardrobe - hats, glasses, a bow tie
-  cap: { els: [
-    grad('M62 30 Q62 -10 102 -10 Q142 -10 142 30 Z', 'red', 3),
-    shade('M102 -10 Q142 -10 142 30 H110 Q116 8 102 -10 Z', 0.3),
-    line('M102 -8 Q92 10 90 28', W, 1.8), line('M102 -8 Q118 10 118 28', W, 1.8),
-    grad('M136 24 Q170 20 184 34 Q160 42 134 34 Z', 'red', 3),
-    shade('M136 32 Q160 38 184 34 Q160 42 134 34 Z', 0.4),
-    gellipse(102, -10, 4.5, 4.5, 'gold', 2),
-    gloss('M76 8 Q84 -2 96 -5', 0.45, 3),
-  ] },
   'cowboy-hat': { els: [
     shade('M36 36 Q100 48 164 36 Q100 52 36 36 Z', 0.35),
     grad('M36 30 Q66 44 100 38 Q134 44 164 30 Q154 16 138 22 L134 2 Q100 -10 66 2 L62 22 Q46 16 36 30 Z', 'hat-tan', 3),
@@ -370,7 +361,7 @@ export type AccessoryLayer = 'head' | 'face' | 'ears' | 'neck'
 export const ACCESSORY_LAYERS: readonly AccessoryLayer[] = ['ears', 'head', 'face', 'neck']
 export const ACCESSORY_LAYER: Record<AccessoryId, AccessoryLayer> = {
   headphones: 'ears', sunglasses: 'face', 'heart-glasses': 'face', monocle: 'face', scarf: 'neck', bowtie: 'neck',
-  'party-hat': 'head', 'wizard-hat': 'head', nightcap: 'head', 'chef-hat': 'head', cap: 'head', 'cowboy-hat': 'head',
+  'party-hat': 'head', 'wizard-hat': 'head', nightcap: 'head', 'chef-hat': 'head', 'cowboy-hat': 'head',
   crown: 'head', beret: 'head', 'top-hat': 'head',
 }
 

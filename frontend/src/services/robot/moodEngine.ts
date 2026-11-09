@@ -401,7 +401,7 @@ export class MoodEngine {
   }
 
   private musicFeelActive(s: RobotSignals): boolean {
-    return this.opts.reactTo.music && s.musicPlaying && (this.baseline === 'music' || this.baseline === 'working')
+    return this.opts.reactTo.music && s.musicPlaying && this.baseline === 'music'
   }
 
   /** Everything worn right now: while music plays (even while the agent works) the feel picks a combined outfit. */

@@ -31,14 +31,14 @@
         :key="action.id"
         type="button"
         class="agent-action"
-        :class="{ primary: action.isPrimary, running: runningActionId === action.id }"
+        :class="{ primary: action.isPrimary, running: runningActionId === action.id, done: flashActionId === action.id }"
         :disabled="runningActionId !== null"
         :title="action.description"
         @click="runAction(action)"
       >
         <FontAwesomeIcon
           class="agent-action-icon"
-          :icon="['fas', runningActionId === action.id ? 'spinner' : action.icon]"
+          :icon="['fas', runningActionId === action.id ? 'spinner' : flashActionId === action.id ? 'check' : action.icon]"
           :spin="runningActionId === action.id"
         />
         <span class="agent-action-label">{{ action.label }}</span>
@@ -80,6 +80,7 @@ const {
   isAgentPossiblyRunning,
   visibleActions,
   runningActionId,
+  flashActionId,
   runAction,
 } = useAgentSession(toRef(props, 'scene'))
 
@@ -313,4 +314,5 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
 }
+.agent-action.done { background: #16a34a; border-color: #4ade80; color: #fff; }
 </style>

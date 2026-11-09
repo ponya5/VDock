@@ -245,10 +245,10 @@
       <circle cx="94" cy="126.5" r="1.8" fill="#6cc7ff" stroke="none" />
       <circle cx="106" cy="126.5" r="1.8" fill="#ff6fa8" stroke="none" />
       <!-- scratching hand on the left platter, free hand on the fader -->
-      <g :transform="`translate(${f(62 + Math.sin(t / 130) * 12)} ${f(112 + Math.abs(Math.sin(t / 130)) * 1.5)}) scale(0.92)`">
+      <g :transform="`translate(${f(62 + Math.sin(t / 130) * 12)} ${f(112 + Math.abs(Math.sin(t / 130)) * 1.5)}) scale(0.92 -0.92)`">
         <ToonHand kind="drum" :t="t" :phase="0" />
       </g>
-      <g :transform="`translate(${f(144 + Math.sin(t / 380) * 5)} 110) scale(-0.9 0.9)`">
+      <g :transform="`translate(${f(144 + Math.sin(t / 380) * 5)} ${f(98 + Math.abs(Math.sin(t / 190)) * 2.5)}) scale(-0.9 -0.9)`">
         <ToonHand kind="peace" :t="t" :phase="0.8" />
       </g>
       <!-- EQ bars flanking the face + sound rings -->

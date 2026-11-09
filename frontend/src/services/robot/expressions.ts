@@ -45,7 +45,7 @@ export const EXPRESSIONS = {
   surprised: { eyes: { h: 58, w: 32 }, face: { mouthWidth: 12, mouthOpen: 0.6, mouthCurve: 0 } },
   shocked: { glyphs: ['dot', 'dot'], face: { mouthWidth: 14, mouthOpen: 0.8, mouthCurve: 0 } },
   love: { glyphs: ['heart', 'heart'], face: { mouthCurve: 1, blush: 0.6 } },
-  starstruck: { glyphs: ['star', 'star'], face: { mouthCurve: 1, mouthOpen: 0.5 } },
+  starstruck: { eyes: { h: 54, w: 36 }, face: { mouthCurve: 1, mouthOpen: 0.6, mouthWidth: 28, blush: 0.3 } }, // DL-165: plain wide eyes (no star glyphs)
   dizzy: { glyphs: ['spiral', 'spiral'], face: { mouthWave: 1, mouthCurve: 0 } },
   dead: { glyphs: ['x', 'x'], face: { mouthCurve: 0, mouthWidth: 22 } },
   laughing: { glyphs: ['gt', 'lt'], face: { mouthCurve: 1, mouthOpen: 0.9, mouthWidth: 30 } },
@@ -64,7 +64,7 @@ export const EXPRESSIONS = {
   excited: { eyes: { h: 54, w: 36 }, face: { mouthCurve: 1, mouthOpen: 0.8, mouthWidth: 32, tongue: 1, blush: 0.3 } },
   proud: { eyes: CONTENT_EYE, face: { mouthCurve: 1, mouthWidth: 28, lookY: -0.3, blush: 0.25 } },
   determined: { eyes: { lidTop: 0.3, lidTilt: 0.5, h: 40 }, face: { mouthCurve: 0.1, mouthWidth: 22, lookY: 0.4 } },
-  dreamy: { glyphs: ['star', 'star'], face: { mouthCurve: 0.6, mouthWidth: 18, lookY: -0.3, blush: 0.5 } },
+  dreamy: { eyes: CONTENT_EYE, face: { mouthCurve: 0.6, mouthWidth: 18, lookY: -0.3, blush: 0.5 } }, // DL-165: soft closed eyes (no star glyphs)
   cheeky: { eyeL: HAPPY_EYE, face: { mouthCurve: 1, mouthOpen: 0.5, mouthWidth: 28, tongue: 1, mouthSkew: 0.5 } },
   nervous: { eyes: { w: 26, h: 44, lidTilt: -0.3 }, face: { mouthWave: 1, mouthCurve: 0, mouthWidth: 20, lookX: -0.6 } },
   relieved: { eyes: CONTENT_EYE, face: { mouthCurve: 0.5, mouthOpen: 0.3, mouthWidth: 22, lookY: 0.2 } },

@@ -976,7 +976,7 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: var(--color-primary, #4aa3ff);
   color: #fff;
-  font-size: 11px;
+  font-size: clamp(0.65rem, 1vw + 0.4rem, 0.8rem);
   cursor: pointer;
   z-index: 45;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);

@@ -150,7 +150,12 @@ export function useButtonActions() {
     }
 
     // DL-165: pushing / committing / merging code asks first (Settings -> Security).
-    const risk = settingsStore.confirmCodeActions ? codeActionRisk(button) : null
+    const mode = button.confirm ?? 'default'
+    const risk = mode === 'never'
+      ? null
+      : mode === 'always'
+        ? (codeActionRisk(button) ?? { title: `Run "${button.label || 'this button'}"?`, message: 'Run this action?', danger: false })
+        : settingsStore.confirmCodeActions ? codeActionRisk(button) : null
     if (risk) {
       void confirmDialog({
         title: risk.title,

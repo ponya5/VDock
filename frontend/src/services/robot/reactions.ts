@@ -231,10 +231,10 @@ export const MUSIC_FEEL: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'f
 }
 /** DL-165: what Wingy wears while music plays, by feel - layers combine (ears + face + head). */
 export const MUSIC_OUTFIT: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast' | 'hype', readonly AccessoryId[]>>>> = {
-  funny: { slow: ['headphones', 'beret'], mid: ['headphones', 'cap'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'party-hat'] },
-  sweet: { slow: ['headphones', 'beret'], mid: ['headphones'], fast: ['headphones', 'cap'], hype: ['headphones', 'heart-glasses', 'crown'] },
+  funny: { slow: ['headphones', 'beret'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'party-hat'] },
+  sweet: { slow: ['headphones', 'beret'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'heart-glasses', 'crown'] },
   sarcastic: { slow: ['headphones', 'monocle'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'top-hat'] },
-  grumpy: { fast: ['headphones', 'cap'], hype: ['headphones', 'cap'] },
+  grumpy: { fast: ['headphones'], hype: ['headphones'] },
 }
 /** Minimum time a music face / scene / outfit stays up before the feel may change it again. */
 export const MUSIC_DWELL_MS = 20_000

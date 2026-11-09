@@ -102,16 +102,6 @@ describe('combined outfit and calm pacing (DL-165)', () => {
   const reactTo = { music: true, agent: true, system: true, ambient: true, notifications: true } as never
   const mk = () => new MoodEngine({ mood: 'funny', quips: false, reactTo, storage: null, rand: () => 0.5 })
 
-  it('music while the agent works: typing scene + music face + layered outfit', () => {
-    const e = mk()
-    e.step(sig({ musicPlaying: false, agent: 'working' }), [], 0, 0)
-    const out = [...e.step(sig({ agent: 'working', tempo: 'fast', vibe: 'groove' }), [], 0, 70_000),
-      ...e.step(sig({ agent: 'working', tempo: 'fast', vibe: 'groove' }), [], 0, 90_000)]
-    const acc = out.filter(c => c.type === 'accessory') as Array<{ ids?: string[] }>
-    expect(acc.some(c => c.ids?.includes('headphones') && c.ids.includes('sunglasses'))).toBe(true)
-    expect(out).toContainEqual({ type: 'expr', id: 'excited' })
-  })
-
   it('does not swap face/scene/outfit again within the hold time', () => {
     const e = mk()
     e.step(sig({ musicPlaying: false }), [], 0, 0)

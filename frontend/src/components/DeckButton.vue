@@ -1396,12 +1396,12 @@ html.device-tablet .copy-btn {
   border: 1px solid rgba(255, 255, 255, 0.4);
   background: rgba(220, 38, 38, 0.92);
   color: #fff;
-  font-size: 12px;
+  font-size: clamp(0.7rem, 1vw + 0.45rem, 0.9rem);
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 html.device-tablet .button-cancel,
-html.device-phone .button-cancel { width: 34px; height: 34px; font-size: 14px; }
+html.device-phone .button-cancel { width: 34px; height: 34px; font-size: clamp(0.85rem, 1vw + 0.5rem, 1rem); }
 
 .button-state.is-running {
   color: rgba(255, 255, 255, 0.9);

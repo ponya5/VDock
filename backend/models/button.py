@@ -178,6 +178,9 @@ class Button:
     # then:{tone?,icon?,sublabel?,dim?}}] — evaluated on the client,
     # first match wins. Persisted verbatim; the backend never evaluates.
     rules: List[Dict[str, Any]] = field(default_factory=list)
+    # DL-165: ask "Are you sure?" before running -- 'default' follows the
+    # global code-action setting, 'always' / 'never' override it per button.
+    confirm: str = 'default'
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -211,6 +214,7 @@ class Button:
             layers=data.get('layers'),
             tooltip=data.get('tooltip', ''),
             enabled=data.get('enabled', True),
-            rules=data.get('rules') or []
+            rules=data.get('rules') or [],
+            confirm=data.get('confirm') if data.get('confirm') in ('always', 'never') else 'default'
         )
 

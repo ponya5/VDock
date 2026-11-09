@@ -53,6 +53,8 @@ export interface AgentSession {
   isAgentPossiblyRunning: ComputedRef<boolean>
   visibleActions: ComputedRef<AgentSessionAction[]>
   runningActionId: Ref<string | null>
+  /** The action that just succeeded - the bar shows a check on it for a moment. */
+  flashActionId: Ref<string | null>
   runAction: (action: AgentSessionAction) => Promise<void>
   sendPrompt: (promptText: string) => Promise<AgentActionResult>
 }
@@ -63,6 +65,7 @@ export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
   const notificationsStore = useNotificationsStore()
   const appIntegrations = useAppIntegrations()
   const runningActionId = ref<string | null>(null)
+  const flashActionId = ref<string | null>(null)
 
   const profile = computed<AppProfileDto | null>(() =>
     scene.value ? sceneAppProfile(scene.value, appIntegrations.value) : null
@@ -112,6 +115,18 @@ export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
     return isUnconfirmed ? UNCONFIRMED_STATE_LABEL : STATE_LABELS[currentState.value]
   })
 
+  /** Resolves true as soon as the agent leaves "working", false after `ms`. */
+  function waitForNotWorking(ms: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (currentState.value !== 'working') { resolve(true); return }
+      let timer: ReturnType<typeof setTimeout> | null = null
+      const stop = watch(currentState, (state) => {
+        if (state !== 'working') { stop(); if (timer) clearTimeout(timer); resolve(true) }
+      })
+      timer = setTimeout(() => { stop(); resolve(false) }, ms)
+    })
+  }
+
   async function runAction(action: AgentSessionAction): Promise<void> {
     if (runningActionId.value) return
     runningActionId.value = action.id
@@ -125,6 +140,18 @@ export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
           `${action.label} failed`,
           result?.details || result?.message || 'The agent did not receive it',
         )
+      } else {
+        // DL-165: a successful press used to show nothing at all. Flash a check on the
+        // button and say what was sent; for Interrupt, report whether the agent really stopped.
+        flashActionId.value = action.id
+        setTimeout(() => { if (flashActionId.value === action.id) flashActionId.value = null }, 1600)
+        if (/interrupt|stop/i.test(action.id) && currentState.value === 'working') {
+          const stopped = await waitForNotWorking(4500)
+          if (stopped) notificationsStore.success(`${action.label} sent`, 'The agent stopped working.')
+          else notificationsStore.warning(`${action.label} sent`, 'Esc was sent, but the agent still shows Working. Check that the right session is pinned (the session chip) and that its window is not busy.')
+        } else {
+          notificationsStore.success(`${action.label} sent`, action.description)
+        }
       }
     } finally {
       runningActionId.value = null
@@ -155,6 +182,7 @@ export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
     isAgentPossiblyRunning,
     visibleActions,
     runningActionId,
+    flashActionId,
     runAction,
     sendPrompt,
   }

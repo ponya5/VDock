@@ -11,7 +11,7 @@ describe('robot art', () => {
       'equalizer', 'exclaim', 'question', 'spinner', 'warning'])
     expect(Object.keys(PROPS)).toHaveLength(25)
     expect(Object.keys(PROPS)).toEqual(expect.arrayContaining(['rocket', 'trophy']))
-    expect(Object.keys(ACCESSORIES).sort()).toEqual(['beret', 'bowtie', 'cap', 'chef-hat', 'cowboy-hat', 'crown', 'headphones', 'heart-glasses', 'monocle', 'nightcap', 'party-hat', 'scarf', 'sunglasses', 'top-hat', 'wizard-hat'])
+    expect(Object.keys(ACCESSORIES).sort()).toEqual(['beret', 'bowtie', 'chef-hat', 'cowboy-hat', 'crown', 'headphones', 'heart-glasses', 'monocle', 'nightcap', 'party-hat', 'scarf', 'sunglasses', 'top-hat', 'wizard-hat'])
     expect(Object.keys(EYE_GLYPHS).sort()).toEqual(['dot', 'gt', 'heart', 'lt', 'spiral', 'star', 'x'])
     expect(Object.keys(MOUTH_GLYPHS).sort()).toEqual(['pout', 'round', 'teeth', 'zigzag'])
   })
