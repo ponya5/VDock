@@ -188,12 +188,14 @@ export class MoodEngine {
       let outfit = this.baselineOutfit(s, now)
       let scene = this.baselineScene(s, now)
       // DL-165: while music plays, a new feel (tempo / loudness) may not swap face, scene and outfit more often than MUSIC_DWELL_MS
-      if (this.musicFeelActive(s) && this.shownBaseExpr !== null && this.shownBaseAcc !== undefined && this.shownBaseScene !== undefined) {
+      if (this.musicFeelActive(s) && (this.shownBaseExpr === null || this.shownBaseAcc === undefined || this.shownBaseScene === undefined)) {
+        this.feelAt = now // first look of this stretch of music — start the hold timer
+      } else if (this.musicFeelActive(s)) {
         const changed = expr !== this.shownBaseExpr || outfit.join(',') !== this.shownBaseAcc || scene !== this.shownBaseScene
         if (changed && now - this.feelAt < MUSIC_DWELL_MS) {
           expr = this.shownBaseExpr
           outfit = this.shownBaseAcc ? (this.shownBaseAcc.split(',') as AccessoryId[]) : []
-          scene = this.shownBaseScene
+          scene = this.shownBaseScene as SceneId | null
         } else if (changed) this.feelAt = now
       }
       if (expr !== this.shownBaseExpr) { out.push({ type: 'expr', id: expr }); this.shownBaseExpr = expr }
