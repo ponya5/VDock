@@ -385,7 +385,7 @@ export class MoodEngine {
     switch (this.baseline) {
       case 'music': return this.opts.reactTo.music ? 'headphones' : null
       case 'night': return 'nightcap'
-      case 'working': return this.workingSince !== null && now - this.workingSince >= LONG_WORK_MS ? 'wizard-hat' : null
+      case 'working': return null
       case 'idle':
         if (!this.opts.reactTo.ambient) return null
         if (s.weather === 'sunny' && s.isDay) return 'sunglasses'
