@@ -56,7 +56,7 @@ describe('devicePrefs service', () => {
   it('defaults to auto touch, fit layout, keep-awake on', async () => {
     vi.resetModules()
     const { useDevicePrefs } = await import('@/services/devicePrefs')
-    expect({ ...useDevicePrefs() }).toEqual({ touchMode: 'auto', layout: 'fit', keepAwake: true, railAutoHide: 0 })
+    expect({ ...useDevicePrefs() }).toEqual({ touchMode: 'auto', layout: 'fit', keepAwake: true, railAutoHide: 0, dayMode: 'off' })
   })
 
   it('tolerates junk JSON and unknown values', async () => {
@@ -68,7 +68,7 @@ describe('devicePrefs service', () => {
     localStorage.setItem('vdock_device_prefs', JSON.stringify({ touchMode: 'huge', layout: 7, keepAwake: 'yes' }))
     vi.resetModules()
     ;({ useDevicePrefs } = await import('@/services/devicePrefs'))
-    expect({ ...useDevicePrefs() }).toEqual({ touchMode: 'auto', layout: 'fit', keepAwake: true, railAutoHide: 0 })
+    expect({ ...useDevicePrefs() }).toEqual({ touchMode: 'auto', layout: 'fit', keepAwake: true, railAutoHide: 0, dayMode: 'off' })
   })
 
   it('persists changes to localStorage and restores them', async () => {
