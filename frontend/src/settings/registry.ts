@@ -82,7 +82,7 @@ export const SECTIONS: SettingsSection[] = [
     id: 'system', name: 'System', icon: ['fas', 'screwdriver-wrench'], tour: 'nav-logs',
     pages: [
       { id: 'logs', name: 'Logs', title: 'Session logs', blurb: 'Backend and frontend logs for troubleshooting.', panels: ['LogsPanel'], anchors: [], autosaves: true },
-      { id: 'startup', name: 'Startup', title: 'Startup', blurb: 'Launcher behaviour, settings navigation and recent actions.', panels: ['StartupPanel', 'RecentActionsPanel'], anchors: ['startup', 'recent-actions'] },
+      { id: 'startup', name: 'Startup', title: 'Startup', blurb: 'Launcher behaviour and settings navigation.', panels: ['StartupPanel'], anchors: ['startup'] },
     ],
   },
   {
@@ -136,7 +136,6 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', section: 'system', page: 'logs', icon: ['fas', 'file-lines'] },
   { label: 'Startup', keywords: 'launcher terminal close debug startup', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'up-right-from-square'] },
-  { label: 'Recent Actions', keywords: 'recent actions history picker clear', section: 'system', page: 'startup', anchor: 'recent-actions', icon: ['fas', 'clock-rotate-left'] },
   { label: 'About VDock', keywords: 'version about info build tutorial', section: 'about', page: 'about', icon: ['fas', 'circle-info'] },
   { label: 'User Guide', keywords: 'help guide tutorial how to documentation swipe gestures troubleshooting', section: 'guide', icon: ['fas', 'circle-question'] },
 ]

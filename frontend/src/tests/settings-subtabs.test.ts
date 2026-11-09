@@ -31,7 +31,7 @@ describe('top sub-tab bar', () => {
   it('mounts the panels a registry page lists, not hand-written v-ifs', () => {
     expect(view).toContain('v-for="name in activePage.panels"')
     expect(view).not.toContain('activeTab')
-    for (const id of ['auto-switch', 'running-apps', 'agent-alerts', 'recent-actions', 'mcp-server']) {
+    for (const id of ['auto-switch', 'running-apps', 'agent-alerts', 'mcp-server']) {
       expect(allSettingsSource).toContain(`id="${id}"`)
     }
   })
