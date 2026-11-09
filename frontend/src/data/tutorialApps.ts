@@ -16,7 +16,6 @@ export const TUTORIAL_APPS: TutorialApp[] = [
   { id: 'cursor', label: 'Cursor', source: 'cursor', icon: ['fas', 'code'] },
   { id: 'codex', label: 'Codex', source: 'codex', icon: ['fas', 'terminal'] },
   { id: 'github-copilot', label: 'GitHub Copilot', source: 'github-copilot', icon: ['fas', 'code'] },
-  { id: 'claude', label: 'Claude', source: 'claude', icon: ['fas', 'robot'] },
   { id: 'chatgpt', label: 'ChatGPT', source: 'chatgpt', icon: ['fas', 'robot'] },
   { id: 'github', label: 'GitHub', source: 'github', icon: ['fab', 'github'] },
   { id: 'figma', label: 'Figma', source: 'figma', icon: ['fab', 'figma'] },

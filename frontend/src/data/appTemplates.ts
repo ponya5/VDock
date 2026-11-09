@@ -42,17 +42,6 @@ const aiAssistants: AppTemplate[] = [
     { label: "Sora", icon: ["fas","video"], action: url("https://sora.com"), tooltip: "OpenAI Sora video generation" },
     { label: "API Platform", icon: ["fas","code"], action: url("https://platform.openai.com"), tooltip: "OpenAI API platform" },
   ]},
-  { id: "claude", name: "Claude", description: "Anthropic Claude shortcuts", icon: ["fas","robot"], logo: "/logos/claude-color.png", color: "#d97757", buttons: [
-    { label: "New Chat", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "Start a new conversation" },
-    { label: "Open Claude", icon: ["fas","arrow-up-right-from-square"], action: url("https://claude.ai"), tooltip: "Open in browser" },
-    { label: "Projects", icon: ["fas","folder"], action: url("https://claude.ai/projects"), tooltip: "Open Projects" },
-    { label: "Upload File", icon: ["fas","paperclip"], action: hk(["ctrl","u"]), tooltip: "Attach a file" },
-    { label: "Copy Last", icon: ["fas","copy"], action: hk(["ctrl","shift","c"]), tooltip: "Copy last response" },
-    { label: "Console", icon: ["fas","gauge-high"], action: url("https://console.anthropic.com"), tooltip: "Anthropic API console" },
-    { label: "Docs", icon: ["fas","book-open"], action: url("https://docs.anthropic.com"), tooltip: "Claude documentation" },
-    { label: "Recents", icon: ["fas","clock-rotate-left"], action: url("https://claude.ai/recents"), tooltip: "Recent chats" },
-    { label: "Settings", icon: ["fas","gear"], action: url("https://claude.ai/settings"), tooltip: "Claude settings" },
-  ]},
   { id: "claude-cowork", name: "Claude Cowork", description: "Claude Cowork: agentic tasks on your files, scheduling, connectors and plugins", icon: ["fas","people-group"], logo: "/logos/claudecowork-color.png", color: "#d97757", buttons: [
     // Cowork is Claude's knowledge-work agent (files, schedules, connectors), not a coding terminal - so this scene is about
     // launching/steering tasks and the places Cowork is configured. Anthropic publishes no official Cowork hotkeys; the chords
@@ -67,8 +56,6 @@ const aiAssistants: AppTemplate[] = [
     { label: "Projects", icon: ["fas","folder-open"], action: url("https://claude.ai/projects"), tooltip: "Workspaces with their own files, instructions and memory" },
     { label: "Cowork Settings", icon: ["fas","gear"], action: url("https://claude.ai/settings/cowork"), tooltip: "Global instructions, browser, permissions" },
     { label: "Usage", icon: ["fas","gauge-high"], action: url("https://claude.ai/settings/usage"), tooltip: "Check your usage limits (Cowork tasks use a lot)" },
-    { label: "Download", icon: ["fas","download"], action: url("https://claude.com/download"), tooltip: "Get or update the Claude desktop app" },
-    { label: "Help", icon: ["fas","circle-question"], action: url("https://support.claude.com/en/articles/13345190-get-started-with-cowork"), tooltip: "Get started with Cowork" },
   ]},
   { id: "gemini", name: "Gemini", description: "Google Gemini shortcuts", icon: ["fas","gem"], logo: "/logos/gemini-color.png", color: "#4285f4", buttons: [
     { label: "Open Gemini", icon: ["fas","arrow-up-right-from-square"], action: url("https://gemini.google.com"), tooltip: "Open Gemini" },
@@ -154,7 +141,6 @@ const aiCoding: AppTemplate[] = [
     { label: "Agent Layout", icon: ["fas","table-columns"], action: hk(["mod","e"]), tooltip: "Toggle the agent layout (Ctrl+E)" },
     { label: "Models", icon: ["fas","brain"], action: hk(["mod","/"]), tooltip: "Loop between AI models (Ctrl+/)" },
     { label: "Palette", icon: ["fas","terminal"], action: { type: "cursor_command_palette", config: {} }, tooltip: "Command palette (Ctrl+Shift+P)" },
-    { label: "Open Cursor", icon: ["fas","window-maximize"], action: prog("cursor"), tooltip: "Launch the Cursor app" },
   ]},
   { id: "claude-code", name: "Claude Code", description: "Anthropic Claude Code CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/claudecode-color.png", color: "#d97757", buttons: [
     // Live-session controls: keystrokes into the terminal running Claude Code.
@@ -170,8 +156,6 @@ const aiCoding: AppTemplate[] = [
     { label: "Open Claude", icon: ["fas","window-maximize"], action: { type: "claude_continue", config: {} }, tooltip: "Open a new terminal session" },
     { label: "Review Diff", icon: ["fas","code-pull-request"], action: cmd('claude -p "review the current git diff"'), tooltip: "Review changes" },
     { label: "Queue", icon: ["fas","hourglass-half"], action: { type: "cc_queue", config: {} }, tooltip: "Run the typed message after the current turn (Ctrl+X, Enter)" },
-    { label: "Background", icon: ["fas","layer-group"], action: { type: "cc_background", config: {} }, tooltip: "Move the running task to the background (Ctrl+B)" },
-    { label: "To-dos", icon: ["fas","list-check"], action: { type: "cc_todos", config: {} }, tooltip: "Show or hide Claude's to-do checklist (Ctrl+T)" },
     { label: "Compact", icon: ["fas","compress"], action: { type: "cc_compact", config: {} }, tooltip: "/compact - free up context" },
     { label: "Rewind", icon: ["fas","backward"], action: { type: "cc_rewind", config: {} }, tooltip: "Rewind to an earlier message (Esc Esc)" },
     { label: "Thinking", icon: ["fas","lightbulb"], action: { type: "cc_thinking", config: {} }, tooltip: "Toggle extended thinking (Alt+T)" },

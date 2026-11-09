@@ -70,7 +70,6 @@ export const launchApps: { key: string; label: string }[] = [
  *  inert for pure keymap/URL templates but consistent UX. */
 const TEMPLATE_APP_KEYS: Record<string, string> = {
   'claude-code': 'claude',
-  'claude': 'claude',
 }
 
 export function templateAppKey(template: {

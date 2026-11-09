@@ -38,7 +38,7 @@ test('seeded buttons use only no-key action types', () => {
   const allowed = new Set([
     'url', 'hotkey', 'cross_platform', 'macro',
     'claude_continue', 'claude_slash', 'claude_prompt', 'claude_open',
-    'cc_prompt',
+    'cc_prompt', 'cc_interrupt', 'cc_queue', 'cc_mode', 'cc_clear', 'cc_compact',
     'cursor_new_chat', 'cursor_prompt', 'cursor_inline_edit', 'cursor_toggle_terminal',
     'now_playing' // DL-129: the SMTC track card — local feed, no key needed
   ])
@@ -52,13 +52,19 @@ test('seeded buttons use only no-key action types', () => {
   }
 })
 
-test('Claude grid leaves state-dependent actions to the agent action bar', () => {
+// DL-165: the Claude Code grid now carries the agent-bar actions as keys (Interrupt next to Continue, Queue, Mode,
+// New Session, Compact), each labelled with its shortcut; Commit, claude.ai, To-dos and Background are not seeded.
+test('Claude grid holds the agent actions as keys, Interrupt next to Continue', () => {
   const claudeScene = createDefaultProfile().scenes.find((scene) => scene.name === 'Claude Code')!
   const buttons = claudeScene.pages[0].buttons
-  const barOwnedTypes = new Set(['cc_submit', 'cc_interrupt', 'cc_accept', 'cc_approve', 'cc_deny'])
+  const labels = buttons.map((b) => b.label)
 
-  expect(buttons.some((button) => barOwnedTypes.has(button.action!.type))).toBe(false)
-  expect(buttons.some((button) => button.action?.config?.text === 'continue')).toBe(false)
+  expect(labels).toEqual(expect.arrayContaining(['Open Claude', 'Review', 'Interrupt', 'Continue', 'Queue', 'Mode', 'New Session', 'Compact']))
+  for (const gone of ['Commit', 'claude.ai', 'To-dos', 'Background', 'Explain', 'Write Tests', 'Fix Tests']) expect(labels).not.toContain(gone)
+  const at = (label: string) => buttons.find((b) => b.label === label)!.position
+  expect(at('Interrupt').row).toBe(at('Continue').row)
+  expect(Math.abs(at('Interrupt').col - at('Continue').col)).toBe(1)
+  expect(buttons.find((b) => b.label === 'Interrupt')!.secondary_label).toBe('Esc')
   expect(claudeScene.pages[0].grid_config).toEqual({ rows: 2, cols: 4 })
 })
 
@@ -77,7 +83,10 @@ test('Cursor grid matches Claude\'s density and leaves state-dependent actions t
 
   expect(cursorScene.pages[0].grid_config).toEqual({ rows: 2, cols: 4 })
   expect(buttons.some((button) => barOwnedTypes.has(button.action!.type))).toBe(false)
-  expect(buttons).toHaveLength(8)
+  expect(buttons.map((b) => b.label)).not.toEqual(expect.arrayContaining(['Fix Tests']))
+  expect(buttons.map((b) => b.label)).not.toContain('Write Tests')
+  expect(buttons.map((b) => b.label)).not.toContain('Launch Cursor')
+  expect(buttons).toHaveLength(6)
 })
 
 test('button ids are unique across the profile', () => {

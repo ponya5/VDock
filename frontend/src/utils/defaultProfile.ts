@@ -196,15 +196,6 @@ export function createClaudeCodeScene(ts: number = Date.now()): Scene {
       position: { row: 0, col: 0 }
     }),
     makeButton({
-      id: `btn-${ts}-c4`,
-      label: 'claude.ai',
-      icon: ['fas', 'globe'],
-      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
-      action: { type: 'claude_open', config: { target: 'new_chat' } },
-      tooltip: 'Open a new chat on claude.ai',
-      position: { row: 0, col: 3 }
-    }),
-    makeButton({
       id: `btn-${ts}-c2`,
       label: 'Review',
       icon: ['fas', 'magnifying-glass'],
@@ -214,39 +205,64 @@ export function createClaudeCodeScene(ts: number = Date.now()): Scene {
       position: { row: 0, col: 1 }
     }),
     makeButton({
-      id: `btn-${ts}-c3`,
-      label: 'Commit',
-      icon: ['fas', 'code-commit'],
-      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt(COMMIT_PROMPT),
-      secondary_label: 'git commit',
+      id: `btn-${ts}-c8`,
+      label: 'Interrupt',
+      icon: ['fas', 'hand'],
+      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cc_interrupt', config: {} },
+      secondary_label: 'Esc',
+      tooltip: 'Stop the current response',
       position: { row: 0, col: 2 }
     }),
     makeButton({
-      id: `btn-${ts}-c5`,
-      label: 'Explain',
-      icon: ['fas', 'circle-question'],
-      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt(EXPLAIN_PROMPT),
-      tooltip: 'Asks the session to explain whatever is on the clipboard',
+      id: `btn-${ts}-c9`,
+      label: 'Continue',
+      icon: ['fas', 'forward'],
+      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cc_prompt', config: {} },
+      secondary_label: 'continue',
+      tooltip: 'Type continue and send it',
+      position: { row: 0, col: 3 }
+    }),
+    makeButton({
+      id: `btn-${ts}-c10`,
+      label: 'Queue',
+      icon: ['fas', 'hourglass-half'],
+      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cc_queue', config: {} },
+      secondary_label: 'Ctrl+X, Enter',
+      tooltip: 'Run the typed message after the current turn',
       position: { row: 1, col: 0 }
     }),
     makeButton({
-      id: `btn-${ts}-c6`,
-      label: 'Write Tests',
-      icon: ['fas', 'vial'],
-      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt(WRITE_TESTS_PROMPT),
-      tooltip: 'Asks the session to write tests for clipboard code',
+      id: `btn-${ts}-c11`,
+      label: 'Mode',
+      icon: ['fas', 'arrows-rotate'],
+      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cc_mode', config: {} },
+      secondary_label: 'Shift+Tab',
+      tooltip: 'Cycle normal / auto-accept / plan mode',
       position: { row: 1, col: 1 }
     }),
     makeButton({
-      id: `btn-${ts}-c7`,
-      label: 'Fix Tests',
-      icon: ['fas', 'wrench'],
-      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt(FIX_TESTS_PROMPT),
+      id: `btn-${ts}-c12`,
+      label: 'New Session',
+      icon: ['fas', 'plus'],
+      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cc_clear', config: {} },
+      secondary_label: '/clear',
+      tooltip: 'Start a fresh session (clears context)',
       position: { row: 1, col: 2 }
+    }),
+    makeButton({
+      id: `btn-${ts}-c13`,
+      label: 'Compact',
+      icon: ['fas', 'compress'],
+      style: { backgroundColor: brand, textColor: '#ffffff', iconSize: 32 },
+      action: { type: 'cc_compact', config: {} },
+      secondary_label: '/compact',
+      tooltip: 'Compact the conversation to free context',
+      position: { row: 1, col: 3 }
     })
   ]
   // appId stamped: scene→profile resolution relies on button command votes
@@ -322,29 +338,12 @@ function createCursorScene(ts: number = Date.now()): Scene {
       position: { row: 1, col: 0 }
     }),
     makeButton({
-      id: `btn-${ts}-u6`,
-      label: 'Write Tests',
-      icon: ['fas', 'vial'],
-      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt(WRITE_TESTS_PROMPT),
-      tooltip: 'Asks the session to write tests for clipboard code',
-      position: { row: 1, col: 1 }
-    }),
-    makeButton({
-      id: `btn-${ts}-u7`,
-      label: 'Fix Tests',
-      icon: ['fas', 'wrench'],
-      style: { backgroundColor: promptColor, textColor: '#ffffff', iconSize: 32 },
-      action: livePrompt(FIX_TESTS_PROMPT),
-      position: { row: 1, col: 2 }
-    }),
-    makeButton({
       id: `btn-${ts}-u8`,
       label: 'Terminal',
       icon: ['fas', 'terminal'],
       style: { backgroundColor: '#334155', textColor: '#ffffff', iconSize: 32 },
       action: { type: 'cursor_toggle_terminal', config: {} },
-      position: { row: 1, col: 3 }
+      position: { row: 1, col: 1 }
     })
   ]
   return seedScene(ts, 'cursor', 'Cursor', 'i-cursor', brand, buttons, { rows: 2, cols: 4 }, 'cursor')
