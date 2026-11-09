@@ -199,6 +199,7 @@ const features: GuideFeature[] = [
     tagline: 'Your phone or tablet is a deck',
     body: [
       'Open VDock on any phone or tablet on your Wi-Fi — scan the QR code in <strong>Settings → Devices &amp; network → Connect &amp; security</strong>. No app store, no account. Add it to the Home Screen for a full-screen deck with no browser bars.',
+      '🔐 <strong>Secure without the hassle:</strong> the QR code carries a unique, one-time <strong>pairing token</strong>, so the phone is signed in the moment you scan it, with no password to type. The token works once and expires within minutes, and each phone gets its own login you can revoke.',
     ],
     points: [
       '<strong>Phone = a remote</strong> — a portrait grid sized for your thumb, a Claude Code console, and an approval remote: approve or deny a waiting agent from the couch.',
@@ -210,7 +211,7 @@ const features: GuideFeature[] = [
     ],
     shot: 'guide-mobile.png',
     shotCaption: 'Media on one phone, Claude Code on a phone and a tablet — same deck, same QR code.',
-    keywords: 'mobile phone tablet ipad android iphone remote portrait landscape touch thumb approval approve deny couch home screen pwa install wifi qr swipe rail keep awake day mode sync reconnect hot',
+    keywords: 'mobile phone tablet ipad android iphone remote portrait landscape touch thumb approval approve deny couch home screen pwa install wifi qr pair pairing token secure security swipe rail keep awake day mode sync reconnect hot',
   },
   {
     id: 'scenes',
@@ -241,20 +242,6 @@ const features: GuideFeature[] = [
     keywords: 'template app scene starter preset claude code cowork cursor vscode jetbrains github gh pr ci checks issues runs obs spotify chatgpt figma n8n import pack',
   },
   {
-    id: 'header',
-    icon: ['fas', 'window-maximize'],
-    title: 'Header, Reveal & Auto-hide',
-    tagline: 'Chrome that gets out of the way',
-    body: [
-      'Hide the header from <strong>Appearance → Layout &amp; sidebar</strong>, and it slides away. A <strong>reveal chip</strong> waits in the bottom-right corner — tap it, or swipe down from the top edge, and the header glides back.',
-      'While the header is open, a <strong>countdown pill</strong> shows the seconds until it auto-hides. Tap the pill to <em>pin the header open</em>; tap again to resume the countdown.',
-      'Phones get a slimmer landscape header and a compact scene rail; the scene bar can auto-hide too. These settings follow you across devices.',
-    ],
-    shot: 'guide-header.png',
-    shotCaption: 'The countdown pill — tap to pin the header open.',
-    keywords: 'header reveal auto hide countdown timer pill pin swipe fab chrome navigation clock scene bar rail phone landscape',
-  },
-  {
     id: 'appearance',
     icon: ['fas', 'palette'],
     title: 'Look & Feel',
@@ -263,8 +250,9 @@ const features: GuideFeature[] = [
       '<strong>Day mode</strong> swaps the dark look for a light one — on, off, or Auto to follow each device’s own light/dark setting. It is set per device, so the panel can stay dark while your phone goes light.',
       'Pick a <strong>key design</strong> in <strong>Appearance → Buttons</strong> (glass, Deck Key and more), then use <strong>Apply to all keys</strong> to restyle every button at once. It shows you what will change first and can be undone.',
       'Under <strong>Clocks</strong>, choose 12- or 24-hour time for the screensaver, session lists and logs.',
+      'Want more room for buttons? Hide the header from <strong>Appearance → Layout &amp; sidebar</strong>. Tap the reveal chip in the corner, or swipe down from the top, to bring it back; it hides again after a countdown unless you tap the pill to pin it.',
     ],
-    keywords: 'appearance day mode light dark theme auto key design style glass deck key apply all undo font typography clock 12 24 hour background wallpaper',
+    keywords: 'appearance day mode light dark theme auto key design style glass deck key apply all undo font typography clock 12 24 hour background wallpaper header reveal auto hide countdown pill pin',
   },
   {
     id: 'media',
@@ -290,13 +278,13 @@ const features: GuideFeature[] = [
     ],
     points: [
       '<strong>Widget dashboard</strong> — clock, weather, news, sports, markets and world clocks, each draggable and resizable.',
-      '<strong>Spectrum visualizer</strong> — 16 skins from Winamp bars to Wave Grid and Neon Flight, reacting to whatever plays. Shuffle the skins on a timer and keep a Now Playing card with media controls on top.',
-      '<strong>System stats</strong> — a full-screen board of CPU, memory, disk and network gauges.',
+      '<strong>Spectrum visualizer</strong> — 16 skins from Winamp bars to Iso Field, Wave Grid and Neon Flight, reacting to whatever plays. The bars follow the music itself, so turning the volume up or down doesn’t change them. Shuffle the skins on a timer and keep a Now Playing card with media controls on top.',
+      '<strong>System stats</strong> — a full-screen board of CPU, memory, disk and network gauges, plus the busiest processes.',
       '<strong>Robot buddy</strong> — Wingy and a big clock (see the next section).',
       '<strong>Shuffle</strong> — rotates through the other types every few minutes.',
     ],
     shot: 'guide-screensaver.png',
-    shotCaption: 'Screen saver settings — the spectrum skins and a live preview.',
+    shotCaption: 'The four screen saver types — Wingy, widget dashboard, system stats and the Iso Field spectrum.',
     keywords: 'screensaver idle sleep widgets weather news sports market clock system stats spectrum visualizer winamp aurora ember neon skin shuffle wake test customise layout',
   },
   {
@@ -381,7 +369,7 @@ const features: GuideFeature[] = [
     tagline: 'Your phone or tablet as a second deck',
     body: [
       'Any browser on your Wi-Fi can be a deck — the 7″ panel, a phone, a tablet next to the keyboard. Open <strong>Settings → Devices &amp; network → Connect &amp; security</strong>, turn on <strong>Allow phone &amp; tablet access</strong>, and scan the QR code. Add VDock to the Home Screen for a full-screen deck.',
-      'Lock it down with <strong>Require pairing</strong> (only devices that scan the code get in) or a deck password. The same token protects the HTTP API, the socket and the MCP endpoint.',
+      'Lock it down with <strong>Require pairing</strong> (only devices that scan the code get in) or a deck password. Pairing needs no typing: the QR code holds a unique, random, single-use <strong>pairing token</strong> that expires after 3 minutes, and the QR code refreshes itself. The phone trades it once for its own login token. An old screenshot of the code is useless, and repeated attempts are rate-limited. That login token protects the HTTP API, the socket and the MCP endpoint.',
       'Every device that joins is listed with its name and when it was last seen — <strong>Rename</strong> or <strong>Revoke</strong> it — and a toast announces each new one. Phone can’t connect? <strong>Check connection</strong> tests the address, phone access and the firewall and offers a one-click fix.',
       '<strong>Ask before pushing or committing code</strong> makes push, commit, merge and deploy buttons ask “Are you sure?” first.',
     ],
@@ -439,7 +427,7 @@ const sections = new Map<string, Element>()
 
 /** Sidebar grouping — the "sub tabs" under which sections cluster. */
 const NAV_GROUPS: Array<{ label: string; ids: string[] }> = [
-  { label: 'The Deck', ids: ['deck', 'mobile', 'scenes', 'templates', 'header', 'appearance'] },
+  { label: 'The Deck', ids: ['deck', 'mobile', 'scenes', 'templates', 'appearance'] },
   { label: 'Media & Display', ids: ['media', 'screensaver', 'wingy'] },
   { label: 'Agents & Automation', ids: ['agents', 'mission-control', 'mcp', 'integrations'] },
   { label: 'System', ids: ['connect', 'updates', 'settings', 'tour'] },

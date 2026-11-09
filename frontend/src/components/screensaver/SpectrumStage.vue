@@ -18,6 +18,8 @@
  * - Media bar (bottom-center, `spectrumMediaBar`): SMTC track + transport
  *   via `cross_platform` media actions. Every pointer event is `.stop`-ed —
  *   only a tap OUTSIDE the bar dismisses the saver.
+ * - Skin switcher (top-left, DL-169): previous/next through the registry,
+ *   saved as the picked skin; contained the same way as the media bar.
  * - Honest states: stream never arrived → dim "capture unavailable" hint
  *   after a grace window; silent stream → skins relax to baseline (bands≈0).
  */
@@ -33,6 +35,8 @@ import {
 import {
   getSpectrumSkin,
   pickNextSkin,
+  SPECTRUM_SKINS,
+  stepSkin,
   type SpectrumFrame,
   type SpectrumRenderer,
 } from '@/services/spectrumSkins'
@@ -125,6 +129,19 @@ watch(
   armShuffle,
   { immediate: true },
 )
+
+// --- skin switcher (DL-169) --------------------------------------------------
+
+const skinPosition = computed(() =>
+  `${SPECTRUM_SKINS.findIndex(s => s.id === activeSkinId.value) + 1} / ${SPECTRUM_SKINS.length}`)
+
+/** A manual pick is saved (unlike shuffle) and restarts the shuffle clock. */
+function stepSkinBy(dir: 1 | -1): void {
+  const id = stepSkin(activeSkinId.value, dir)
+  swapSkin(id)
+  settingsStore.spectrumSkin = id
+  armShuffle()
+}
 
 // --- canvas + rAF ------------------------------------------------------------
 
@@ -330,6 +347,26 @@ function media(action: string): void {
       {{ activeSkinLabel }}
     </div>
 
+    <!-- Same containment as the media bar: presses never reach the saver's
+         root dismiss handler. -->
+    <div
+      v-if="!props.backdrop"
+      class="spectrum-switch"
+      role="group"
+      aria-label="Visualizer skin"
+      @click.stop
+      @touchstart.stop
+      @pointerdown.stop
+    >
+      <button type="button" class="spectrum-switch-btn" aria-label="Previous visualizer" @click="stepSkinBy(-1)">
+        <FontAwesomeIcon :icon="['fas', 'chevron-left']" />
+      </button>
+      <span class="spectrum-switch-pos">{{ skinPosition }}</span>
+      <button type="button" class="spectrum-switch-btn" aria-label="Next visualizer" @click="stepSkinBy(1)">
+        <FontAwesomeIcon :icon="['fas', 'chevron-right']" />
+      </button>
+    </div>
+
     <!-- The bar stops every pointer event — taps here must never reach the
          saver's root dismiss handler; only a tap outside it wakes the deck. -->
     <div
@@ -418,6 +455,60 @@ function media(action: string): void {
 .spectrum-off { z-index: 2; }
 .spectrum-tag { z-index: 2; }
 .spectrum-media { z-index: 2; }
+.spectrum-switch { z-index: 2; }
+
+.spectrum-switch {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(10, 10, 22, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0.45;
+  transition: opacity 200ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.spectrum-switch:hover,
+.spectrum-switch:active,
+.spectrum-switch:focus-within {
+  opacity: 1;
+}
+
+.spectrum-switch-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.spectrum-switch-btn:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.spectrum-switch-pos {
+  min-width: 52px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
 
 .spectrum-off {
   position: absolute;

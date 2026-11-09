@@ -55,6 +55,36 @@ BAND_CURVE = 1.6
 # the backend smooths, the widget adds its own slower fall on top.
 BAND_DECAY = 0.70
 
+# DL-168 auto-gain: the loopback carries the post-volume mix, so on a fixed
+# dBFS scale the bars grew with the volume knob. Each band is scaled against
+# a running reference of the chunk's loudest band, so a uniform gain change
+# cancels out and only the music's shape and dynamics remain.
+# The reference is a dB envelope that follows the song's *typical* loudness
+# (AGC_ATTACK_S up, AGC_RELEASE_S down), not a max-hold: a max-hold parked
+# on the biggest drum hit and left the groove in the bottom third. The
+# groove now sits around AGC_TARGET_DB (≈ 90 after BAND_CURVE) and hits
+# above it clip to 100. Per-band amplitudes are single-bin peaks, so real
+# music's loudest band sits around -40 dBFS at full app volume; AGC_FLOOR_DB
+# caps the boost low enough to still cover an app turned down to ~10%.
+# True silence stays flat through the raw-level `live` gate, not the floor.
+AGC_ATTACK_S = 0.3
+AGC_RELEASE_S = 3.0
+AGC_FLOOR_DB = -65.0
+AGC_TARGET_DB = -1.5
+# Music's spectrum falls off toward the sub-bass and the treble, so against
+# one shared reference the outer bands barely move. Each band also tracks
+# its own typical level (slow envelope); the final reference blends the two
+# (BAND_REF_MIX = share of the band's own) and BAND_REF_HEADROOM_DB lets a
+# band's accents still reach the top. Still all relative dB → volume-free.
+BAND_REF_MIX = 0.6
+BAND_REF_ATTACK_S = 1.0
+BAND_REF_RELEASE_S = 8.0
+BAND_REF_HEADROOM_DB = 6.0
+# `level` drives glow/pulse and Wingy's beat — typical loudness lands ~75 so
+# accents still have room to push it up.
+LEVEL_TARGET_DB = -8.0
+CHUNK_SECONDS = CHUNK_FRAMES / SAMPLE_RATE
+
 # Emit at up to ~22 Hz — just under the ~23.4 Hz chunk cadence so every
 # chunk that moved qualifies; the payload is ~20 ints, the socket cost is
 # nil, and the extra granularity is what makes the frontend's per-frame
@@ -226,6 +256,48 @@ def amp_to_value(amp: float) -> int:
         return 0
     value = int(round((norm ** BAND_CURVE) * 100))
     return 100 if value > 100 else value
+
+
+def agc_reference(loud: float, ref_db: Optional[float],
+                  dt: float = CHUNK_SECONDS,
+                  attack: float = AGC_ATTACK_S,
+                  release: float = AGC_RELEASE_S,
+                  floor_db: float = AGC_FLOOR_DB) -> float:
+    """dB loudness envelope of `loud`; None (first chunk) starts at it."""
+    loud_db = max(20.0 * math.log10(loud) if loud > 0 else floor_db, floor_db)
+    if ref_db is None:
+        return loud_db
+    tau = attack if loud_db > ref_db else release
+    return ref_db + (loud_db - ref_db) * (1.0 - math.exp(-dt / tau))
+
+
+def agc_apply(amps: Sequence[float], ref_db: float,
+              target_db: float = AGC_TARGET_DB) -> List[float]:
+    """Scale amplitudes so the `ref_db` level lands on `target_db`."""
+    gain = 10.0 ** ((target_db - ref_db) / 20.0)
+    return [a * gain for a in amps]
+
+
+def agc_band_refs(amps: Sequence[float],
+                  refs: Optional[Sequence[Optional[float]]]) -> List[float]:
+    """Per-band slow dB envelopes (each band's own typical level)."""
+    if refs is None:
+        refs = [None] * len(amps)
+    return [agc_reference(a, r, attack=BAND_REF_ATTACK_S,
+                          release=BAND_REF_RELEASE_S)
+            for a, r in zip(amps, refs)]
+
+
+def agc_apply_bands(amps: Sequence[float], ref_db: float,
+                    band_refs: Sequence[float],
+                    mix: float = BAND_REF_MIX,
+                    target_db: float = AGC_TARGET_DB) -> List[float]:
+    """Scale each band against a blend of the shared and its own reference."""
+    out = []
+    for a, b in zip(amps, band_refs):
+        ref = (1.0 - mix) * ref_db + mix * (b + BAND_REF_HEADROOM_DB)
+        out.append(a * 10.0 ** ((target_db - ref) / 20.0))
+    return out
 
 
 def bands_envelope(values: Sequence[int],
@@ -442,6 +514,9 @@ def _capture_loop(gen: int = 0) -> None:
     emit_state: Dict[str, Any] = {}
     live_state: Dict[str, float] = {}
     prev_bands = [0] * NUM_BANDS
+    band_ref: Optional[float] = None
+    peak_ref: Optional[float] = None
+    per_band_refs: Optional[List[float]] = None
     last_device_error: Optional[str] = None
     mic: Any = None
     while gen == _generation:
@@ -473,11 +548,17 @@ def _capture_loop(gen: int = 0) -> None:
                         return  # superseded while blocked in record()
                     _last_chunk_at = time.time()
                     band_amps, peak = chunk_band_amps(np, frames)
-                    values = [amp_to_value(a) for a in band_amps]
+                    band_ref = agc_reference(max(band_amps), band_ref)
+                    per_band_refs = agc_band_refs(band_amps, per_band_refs)
+                    peak_ref = agc_reference(peak, peak_ref)
+                    values = [amp_to_value(a) for a in agc_apply_bands(
+                        band_amps, band_ref, per_band_refs)]
                     prev_bands = bands_envelope(values, prev_bands)
-                    level = amp_to_value(peak)
+                    level = amp_to_value(
+                        agc_apply([peak], peak_ref, LEVEL_TARGET_DB)[0])
                     now = time.time()
-                    live = update_live(level, now, live_state)
+                    # Silence detection runs on the raw (unboosted) level.
+                    live = update_live(amp_to_value(peak), now, live_state)
                     payload = decide_emit(prev_bands, level, live, now,
                                           emit_state)
                     if payload is not None:

@@ -48,7 +48,7 @@ Coding with AI agents changed the job. The agent works, then it **waits** for a 
 | **Any screen is a deck** | Phone, tablet, touch panel or browser, all from the same QR code. |
 | **Yours to design** | Lay out every scene, key, background and font yourself. |
 | **Ready out of the box** | Claude Code, Cursor, Copilot, Codex, Devin, VS Code, JetBrains, OBS, GitHub and more. |
-| **Alive when idle** | An interactive screensaver with Wingy, music spectrum skins and ambient widgets. |
+| **Alive when idle** | Four screensavers: Wingy the robot buddy, an ambient dashboard, a music spectrum visualizer and live system stats. |
 | **Local and private** | Everything runs on your PC. No cloud, no telemetry. |
 
 ---
@@ -63,7 +63,7 @@ Plenty of tools give you buttons. VDock is different: it **watches your AI agent
 | ✅ **Approve from the couch** | Approve, deny or answer from your phone. Input goes into your **live** session, not a new one. |
 | 🔀 **Scenes follow your work** | Open Cursor and the Cursor scene appears. Jump to your terminal and Claude Code takes over. |
 | 🧭 **Mission Control** | Every agent session in one place: working, waiting, done. |
-| 🤖 **Wingy** | A screensaver buddy that types along while your agent codes, puts on headphones when music plays, and reacts when you poke it. |
+| 🌙 **A screensaver that keeps working** | Wingy the robot buddy reacts to your agents and your music, the spectrum visualizer dances to whatever's playing, and the dashboard and stats boards stay glanceable. |
 | 🏠 **100% local and free** | No cloud, no account, no hardware to buy. MIT licensed. |
 
 <img src="docs/assets/screens/scene-claude-code.jpg" alt="VDock's Claude Code scene: a live READY status tile ('Waiting for your prompt'), the auto-picked session, Submit, Continue, Mode, New Session and Compact in the header, a sidebar of Session, Review & Ship, Mode & Model and Context groups, and Open Claude, Interrupt, Continue and Queue keys, with a 'Claude Code is waiting for input' banner offering Snooze 3m and Dismiss" width="820" />
@@ -97,6 +97,8 @@ It knows your repo too: branch, changed files and diffs, test runs, dev servers,
 <img src="docs/assets/screens/connect-security.jpg" alt="VDock Settings, Devices & network, Connect & security: a 'Phone access is unprotected' warning with Require pairing and Use a password instead buttons, the deck QR code and address (masked in this screenshot), a Check connection button, the Connected devices list with Rename and Revoke, and an 'Ask before pushing or committing code' switch" width="820" />
 
 Open **Settings > Devices & network > Connect & security**, turn on **Allow phone & tablet access**, and scan the QR code. **Require pairing** (only devices that scan the code get in) or set a deck password, and **Check connection** walks through the address, phone access and firewall if a phone can't connect. Every phone that joins is listed, so you can rename or revoke it.
+
+🔐 **Secure pairing with no typing.** With **Require pairing** on, the QR code carries a unique, random **one-time pairing token**. Scan it and the phone is in: no password to type, no account. The token works once, expires within minutes (the QR code refreshes itself), and is traded for the phone's own login token, which you can revoke at any time. Scanning an old screenshot of the QR code gets nobody in.
 
 > **Security:** LAN access is off by default. Anyone on your Wi-Fi who can reach the deck can press your keys, so **set a deck password before turning it on**. See [Security](#-security-and-privacy).
 
@@ -132,7 +134,20 @@ Start from an **app template** instead of a blank grid. Scenes for Claude Code, 
 
 ## ✨ An interactive screensaver
 
-When the deck is idle it comes alive.
+When the deck is idle it comes alive. Pick one of four screensavers, or shuffle through them all.
+
+<div align="center">
+<img src="docs/assets/screens/screensaver-modes.png" alt="The four VDock screensavers in a 2x2 grid: Wingy the robot buddy typing on a laptop next to a big clock, the widget dashboard with clock, weather, markets and headlines over a purple light burst, the system stats board with CPU, memory and disk gauges, and the Iso Field spectrum visualizer with a Now Playing card" width="820" />
+</div>
+
+| Screensaver | What it shows |
+|---|---|
+| 🤖 **Robot buddy** | Wingy and a big clock. Wingy shows what your PC is doing: coding agents, music, load, time of day. |
+| 📰 **Widget dashboard** | Clock, weather, news and sports headlines, stock and crypto quotes, and world clocks. Drag and resize every widget. |
+| 🎵 **Spectrum visualizer** | 16 skins, from Winamp bars to Iso Field and Neon Flight, moving with the music itself, not your volume knob. Switch skins with the arrows in the corner. |
+| 📊 **System stats** | Full-screen CPU, memory, disk and network gauges plus the busiest processes. |
+
+Choose one in **Settings > Appearance > Screen saver**. **Test** shows it right away. If an agent needs you while the screensaver is up, the alert appears on top of it.
 
 ### Meet Wingy
 
@@ -162,19 +177,18 @@ When the deck is idle it comes alive.
 
 Turn it on in **Settings > Appearance > Screen saver** by choosing **Robot buddy**. You can choose which side Wingy sits on and switch each kind of reaction on or off.
 
-### Ambient dashboard and music spectrum
+### Ambient dashboard, music spectrum and system stats
 
 <img src="docs/assets/screens/screensaver.png" alt="VDock screensaver: a large serif clock, date, weather, market price, four news headlines, four sports headlines and three world clocks on a dark background with a soft amber glow" width="820" />
 
-- **Ambient dashboard:** clock, weather, news and sports headlines, stock and crypto quotes, and world clocks. No API keys required.
-- **Music spectrum:** 16 animated skins, from classic Winamp bars to 3D wave grids and Neon Flight, reacting to whatever's playing on the PC. Shuffle the skins on a timer and keep a Now Playing card with media controls on top.
-- **System stats:** a full-screen sensor board of CPU, memory, disk and network gauges.
-- **Shuffle:** rotate through all the screensaver types while the deck is idle.
-- **Yours to arrange:** toggle each widget and drag-and-resize the layout.
+- **Ambient dashboard:** clock, weather, news and sports headlines, stock and crypto quotes, and world clocks. No API keys required. Toggle each widget and drag-and-resize the layout.
+- **Music spectrum:** 16 animated skins that react to whatever's playing on the PC. The bars follow the music's own shape and dynamics, so turning the volume up or down doesn't change them. Step through skins with the **‹ ›** buttons in the top-left corner without waking the deck, shuffle them on a timer, and keep a Now Playing card with media controls on top.
+- **System stats:** a full-screen sensor board of CPU, memory, disk and network gauges, with the busiest processes along the bottom.
+- **Shuffle:** rotate through all four screensavers while the deck is idle.
 
 <img src="docs/assets/screens/settings-screensaver.jpg" alt="VDock Settings, Appearance, Screen saver: the idle-delay slider, Test and Customise layout buttons, the Spectrum visualizer skin grid (Winamp, Mono Bars, UV Bars, RGB Bars, Iso Field, Scope, Aurora, Ember, Rotor 3D, Swarm, Waveform, Wave Ring, Mirror Bars, Radial Pulse, Wave Grid, Neon Flight), Shuffle skins and Media controls switches, and a live screensaver preview" width="820" />
 
-If an agent needs you while the screensaver is up, the alert appears on top of it.
+*Screen saver settings: the spectrum skins, shuffle and a live preview.*
 
 ---
 
@@ -195,7 +209,7 @@ Settings opens on an **Overview** of what's set up and what needs attention. It'
 VDock can press keys and type into your terminal, so trust matters. **Everything runs on your own machine.**
 
 - **No cloud, no account, no telemetry.** Your prompts, repo details and session activity never leave your PC.
-- **Locked down by default.** LAN access is off until you turn it on. With a deck password set, the QR code carries a single-use, 10-minute pairing token.
+- **Locked down by default.** LAN access is off until you turn it on. Phones pair by scanning a QR code that carries a unique, single-use pairing token (it expires after 3 minutes and the code refreshes itself). Each phone then gets its own revocable login token, and repeated pairing attempts are rate-limited.
 - **Agents report in locally**, through their official hooks to a localhost-only endpoint. You install or remove each hook from Settings, and only VDock's own entry is touched.
 - **Works offline.** Only the optional screensaver feeds and GitHub (when you add a token) use the network.
 - **Open source (MIT).** Startup refuses unsafe combinations. See [SECURITY.md](SECURITY.md).

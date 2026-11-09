@@ -31,6 +31,7 @@ import {
   DEFAULT_SPECTRUM_SKIN,
   getSpectrumSkin,
   pickNextSkin,
+  stepSkin,
   demoBands,
 } from '@/services/spectrumSkins'
 import { useSettingsStore } from '@/stores/settings'
@@ -80,6 +81,14 @@ describe('spectrum skin registry', () => {
         expect(SPECTRUM_SKINS.some(s => s.id === next)).toBe(true)
       }
     }
+  })
+
+  it('stepSkin walks the registry in order and wraps both ways', () => {
+    const ids = SPECTRUM_SKINS.map(s => s.id)
+    expect(stepSkin(ids[0], 1)).toBe(ids[1])
+    expect(stepSkin(ids[0], -1)).toBe(ids[ids.length - 1])
+    expect(stepSkin(ids[ids.length - 1], 1)).toBe(ids[0])
+    expect(stepSkin('nonsense', 1)).toBe(stepSkin(DEFAULT_SPECTRUM_SKIN, 1))
   })
 
   it('demoBands produces 20 in-range values that move', () => {
@@ -158,6 +167,41 @@ describe('SpectrumStage', () => {
     await wrapper.find('.spectrum-media').trigger('click')
     // Vue's .stop calls stopPropagation — the parent listener must not fire.
     expect(parentSpy).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('DL-169: the top-left switcher steps skins, saves the pick and never bubbles', async () => {
+    const settings = useSettingsStore()
+    settings.spectrumSkin = 'winamp'
+    const wrapper = mountStage()
+    const parentSpy = vi.fn()
+    wrapper.element.addEventListener('click', parentSpy)
+    wrapper.element.addEventListener('touchstart', parentSpy)
+    wrapper.element.addEventListener('pointerdown', parentSpy)
+    const sw = wrapper.find('.spectrum-switch')
+    const [prev, next] = sw.findAll('.spectrum-switch-btn')
+    expect(sw.find('.spectrum-switch-pos').text()).toBe(`1 / ${SPECTRUM_SKINS.length}`)
+
+    await next.trigger('pointerdown')
+    await next.trigger('touchstart')
+    await next.trigger('click')
+    expect(settings.spectrumSkin).toBe('mono')
+    expect(wrapper.find('.spectrum-tag').text()).toContain('Mono Bars')
+    expect(sw.find('.spectrum-switch-pos').text()).toBe(`2 / ${SPECTRUM_SKINS.length}`)
+
+    await prev.trigger('click')
+    await prev.trigger('click')
+    expect(settings.spectrumSkin).toBe('flight') // wraps past the first skin
+    expect(parentSpy).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('DL-169: the switcher is hidden behind the layout editor (backdrop)', () => {
+    const wrapper = mount(SpectrumStage, {
+      props: { backdrop: true },
+      global: { stubs: { FontAwesomeIcon: true } },
+    })
+    expect(wrapper.find('.spectrum-switch').exists()).toBe(false)
     wrapper.unmount()
   })
 

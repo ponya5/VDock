@@ -1706,6 +1706,13 @@ export function pickNextSkin(current: string, rand: () => number = Math.random):
   return others[Math.floor(rand() * others.length) % others.length].id
 }
 
+/** Neighbouring skin in registry order (dir 1 = next, -1 = previous), wrapping. */
+export function stepSkin(current: string, dir: 1 | -1): string {
+  const i = SPECTRUM_SKINS.findIndex(s => s.id === getSpectrumSkin(current).id)
+  const n = SPECTRUM_SKINS.length
+  return SPECTRUM_SKINS[(i + dir + n) % n].id
+}
+
 /**
  * Deterministic synthetic bands for settings previews and tests — a musical
  * looking swatch without touching the audio stream.

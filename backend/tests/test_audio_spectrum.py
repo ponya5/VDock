@@ -9,6 +9,7 @@ Two seams keep this off real audio hardware:
 
 One numpy end-to-end check (sine -> band) is importorskip-guarded.
 """
+import math
 import os
 import sys
 
@@ -97,6 +98,85 @@ def test_envelope_rises_instantly_and_decays():
     assert fell == [40] * spec.NUM_BANDS
     rose = spec.bands_envelope([90] * spec.NUM_BANDS, fell, decay=0.5)
     assert rose == [90] * spec.NUM_BANDS
+
+
+def _agc_values(chunks):
+    """Run band-amp chunks through the auto-gain → final chunk's 0-100 values."""
+    ref = None
+    band_refs = None
+    values = []
+    for amps in chunks:
+        ref = spec.agc_reference(max(amps), ref)
+        band_refs = spec.agc_band_refs(amps, band_refs)
+        values = [spec.amp_to_value(a)
+                  for a in spec.agc_apply_bands(amps, ref, band_refs)]
+    return values
+
+
+def test_per_band_reference_lifts_quiet_outer_bands():
+    # A typical falling spectrum: band i sits 2 dB below band i-1. Against
+    # the shared reference alone the treble end nearly vanishes; the blend
+    # keeps it visibly moving while the loud end stays the tallest.
+    tilt = [0.05 * 10 ** (-2 * i / 20) for i in range(spec.NUM_BANDS)]
+    chunks = [tilt] * 200
+    blended = _agc_values(chunks)
+    ref = None
+    for amps in chunks:
+        ref = spec.agc_reference(max(amps), ref)
+    shared = [spec.amp_to_value(a) for a in spec.agc_apply(tilt, ref)]
+    assert blended[-1] > shared[-1] + 25
+    assert blended[0] >= blended[-1]
+
+
+def test_auto_gain_makes_bars_independent_of_volume():
+    # The same "song" (band shape + dynamics) at full volume and at -20 dB
+    # (the knob turned down) must draw the same bars.
+    song = [[0.30, 0.12, 0.05, 0.02] + [0.01] * (spec.NUM_BANDS - 4),
+            [0.10, 0.25, 0.08, 0.04] + [0.01] * (spec.NUM_BANDS - 4)] * 20
+    quiet = [[a * 0.1 for a in chunk] for chunk in song]
+    loud_bars = _agc_values(song)
+    quiet_bars = _agc_values(quiet)
+    assert loud_bars == quiet_bars
+    assert max(loud_bars) > 80          # the loudest band still reaches high
+    assert loud_bars[1] > loud_bars[3]  # and the shape is preserved
+
+
+def test_auto_gain_reference_is_a_db_envelope():
+    ref = spec.agc_reference(0.5, None)
+    assert ref == pytest.approx(20 * math.log10(0.5))
+    # Rises fast (attack), falls slowly (release), never below the floor.
+    up = spec.agc_reference(1.0, ref, dt=spec.AGC_ATTACK_S)
+    down = spec.agc_reference(0.05, ref, dt=spec.AGC_ATTACK_S)
+    assert up - ref > 0.6 * (0 - ref)
+    assert ref - down < 0.2 * (ref - 20 * math.log10(0.05))
+    assert spec.agc_reference(0.0, None) == spec.AGC_FLOOR_DB
+
+
+def test_auto_gain_lifts_the_groove_not_just_the_peaks():
+    # A steady groove with an occasional drum hit 12 dB above it: the
+    # groove must still fill most of the bar, the hit reaches the top.
+    groove = [0.02] * spec.NUM_BANDS
+    hit = [0.08] * spec.NUM_BANDS
+    chunks = ([groove] * 10 + [hit]) * 12 + [groove] * 3
+    assert min(_agc_values(chunks)) > 70
+    assert min(_agc_values(chunks[:-3])) == 100
+
+
+def test_auto_gain_boost_is_capped_below_the_floor():
+    # Content quieter than the floor gets exactly the capped boost — it
+    # is not stretched to the target like real music would be.
+    quiet = 10 ** ((spec.AGC_FLOOR_DB - 20) / 20)
+    ref = None
+    for _ in range(50):
+        ref = spec.agc_reference(quiet, ref)
+    assert ref == pytest.approx(spec.AGC_FLOOR_DB)
+    boosted = spec.agc_apply([quiet], ref)[0]
+    assert 20 * math.log10(boosted) == pytest.approx(spec.AGC_TARGET_DB - 20)
+
+
+def test_true_silence_reads_as_not_live():
+    # Silence is handled by the raw-level live gate, so the bars go flat.
+    assert spec.update_live(spec.amp_to_value(0.0), 100.0, {}) is False
 
 
 def test_live_flag_holds_through_quiet_gaps():
