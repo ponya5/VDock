@@ -66,7 +66,8 @@
       </div>
       <div class="panel-body flush app-list-body">
         <div v-if="!settingsStore.appScanningEnabled" class="empty-state">
-          <FontAwesomeIcon :icon="['fas', 'desktop']" /><p>App scanning is disabled</p>
+          <FontAwesomeIcon :icon="['fas', 'desktop']" /><p>App scanning is disabled — turn it on to see the apps VDock can switch scenes for.</p>
+          <button type="button" class="btn sm primary" data-action="enable-scanning" @click="toggleAppScanning">Turn on app scanning</button>
         </div>
         <template v-else>
           <div v-if="runningApps.length > 0" class="app-toolbar">

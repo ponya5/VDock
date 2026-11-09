@@ -45,11 +45,40 @@ export function useButtonActions() {
     return fx && fx !== 'none' ? { type: fx as EffectType, tint: 'brand' } : undefined
   }
 
+  /** Opens Settings -> Apps & scenes -> Scene templates, where each app card has Browse / Detect for its location. */
+  async function openAppLocationSettings() {
+    const [{ default: appRouter }, { openStandaloneSettings }] = await Promise.all([
+      import('@/router'), import('@/utils/openStandaloneSettings'),
+    ])
+    if (!openStandaloneSettings({ router: appRouter, query: { section: 'agents', page: 'templates' } })) {
+      void appRouter.push({ path: '/settings', query: { section: 'agents', page: 'templates' } })
+    }
+  }
+
   function showActionResult(result: ActionResult) {
     if ((result as { cancelled?: boolean }).cancelled) {
       notificationsStore.info('Cancelled', 'Stopped waiting for the action.')
     } else if (result.success) {
       notificationsStore.success('Action Executed', result.message)
+    } else if (result.data?.not_installed) {
+      // DL-165: the app is not on this computer - say so, and offer the two ways out.
+      const app = String(result.data.app || 'The app')
+      const download = typeof result.data.download === 'string' ? result.data.download : ''
+      notificationsStore.error(
+        `${app} not found`,
+        'It is not installed here, or VDock cannot see where it lives.',
+        result.details,
+        {
+          duration: 12000,
+          actions: [
+            {
+              label: 'Choose app location', primary: true,
+              handler: () => { void openAppLocationSettings() },
+            },
+            ...(download ? [{ label: 'Download', handler: () => { window.open(download, '_blank', 'noopener') } }] : []),
+          ],
+        },
+      )
     } else {
       notificationsStore.error(
         'Action Failed',

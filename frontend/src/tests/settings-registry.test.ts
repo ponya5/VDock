@@ -12,9 +12,9 @@ const allAnchors = SECTIONS.flatMap((s) => s.pages.flatMap((p) => p.anchors))
 describe('merged Integrations section', () => {
   it('old integrations links land on Agents & automation', () => {
     expect(resolveRoute({ section: 'integrations', page: 'accounts' })).toEqual({ section: 'agents', page: 'accounts' })
-    expect(resolveRoute({ section: 'integrations', page: 'templates' })).toEqual({ section: 'agents', page: 'scenes' })
+    expect(resolveRoute({ section: 'integrations', page: 'templates' })).toEqual({ section: 'agents', page: 'templates' })
     expect(resolveRoute({ section: 'agents', page: 'mcp' })).toEqual({ section: 'agents', page: 'alerts' })
-    expect(resolveRoute({ tab: 'templates' })).toEqual({ section: 'agents', page: 'scenes' })
+    expect(resolveRoute({ tab: 'templates' })).toEqual({ section: 'agents', page: 'templates' })
   })
 })
 

@@ -1240,36 +1240,19 @@ class CrossPlatformAction(BaseAction):
             return ActionResult(False, f'URL opening not supported on {_SYSTEM}')
 
     def _open_app(self) -> ActionResult:
-        """Open application."""
-        app_path = self.config.get('path') or self.config.get('name')
-        if not app_path:
+        """Open an application (see services/app_launcher for the resolution order)."""
+        from services import app_launcher
+
+        target = self.config.get('path') or self.config.get('name')
+        if not target:
             return ActionResult(False, 'Application path/name not specified')
-
-        # DL-084: a configured app_paths override wins over OS name
-        # resolution — the template ships a NAME ("cursor"), the user points
-        # it at the real binary/bundle once.
-        from services import app_paths as app_paths_svc
-        override = app_paths_svc.override_for(str(app_path))
-        if override and _SYSTEM == 'Darwin':
-            # `open` handles .app bundles and bare executables by path;
-            # `open -a` only takes installed app *names*.
-            return self._run_command(f'open "{override}"')
-        target = override or app_path
-
-        if _SYSTEM == 'Windows':
-            return self._run_command(f'start "" "{target}"')
-        elif _SYSTEM == 'Darwin':  # macOS
-            app_name = os.path.basename(target)
-            return self._run_command(f'open -a "{app_name}"')
-        elif _SYSTEM == 'Linux':
-            # Try xdg-open first
-            result = self._run_command(f'xdg-open "{target}"')
-            if result.success:
-                return result
-            # Fallback to direct execution
-            return self._run_command(f'"{target}"')
-        else:
-            return ActionResult(False, f'Application opening not supported on {_SYSTEM}')
+        result = app_launcher.launch(str(target), label=str(self.config.get('label') or ''))
+        if result.ok:
+            return ActionResult(True, result.message)
+        data = {}
+        if result.not_installed:
+            data = {'not_installed': True, 'app': result.app, 'download': result.download}
+        return ActionResult(False, result.message, data=data, details=result.details or None)
 
     def _open_folder(self) -> ActionResult:
         """Open folder in file manager."""

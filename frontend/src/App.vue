@@ -58,6 +58,7 @@ import { initConnectionResume } from '@/services/connectionResume'
 import { initProfileSync } from '@/services/profileSync'
 import { useDeviceClass } from '@/composables/useDeviceClass'
 import { useAgentAlerts } from '@/services/agentAlerts'
+import { startAgentToasts } from '@/services/agentToasts'
 import { useToggleSync } from '@/services/toggleSync'
 import { initTriggerEvents } from '@/services/triggerEvents'
 import { autoSceneSwitcher } from '@/services/autoSceneSwitcher'
@@ -118,6 +119,7 @@ onMounted(async () => {
   stopConnectionResume = initConnectionResume()
   stopProfileSync = initProfileSync()
   useAgentAlerts().init()
+  startAgentToasts()
   initTriggerEvents()
   useToggleSync().init()
   stopLiveSettingsSync = settingsStore.initLiveSync()

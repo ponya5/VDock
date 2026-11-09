@@ -340,6 +340,8 @@ export class MoodEngine {
   private computeBaseline(s: RobotSignals, lastPointerAt: number, now: number): BaselineState {
     const nightHour = s.hour >= 23 || s.hour < 6
     if (s.agent === 'permission' && this.opts.reactTo.agent) return 'waiting'
+    // DL-165: hearing music beats typing - the listening look (headphones + jamming) shows even while an agent works.
+    if (s.musicPlaying && this.opts.reactTo.music) return 'music'
     if (s.agent === 'working' && this.opts.reactTo.agent) return 'working'
     if (this.opts.reactTo.system && ((s.cpuPercent !== null && s.cpuPercent >= 82) || (s.memPercent !== undefined && s.memPercent !== null && s.memPercent >= 88))) {
       return 'overworked'

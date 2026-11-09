@@ -53,6 +53,9 @@ ALLOWED_USER_SETTING_KEYS = {
     # 24-hour clocks toggle — missing here, every save silently dropped it.
     'clock24h',
     'confirmCodeActions',
+    'agentToastIdle',
+    'agentToastPermission',
+    'agentToastWorking',
     'screensaverWeatherSize',
     'newsFeeds',
     'sportsFeeds',

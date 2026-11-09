@@ -65,7 +65,8 @@ export const SECTIONS: SettingsSection[] = [
   {
     id: 'agents', name: 'Agents & automation', icon: ['fas', 'robot'], tour: 'nav-integration',
     pages: [
-      { id: 'scenes', name: 'Apps & scenes', title: 'Apps & scenes', blurb: 'Pick the apps you use and the deck switches to their buttons when you open them. Add ready-made app scenes here too.', panels: ['SceneSwitchingPanel', 'TemplatesPanel'], anchors: ['scene-order', 'auto-switch', 'running-apps'], tour: 'nav-templates' },
+      { id: 'scenes', name: 'Apps & scenes', title: 'Apps & scenes', blurb: 'Pick the apps you use and the deck switches to their buttons when you open them. Scene order, auto switching and the apps VDock sees running.', panels: ['SceneSwitchingPanel'], anchors: ['scene-order', 'auto-switch', 'running-apps'] },
+      { id: 'templates', name: 'Scene templates', title: 'Scene templates', blurb: 'Add ready-made scenes for the apps and tools you use: Claude Code, Cursor, GitHub, media and more.', panels: ['TemplatesPanel'], anchors: [], tour: 'nav-templates' },
       { id: 'alerts', name: 'AI agents', title: 'AI agents', blurb: 'Know when Claude, Cursor or Codex needs you, and let agents press deck keys.', panels: ['AgentAlertsPanel', 'McpPanel', 'NotificationsPanel'], anchors: ['agent-alerts', 'mac-accessibility', 'mcp-server', 'notifications'] },
       { id: 'triggers', name: 'Automation', title: 'Automation', blurb: 'Do things on their own: when a time comes, an app opens, an agent needs you or a script calls in, VDock switches scene, shows a notification or runs an action.', panels: ['TriggersPanel'], anchors: [], autosaves: true },
       { id: 'accounts', name: 'Accounts & keys', title: 'Accounts & keys', blurb: 'Which keys and tools VDock can use, and where to add them. All optional.', panels: ['AccountsPanel'], anchors: ['accounts', 'tools'], autosaves: true },
@@ -131,7 +132,7 @@ export const SEARCH: SearchEntry[] = [
   { label: 'Spectrum Screensaver', keywords: 'spectrum visualizer audio skin winamp aurora ember scope shuffle media controls fullscreen', section: 'appearance', page: 'screensaver', anchor: 'ss-spectrum', icon: ['fas', 'wave-square'] },
   { label: 'Weather Widget Size', keywords: 'screensaver weather size scale small screen touch', section: 'appearance', page: 'screensaver', anchor: 'ss-widgets', icon: ['fas', 'cloud-sun'] },
   { label: 'Weather Widget Location', keywords: 'weather location city temperature geolocation', section: 'appearance', page: 'screensaver', anchor: 'ss-widgets', icon: ['fas', 'cloud-sun'] },
-  { label: 'App Templates', keywords: 'templates presets apps buttons app paths executable', section: 'agents', page: 'scenes', icon: ['fas', 'layer-group'] },
+  { label: 'App Templates', keywords: 'templates presets apps buttons app paths executable', section: 'agents', page: 'templates', icon: ['fas', 'layer-group'] },
   { label: 'Session Logs', keywords: 'logs errors troubleshoot debug export download', section: 'system', page: 'logs', icon: ['fas', 'file-lines'] },
   { label: 'Startup', keywords: 'launcher terminal close debug startup', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'power-off'] },
   { label: 'Open Settings in New Tab', keywords: 'settings browser tab window navigation external', section: 'system', page: 'startup', anchor: 'startup', icon: ['fas', 'up-right-from-square'] },
@@ -143,7 +144,7 @@ export const SEARCH: SearchEntry[] = [
 /** Pre-registry `?tab=` ids and the page each opened. */
 export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> = {
   appearance: { section: 'appearance' },
-  templates: { section: 'agents', page: 'scenes' },
+  templates: { section: 'agents', page: 'templates' },
   server: { section: 'devices', page: 'connect' },
   integration: { section: 'agents' },
   connect: { section: 'devices', page: 'connect' },
@@ -155,7 +156,7 @@ export const LEGACY_TABS: Record<string, { section: SectionId; page?: string }> 
 export const LEGACY_SUBS: Record<string, string> = { apps: 'scenes' }
 
 /** Pages that were folded into another page (Advanced "ports" and "security" now live under "connect"). */
-export const LEGACY_PAGES: Record<string, string> = { ports: 'connect', security: 'connect', templates: 'scenes', mcp: 'alerts' }
+export const LEGACY_PAGES: Record<string, string> = { ports: 'connect', security: 'connect', templates: 'templates', mcp: 'alerts' }
 
 /** Sections that were merged into another (Integrations now lives under Agents & automation). */
 export const LEGACY_SECTIONS: Record<string, SectionId> = { integrations: 'agents' }

@@ -1,6 +1,7 @@
 import type { Button, Scene } from '@/types'
 import type { AppTemplate } from '@/data/appTemplates'
 import { useDashboardStore } from '@/stores/dashboard'
+import { templateShortcut } from '@/utils/templateShortcut'
 
 /** Adds a template as a new scene on the loaded profile; null when no profile is loaded. */
 export function addTemplateScene(template: AppTemplate): Scene | null {
@@ -11,7 +12,8 @@ export function addTemplateScene(template: AppTemplate): Scene | null {
     label: b.label, icon: b.icon, icon_type: 'fontawesome', action: b.action as Button['action'], shape: 'rounded',
     position: { row: Math.floor(index / 5), col: index % 5 }, size: { rows: 1, cols: 1 },
     style: { backgroundColor: b.style?.backgroundColor ?? template.color, textColor: b.style?.textColor ?? '#ffffff' },
-    tooltip: b.tooltip ?? b.label, enabled: true
+    tooltip: b.tooltip ?? b.label, enabled: true,
+    secondary_label: templateShortcut(b) || undefined
   }))
   const scene: Scene = {
     id: `scene-${Date.now()}-${template.id}`, name: template.name, icon: template.icon[1] ?? 'layer-group',

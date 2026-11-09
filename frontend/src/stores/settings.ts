@@ -105,6 +105,9 @@ export const SETTINGS_DEFAULTS = {
   agentWaitingDockEnabled: true,
   missionControlEnabled: true,
   agentAutoFocusScene: true,
+  agentToastIdle: false,
+  agentToastPermission: false,
+  agentToastWorking: false,
   autoSceneClaudeInCursor: true,
   mcpEnabled: true,
   tutorialCompleted: false,
@@ -233,6 +236,10 @@ export interface PersistedUserSettings {
   /** Mission Control (all-sessions dialog + its entry points) on/off. */
   missionControlEnabled: boolean
   agentAutoFocusScene: boolean
+  /** DL-165: pop a toast when an AI agent goes idle (finished, waiting for you) / needs permission / starts working. */
+  agentToastIdle: boolean
+  agentToastPermission: boolean
+  agentToastWorking: boolean
   /** DL-159: Cursor in front + a live Claude CLI session → the Claude scene. */
   autoSceneClaudeInCursor: boolean
   /** App->scene links + auto-switch toggle; shared across windows via the server. */
@@ -401,6 +408,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const agentWaitingDockEnabled = ref(true)
   const missionControlEnabled = ref(true)
   const agentAutoFocusScene = ref(true)
+  const agentToastIdle = ref(false)
+  const agentToastPermission = ref(false)
+  const agentToastWorking = ref(false)
   const autoSceneClaudeInCursor = ref(true)
   const mcpEnabled = ref(true)
   // Persisted onboarding flag — true once the tour is finished or skipped.
@@ -613,6 +623,9 @@ export const useSettingsStore = defineStore('settings', () => {
       agentWaitingDockEnabled: agentWaitingDockEnabled.value,
       missionControlEnabled: missionControlEnabled.value,
       agentAutoFocusScene: agentAutoFocusScene.value,
+      agentToastIdle: agentToastIdle.value,
+      agentToastPermission: agentToastPermission.value,
+      agentToastWorking: agentToastWorking.value,
       autoSceneClaudeInCursor: autoSceneClaudeInCursor.value,
       appIntegrations: JSON.parse(JSON.stringify(useAppIntegrations().value)),
       autoSceneSwitching: useAutoSceneSwitching().value,
@@ -722,6 +735,9 @@ export const useSettingsStore = defineStore('settings', () => {
     if (settings.agentWaitingDockEnabled !== undefined) agentWaitingDockEnabled.value = settings.agentWaitingDockEnabled
     if (settings.missionControlEnabled !== undefined) missionControlEnabled.value = settings.missionControlEnabled
     if (settings.agentAutoFocusScene !== undefined) agentAutoFocusScene.value = settings.agentAutoFocusScene
+    if (settings.agentToastIdle !== undefined) agentToastIdle.value = settings.agentToastIdle
+    if (settings.agentToastPermission !== undefined) agentToastPermission.value = settings.agentToastPermission
+    if (settings.agentToastWorking !== undefined) agentToastWorking.value = settings.agentToastWorking
     if (settings.autoSceneClaudeInCursor !== undefined) autoSceneClaudeInCursor.value = settings.autoSceneClaudeInCursor
     // Only adopt a server list that has content, so a fresh window never wipes
     // links this client still holds locally (they migrate up on the next save).
@@ -858,6 +874,9 @@ export const useSettingsStore = defineStore('settings', () => {
         agentWaitingDockEnabled: settings.agentWaitingDockEnabled ?? true,
         missionControlEnabled: settings.missionControlEnabled ?? true,
         agentAutoFocusScene: settings.agentAutoFocusScene ?? true,
+        agentToastIdle: settings.agentToastIdle ?? false,
+        agentToastPermission: settings.agentToastPermission ?? false,
+        agentToastWorking: settings.agentToastWorking ?? false,
         autoSceneClaudeInCursor: settings.autoSceneClaudeInCursor ?? true,
         mcpEnabled: settings.mcpEnabled ?? true,
         tutorialCompleted: settings.tutorialCompleted ?? false,
@@ -1116,6 +1135,12 @@ export const useSettingsStore = defineStore('settings', () => {
     missionControlEnabled,
       missionControlEnabled,
       agentAutoFocusScene,
+    agentToastIdle,
+    agentToastPermission,
+    agentToastWorking,
+      agentToastIdle,
+      agentToastPermission,
+      agentToastWorking,
       autoSceneClaudeInCursor,
       mcpEnabled,
       tutorialCompleted,

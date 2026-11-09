@@ -32,7 +32,7 @@ describe('MoodEngine', () => {
     const e = new MoodEngine({ mood: 'funny', quips: false, reactTo: ALL, rand: fixed })
     const c = e.step(sig({ agent: 'working', musicPlaying: true }), [], 0, 0)
     expect(e.state.reaction).toBe('greet')
-    expect(e.state.baseline).toBe('working')
+    expect(e.state.baseline).toBe('music')
     expect(types(c)).not.toContain('icon:dots')
   })
 

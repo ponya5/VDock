@@ -33,6 +33,8 @@ _ALIASES = {
     'vscode': 'code',
     'github-copilot': 'code',
     'visualstudio': 'devenv',
+    'claude-cowork': 'claude desktop',
+    'claude-desktop': 'claude desktop',
 }
 
 _SYSTEM = platform.system()
@@ -125,11 +127,37 @@ def launch_app(path: str) -> bool:
         return False
 
 
+def _claude_desktop_path() -> Optional[str]:
+    """Where the Claude desktop app lives: the Store package (Windows) or /Applications/Claude.app (macOS)."""
+    if _SYSTEM == 'Windows':
+        try:
+            out = subprocess.run(
+                ['powershell', '-NoProfile', '-Command', '(Get-AppxPackage -Name Claude).InstallLocation'],
+                capture_output=True, text=True, timeout=15,
+            ).stdout.strip()
+            exe = Path(out) / 'app' / 'Claude.exe' if out else None
+            if exe is not None and exe.exists():
+                return str(exe)
+        except Exception:
+            pass
+        local = Path(os.environ.get('LOCALAPPDATA', ''))
+        for c in (local / 'AnthropicClaude' / 'claude.exe', local / 'Programs' / 'Claude' / 'Claude.exe'):
+            if c.exists():
+                return str(c)
+    elif _SYSTEM == 'Darwin':
+        for base in (Path('/Applications'), Path.home() / 'Applications'):
+            if (base / 'Claude.app').exists():
+                return str(base / 'Claude.app')
+    return None
+
+
 def probe(app: str) -> Optional[str]:
     """Best-effort locate for an app — PATH first, then known install dirs.
 
     Powers the editor's Detect button so most users never type a path.
     """
+    if _norm(app) in ('claude desktop', 'claude-cowork', 'claude-desktop'):
+        return _claude_desktop_path()
     keys = _keys_for(app)
     # Candidate executable/bundle names per key.
     names = []

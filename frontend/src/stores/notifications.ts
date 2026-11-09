@@ -22,6 +22,8 @@ export interface Notification {
   /** Pierces the 'errors-only' toast level — for warnings that guard an
       irreversible action. 'off' still silences everything. */
   important?: boolean
+  /** DL-165: raised by the agent-toast settings; shown whatever the app-level toast level is. */
+  agent?: boolean
 }
 
 export const useNotificationsStore = defineStore('notifications', () => {
@@ -45,10 +47,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
     const settingsStore = useSettingsStore()
     const unreadNotifications = notifications.value.filter(n => !n.read)
 
+    // Agent toasts are opted into one by one (Settings -> AI agents), so the app-level level never hides them.
     const level = settingsStore.toastLevel
-    if (level === 'off') return []
+    if (level === 'off') return unreadNotifications.filter(n => n.agent).slice(-3)
     if (level === 'errors-only') {
-      return unreadNotifications.filter(n => n.type === 'error' || n.important).slice(-3)
+      return unreadNotifications.filter(n => n.type === 'error' || n.important || n.agent).slice(-3)
     }
     // 'all'
     return unreadNotifications.slice(-3)

@@ -4,6 +4,8 @@ export interface TemplateButton {
   action: { type: string; config: Record<string, unknown> }
   style?: { backgroundColor?: string; textColor?: string }
   tooltip?: string
+  /** Text under the name (the shortcut the key sends); derived from the action / tooltip when absent. */
+  secondary?: string
 }
 export interface AppTemplate {
   id: string
@@ -52,14 +54,13 @@ const aiAssistants: AppTemplate[] = [
     { label: "Settings", icon: ["fas","gear"], action: url("https://claude.ai/settings"), tooltip: "Claude settings" },
   ]},
   { id: "claude-cowork", name: "Claude Cowork", description: "Claude Cowork: agentic tasks on your files, scheduling, connectors and plugins", icon: ["fas","people-group"], logo: "/logos/claudecowork-color.png", color: "#d97757", buttons: [
-    // No official Cowork shortcuts or deep links exist (Anthropic docs), so every button is the app launcher or a documented claude.ai/claude.com page.
-    { label: "Open Claude", icon: ["fas","window-maximize"], action: prog("Claude"), tooltip: "Launch the Claude desktop app, then pick Cowork" },
-    { label: "Quick Entry", icon: ["fas","bolt"], action: hk(["ctrl","shift","space"]), tooltip: "Summon Claude from any app (unofficial shortcut; set it in Claude desktop settings)" },
-    // Desktop-window controls: keystrokes go to the focused Claude window, so a task can be steered from the deck without touching the PC.
-    { label: "New Task", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "Start a new task / conversation" },
-    { label: "Send", icon: ["fas","paper-plane"], action: hk(["enter"]), tooltip: "Send the prompt you typed (Enter)" },
-    { label: "Stop", icon: ["fas","hand"], action: hk(["escape"]), tooltip: "Stop the current response (Esc)" },
-    { label: "Attach", icon: ["fas","paperclip"], action: hk(["ctrl","u"]), tooltip: "Attach a file or folder to the task" },
+    // Cowork is Claude's knowledge-work agent (files, schedules, connectors), not a coding terminal - so this scene is about
+    // launching/steering tasks and the places Cowork is configured. Anthropic publishes no official Cowork hotkeys; the chords
+    // below are the common desktop-app ones, so check them in the app's menus.
+    { label: "Open Claude", icon: ["fas","window-maximize"], action: prog("Claude Desktop"), tooltip: "Launch the Claude desktop app, then pick the Cowork tab" },
+    { label: "New Task", icon: ["fas","plus"], action: hk(["mod","n"]), tooltip: "Start a new task (Ctrl+N)" },
+    { label: "Quick Entry", icon: ["fas","bolt"], action: hk(["mod","shift","space"]), tooltip: "Summon Claude from any app (Ctrl+Shift+Space; the chord is set in Claude desktop settings)" },
+    { label: "Stop", icon: ["fas","hand"], action: hk(["escape"]), tooltip: "Stop the current task (Esc)" },
     { label: "Scheduled", icon: ["fas","clock"], action: url("https://claude.ai/scheduled"), tooltip: "View and manage scheduled tasks" },
     { label: "Connectors", icon: ["fas","plug"], action: url("https://claude.ai/settings/connectors"), tooltip: "Slack, Drive, Notion, Gmail and other connectors" },
     { label: "Plugins", icon: ["fas","puzzle-piece"], action: url("https://claude.com/plugins"), tooltip: "Browse plugins (skills, connectors, sub-agents)" },
@@ -147,8 +148,12 @@ const aiCoding: AppTemplate[] = [
     { label: "Composer", icon: ["fas","wand-magic-sparkles"], action: { type: "cursor_composer", config: {} }, tooltip: "Open Composer (Ctrl+I)" },
     { label: "Inline Edit", icon: ["fas","pen"], action: { type: "cursor_inline_edit", config: {} }, tooltip: "Edit selection with AI (Ctrl+K)" },
     { label: "Accept", icon: ["fas","check-double"], action: { type: "cursor_accept", config: {} }, tooltip: "Accept diff (Ctrl+Enter)" },
-    { label: "Reject", icon: ["fas","xmark"], action: { type: "cursor_reject", config: {} }, tooltip: "Reject diff (Ctrl+Backspace)" },
+    { label: "Reject", icon: ["fas","xmark"], action: { type: "cursor_reject", config: {} }, tooltip: "Reject diff (Ctrl+Shift+Backspace)" },
     { label: "Terminal", icon: ["fas","terminal"], action: { type: "cursor_toggle_terminal", config: {} }, tooltip: "Toggle terminal (Ctrl+`)" },
+    { label: "Mode", icon: ["fas","arrows-rotate"], action: hk(["shift","tab"]), tooltip: "Rotate agent modes (Shift+Tab)" },
+    { label: "Agent Layout", icon: ["fas","table-columns"], action: hk(["mod","e"]), tooltip: "Toggle the agent layout (Ctrl+E)" },
+    { label: "Models", icon: ["fas","brain"], action: hk(["mod","/"]), tooltip: "Loop between AI models (Ctrl+/)" },
+    { label: "Palette", icon: ["fas","terminal"], action: { type: "cursor_command_palette", config: {} }, tooltip: "Command palette (Ctrl+Shift+P)" },
     { label: "Open Cursor", icon: ["fas","window-maximize"], action: prog("cursor"), tooltip: "Launch the Cursor app" },
   ]},
   { id: "claude-code", name: "Claude Code", description: "Anthropic Claude Code CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/claudecode-color.png", color: "#d97757", buttons: [
@@ -164,42 +169,60 @@ const aiCoding: AppTemplate[] = [
     // One-shot runs: these spawn their own claude process, no session needed.
     { label: "Open Claude", icon: ["fas","window-maximize"], action: { type: "claude_continue", config: {} }, tooltip: "Open a new terminal session" },
     { label: "Review Diff", icon: ["fas","code-pull-request"], action: cmd('claude -p "review the current git diff"'), tooltip: "Review changes" },
+    { label: "Queue", icon: ["fas","hourglass-half"], action: { type: "cc_queue", config: {} }, tooltip: "Run the typed message after the current turn (Ctrl+X, Enter)" },
+    { label: "Background", icon: ["fas","layer-group"], action: { type: "cc_background", config: {} }, tooltip: "Move the running task to the background (Ctrl+B)" },
+    { label: "To-dos", icon: ["fas","list-check"], action: { type: "cc_todos", config: {} }, tooltip: "Show or hide Claude's to-do checklist (Ctrl+T)" },
+    { label: "Compact", icon: ["fas","compress"], action: { type: "cc_compact", config: {} }, tooltip: "/compact - free up context" },
+    { label: "Rewind", icon: ["fas","backward"], action: { type: "cc_rewind", config: {} }, tooltip: "Rewind to an earlier message (Esc Esc)" },
+    { label: "Thinking", icon: ["fas","lightbulb"], action: { type: "cc_thinking", config: {} }, tooltip: "Toggle extended thinking (Alt+T)" },
+    { label: "Transcript", icon: ["fas","scroll"], action: { type: "cc_transcript", config: {} }, tooltip: "Detailed tool-use transcript (Ctrl+O)" },
   ]},
   { id: "github-copilot", name: "GitHub Copilot", description: "GitHub Copilot shortcuts", icon: ["fas","code"], logo: "/logos/githubcopilot.png", color: "#6e40c9", buttons: [
     { label: "Accept", icon: ["fas","check"], action: hk(["tab"]), tooltip: "Accept suggestion" },
     { label: "Dismiss", icon: ["fas","xmark"], action: hk(["escape"]), tooltip: "Dismiss suggestion" },
     { label: "Next", icon: ["fas","chevron-right"], action: hk(["alt","]"]), tooltip: "Next suggestion" },
     { label: "Prev", icon: ["fas","chevron-left"], action: hk(["alt","["]), tooltip: "Previous suggestion" },
-    { label: "Chat", icon: ["fas","comments"], action: hk(["ctrl","shift","i"]), tooltip: "Open Copilot Chat" },
-    { label: "Inline Chat", icon: ["fas","comment-dots"], action: hk(["ctrl","i"]), tooltip: "Inline chat" },
+    { label: "Chat", icon: ["fas","comments"], action: { type: "copilot_chat", config: {} }, tooltip: "Open the Copilot Chat view (Ctrl+Alt+I)" },
+    { label: "Inline Chat", icon: ["fas","comment-dots"], action: { type: "copilot_inline", config: {} }, tooltip: "Inline chat (Ctrl+I)" },
     { label: "Trigger", icon: ["fas","wand-magic-sparkles"], action: hk(["alt","\\"]), tooltip: "Trigger an inline suggestion" },
-    { label: "Accept Word", icon: ["fas","forward-step"], action: hk(["ctrl","right"]), tooltip: "Accept the next word of a suggestion" },
-    { label: "Agent Chat", icon: ["fas","robot"], action: hk(["ctrl","alt","i"]), tooltip: "Open the Copilot Chat view" },
-    { label: "Quick Chat", icon: ["fas","bolt"], action: hk(["ctrl","shift","alt","l"]), tooltip: "Copilot quick chat" },
+    { label: "Accept Word", icon: ["fas","forward-step"], action: hk(["mod","right"]), tooltip: "Accept the next word of a suggestion" },
+    { label: "Quick Chat", icon: ["fas","bolt"], action: hk(["mod","shift","alt","l"]), tooltip: "Copilot quick chat (Ctrl+Shift+Alt+L)" },
+    { label: "Explain", icon: ["fas","circle-question"], action: { type: "copilot_explain", config: {} }, tooltip: "/explain - explain the selected code in Chat" },
+    { label: "Fix", icon: ["fas","screwdriver-wrench"], action: { type: "copilot_fix", config: {} }, tooltip: "/fix - fix the selected code or error" },
+    { label: "Tests", icon: ["fas","vial"], action: { type: "copilot_tests", config: {} }, tooltip: "/tests - generate tests" },
+    { label: "Document", icon: ["fas","file-lines"], action: { type: "copilot_doc", config: {} }, tooltip: "/doc - add documentation" },
+    { label: "New Chat", icon: ["fas","plus"], action: hk(["mod","n"]), tooltip: "New chat with the Chat view focused (Ctrl+N)" },
   ]},
   { id: "cline", name: "Cline", description: "Cline AI coding assistant shortcuts", icon: ["fas","terminal"], logo: "/logos/cline.png", color: "#7c3aed", buttons: [
-    { label: "Open Cline", icon: ["fas","sidebar"], action: hk(["ctrl","shift","p"]), tooltip: "Open Cline panel" },
-    { label: "New Task", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "New Cline task" },
+    { label: "Open Cline", icon: ["fas","sidebar"], action: hk(["mod","shift","p"]), tooltip: "Open Cline panel" },
+    { label: "New Task", icon: ["fas","plus"], action: hk(["mod","shift","n"]), tooltip: "New Cline task" },
     { label: "Approve", icon: ["fas","check"], action: hk(["enter"]), tooltip: "Approve action" },
     { label: "Reject", icon: ["fas","xmark"], action: hk(["escape"]), tooltip: "Reject action" },
-    { label: "Add to Cline", icon: ["fas","circle-plus"], action: hk(["ctrl","'"]), tooltip: "Add selection to Cline" },
+    { label: "Add to Cline", icon: ["fas","circle-plus"], action: hk(["mod","'"]), tooltip: "Add selection to Cline" },
     { label: "Terminal", icon: ["fas","terminal"], action: hk(["ctrl","`"]), tooltip: "Toggle terminal" },
-    { label: "Quick Open", icon: ["fas","magnifying-glass"], action: hk(["ctrl","p"]), tooltip: "Jump to a file" },
-    { label: "Save", icon: ["fas","floppy-disk"], action: hk(["ctrl","s"]), tooltip: "Save file" },
+    { label: "Quick Open", icon: ["fas","magnifying-glass"], action: hk(["mod","p"]), tooltip: "Jump to a file" },
+    { label: "Save", icon: ["fas","floppy-disk"], action: hk(["mod","s"]), tooltip: "Save file" },
     { label: "Docs", icon: ["fas","book-open"], action: url("https://docs.cline.bot"), tooltip: "Cline documentation" },
-    { label: "Settings", icon: ["fas","gear"], action: hk(["ctrl",","]), tooltip: "Open settings" },
+    { label: "Settings", icon: ["fas","gear"], action: hk(["mod",","]), tooltip: "Open settings" },
   ]},
   { id: "kilo-code", name: "Kilo Code", description: "Kilo Code AI assistant shortcuts", icon: ["fas","code"], logo: "/logos/kilocode.png", color: "#0ea5e9", buttons: [
-    { label: "Open Panel", icon: ["fas","sidebar"], action: hk(["ctrl","shift","k"]), tooltip: "Open Kilo Code" },
-    { label: "New Task", icon: ["fas","plus"], action: hk(["ctrl","shift","n"]), tooltip: "New task" },
-    { label: "Command Palette", icon: ["fas","terminal"], action: hk(["ctrl","shift","p"]), tooltip: "Command palette" },
+    { label: "Open Panel", icon: ["fas","sidebar"], action: hk(["mod","shift","k"]), tooltip: "Open Kilo Code" },
+    { label: "New Task", icon: ["fas","plus"], action: hk(["mod","shift","n"]), tooltip: "New task" },
+    { label: "Command Palette", icon: ["fas","terminal"], action: hk(["mod","shift","p"]), tooltip: "Command palette" },
     { label: "Terminal", icon: ["fas","terminal"], action: hk(["ctrl","`"]), tooltip: "Toggle terminal" },
-    { label: "Quick Open", icon: ["fas","magnifying-glass"], action: hk(["ctrl","p"]), tooltip: "Jump to a file" },
-    { label: "Save", icon: ["fas","floppy-disk"], action: hk(["ctrl","s"]), tooltip: "Save file" },
+    { label: "Quick Open", icon: ["fas","magnifying-glass"], action: hk(["mod","p"]), tooltip: "Jump to a file" },
+    { label: "Save", icon: ["fas","floppy-disk"], action: hk(["mod","s"]), tooltip: "Save file" },
     { label: "Docs", icon: ["fas","book-open"], action: url("https://kilo.ai/docs"), tooltip: "Kilo Code documentation" },
-    { label: "Settings", icon: ["fas","gear"], action: hk(["ctrl",","]), tooltip: "Open settings" },
+    { label: "Settings", icon: ["fas","gear"], action: hk(["mod",","]), tooltip: "Open settings" },
   ]},
   { id: "codex", name: "Codex", description: "OpenAI Codex CLI shortcuts", icon: ["fas","terminal"], logo: "/logos/codex-color.png", color: "#10a37f", buttons: [
+    { label: "Interrupt", icon: ["fas","hand"], action: { type: "codex_interrupt", config: {} }, tooltip: "Stop the current turn (Esc)" },
+    { label: "Continue", icon: ["fas","forward"], action: { type: "codex_prompt", config: { text: "continue" } }, tooltip: "Type \"continue\" and send it" },
+    { label: "Submit", icon: ["fas","paper-plane"], action: { type: "codex_submit", config: {} }, tooltip: "Send the typed prompt (Enter)" },
+    { label: "Approve", icon: ["fas","circle-check"], action: { type: "codex_approve", config: {} }, tooltip: "Approve the pending command (y)" },
+    { label: "Deny", icon: ["fas","xmark"], action: { type: "codex_deny", config: {} }, tooltip: "Deny the pending command (n)" },
+    { label: "Approvals", icon: ["fas","shield"], action: { type: "codex_approvals", config: {} }, tooltip: "/approvals - change the approval mode" },
+    { label: "Compact", icon: ["fas","compress"], action: { type: "codex_compact", config: {} }, tooltip: "/compact - free up context" },
     { label: "Start Codex", icon: ["fas","play"], action: cmd("codex"), tooltip: "Start Codex CLI" },
     { label: "Full Auto", icon: ["fas","bolt"], action: cmd("codex --approval-mode full-auto"), tooltip: "Full auto mode" },
     { label: "Quiet Mode", icon: ["fas","volume-xmark"], action: cmd("codex -q"), tooltip: "Quiet mode" },
