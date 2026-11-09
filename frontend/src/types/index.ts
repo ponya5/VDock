@@ -1,3 +1,4 @@
+import type { AgentCategoryId } from '@/utils/agentCategories'
 // Type definitions for VDock
 
 export type ActionType = 
@@ -196,6 +197,8 @@ export interface Button {
   rules?: ButtonRule[]
   /** DL-165: ask "Are you sure?" before running. 'default' follows Settings -> Security. */
   confirm?: 'default' | 'always' | 'never'
+  /** DL-166: agent-scene category override; absent or '' = auto-resolve from the action (utils/agentCategories). */
+  category?: AgentCategoryId | ''
 }
 
 export interface GridConfig {

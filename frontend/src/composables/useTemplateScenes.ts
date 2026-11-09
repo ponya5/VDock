@@ -13,7 +13,8 @@ export function addTemplateScene(template: AppTemplate): Scene | null {
     position: { row: Math.floor(index / 5), col: index % 5 }, size: { rows: 1, cols: 1 },
     style: { backgroundColor: b.style?.backgroundColor ?? template.color, textColor: b.style?.textColor ?? '#ffffff' },
     tooltip: b.tooltip ?? b.label, enabled: true,
-    secondary_label: templateShortcut(b) || undefined
+    secondary_label: templateShortcut(b) || undefined,
+    category: b.category
   }))
   const scene: Scene = {
     id: `scene-${Date.now()}-${template.id}`, name: template.name, icon: template.icon[1] ?? 'layer-group',
