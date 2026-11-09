@@ -222,6 +222,30 @@ export const MUSIC_SCENES: Partial<Record<Mood, readonly SceneId[]>> = {
 }
 export const MUSIC_ROTATE_MS = 35_000
 
+/** DL-165: face while music plays, by detected feel — hype/calm loudness win over tempo. Missing key = keep the mood's baseline. */
+export const MUSIC_FEEL: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast' | 'hype' | 'calm', ExpressionId>>>> = {
+  funny: { slow: 'dreamy', mid: 'grooving', fast: 'excited', hype: 'starstruck', calm: 'relaxed' },
+  sweet: { slow: 'dreamy', mid: 'grooving', fast: 'joy', hype: 'excited', calm: 'content' },
+  sarcastic: { slow: 'smug', mid: 'smug', fast: 'smirk', hype: 'smirk' },
+  grumpy: { fast: 'unimpressed', hype: 'smirk' },
+}
+/** DL-165: what Wingy wears while music plays, by feel - layers combine (ears + face + head). */
+export const MUSIC_OUTFIT: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast' | 'hype', readonly AccessoryId[]>>>> = {
+  funny: { slow: ['headphones', 'beret'], mid: ['headphones', 'cap'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'party-hat'] },
+  sweet: { slow: ['headphones', 'beret'], mid: ['headphones'], fast: ['headphones', 'cap'], hype: ['headphones', 'heart-glasses', 'crown'] },
+  sarcastic: { slow: ['headphones', 'monocle'], mid: ['headphones'], fast: ['headphones', 'sunglasses'], hype: ['headphones', 'sunglasses', 'top-hat'] },
+  grumpy: { fast: ['headphones', 'cap'], hype: ['headphones', 'cap'] },
+}
+/** Minimum time a music face / scene / outfit stays up before the feel may change it again. */
+export const MUSIC_DWELL_MS = 20_000
+
+/** DL-165: scene by detected tempo (beats the timed rotation while a tempo is locked). */
+export const TEMPO_SCENES: Partial<Record<Mood, Partial<Record<'slow' | 'mid' | 'fast', SceneId>>>> = {
+  funny: { slow: 'karaoke', mid: 'jamming', fast: 'dj' },
+  sweet: { slow: 'karaoke', mid: 'jamming', fast: 'dj' },
+  sarcastic: { slow: 'jamming', mid: 'jamming', fast: 'dj' },
+}
+
 export const IDLE_GAGS: Record<Mood, SequenceId[]> = {
   funny: ['look-around', 'hiccup', 'sneeze', 'peek-a-boo', 'giggle', 'wink', 'cheeky-wink', 'hello-hand', 'cover-eyes', 'inspect', 'phone-call', 'take-notes', 'relax', 'sneaker-walk', 'hand-on-chin', 'gasp-wink', 'evil-plan', 'bored-drum', 'idle-nod', 'typing-frenzy', 'coffee-sip', 'thumbs-up-pop', 'big-stretch', 'chat-typing', 'reading-book', 'dj-scratch', 'sing-along'],
   grumpy: ['sigh', 'head-shake', 'look-around', 'rage-fit', 'hand-on-chin', 'bored-drum', 'facepalm-sigh', 'idle-nod'],

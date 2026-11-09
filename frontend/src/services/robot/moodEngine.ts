@@ -10,8 +10,9 @@ import type { SequenceId } from './sequences'
 import type { AccessoryId, IconId, PropId } from './robotArt'
 import type { SceneId } from './scenes'
 import type { PointerGesture } from './pointerSense'
+import type { Tempo, Vibe } from './beatTracker'
 import {
-  REACTIONS, BASELINES, BASELINE_SCENE, MUSIC_SCENES, MUSIC_ROTATE_MS, IDLE_GAGS, PRIORITY, COOLDOWN_MS, EVENT_GROUP, ICON_MS,
+  REACTIONS, BASELINES, BASELINE_SCENE, MUSIC_SCENES, MUSIC_ROTATE_MS, MUSIC_FEEL, TEMPO_SCENES, MUSIC_OUTFIT, MUSIC_DWELL_MS, IDLE_GAGS, PRIORITY, COOLDOWN_MS, EVENT_GROUP, ICON_MS,
   type Mood, type RobotEvent, type BaselineState, type Reaction,
 } from './reactions'
 import { QUIPS } from './quips'
@@ -21,6 +22,9 @@ export type WeatherKind = 'sunny' | 'rain' | 'snow' | 'cold' | 'other'
 export interface RobotSignals {
   agent: 'idle' | 'working' | 'permission' | 'ready'
   musicPlaying: boolean
+  /** DL-165: detected tempo bucket / loudness feel of the music (absent = unknown). */
+  tempo?: Tempo | null
+  vibe?: Vibe
   cpuPercent: number | null
   memPercent?: number | null
   tempC?: number | null
@@ -36,7 +40,7 @@ export interface RobotSignals {
 export type RobotCommand =
   | { type: 'expr'; id: ExpressionId } | { type: 'seq'; id: SequenceId }
   | { type: 'icon'; id: IconId | null } | { type: 'prop'; id: PropId }
-  | { type: 'accessory'; id: AccessoryId | null } | { type: 'scene'; id: SceneId | null } | { type: 'quip'; text: string }
+  | { type: 'accessory'; id: AccessoryId | null; ids?: AccessoryId[] } | { type: 'scene'; id: SceneId | null } | { type: 'quip'; text: string }
 type DayStorage = Pick<Storage, 'getItem' | 'setItem'>
 export interface EngineOptions {
   mood: Mood; quips: boolean; reactTo: RobotReactTo; rand?: () => number
@@ -81,7 +85,8 @@ export class MoodEngine {
   private gagUntil = 0
   private baseline: BaselineState = 'idle'
   private shownBaseExpr: ExpressionId | null = null
-  private shownBaseAcc: AccessoryId | null | undefined = undefined
+  private shownBaseAcc: string | undefined = undefined
+  private feelAt = -Infinity
   private shownBaseScene: SceneId | null | undefined = undefined
   private lastQuipAt = -Infinity
   private lastQuip = ''
@@ -179,11 +184,21 @@ export class MoodEngine {
     }
     if (!this.reaction) {
       if (this.gagUntil > 0 && now >= this.gagUntil) { this.gagUntil = 0; this.shownBaseExpr = null }
-      const expr = this.baselineExpr(s, now)
-      const acc = this.baselineAccessory(s, now)
+      let expr = this.baselineExpr(s, now)
+      let outfit = this.baselineOutfit(s, now)
+      let scene = this.baselineScene(s, now)
+      // DL-165: while music plays, a new feel (tempo / loudness) may not swap face, scene and outfit more often than MUSIC_DWELL_MS
+      if (this.musicFeelActive(s) && this.shownBaseExpr !== null && this.shownBaseAcc !== undefined && this.shownBaseScene !== undefined) {
+        const changed = expr !== this.shownBaseExpr || outfit.join(',') !== this.shownBaseAcc || scene !== this.shownBaseScene
+        if (changed && now - this.feelAt < MUSIC_DWELL_MS) {
+          expr = this.shownBaseExpr
+          outfit = this.shownBaseAcc ? (this.shownBaseAcc.split(',') as AccessoryId[]) : []
+          scene = this.shownBaseScene
+        } else if (changed) this.feelAt = now
+      }
       if (expr !== this.shownBaseExpr) { out.push({ type: 'expr', id: expr }); this.shownBaseExpr = expr }
-      if (acc !== this.shownBaseAcc) { out.push({ type: 'accessory', id: acc }); this.shownBaseAcc = acc }
-      const scene = this.baselineScene(s, now)
+      const outfitKey = outfit.join(',')
+      if (outfitKey !== this.shownBaseAcc) { out.push({ type: 'accessory', id: outfit[0] ?? null, ids: outfit }); this.shownBaseAcc = outfitKey }
       if (this.gagUntil === 0 && scene !== this.shownBaseScene) { out.push({ type: 'scene', id: scene }); this.shownBaseScene = scene }
       if (this.baseline === 'idle') {
         if (this.nextGagAt === 0) this.nextGagAt = now + 20_000 + this.opts.rand() * 25_000
@@ -354,6 +369,14 @@ export class MoodEngine {
       if (s.weather === 'rain') return 'cozy'
       if (s.weather === 'snow' || s.weather === 'cold') return 'shivering'
     }
+    if (this.musicFeelActive(s)) {
+      const feel = MUSIC_FEEL[this.opts.mood]
+      if (feel) {
+        if (s.vibe === 'hype' && feel.hype) return feel.hype
+        if (s.vibe === 'calm' && feel.calm) return feel.calm
+        if (s.tempo && feel[s.tempo]) return feel[s.tempo]!
+      }
+    }
     return BASELINES[this.opts.mood][this.baseline]
   }
 
@@ -367,10 +390,29 @@ export class MoodEngine {
       if (s.weather === 'sunny' && s.isDay) return 'weather-sunny'
     }
     if (this.baseline === 'music') {
+      const byTempo = s.tempo ? TEMPO_SCENES[this.opts.mood]?.[s.tempo] : undefined
+      if (byTempo) return byTempo
       const cycle = MUSIC_SCENES[this.opts.mood]
       if (cycle?.length) return cycle[Math.floor(_now / MUSIC_ROTATE_MS) % cycle.length]
     }
     return BASELINE_SCENE[this.opts.mood][this.baseline] ?? null
+  }
+
+  private musicFeelActive(s: RobotSignals): boolean {
+    return this.opts.reactTo.music && s.musicPlaying && (this.baseline === 'music' || this.baseline === 'working')
+  }
+
+  /** Everything worn right now: while music plays (even while the agent works) the feel picks a combined outfit. */
+  private baselineOutfit(s: RobotSignals, now: number): AccessoryId[] {
+    if (this.musicFeelActive(s)) {
+      const table = MUSIC_OUTFIT[this.opts.mood]
+      const key = s.vibe === 'hype' ? 'hype' : s.tempo ?? 'mid'
+      const set = table?.[key] ?? table?.mid
+      if (set) return [...set]
+      return ['headphones']
+    }
+    const a = this.baselineAccessory(s, now)
+    return a ? [a] : []
   }
 
   private baselineAccessory(s: RobotSignals, now: number): AccessoryId | null {

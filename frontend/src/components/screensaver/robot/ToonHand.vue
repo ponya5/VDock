@@ -48,7 +48,7 @@
     <!-- Knuckle & palm crease lines -->
     <path :d="dynamicLines" fill="none" stroke="#fff" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" />
     <!-- Dynamic finger-tap / key-strike / drum motion arcs -->
-    <path v-if="tap || kind === 'typing' || kind === 'drum'" :d="curlPath" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" />
+    <path v-if="tap || kind === 'drum'" :d="curlPath" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" />
     <path v-if="strikeSparks" :d="strikeSparks" fill="none" stroke="#6cc7ff" stroke-width="1.7" stroke-linecap="round" opacity="0.85" />
   </g>
 </template>

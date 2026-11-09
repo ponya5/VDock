@@ -5,10 +5,6 @@
     <!-- typing at the laptop (upgraded with dual articulated typing hands + screen glow) -->
     <g v-if="scene === 'typing'" :transform="`translate(${f(-(1 - u) * 130)} 0)`">
       <rect x="-22" y="130" width="136" height="14" rx="2" fill="#a85f43" stroke-width="1.6" />
-      <!-- Back hand typing on far side of keyboard -->
-      <g :transform="`translate(74 ${f(103 + Math.cos(t / 1000 * 13) * 1.4)}) scale(0.88)`">
-        <ToonHand kind="typing" :t="t" :phase="1.8" tap />
-      </g>
       <!-- Laptop lid + illuminated screen -->
       <path d="M-8 64 L46 56 L58 116 L2 122 Z" fill="#7d7d7d" />
       <path d="M-4 68 L43 61 L53 111 L5 117 Z" fill="#14204a" stroke-width="1" opacity="0.9" />
@@ -21,19 +17,18 @@
       <!-- Laptop base + animated keys -->
       <path d="M-8 118 H72 V126 H-8 Z" fill="#9a9a9a" stroke-width="1.8" />
       <path d="M38 121 h6 M48 121 h6 M58 121 h6" stroke-width="1.5" />
-      <!-- Foreground articulated hand typing -->
-      <g :transform="`translate(58 ${f(108 + Math.sin(t / 1000 * 13) * 1.6)})`">
-        <ToonHand kind="typing" :t="t" :phase="0" tap />
+      <!-- DL-165: exactly two hands, side by side on the keys, alternating strokes (was a pile of overlapping hands) -->
+      <g :transform="`translate(24 ${f(104 + Math.sin(t / 1000 * 9) * 1.5)}) scale(0.74 -0.74)`">
+        <ToonHand kind="typing" :t="t" :phase="0" />
+      </g>
+      <g :transform="`translate(58 ${f(104 + Math.sin(t / 1000 * 9 + Math.PI) * 1.5)}) scale(0.74 -0.74)`">
+        <ToonHand kind="typing" :t="t" :phase="3.1" />
       </g>
     </g>
 
     <!-- typing-frenzy: high-speed furious coding with flying code sparks + vibrating mug -->
     <g v-else-if="scene === 'typing-frenzy'" :transform="`translate(${f(-(1 - u) * 130)} 0)`">
       <rect x="-22" y="130" width="244" height="14" rx="2" fill="#a85f43" stroke-width="1.6" />
-      <!-- Back hand blurring across keys -->
-      <g :transform="`translate(${f(76 + Math.sin(t / 55) * 3)} ${f(101 + Math.cos(t / 45) * 2.5)}) scale(0.92)`">
-        <ToonHand kind="typing" :t="t" :phase="2.1" fast tap />
-      </g>
       <!-- Laptop shaking slightly from intense keystrokes -->
       <g :transform="`translate(${f(Math.sin(t / 40) * 0.9)} ${f(Math.cos(t / 35) * 0.7)})`">
         <path d="M-8 62 L48 54 L60 116 L2 122 Z" fill="#5b6485" />
@@ -44,9 +39,12 @@
         <path :d="`M9 98 L${f(22 + Math.abs(Math.cos(t / 130 + 2)) * 22)} 95`" stroke="#ff6fa8" stroke-width="2.6" />
         <path d="M-8 118 H76 V126 H-8 Z" fill="#9a9a9a" stroke-width="1.8" />
       </g>
-      <!-- Foreground hand rapidly striking keys -->
-      <g :transform="`translate(${f(56 + Math.cos(t / 50) * 3.5)} ${f(107 + Math.sin(t / 42) * 2.8)})`">
-        <ToonHand kind="typing" :t="t" :phase="0" fast tap />
+      <!-- DL-165: two hands, one per half of the keyboard, hammering in turn -->
+      <g :transform="`translate(24 ${f(104 + Math.sin(t / 45) * 2.4)}) scale(0.74 -0.74)`">
+        <ToonHand kind="typing" :t="t" :phase="0" fast />
+      </g>
+      <g :transform="`translate(58 ${f(104 + Math.sin(t / 45 + Math.PI) * 2.4)}) scale(0.74 -0.74)`">
+        <ToonHand kind="typing" :t="t" :phase="3.1" fast />
       </g>
       <!-- Flying keystroke sparks & code brackets -->
       <g :opacity="0.65 + 0.35 * Math.abs(Math.sin(t / 90))">

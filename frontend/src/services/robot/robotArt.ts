@@ -17,6 +17,20 @@ const line = (d: string, stroke: string = W, width = 4): ArtEl =>
 const shape = (d: string, fill: string): ArtEl => ({ tag: 'path', attrs: { d, fill } })
 const dot = (cx: number, cy: number, r: number, fill: string = W): ArtEl => ({ tag: 'circle', attrs: { cx, cy, r, fill } })
 
+/** Soft dark overlay for the shaded side / underside of a hat, and a white gloss streak (DL-165). */
+const shade = (d: string, o = 0.28): ArtEl => ({ tag: 'path', attrs: { d, fill: '#000', opacity: o } })
+const gloss = (d: string, o = 0.4, w = 3): ArtEl => ({ tag: 'path', attrs: { d, fill: 'none', stroke: W, 'stroke-width': w, 'stroke-linecap': 'round', opacity: o } })
+const grad = (d: string, id: string, width = 3): ArtEl =>
+  ({ tag: 'path', attrs: { d, fill: `url(#rb-${id})`, stroke: W, 'stroke-width': width, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' } })
+const gellipse = (cx: number, cy: number, rx: number, ry: number, id: string, width = 3): ArtEl =>
+  ({ tag: 'ellipse', attrs: { cx, cy, rx, ry, fill: `url(#rb-${id})`, stroke: W, 'stroke-width': width } })
+
+const solid = (d: string, fill: string, width = 3.5): ArtEl =>
+  ({ tag: 'path', attrs: { d, fill, stroke: W, 'stroke-width': width, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' } })
+/** The HEART outline placed at (x,y) and scaled - baked into the path so no transform attribute is needed. */
+const heartAt = (x: number, y: number, k: number) =>
+  `M${x} ${y + 12 * k} C${x - 18 * k} ${y} ${x - 14 * k} ${y - 14 * k} ${x - 6 * k} ${y - 14 * k} C${x - 2 * k} ${y - 14 * k} ${x} ${y - 10 * k} ${x} ${y - 8 * k} C${x} ${y - 10 * k} ${x + 2 * k} ${y - 14 * k} ${x + 6 * k} ${y - 14 * k} C${x + 14 * k} ${y - 14 * k} ${x + 18 * k} ${y} ${x} ${y + 12 * k} Z`
+
 const HEART = 'M0 12 C-18 0 -14 -14 -6 -14 C-2 -14 0 -10 0 -8 C0 -10 2 -14 6 -14 C14 -14 18 0 0 12 Z'
 const DROP = 'M0 -10 C6 -2 8 4 0 8 C-8 4 -6 -2 0 -10 Z'
 const STAR5 = 'M0 -14 L4 -4 L14 -4 L6 3 L9 13 L0 7 L-9 13 L-6 3 L-14 -4 L-4 -4 Z'
@@ -75,6 +89,10 @@ export const GRADIENTS: readonly GradientDef[] = [
   { id: 'rb-red', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#ff7a7a'], [1, '#e02a2a']] },
   { id: 'rb-blue', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#bfe6ff'], [1, '#3f9bff']] },
   { id: 'rb-sun', x1: 0.2, y1: 0.2, x2: 0.8, y2: 0.8, stops: [[0, '#fff3a0'], [1, '#ff9a4d']] },
+  { id: 'rb-hat-purple', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#b58cff'], [1, '#4b2bb8']] },
+  { id: 'rb-hat-tan', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#f1c98a'], [1, '#a8692f']] },
+  { id: 'rb-hat-navy', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#7f9bff'], [1, '#2a3a9e']] },
+  { id: 'rb-hat-green', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#8be39a'], [1, '#2f9e5a']] },
   { id: 'rb-ice', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#e6f6ff'], [1, '#6cc7ff']] },
 ]
 const G = (id: string) => `url(#rb-${id})`
@@ -257,13 +275,91 @@ export const ACCESSORIES = {
     ],
   },
   sunglasses: { els: [{ tag: 'path', attrs: { d: 'M50 48 H94 V64 Q94 76 82 76 H62 Q50 76 50 64 Z M106 48 H150 V64 Q150 76 138 76 H118 Q106 76 106 64 Z', fill: '#000', stroke: W, 'stroke-width': 4 } }, line('M94 54 H106', W, 4), line('M56 54 L64 66 M112 54 L120 66', COLORS.blue, 2.2)] },
-  'party-hat': { els: [line('M100 -16 L84 24 H116 Z', W, 4), line('M92 4 L108 0 M88 14 L112 10', COLORS.pink, 3), dot(100, -18, 4, COLORS.yellow)] },
-  'wizard-hat': { els: [line('M62 28 H138 M76 28 L104 -26 L124 28', W, 4), shape(STAR4(104, 6, 0.7), COLORS.yellow)] },
-  nightcap: { els: [line('M70 30 Q100 -10 142 18 L150 34 M70 30 H132', W, 4), dot(150, 37, 5)] },
+  'party-hat': { els: [
+    gellipse(100, -22, 6.5, 6.5, 'gold', 2.2),
+    grad('M100 -18 L75 28 Q100 35 125 28 Z', 'heart'),
+    shade('M100 -18 L125 28 Q113 32 100 32 Z', 0.26),
+    line('M91 6 Q100 10 109 6', COLORS.yellow, 3.5), line('M84 18 Q100 24 116 18', COLORS.blue, 3.5),
+    dot(98, -4, 2, COLORS.yellow), gloss('M92 -2 L84 18', 0.45, 2.6),
+  ] },
+  'wizard-hat': { els: [
+    gellipse(100, 30, 50, 9, 'hat-purple', 3),
+    shade('M52 33 Q100 46 148 33 Q100 41 52 33 Z', 0.35),
+    grad('M70 28 Q82 6 94 -22 Q100 -34 110 -22 Q126 6 132 28 Q100 36 70 28 Z', 'hat-purple', 3),
+    shade('M106 -24 Q126 6 132 28 Q116 33 104 33 Z', 0.3),
+    grad('M72 21 Q100 29 130 21 L132 28 Q100 36 70 28 Z', 'gold', 2.2),
+    shape(STAR4(98, 6, 0.8), COLORS.yellow), shape(STAR4(116, -6, 0.45), COLORS.yellow), dot(88, 12, 1.6, COLORS.blue),
+    gloss('M86 4 Q92 -8 97 -20', 0.4, 3),
+  ] },
+  nightcap: { els: [
+    grad('M66 30 Q84 -14 128 4 Q150 14 154 38 Q110 24 66 30 Z', 'hat-navy', 3),
+    shade('M104 8 Q150 14 154 38 Q130 28 104 28 Z', 0.28),
+    grad('M64 26 Q110 18 152 32 L154 41 Q110 28 64 36 Z', 'skin', 2.5),
+    dot(96, 6, 2, COLORS.yellow), shape(STAR4(116, 12, 0.5), COLORS.yellow), dot(84, 14, 1.6, COLORS.pink),
+    gellipse(155, 42, 7, 7, 'skin', 2.2),
+    gloss('M82 4 Q92 -4 106 -2', 0.4, 2.6),
+  ] },
   scarf: { els: [line('M64 122 Q100 136 136 122', COLORS.pink, 7), line('M122 128 L126 146', COLORS.pink, 6)] },
-  'chef-hat': { els: [line('M76 28 H124 V12 Q134 12 134 2 Q134 -10 120 -8 Q114 -18 100 -16 Q86 -18 80 -8 Q66 -10 66 2 Q66 12 76 12 Z', W, 4)] },
+  'chef-hat': { els: [
+    grad('M76 28 H124 V14 Q136 14 136 2 Q136 -10 121 -8 Q115 -20 100 -18 Q85 -20 79 -8 Q64 -10 64 2 Q64 14 76 14 Z', 'skin', 3),
+    shade('M108 -17 Q115 -20 121 -8 Q136 -10 136 2 Q136 14 124 14 V28 H112 Z', 0.16),
+    grad('M76 14 H124 V30 H76 Z', 'metal', 2.5),
+    line('M88 16 V28 M100 16 V28 M112 16 V28', '#fff', 1.8),
+    gloss('M76 -4 Q82 -14 92 -14', 0.5, 2.8),
+  ] },
+  // DL-165: more wardrobe - hats, glasses, a bow tie
+  cap: { els: [
+    grad('M62 30 Q62 -10 102 -10 Q142 -10 142 30 Z', 'red', 3),
+    shade('M102 -10 Q142 -10 142 30 H110 Q116 8 102 -10 Z', 0.3),
+    line('M102 -8 Q92 10 90 28', W, 1.8), line('M102 -8 Q118 10 118 28', W, 1.8),
+    grad('M136 24 Q170 20 184 34 Q160 42 134 34 Z', 'red', 3),
+    shade('M136 32 Q160 38 184 34 Q160 42 134 34 Z', 0.4),
+    gellipse(102, -10, 4.5, 4.5, 'gold', 2),
+    gloss('M76 8 Q84 -2 96 -5', 0.45, 3),
+  ] },
+  'cowboy-hat': { els: [
+    shade('M36 36 Q100 48 164 36 Q100 52 36 36 Z', 0.35),
+    grad('M36 30 Q66 44 100 38 Q134 44 164 30 Q154 16 138 22 L134 2 Q100 -10 66 2 L62 22 Q46 16 36 30 Z', 'hat-tan', 3),
+    shade('M100 38 Q134 44 164 30 Q154 16 138 22 L134 2 Q120 -2 108 -4 Z', 0.26),
+    line('M63 16 Q100 25 137 16', COLORS.red, 5), dot(100, 21, 3.4, COLORS.yellow),
+    gloss('M70 6 Q82 -2 98 -3', 0.4, 3),
+  ] },
+  crown: { els: [
+    grad('M62 28 L56 -8 L80 10 L100 -14 L120 10 L144 -8 L138 28 Z', 'gold', 3),
+    shade('M100 -14 L120 10 L144 -8 L138 28 H100 Z', 0.22),
+    grad('M62 22 H138 V30 H62 Z', 'gold', 2.2),
+    gellipse(56, -10, 4.2, 4.2, 'red', 1.8), gellipse(100, -17, 4.2, 4.2, 'heart', 1.8), gellipse(144, -10, 4.2, 4.2, 'red', 1.8),
+    gellipse(100, 14, 5.5, 6.5, 'heart', 2), gellipse(78, 20, 3.2, 3.2, 'blue', 1.6), gellipse(122, 20, 3.2, 3.2, 'blue', 1.6),
+    gloss('M72 12 L68 0', 0.55, 2.4),
+  ] },
+  beret: { els: [
+    grad('M56 28 Q50 -8 100 -10 Q152 -8 146 26 Q100 38 56 28 Z', 'heart', 3),
+    shade('M100 -10 Q152 -8 146 26 Q124 34 100 34 Z', 0.26),
+    line('M100 -10 L105 -20', W, 3.5),
+    gloss('M70 6 Q78 -2 92 -3', 0.45, 3),
+  ] },
+  'top-hat': { els: [
+    shade('M48 34 Q100 44 152 34 Q100 48 48 34 Z', 0.35),
+    gellipse(100, 29, 52, 7, 'metal-dark', 3),
+    grad('M70 28 L74 -22 H126 L130 28 Z', 'metal-dark', 3),
+    shade('M104 -22 H126 L130 28 H104 Z', 0.3),
+    gellipse(100, -22, 26, 5, 'metal-dark', 3),
+    grad('M71 14 H129 V22 H71 Z', 'heart', 2),
+    gloss('M82 -16 L80 8', 0.4, 3),
+  ] },
+  'heart-glasses': { els: [solid(heartAt(72, 62, 1.9), COLORS.pink, 2.5), solid(heartAt(128, 62, 1.9), COLORS.pink, 2.5), line('M90 56 Q100 50 110 56', W, 3.5)] },
+  monocle: { els: [{ tag: 'circle', attrs: { cx: 132, cy: 60, r: 18, fill: 'none', stroke: COLORS.yellow, 'stroke-width': 4 } }, line('M148 70 Q162 92 150 120', W, 2.2)] },
+  bowtie: { els: [solid('M100 128 L74 116 L74 140 Z', COLORS.red, 3), solid('M100 128 L126 116 L126 140 Z', COLORS.red, 3), dot(100, 128, 6, COLORS.orange)] },
 } satisfies Record<string, ArtDef>
 export type AccessoryId = keyof typeof ACCESSORIES
+/** Accessories sit on independent layers so an outfit can combine them (headphones + sunglasses + a hat). */
+export type AccessoryLayer = 'head' | 'face' | 'ears' | 'neck'
+export const ACCESSORY_LAYERS: readonly AccessoryLayer[] = ['ears', 'head', 'face', 'neck']
+export const ACCESSORY_LAYER: Record<AccessoryId, AccessoryLayer> = {
+  headphones: 'ears', sunglasses: 'face', 'heart-glasses': 'face', monocle: 'face', scarf: 'neck', bowtie: 'neck',
+  'party-hat': 'head', 'wizard-hat': 'head', nightcap: 'head', 'chef-hat': 'head', cap: 'head', 'cowboy-hat': 'head',
+  crown: 'head', beret: 'head', 'top-hat': 'head',
+}
 
 const f2 = (n: number) => (Math.round(n * 100) / 100).toString()
 

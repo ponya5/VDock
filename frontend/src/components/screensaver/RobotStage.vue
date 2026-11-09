@@ -46,7 +46,7 @@ const rootEl = ref<HTMLElement | null>(null)
 const faceCmp = ref<{ $el: SVGSVGElement } | null>(null)
 const animator = new FaceAnimator()
 const sense = new PointerSense()
-const { signals, audioLevel, start: startSignals, stop: stopSignals } = useRobotSignals()
+const { signals, audioLevel, beat, start: startSignals, stop: stopSignals } = useRobotSignals()
 const engine = new MoodEngine({
   mood: resolveMood(settings.robotMood, localDay(new Date())),
   quips: settings.robotQuips,
@@ -67,6 +67,7 @@ function loop(ts: number): void {
   const dt = last < 0 ? 16.7 : ts - last
   last = ts
   animator.setBob(bobLevel.value)
+  animator.setBeat(settings.robotReactTo.music ? beat(ts) : null)
   animator.step(dt, ts)
   frame.value = animator.frame()
   raf = requestAnimationFrame(loop)
@@ -85,7 +86,7 @@ function apply(cmds: RobotCommand[]): void {
       case 'seq': animator.playSequence(c.id); break
       case 'icon': animator.setIcon(c.id); break
       case 'prop': animator.addProp(c.id); break
-      case 'accessory': animator.setAccessory(c.id); break
+      case 'accessory': if (c.ids) animator.setOutfit(c.ids); else animator.setAccessory(c.id); break
       case 'scene': animator.setScene(c.id); break
       case 'quip':
         quip.value = c.text

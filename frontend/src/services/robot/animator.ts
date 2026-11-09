@@ -10,7 +10,7 @@ import {
   type EyeKey, type EyeParams, type FaceKey, type FaceParams, type FaceScalars,
 } from './faceRig'
 import { resolveExpression, type ExpressionId, type EyeGlyph, type MouthGlyph } from './expressions'
-import { PROPS, type AccessoryId, type IconId, type PropId } from './robotArt'
+import { PROPS, ACCESSORY_LAYER, ACCESSORY_LAYERS, type AccessoryId, type AccessoryLayer, type IconId, type PropId } from './robotArt'
 import { SequencePlayer, type SequenceId } from './sequences'
 import { SCENES, type SceneDef, type SceneId } from './scenes'
 
@@ -27,6 +27,8 @@ export interface FaceFrame {
   faceOpacity: number
   icon: GlyphFrame<IconId>
   accessory: GlyphFrame<AccessoryId> & { dy: number }
+  /** DL-165: every worn accessory (one per layer), for rendering a combined outfit. */
+  accessories: Array<GlyphFrame<AccessoryId> & { dy: number; layer: AccessoryLayer }>
   /** Hands scene (DL-155): p is the springy slide-in progress. */
   scene: GlyphFrame<SceneId> & { p: number }
   props: PropFrame[]
@@ -76,7 +78,10 @@ export class FaceAnimator {
   private readonly glyphR = new Slot<EyeGlyph>()
   private readonly mouthGlyphSlot = new Slot<MouthGlyph>()
   private readonly iconSlot = new Slot<IconId>()
-  private readonly accessorySlot = new Slot<AccessoryId>(SPRINGS.bouncy)
+  private readonly accSlots: Record<AccessoryLayer, Slot<AccessoryId>> = {
+    head: new Slot<AccessoryId>(SPRINGS.bouncy), face: new Slot<AccessoryId>(SPRINGS.bouncy),
+    ears: new Slot<AccessoryId>(SPRINGS.bouncy), neck: new Slot<AccessoryId>(SPRINGS.bouncy),
+  }
   private readonly sceneSlot = new Slot<SceneId>(SPRINGS.bouncy)
   private readonly faceVis = createSpring(1, SPRINGS.fade)
   private readonly mouthVis = createSpring(1, SPRINGS.fade)
@@ -91,6 +96,8 @@ export class FaceAnimator {
   private blinkStart = -1
   private blinkSecond = false
   private bob = 0
+  private beat: { pulse: number; beatIndex: number; confidence: number; energy: number } | null = null
+  private beatTilt = 0
   private reduced = false
   private props: Array<{ key: number; id: PropId; born: number }> = []
   private propSeq = 0
@@ -126,8 +133,16 @@ export class FaceAnimator {
     this.look = look ? { x: clamp(look.x, -1, 1), y: clamp(look.y, -1, 1) } : null
   }
   setBob(level: number): void { this.bob = clamp(level, 0, 1) }
+  /** DL-165: beat-locked head motion (null = no beat info, fall back to the loudness bob). */
+  setBeat(b: { pulse: number; beatIndex: number; confidence: number; energy: number } | null): void { this.beat = b }
+  private get beating(): boolean { return !this.reduced && this.beat !== null && this.beat.confidence >= 0.5 }
   setIcon(id: IconId | null): void { this.iconSlot.desired = id }
-  setAccessory(id: AccessoryId | null): void { this.accessorySlot.desired = id }
+  setAccessory(id: AccessoryId | null): void { this.setOutfit(id ? [id] : []) }
+  /** Wear exactly these accessories (at most one per layer); everything else is taken off. */
+  setOutfit(ids: readonly AccessoryId[]): void {
+    for (const l of ACCESSORY_LAYERS) this.accSlots[l].desired = null
+    for (const id of ids) this.accSlots[ACCESSORY_LAYER[id]].desired = id
+  }
   setScene(id: SceneId | null): void { this.sceneSlot.desired = id }
   addProp(id: PropId): void { this.props.push({ key: ++this.propSeq, id, born: this.now }) }
   playSequence(id: SequenceId): void { this.player.start(id, this.now) }
@@ -147,6 +162,10 @@ export class FaceAnimator {
       if (s.scene !== undefined) this.setScene(s.scene)
     }
     if (this.player.current && !this.player.active(now)) { this.player.stop(); this.nudge = {} }
+
+    // beat sway: lean to alternating sides on successive beats, eased so it never snaps
+    const bt = this.beating ? (this.beat!.beatIndex % 2 ? 1 : -1) * (2.5 + 3 * this.beat!.energy) : 0
+    this.beatTilt += (bt - this.beatTilt) * (1 - Math.exp(-Math.max(1, dtMs) / 110))
 
     // idle saccades
     if (now >= this.nextSaccadeAt) {
@@ -177,7 +196,7 @@ export class FaceAnimator {
     setEye(this.eyeR, this.base.eyeR, glyphOn(this.glyphR))
     this.mouthVis.target = this.mouthGlyphSlot.busy ? 0 : 1
     stepSpring(this.mouthVis, dtMs)
-    for (const s of [this.glyphL, this.glyphR, this.mouthGlyphSlot, this.iconSlot, this.accessorySlot, this.sceneSlot]) s.step(dtMs)
+    for (const s of [this.glyphL, this.glyphR, this.mouthGlyphSlot, this.iconSlot, ...Object.values(this.accSlots), this.sceneSlot]) s.step(dtMs)
     const sd = this.sceneSlot.desired
     this.faceVis.target = this.iconSlot.busy || (sd !== null && SCENES[sd].hideFace) ? 0 : 1
     stepSpring(this.faceVis, dtMs)
@@ -214,16 +233,26 @@ export class FaceAnimator {
     const breathe = (this.reduced ? 0.005 : 0.015) * Math.sin((2 * Math.PI * t) / 4000)
     const dx = this.reduced ? 0 : 3 * Math.sin((2 * Math.PI * t) / 7000)
     const dy = this.reduced ? 0 : 2 * Math.sin((2 * Math.PI * t) / 9000)
-    const bob = this.reduced ? 0 : -6 * this.bob * Math.abs(Math.sin((2 * Math.PI * t) / 450))
-    const bobTilt = this.reduced ? 0 : 4.5 * this.bob * Math.sin((2 * Math.PI * t) / 900)
+    const beating = this.beating
+    const bob = this.reduced ? 0
+      : beating ? -(4 + 5 * this.beat!.energy) * this.beat!.pulse
+        : -6 * this.bob * Math.abs(Math.sin((2 * Math.PI * t) / 450))
+    const bobTilt = this.reduced ? 0 : beating ? this.beatTilt : 4.5 * this.bob * Math.sin((2 * Math.PI * t) / 900)
     const sc = this.sceneSlot.frame()
     const sdef: SceneDef | null = sc.id ? SCENES[sc.id] : null
     const su = clamp(this.sceneSlot.spring.value, 0, 1)
     const lift = sdef ? sdef.lift * su : 0
     const sx = sdef ? (sdef.fx ?? 0) * su : 0
     const sy = sdef ? (sdef.fy ?? 0) * su : 0
-    const scale = face.scale * (1 + breathe) * (1 - 0.2 * lift + (sdef?.fs ?? 0) * su)
-    const acc = this.accessorySlot.frame()
+    const scale = face.scale * (1 + breathe + (beating ? 0.025 * this.beat!.pulse : 0)) * (1 - 0.2 * lift + (sdef?.fs ?? 0) * su)
+    const earsOn = this.accSlots.ears.shown !== null ? clamp(this.accSlots.ears.spring.value, 0, 1) : 0
+    const accessories = ACCESSORY_LAYERS.map(layer => {
+      const slot = this.accSlots[layer]
+      const fr = slot.frame()
+      // a hat rides higher when headphones are on so the band does not cut through it
+      return { ...fr, layer, dy: (1 - Math.max(0, Math.min(1.2, slot.spring.value))) * -30 - (layer === 'head' ? 10 * earsOn : 0) }
+    }).filter(a => a.id)
+    const first = accessories[0]
     return {
       eyeL: eyePath(eyeL, lx, ly, 'L'),
       eyeR: eyePath(eyeR, rx, ry, 'R'),
@@ -246,7 +275,8 @@ export class FaceAnimator {
       mouthGlyph: this.mouthGlyphSlot.frame(),
       faceOpacity: clamp(this.faceVis.value, 0, 1),
       icon: this.iconSlot.frame(),
-      accessory: { ...acc, dy: (1 - Math.max(0, Math.min(1.2, this.accessorySlot.spring.value))) * -30 },
+      accessory: first ? { id: first.id, opacity: first.opacity, scale: first.scale, dy: first.dy } : { ...this.accSlots.ears.frame(), dy: 0 },
+      accessories,
       scene: { ...sc, p: this.sceneSlot.spring.value },
       props: this.props.map(pr => ({ key: pr.key, id: pr.id, age: t - pr.born })),
       transform: `translate(${f2(100 + dx + sx)} ${f2(70 + dy + sy + face.bounce + bob - 20 * lift)}) rotate(${f2(face.tilt + bobTilt)}) scale(${f2(scale)}) translate(-100 -70)`,

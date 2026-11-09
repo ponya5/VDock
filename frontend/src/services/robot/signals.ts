@@ -4,7 +4,7 @@
  * notifications are socket-fed; system stats and weather use their own
  * composables, started only while the robot saver is up.
  */
-import { computed, onScopeDispose, ref, type ComputedRef } from 'vue'
+import { computed, onScopeDispose, ref, watch, type ComputedRef } from 'vue'
 import { agentStates } from '@/services/agentState'
 import { useNowPlaying } from '@/services/nowPlaying'
 import { useAudioSpectrum } from '@/services/audioSpectrum'
@@ -15,6 +15,7 @@ import { useUpdateStore } from '@/stores/update'
 import type { RobotMood } from '@/stores/settings'
 import type { RobotSignals, WeatherKind } from './moodEngine'
 import type { Mood } from './reactions'
+import { BeatTracker, type BeatInfo, type Tempo, type Vibe } from './beatTracker'
 
 const MOODS: Mood[] = ['funny', 'grumpy', 'sarcastic', 'sweet']
 const ACTIVE_UPDATE = ['downloading', 'installing', 'restarting']
@@ -74,7 +75,7 @@ export function localDay(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLevel: ComputedRef<number>; start(): void; stop(): void } {
+export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLevel: ComputedRef<number>; beat(now: number): BeatInfo; start(): void; stop(): void } {
   const nowPlaying = useNowPlaying()
   const spectrum = useAudioSpectrum() // attaches its socket listener itself
   const sys = useSystemStats()
@@ -85,11 +86,25 @@ export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLe
     notifications.notifications.reduce((m, n) => Math.max(m, new Date(n.timestamp).getTime()), 0) || null
   const notifCounter = new MonotonicCounter(newestNotification() ?? 0)
   const clock = ref(new Date())
+  // DL-165: beat tracking off the live spectrum; tempo/vibe buckets are reactive, the per-frame pulse is polled via beat()
+  const tracker = new BeatTracker()
+  const tempo = ref<Tempo | null>(null)
+  const vibe = ref<Vibe>('calm')
+  const stopBeatWatch = watch(() => spectrum.lastSeenAt, () => {
+    const now = performance.now()
+    if (!nowPlaying.playing.value || !spectrum.live) tracker.reset()
+    else tracker.feed(spectrum.bands, spectrum.level, now)
+    const b = tracker.read(now)
+    if (b.tempo !== tempo.value) tempo.value = b.tempo
+    if (b.vibe !== vibe.value) vibe.value = b.vibe
+  })
   let timer: ReturnType<typeof setInterval> | null = null
 
   const signals = computed<RobotSignals>(() => ({
     agent: aggregateAgent(Object.values(agentStates)),
     musicPlaying: nowPlaying.playing.value,
+    tempo: tempo.value,
+    vibe: vibe.value,
     cpuPercent: sys.stats.value?.cpuPercent ?? null,
     memPercent: sys.stats.value?.memPercent ?? null,
     tempC: sys.stats.value?.tempC ?? null,
@@ -116,6 +131,7 @@ export function useRobotSignals(): { signals: ComputedRef<RobotSignals>; audioLe
     weather.stop()
     if (timer) { clearInterval(timer); timer = null }
   }
-  onScopeDispose(stop)
-  return { signals, audioLevel, start, stop }
+  onScopeDispose(() => { stop(); stopBeatWatch() })
+  const beat = (now: number): BeatInfo => tracker.read(now)
+  return { signals, audioLevel, beat, start, stop }
 }

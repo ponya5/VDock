@@ -21,10 +21,7 @@
       </linearGradient>
     </defs>
     <g :transform="frame.transform">
-      <!-- Ambient audio / mood halo behind the original eyes + mouth -->
-      <g v-if="level > 0.02" :opacity="Math.min(0.32, level * 0.38) * (0.75 + 0.25 * Math.sin(frame.t / 1000 * 8))">
-        <ellipse cx="100" cy="72" rx="88" ry="58" fill="url(#rb-blue)" filter="url(#robot-glow)" />
-      </g>
+      <!-- DL-165: the flashing blue audio halo was removed on request; the beat is shown by head motion instead -->
       <g v-if="frame.deco.rage > 0.02" :opacity="frame.deco.rage * (0.32 + 0.14 * Math.sin(frame.t / 1000 * 9))">
         <ellipse cx="100" cy="72" rx="86" ry="56" fill="#ff2a2a" filter="url(#robot-glow)" />
       </g>
@@ -74,9 +71,9 @@
         <circle cx="-22" cy="19" r="3" fill="#000" /><circle cx="-28" cy="26" r="1.8" fill="#000" />
         <text x="0" y="5" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" stroke="none">???</text>
       </g>
-      <g v-if="frame.accessory.id" :data-accessory="frame.accessory.id" :opacity="frame.accessory.opacity"
-         :transform="`translate(0 ${frame.accessory.dy})`">
-        <RobotArt :def="ACCESSORIES[frame.accessory.id]" :t="frame.t" :level="level" />
+      <g v-for="a in frame.accessories" :key="a.layer" :data-accessory="a.id" :opacity="a.opacity"
+         :transform="`translate(0 ${a.dy})`">
+        <RobotArt :def="ACCESSORIES[a.id!]" :t="frame.t" :level="level" />
       </g>
     </g>
     <!-- status icon: centred, outside the face transform so it stays steady -->
