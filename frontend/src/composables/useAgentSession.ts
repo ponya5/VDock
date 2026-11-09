@@ -59,7 +59,7 @@ export interface AgentSession {
   sendPrompt: (promptText: string) => Promise<AgentActionResult>
 }
 
-export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
+export function useAgentSession(scene: Ref<Scene | null>, stateOverride?: Ref<AgentStateName | null>): AgentSession {
   const dashboardStore = useDashboardStore()
   const settingsStore = useSettingsStore()
   const notificationsStore = useNotificationsStore()
@@ -73,7 +73,9 @@ export function useAgentSession(scene: Ref<Scene | null>): AgentSession {
 
   const stateEntry = computed(() => agentStateEntry(profile.value?.status_source))
 
-  const currentState = computed<AgentStateName>(() => agentStateFor(profile.value?.status_source))
+  // DL-165: with several sessions of one agent, the buttons follow the *linked* session's state (stateOverride),
+  // not the folded per-agent state, so each session gets the buttons that fit what it is doing.
+  const currentState = computed<AgentStateName>(() => stateOverride?.value ?? agentStateFor(profile.value?.status_source))
 
   const isAgentDetected = computed(() => {
     const agentProfile = profile.value

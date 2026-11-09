@@ -2,15 +2,18 @@
   <div
     v-if="isVisible"
     class="agent-action-bar"
-    :class="`state-${currentState}`"
+    :class="[`state-${currentState}`, { 'is-linked': !!linkAccent }]"
+    :style="linkAccent ? { '--link-accent': linkAccent } : undefined"
     role="toolbar"
     :aria-label="`${profile?.label} actions`"
   >
     <div class="agent-state-pill" :title="stateEntry?.message || stateLabel">
+      <span v-if="linked" class="agent-link-badge" :style="{ background: linkAccent! }" :title="`Linked to ${linked.label}`">{{ linked.badge || '·' }}</span>
       <span class="agent-state-dot" />
       <span class="agent-state-text">
         <strong>{{ profile?.label }}</strong>
         <span>{{ stateLabel }}</span>
+        <span v-if="othersSummary" class="agent-others" data-testid="others-summary">{{ othersSummary }}</span>
       </span>
     </div>
     <AgentSessionPicker
@@ -21,11 +24,16 @@
       :waiting-glow-on="waitingGlowOn"
       :target-label="targetLabel"
       :effective-session="effectiveSession"
+      :linked-accent="linkAccent"
+      :linked-badge="linked?.badge"
       @pick="chooseTarget"
       @identify="identify"
       @opened="refreshTargets"
     />
-    <div class="agent-actions">
+    <div class="agent-actions" :class="{ linked: !!linkAccent }">
+      <span v-if="linked" class="agent-actions-for" data-testid="actions-for" :title="`These buttons act on ${linked.label}`">
+        <FontAwesomeIcon :icon="['fas', 'link']" /> {{ linked.label }}
+      </span>
       <button
         v-for="action in visibleActions"
         :key="action.id"
@@ -48,9 +56,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed, ref, toRef, watchEffect } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Scene } from '@/types'
+import type { AgentStateName } from '@/api/appProfiles'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSettingsStore } from '@/stores/settings'
 import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
@@ -71,6 +80,8 @@ import AgentSessionPicker from '@/components/AgentSessionPicker.vue'
 const props = defineProps<{ scene: Scene | null }>()
 
 const dashboardStore = useDashboardStore()
+// The linked session's own state drives the buttons (set below, once the session list is known).
+const stateOverride = ref<AgentStateName | null>(null)
 const settingsStore = useSettingsStore()
 const {
   profile,
@@ -82,7 +93,7 @@ const {
   runningActionId,
   flashActionId,
   runAction,
-} = useAgentSession(toRef(props, 'scene'))
+} = useAgentSession(toRef(props, 'scene'), stateOverride)
 
 const isVisible = computed(() =>
   !dashboardStore.isEditMode && isAgentPossiblyRunning.value && visibleActions.value.length > 0
@@ -116,6 +127,28 @@ async function chooseTarget(pid: number | null) {
   if (pid !== null) void identify(pid)
   await setTarget(pid)
 }
+
+// DL-165: which session the buttons are linked to, shown in its colour; the buttons follow *its* state.
+const linked = computed(() => sessionRows.value.find(r => r.pid === effectiveSession.value?.pid) ?? null)
+function toAgentState(state: string | null | undefined): AgentStateName | null {
+  if (state === 'working' || state === 'permission') return state
+  if (state === 'ready' || state === 'idle') return 'ready'
+  return null
+}
+watchEffect(() => { stateOverride.value = linked.value ? toAgentState(linked.value.state) : null })
+const linkAccent = computed(() => linked.value?.accent ?? null)
+/** "2 others: 1 working, 1 ready" - what the sessions this bar is NOT linked to are doing. */
+const othersSummary = computed(() => {
+  const others = sessionRows.value.filter(r => r.pid !== linked.value?.pid)
+  if (!linked.value || !others.length) return ''
+  const counts: Record<string, number> = {}
+  for (const o of others) {
+    const st = toAgentState(o.state) ?? 'unknown'
+    counts[st] = (counts[st] ?? 0) + 1
+  }
+  const parts = Object.entries(counts).map(([st, n]) => `${n} ${st === 'permission' ? 'needs permission' : st === 'ready' ? 'ready' : st}`)
+  return `${others.length} other${others.length > 1 ? 's' : ''}: ${parts.join(', ')}`
+})
 
 trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisible)
 </script>
@@ -314,5 +347,21 @@ trackAgentSurfaceVisibility(computed(() => profile.value?.status_source), isVisi
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
 }
+/* DL-165: the link to a session - its colour on the badge, the chip edge, a tab over the buttons and each button's top edge. */
+.agent-link-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2em; height: 1.7em; padding: 0 0.4em; border-radius: 7px; margin-right: 2px;
+  color: #0b1220; font-weight: 800; font-size: clamp(0.62rem, 0.9vw + 0.35rem, 0.85rem);
+}
+.agent-others { display: block; font-size: clamp(0.6rem, 0.8vw + 0.32rem, 0.78rem); opacity: 0.75; }
+.agent-actions.linked { position: relative; padding-top: 6px; }
+.agent-actions-for {
+  position: absolute; top: -13px; left: 10px; z-index: 2; max-width: 70%;
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 8px 8px 0 0;
+  background: var(--link-accent); color: #0b1220; font-weight: 700;
+  font-size: clamp(0.6rem, 0.8vw + 0.34rem, 0.8rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-actions.linked .agent-action { border-top: 3px solid var(--link-accent); }
+.agent-action-bar.is-linked { border-left: 4px solid var(--link-accent); }
 .agent-action.done { background: #16a34a; border-color: #4ade80; color: #fff; }
 </style>

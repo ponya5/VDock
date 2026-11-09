@@ -1,14 +1,17 @@
 <template>
   <section
     class="mobile-agent-console"
-    :class="`state-${displayState}`"
+    :class="[`state-${displayState}`, { 'is-linked': !!linkAccent }]"
+    :style="linkAccent ? { '--link-accent': linkAccent } : undefined"
     :aria-label="`${agentName} console`"
   >
     <header class="mac-status" aria-live="polite">
+      <span v-if="linked" class="mac-link-badge" :style="{ background: linkAccent! }" :title="`Linked to ${linked.label}`">{{ linked.badge || '·' }}</span>
       <span class="mac-status-dot" aria-hidden="true" />
       <div class="mac-status-text">
         <strong class="mac-agent-name">{{ agentName }}</strong>
         <span class="mac-state-label">{{ statusLine }}</span>
+        <span v-if="othersSummary" class="mac-others" data-testid="others-summary">{{ othersSummary }}</span>
       </div>
       <!-- Session targeting (DL-071): a single chip that opens the shared
            listbox sheet — the old wrap-visible chip strip ate a whole row
@@ -22,6 +25,8 @@
         :waiting-glow-on="waitingGlowOn"
         :target-label="targetLabel"
         :effective-session="effectiveSession"
+        :linked-accent="linkAccent"
+        :linked-badge="linked?.badge"
         @pick="chooseTarget"
         @identify="identify"
         @opened="refreshTargets"
@@ -40,6 +45,9 @@
       :class="{ 'emphasizes-primary': emphasizesPrimaryAction }"
       :style="{ '--secondary-action-count': Math.max(visibleActions.length - 1, 1) }"
     >
+      <span v-if="linked" class="mac-actions-for" data-testid="actions-for">
+        <FontAwesomeIcon :icon="['fas', 'link']" /> acts on {{ linked.label }}
+      </span>
       <button
         v-for="action in visibleActions"
         :key="action.id"
@@ -103,12 +111,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRef } from 'vue'
+import { computed, ref, toRef, watchEffect } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Button, Scene } from '@/types'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useSettingsStore } from '@/stores/settings'
+import type { AgentStateName } from '@/api/appProfiles'
 import { trackAgentSurfaceVisibility, useAgentSession } from '@/composables/useAgentSession'
 import { profileSessionMarker, useAgentTargets } from '@/composables/useAgentTargets'
 import { isAgentWaitingDismissed } from '@/services/agentWaiting'
@@ -152,6 +161,8 @@ const WEB_LINK_ACTIONS = new Set(['url', 'claude_open'])
 const dashboardStore = useDashboardStore()
 const notificationsStore = useNotificationsStore()
 const settingsStore = useSettingsStore()
+// DL-165: the linked session's own state drives the actions (set below once the session list is known).
+const stateOverride = ref<AgentStateName | null>(null)
 const {
   profile,
   stateEntry,
@@ -162,7 +173,7 @@ const {
   visibleActions,
   runningActionId,
   runAction,
-} = useAgentSession(toRef(props, 'scene'))
+} = useAgentSession(toRef(props, 'scene'), stateOverride)
 
 const runningShortcutId = ref<string | null>(null)
 
@@ -180,6 +191,24 @@ const {
   setTarget,
   identify,
 } = useAgentTargets(sessionMarker)
+
+// DL-165: which session the actions are linked to (shown in its colour) and what the others are doing.
+const linked = computed(() => targetRows.value.find(r => r.pid === effectiveSession.value?.pid) ?? null)
+function toAgentState(state: string | null | undefined): AgentStateName | null {
+  if (state === 'working' || state === 'permission') return state
+  if (state === 'ready' || state === 'idle') return 'ready'
+  return null
+}
+watchEffect(() => { stateOverride.value = linked.value ? toAgentState(linked.value.state) : null })
+const linkAccent = computed(() => linked.value?.accent ?? null)
+const othersSummary = computed(() => {
+  const others = targetRows.value.filter(r => r.pid !== linked.value?.pid)
+  if (!linked.value || !others.length) return ''
+  const counts: Record<string, number> = {}
+  for (const o of others) { const st = toAgentState(o.state) ?? 'unknown'; counts[st] = (counts[st] ?? 0) + 1 }
+  const parts = Object.entries(counts).map(([st, n]) => `${n} ${st === 'permission' ? 'needs permission' : st}`)
+  return `${others.length} other${others.length > 1 ? 's' : ''}: ${parts.join(', ')}`
+})
 
 const showSessionPicker = computed(() =>
   Boolean(sessionMarker.value) &&
@@ -573,5 +602,18 @@ trackAgentSurfaceVisibility(
 @media (prefers-reduced-motion: reduce) {
   .mac-status-dot { animation: none !important; }
   .mac-session.waiting { animation: none; }
+}
+/* DL-165: the link to a session - badge, edge and a caption over the actions, in the session's colour. */
+.mac-link-badge {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-width: 2em; height: 1.7em; padding: 0 0.4em; border-radius: 7px;
+  color: #0b1220; font-weight: 800; font-size: clamp(0.62rem, 0.9vw + 0.35rem, 0.85rem);
+}
+.mac-others { display: block; font-size: clamp(0.6rem, 0.8vw + 0.32rem, 0.78rem); opacity: 0.75; }
+.mobile-agent-console.is-linked { border-left: 4px solid var(--link-accent); }
+.mac-actions-for {
+  grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 6px;
+  padding: 1px 10px; border-radius: 8px; background: var(--link-accent); color: #0b1220; font-weight: 700;
+  font-size: clamp(0.62rem, 0.8vw + 0.34rem, 0.82rem); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 </style>

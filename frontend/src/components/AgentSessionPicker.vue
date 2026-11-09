@@ -4,13 +4,15 @@
       ref="chipRef"
       type="button"
       class="agent-target-chip"
-      :class="{ pinned: pinnedPid !== null, waiting: showWaitingHint }"
+      :class="{ pinned: pinnedPid !== null, waiting: showWaitingHint, linked: !!linkedAccent }"
+      :style="linkedAccent ? { '--chip-accent': linkedAccent } : undefined"
       :title="`Buttons target: ${targetLabel}`"
       aria-haspopup="listbox"
       :aria-expanded="targetOpen"
       @click="toggleTargetPicker"
     >
-      <FontAwesomeIcon :icon="['fas', 'crosshairs']" class="agent-target-icon" />
+      <span v-if="linkedAccent" class="chip-badge" :style="{ background: linkedAccent }" aria-hidden="true">{{ linkedBadge || '·' }}</span>
+      <FontAwesomeIcon v-else :icon="['fas', 'crosshairs']" class="agent-target-icon" />
       <span class="agent-target-label">{{ targetLabel }}</span>
       <span v-if="showWaitingHint" class="row-tag tag-waiting chip-tag">waiting</span>
       <FontAwesomeIcon :icon="['fas', 'chevron-down']" class="agent-target-caret" />
@@ -131,6 +133,9 @@ const props = defineProps<{
   /** The session commands actually land on — resolved by the composable
       (focus/hwnd-aware), NOT a rows lookup. Drives the chip's waiting hint. */
   effectiveSession: AgentSessionInfo | null
+  /** DL-165: the linked session's accent colour and host badge, painted on the chip. */
+  linkedAccent?: string | null
+  linkedBadge?: string
 }>()
 
 const emit = defineEmits<{
@@ -522,5 +527,11 @@ function chooseTarget(pid: number | null) {
 
 @media (max-width: 600px), (max-height: 460px) {
   html:not(.device-phone):not(.device-tablet):not(.device-panel) .agent-target-chip { min-height: 30px; padding: 0 8px; font-size: 0.75rem; }
+}
+.agent-target-chip.linked { border-left: 4px solid var(--chip-accent); }
+.chip-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.9em; padding: 0 0.35em; height: 1.6em; border-radius: 6px;
+  color: #0b1220; font-weight: 800; font-size: clamp(0.62rem, 0.9vw + 0.35rem, 0.8rem);
 }
 </style>
