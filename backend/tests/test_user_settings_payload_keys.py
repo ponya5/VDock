@@ -45,6 +45,7 @@ FULL_SETTINGS_PAYLOAD = {
     'screensaverWidgets': ['weather', 'news', 'market'],
     'screensaverClockEnabled': True,
     'clock24h': True,
+    'confirmCodeActions': False,
     'screensaverWeatherSize': 1.0,
     'newsApiKey': '',
     'newsFeeds': '',

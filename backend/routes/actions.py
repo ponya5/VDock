@@ -129,6 +129,18 @@ def _looks_long(action_data: Dict[str, Any]) -> bool:
     return total > 20
 
 
+@actions_bp.route('/api/actions/jobs/<job_id>/cancel', methods=['POST'])
+@require_auth
+def cancel_action_job(job_id):
+    """Stop waiting for a running background action (see JobRunner.cancel)."""
+    from services.job_runner import get_job_runner
+
+    job = get_job_runner().cancel(job_id)
+    if job is None:
+        return jsonify({'error': 'Job not found', 'success': False}), 404
+    return jsonify({'success': True, **job.to_dict()})
+
+
 @actions_bp.route('/api/actions/jobs/<job_id>', methods=['GET'])
 @require_auth
 def get_action_job(job_id):

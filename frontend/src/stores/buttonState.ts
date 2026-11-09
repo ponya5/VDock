@@ -86,6 +86,8 @@ export const useButtonStateStore = defineStore('buttonState', () => {
   function markFinished(buttonId: string, result: any) {
     if (!buttonId) return
     clearTimer(buttonId)
+    // A cancelled press just stops spinning - no tick, no red cross.
+    if (result?.cancelled) { clear(buttonId); return }
 
     const data = result?.data ?? {}
     const hasBadge = data.badge !== undefined && data.badge !== null

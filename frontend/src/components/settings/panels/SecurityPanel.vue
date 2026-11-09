@@ -100,6 +100,15 @@
           </button>
         </div>
       </div>
+      <div class="row" data-testid="confirm-code-actions">
+        <div class="row-text">
+          <span class="label">Ask before pushing or committing code</span>
+          <p>Buttons that push, commit, merge or deploy (Claude Code, Cursor, GitHub, git) ask "Are you sure?" first, like Claude Code does.</p>
+        </div>
+        <div class="row-control">
+          <label class="switch"><span class="sr-only">Ask before pushing or committing code</span><input v-model="settingsStore.confirmCodeActions" type="checkbox" data-action="confirm-code-actions" /><span class="track"></span></label>
+        </div>
+      </div>
     </div>
   </section>
 </template>

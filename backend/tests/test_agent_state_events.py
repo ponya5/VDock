@@ -872,7 +872,7 @@ def test_tab_indentation_is_typed_as_spaces_into_terminal_agents():
     assert typed == ['def f():', '    return 1']
 
 
-def test_clipboard_prompt_refuses_an_empty_clipboard(mocker):
+def test_clipboard_prompt_falls_back_on_an_empty_clipboard(mocker):
     from integrations import context
     from integrations.claude_code_pack import Plugin as ClaudeCodePlugin
     mocker.patch.object(context, 'clipboard_text', return_value='  ')
@@ -881,9 +881,12 @@ def test_clipboard_prompt_refuses_an_empty_clipboard(mocker):
     result = ClaudeCodePlugin().execute_action(
         'cc_prompt', {'text': 'Explain:\n\n{clipboard}'})
 
-    assert result['success'] is False
-    assert result['message'] == 'Copy some code first'
-    send.assert_not_called()
+    # An empty clipboard no longer fails the button: the prompt falls back to
+    # the code the user has selected / open in the editor.
+    send.assert_called_once()
+    assert '{clipboard}' not in send.call_args.kwargs['text_override']
+    assert 'selected' in send.call_args.kwargs['text_override']
+    assert result is send.return_value
 
 
 def test_cc_submit_is_a_session_gated_enter():

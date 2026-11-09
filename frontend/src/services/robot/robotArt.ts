@@ -92,6 +92,7 @@ export const GRADIENTS: readonly GradientDef[] = [
   { id: 'rb-hat-purple', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#b58cff'], [1, '#4b2bb8']] },
   { id: 'rb-hat-tan', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#f1c98a'], [1, '#a8692f']] },
   { id: 'rb-hat-navy', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#7f9bff'], [1, '#2a3a9e']] },
+  { id: 'rb-hat-velvet', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#3a4a92'], [0.55, '#1f2b66'], [1, '#0e1540']] },
   { id: 'rb-hat-green', x1: 0, y1: 0, x2: 0, y2: 1, stops: [[0, '#8be39a'], [1, '#2f9e5a']] },
   { id: 'rb-ice', x1: 0, y1: 0, x2: 1, y2: 1, stops: [[0, '#e6f6ff'], [1, '#6cc7ff']] },
 ]
@@ -283,13 +284,25 @@ export const ACCESSORIES = {
     dot(98, -4, 2, COLORS.yellow), gloss('M92 -2 L84 18', 0.45, 2.6),
   ] },
   'wizard-hat': { els: [
-    gellipse(100, 30, 50, 9, 'hat-purple', 3),
-    shade('M52 33 Q100 46 148 33 Q100 41 52 33 Z', 0.35),
-    grad('M70 28 Q82 6 94 -22 Q100 -34 110 -22 Q126 6 132 28 Q100 36 70 28 Z', 'hat-purple', 3),
-    shade('M106 -24 Q126 6 132 28 Q116 33 104 33 Z', 0.3),
-    grad('M72 21 Q100 29 130 21 L132 28 Q100 36 70 28 Z', 'gold', 2.2),
-    shape(STAR4(98, 6, 0.8), COLORS.yellow), shape(STAR4(116, -6, 0.45), COLORS.yellow), dot(88, 12, 1.6, COLORS.blue),
-    gloss('M86 4 Q92 -8 97 -20', 0.4, 3),
+    // wide brim with a double white outline, tilted a little
+    gellipse(100, 20, 78, 14, 'hat-velvet', 3.2),
+    { tag: 'ellipse', attrs: { cx: 100, cy: 20, rx: 69, ry: 10.5, fill: 'none', stroke: W, 'stroke-width': 1.5, opacity: 0.85 } },
+    shade('M24 24 Q100 50 176 24 Q100 38 24 24 Z', 0.35),
+    // tall cone, tip bent over to the right
+    grad('M62 22 Q80 -12 94 -44 Q102 -66 128 -66 Q150 -62 160 -44 Q144 -52 127 -42 Q126 -10 142 22 Q102 32 62 22 Z', 'hat-velvet', 3.2),
+    shade('M110 -52 Q126 -10 142 22 Q124 28 108 28 Z', 0.3),
+    // brim band + gold brooch with a ruby
+    line('M70 14 Q100 28 138 14', COLORS.yellow, 2.2),
+    shape(STAR4(118, 20, 1.3), 'url(#rb-gold)'), dot(118, 20, 3.2, COLORS.red), dot(117, 19, 1.1, W),
+    // silver stars, moons and circuit lines (white at low opacity reads as silver on velvet)
+    shape(STAR4(92, -8, 0.7), W), shape(STAR4(108, -34, 0.55), W), shape(STAR4(80, 4, 0.45), W), shape(STAR4(130, -52, 0.4), W),
+    dot(100, 8, 1.4, W), dot(86, -22, 1.2, W), dot(122, -20, 1.2, W),
+    { tag: 'path', attrs: { d: 'M44 24 H56 L60 28 H72 M150 28 H160 L164 24 H172 M30 22 Q36 30 46 32', fill: 'none', stroke: W, 'stroke-width': 1.2, opacity: 0.55 } },
+    dot(56, 28, 1.4, W), dot(160, 28, 1.4, W),
+    { tag: 'circle', attrs: { cx: 76, cy: 30, r: 3, fill: 'none', stroke: W, 'stroke-width': 1.3, opacity: 0.8 } },
+    { tag: 'circle', attrs: { cx: 92, cy: 33, r: 3, fill: W, opacity: 0.8 } },
+    { tag: 'circle', attrs: { cx: 108, cy: 33, r: 3, fill: 'none', stroke: W, 'stroke-width': 1.3, opacity: 0.8 } },
+    gloss('M80 -2 Q90 -26 98 -48', 0.35, 3),
   ] },
   nightcap: { els: [
     grad('M66 30 Q84 -14 128 4 Q150 14 154 38 Q110 24 66 30 Z', 'hat-navy', 3),

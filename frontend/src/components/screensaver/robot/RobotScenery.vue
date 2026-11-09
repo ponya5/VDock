@@ -17,13 +17,8 @@
       <!-- Laptop base + animated keys -->
       <path d="M-8 118 H72 V126 H-8 Z" fill="#9a9a9a" stroke-width="1.8" />
       <path d="M38 121 h6 M48 121 h6 M58 121 h6" stroke-width="1.5" />
-      <!-- DL-165: exactly two hands, side by side on the keys, alternating strokes (was a pile of overlapping hands) -->
-      <g :transform="`translate(24 ${f(104 + Math.sin(t / 1000 * 9) * 1.5)}) scale(0.74 -0.74)`">
-        <ToonHand kind="typing" :t="t" :phase="0" />
-      </g>
-      <g :transform="`translate(58 ${f(104 + Math.sin(t / 1000 * 9 + Math.PI) * 1.5)}) scale(0.74 -0.74)`">
-        <ToonHand kind="typing" :t="t" :phase="3.1" />
-      </g>
+      <!-- DL-165: two gloved hands, fingers fanned onto the keys -->
+      <TypingGloves :t="t" />
     </g>
 
     <!-- typing-frenzy: high-speed furious coding with flying code sparks + vibrating mug -->
@@ -39,13 +34,8 @@
         <path :d="`M9 98 L${f(22 + Math.abs(Math.cos(t / 130 + 2)) * 22)} 95`" stroke="#ff6fa8" stroke-width="2.6" />
         <path d="M-8 118 H76 V126 H-8 Z" fill="#9a9a9a" stroke-width="1.8" />
       </g>
-      <!-- DL-165: two hands, one per half of the keyboard, hammering in turn -->
-      <g :transform="`translate(24 ${f(104 + Math.sin(t / 45) * 2.4)}) scale(0.74 -0.74)`">
-        <ToonHand kind="typing" :t="t" :phase="0" fast />
-      </g>
-      <g :transform="`translate(58 ${f(104 + Math.sin(t / 45 + Math.PI) * 2.4)}) scale(0.74 -0.74)`">
-        <ToonHand kind="typing" :t="t" :phase="3.1" fast />
-      </g>
+      <!-- DL-165: two gloved hands, fingers fanned onto the keys -->
+      <TypingGloves :t="t" fast />
       <!-- Flying keystroke sparks & code brackets -->
       <g :opacity="0.65 + 0.35 * Math.abs(Math.sin(t / 90))">
         <path :d="spark(68, 82 - ((t / 18) % 24), 0.9)" fill="#ffd84d" stroke="none" />
@@ -502,6 +492,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import TypingGloves from './TypingGloves.vue'
 import ToonHand from './ToonHand.vue'
 import RobotArt from './RobotArt.vue'
 import { PROPS } from '@/services/robot/robotArt'

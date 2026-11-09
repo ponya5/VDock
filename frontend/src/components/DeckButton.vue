@@ -189,6 +189,19 @@
       />
     </div>
 
+    <button
+      v-if="liveState?.status === 'running' && dashboardStore.runningJobs?.[button.id] && !isEditMode"
+      class="button-cancel"
+      type="button"
+      title="Cancel"
+      aria-label="Cancel this action"
+      @click.stop="dashboardStore.cancelButtonJob(button.id)"
+      @pointerdown.stop
+      @touchstart.stop
+    >
+      <FontAwesomeIcon :icon="['fas', 'xmark']" />
+    </button>
+
     <div
       v-if="liveState?.badge && !isEditMode"
       class="button-badge"
@@ -1371,6 +1384,24 @@ html.device-tablet .copy-btn {
   pointer-events: none;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
+
+.button-cancel {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(220, 38, 38, 0.92);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+html.device-tablet .button-cancel,
+html.device-phone .button-cancel { width: 34px; height: 34px; font-size: 14px; }
 
 .button-state.is-running {
   color: rgba(255, 255, 255, 0.9);

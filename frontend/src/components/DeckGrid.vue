@@ -84,6 +84,18 @@
       </button>
     </template>
 
+    <!-- Now Playing resize chips (DL-165): + / - on the right edge (width) and bottom edge (height). -->
+    <template v-for="c in cardEdges" :key="`card-${c.id}`">
+      <button class="slider-resize-chip widen" :style="c.rightStyle" type="button" title="Wider" aria-label="Make Now Playing wider"
+              @click.stop="emit('cardResize', c.id, 1, 0)"><FontAwesomeIcon :icon="['fas', 'plus']" /></button>
+      <button v-if="c.canNarrow" class="slider-resize-chip shrink" :style="c.rightStyle" type="button" title="Narrower" aria-label="Make Now Playing narrower"
+              @click.stop="emit('cardResize', c.id, -1, 0)"><FontAwesomeIcon :icon="['fas', 'minus']" /></button>
+      <button class="card-resize-chip grow" :style="c.bottomStyle" type="button" title="Taller" aria-label="Make Now Playing taller"
+              @click.stop="emit('cardResize', c.id, 0, 1)"><FontAwesomeIcon :icon="['fas', 'plus']" /></button>
+      <button v-if="c.canShorten" class="card-resize-chip shorten" :style="c.bottomStyle" type="button" title="Shorter" aria-label="Make Now Playing shorter"
+              @click.stop="emit('cardResize', c.id, 0, -1)"><FontAwesomeIcon :icon="['fas', 'minus']" /></button>
+    </template>
+
     <!-- Ambient Deck Overlay -->
     <DeckOverlay
       v-if="dashboardStore.currentScene?.overlay_style && dashboardStore.currentScene.overlay_style !== 'none'"
@@ -144,6 +156,7 @@ const emit = defineEmits<{
   buttonSwap: [sourceId: string, targetId: string]
   sliderExpand: [id: string]
   sliderShrink: [id: string]
+  cardResize: [id: string, dCols: number, dRows: number]
   doubleTap: [button: Button]
   exitEditMode: []
 }>()
@@ -433,6 +446,20 @@ const sliderEdges = computed<SliderEdge[]>(() => {
         canShrink: btn.size.cols > 1
       }
     })
+})
+
+/** Now Playing cards get width and height chips in edit mode (DL-165). */
+const cardEdges = computed(() => {
+  if (!props.isEditMode) return []
+  return renderedPage.value.buttons
+    .filter(b => b.enabled && b.action?.type === 'now_playing')
+    .map(b => ({
+      id: b.id,
+      canNarrow: b.size.cols > 1,
+      canShorten: b.size.rows > 1,
+      rightStyle: { gridColumn: `${b.position.col + b.size.cols}`, gridRow: `${b.position.row + 1} / span ${b.size.rows}` },
+      bottomStyle: { gridColumn: `${b.position.col + 1} / span ${b.size.cols}`, gridRow: `${b.position.row + b.size.rows}` },
+    }))
 })
 
 function edgeStyle(edge: SliderEdge) {
@@ -938,6 +965,27 @@ function handlePlaceholderDragLeave(e: DragEvent, placeholder: { row: number; co
 
 .slider-resize-chip.widen:active { transform: translateX(50%) translateY(calc(-1 * var(--chip-offset, 17px))) scale(0.95); }
 .slider-resize-chip.shrink:active { transform: translateX(50%) translateY(var(--chip-offset, 17px)) scale(0.95); }
+
+/* Now Playing bottom-edge chips: centred on the lower edge, the pair side by side. */
+.card-resize-chip {
+  justify-self: center;
+  align-self: end;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: var(--color-primary, #4aa3ff);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  z-index: 45;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 150ms var(--ease-out, ease-out);
+}
+.card-resize-chip.grow { transform: translateX(-17px) translateY(50%); }
+.card-resize-chip.shorten { transform: translateX(17px) translateY(50%); background: rgba(30, 41, 59, 0.92); }
+.card-resize-chip.grow:hover { transform: translateX(-17px) translateY(50%) scale(1.15); }
+.card-resize-chip.shorten:hover { transform: translateX(17px) translateY(50%) scale(1.15); }
 
 /* DL-147: finger-sized chips on tablets, spaced so the pair does not overlap. */
 html.device-tablet .slider-resize-chip {

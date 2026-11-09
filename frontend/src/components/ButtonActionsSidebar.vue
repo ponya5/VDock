@@ -59,6 +59,12 @@
             >
               <FontAwesomeIcon :icon="action.icon" />
               <span>{{ action.label }}</span>
+              <span
+                v-if="action.action_type === 'slider'"
+                class="slider-badge"
+                title="Slider - drag to set a level"
+                data-testid="slider-badge"
+              ><i class="slider-badge-fill" /><i class="slider-badge-knob" /></span>
               <FontAwesomeIcon
                 v-if="action.unavailable_reason"
                 :icon="['fas', 'circle-exclamation']"
@@ -314,6 +320,28 @@ function selectAction(action: ActionSpec) {
   width: calc(22px * var(--touch-multiplier, 1));
   flex-shrink: 0;
   color: var(--color-primary);
+}
+
+/* DL-165: a mini slider on slider-type actions, so they stand out from plain buttons. */
+.slider-badge {
+  margin-left: auto;
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.slider-badge-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 62%;
+  border-radius: 6px 0 0 6px;
+  background: linear-gradient(90deg, #2563eb, var(--color-primary, #4aa3ff));
+}
+.slider-badge-knob {
+  position: absolute; left: calc(62% - 6px); top: -3px;
+  width: 12px; height: 14px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Scrollbar styling — wider on touch panels so it can be dragged by finger. */

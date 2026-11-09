@@ -105,6 +105,7 @@
                   @button-swap="handleButtonSwap"
                   @slider-expand="handleSliderExpand"
                   @slider-shrink="handleSliderShrink"
+                  @card-resize="handleCardResize"
                   @double-tap="handleButtonClick"
                   @exit-edit-mode="dashboardStore.toggleEditMode"
                 />
@@ -354,6 +355,7 @@ const {
   handleButtonSwap,
   handleSliderExpand,
   handleSliderShrink,
+  handleCardResize,
   handleActionDrop,
   handlePlaceholderClick,
   handleDockedButtonDelete,

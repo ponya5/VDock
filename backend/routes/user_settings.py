@@ -52,6 +52,7 @@ ALLOWED_USER_SETTING_KEYS = {
     'screensaverClockEnabled',
     # 24-hour clocks toggle — missing here, every save silently dropped it.
     'clock24h',
+    'confirmCodeActions',
     'screensaverWeatherSize',
     'newsFeeds',
     'sportsFeeds',

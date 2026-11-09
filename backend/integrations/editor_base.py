@@ -321,6 +321,12 @@ def send(command: Command, text_override: Optional[str] = None,
     }
 
 
+EMPTY_CLIPBOARD_FALLBACK = (
+    '(nothing is on my clipboard - use the code I currently have selected '
+    'or open in the editor)'
+)
+
+
 class KeystrokeEditorPlugin(BasePlugin):
     """Base for packs whose actions are editor keystrokes.
 
@@ -447,12 +453,10 @@ class KeystrokeEditorPlugin(BasePlugin):
         if text is not None:
             text = str(text)
             if '{clipboard}' in text and not context.clipboard_text().strip():
-                return {
-                    'success': False,
-                    'message': 'Copy some code first',
-                    'details': 'This prompt sends whatever is on the '
-                               'clipboard, and the clipboard is empty.',
-                }
+                # An empty clipboard is the normal case when the code is just
+                # selected or open in the editor -- fall back to that instead of
+                # failing the button with "Copy some code first".
+                text = text.replace('{clipboard}', EMPTY_CLIPBOARD_FALLBACK)
             text = context.expand_placeholders(text)
 
         return send(

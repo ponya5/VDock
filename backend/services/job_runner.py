@@ -55,6 +55,7 @@ MAX_TRACKED_JOBS = 200
 STATUS_RUNNING = 'running'
 STATUS_SUCCEEDED = 'succeeded'
 STATUS_FAILED = 'failed'
+STATUS_CANCELLED = 'cancelled'
 
 
 @dataclass
@@ -67,6 +68,7 @@ class Job:
     started_at: float = field(default_factory=time.time)
     finished_at: Optional[float] = None
     button_id: Optional[str] = None
+    cancelled: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
@@ -168,18 +170,42 @@ class JobRunner:
         try:
             result = run()
             payload = result.to_dict() if hasattr(result, 'to_dict') else dict(result)
+            if job.cancelled:
+                return  # the user stopped waiting; keep the cancelled outcome
             job.status = (
                 STATUS_SUCCEEDED if payload.get('success') else STATUS_FAILED
             )
             job.result = payload
         except Exception as e:
             logger.error('Job %s (%s) raised: %s', job.id, job.action_type, e)
-            job.status = STATUS_FAILED
-            job.result = {'success': False, 'message': f'Action failed: {e}'}
+            if not job.cancelled:
+                job.status = STATUS_FAILED
+                job.result = {'success': False, 'message': f'Action failed: {e}'}
         finally:
             self._slots.release()
+            if job.finished_at is None:
+                job.finished_at = time.time()
+                self._broadcast(job)
+
+    def cancel(self, job_id: str) -> Optional[Job]:
+        """Stop tracking a running job and tell clients it was cancelled.
+
+        A worker thread cannot be killed safely, so the underlying step (a
+        keystroke already sent, a prompt already typed) may still complete --
+        what is cancelled is the wait: the button stops spinning and the
+        eventual result is discarded.
+        """
+        with self._lock:
+            job = self._jobs.get(job_id)
+        if job is None:
+            return None
+        if job.finished_at is None:
+            job.cancelled = True
+            job.status = STATUS_CANCELLED
+            job.result = {'success': False, 'message': 'Cancelled', 'cancelled': True}
             job.finished_at = time.time()
             self._broadcast(job)
+        return job
 
     def get_job(self, job_id: str) -> Optional[Job]:
         with self._lock:

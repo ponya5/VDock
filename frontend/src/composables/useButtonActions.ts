@@ -8,6 +8,7 @@ import { useButtonStateStore } from '@/stores/buttonState'
 import type { Button, ActionResult, IconLoop, EffectType } from '@/types'
 import { presetRegistry, presetToButton } from '@/data/presets'
 import { confirmDialog } from '@/composables/useConfirm'
+import { codeActionRisk } from '@/utils/codeActionRisk'
 import { isMissionControlEnabled, openMissionControl } from '@/services/missionControl'
 import { openLiveMenu } from '@/services/liveActionMenu'
 import { useDeviceClass } from '@/composables/useDeviceClass'
@@ -45,7 +46,9 @@ export function useButtonActions() {
   }
 
   function showActionResult(result: ActionResult) {
-    if (result.success) {
+    if ((result as { cancelled?: boolean }).cancelled) {
+      notificationsStore.info('Cancelled', 'Stopped waiting for the action.')
+    } else if (result.success) {
       notificationsStore.success('Action Executed', result.message)
     } else {
       notificationsStore.error(
@@ -146,6 +149,23 @@ export function useButtonActions() {
       return
     }
 
+    // DL-165: pushing / committing / merging code asks first (Settings -> Security).
+    const risk = settingsStore.confirmCodeActions ? codeActionRisk(button) : null
+    if (risk) {
+      void confirmDialog({
+        title: risk.title,
+        message: risk.message,
+        confirmLabel: 'Yes, run it',
+        cancelLabel: 'Cancel',
+        danger: risk.danger,
+        icon: 'code-branch',
+      }).then((ok) => { if (ok) runButtonAction(button) })
+      return
+    }
+    runButtonAction(button)
+  }
+
+  function runButtonAction(button: Button) {
     // Show the press on the button face. A Claude prompt can run for half a
     // minute; without this the deck looks like it ignored the tap.
     buttonStateStore.markRunning(button.id)
@@ -263,6 +283,18 @@ export function useButtonActions() {
         'The next cell is taken — only free space or another slider can be absorbed.'
       )
     }
+  }
+
+  /** Now Playing resize chips: +/- one column or row. */
+  function handleCardResize(id: string, dCols: number, dRows: number) {
+    if (!dashboardStore.resizeCardButton(id, dCols, dRows) && (dCols > 0 || dRows > 0)) {
+      notificationsStore.error('Cannot resize', 'The next cells are taken or outside the grid.')
+    }
+  }
+
+  /** Cancel chip on a running key. */
+  function handleCancelRunning(button: Button) {
+    void dashboardStore.cancelButtonJob(button.id)
   }
 
   /** Narrow chip: give one column back. */
@@ -578,6 +610,8 @@ export function useButtonActions() {
     handleButtonSwap,
     handleSliderExpand,
     handleSliderShrink,
+    handleCardResize,
+    handleCancelRunning,
     handleActionDrop,
     handlePlaceholderClick,
     handleAddDockedButton,

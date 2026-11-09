@@ -751,6 +751,23 @@ export const useDashboardStore = defineStore('dashboard', () => {
    * Dispatch any action object (a button's release_action, a slider's live
    * value push) with an owning button id for state/toast attribution.
    */
+  /** Buttons whose action is a background job right now (buttonId -> jobId), so the key can offer Cancel. */
+  const runningJobs = ref<Record<string, string>>({})
+
+  /** Stop waiting for a button's running job; the key stops spinning and the late result is dropped. */
+  async function cancelButtonJob(buttonId: string): Promise<boolean> {
+    const jobId = runningJobs.value[buttonId]
+    if (!jobId) return false
+    try {
+      await apiClient.post(`/actions/jobs/${jobId}/cancel`)
+      return true
+    } catch {
+      return false
+    } finally {
+      delete runningJobs.value[buttonId]
+    }
+  }
+
   async function executeAction(action: { type: string; config: Record<string, any> }, buttonId: string) {
     try {
       const response = await apiClient.post('/actions/execute', {
@@ -763,7 +780,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
       // returns 202 with a job id. Wait for the `action_job` event instead of
       // letting axios time out at 30s while the work carries on invisibly.
       if (response.data?.pending && response.data.job_id) {
-        return await awaitActionJob(response.data.job_id, action.type)
+        if (buttonId) runningJobs.value[buttonId] = response.data.job_id
+        try {
+          return await awaitActionJob(response.data.job_id, action.type)
+        } finally {
+          if (buttonId && runningJobs.value[buttonId] === response.data.job_id) delete runningJobs.value[buttonId]
+        }
       }
 
       // Handle fullscreen action locally
@@ -968,6 +990,26 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return true
   }
 
+  /**
+   * Resize a Now Playing card by whole cells (edit-mode chips). Returns false -
+   * and changes nothing - when the new area leaves the grid or overlaps another key.
+   */
+  function resizeCardButton(id: string, dCols: number, dRows: number) {
+    const page = currentPage.value
+    const btn = page?.buttons.find(b => b.id === id)
+    if (!page || !btn || btn.action?.type !== 'now_playing') return false
+    const cols = btn.size.cols + dCols
+    const rows = btn.size.rows + dRows
+    if (cols < 1 || rows < 1) return false
+    if (btn.position.col + cols > page.grid_config.cols || btn.position.row + rows > page.grid_config.rows) return false
+    const probe = { ...btn, size: { rows, cols } } as Button
+    if (page.buttons.some(b => b.enabled && b.id !== id && checkButtonCollision(probe, b))) return false
+    btn.size = { rows, cols }
+    addToHistory()
+    saveProfile()
+    return true
+  }
+
   /** Narrow a wide slider back by one column (rightmost column freed). */
   function shrinkSliderButton(id: string) {
     const btn = currentPage.value?.buttons.find(b => b.id === id)
@@ -1012,6 +1054,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     mergeSliderButtons,
     expandSliderButton,
     shrinkSliderButton,
+    resizeCardButton,
+    runningJobs,
+    cancelButtonJob,
     updateButton,
     getButton,
     applyGlobalButtonStyle,
