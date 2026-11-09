@@ -374,6 +374,8 @@ trackAgentSurfaceVisibility(
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   color: #e5e7eb;
 }
@@ -534,7 +536,8 @@ trackAgentSurfaceVisibility(
 /* A long category scrolls inside the console; the banner never scrolls away. */
 .mac-shortcuts.in-groups {
   flex: 1;
-  min-height: 0;
+  /* A short landscape panel keeps at least one full row of tiles; the console scrolls instead. */
+  min-height: min(150px, 40vh);
   overflow-y: auto;
   align-content: start;
   overscroll-behavior: contain;

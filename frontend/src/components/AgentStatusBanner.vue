@@ -173,7 +173,7 @@ const accessibleText = computed(() => `${props.agentName}: ${glyph.value.word}. 
   min-height: var(--agent-action-height, 64px);
   padding: 4px clamp(10px, 1.2vw, 16px);
 }
-.variant-bar .asb-glyph { font-size: 28px; }
+.variant-bar .asb-glyph { font-size: clamp(24px, 5vh, 28px); }
 .variant-bar .asb-name { font-size: clamp(0.72rem, 1.6vh, 0.85rem); }
 .variant-bar .asb-word { font-size: clamp(1.25rem, 4vh, 1.9rem); }
 .variant-bar .asb-sub { font-size: clamp(0.78rem, 2vh, 0.95rem); }
@@ -181,12 +181,13 @@ const accessibleText = computed(() => `${props.agentName}: ${glyph.value.word}. 
 
 /* --- card variant: full-width status card on the phone console --- */
 .variant-card {
+  flex-shrink: 0; /* a flex item of the console column; overflow:hidden would otherwise let it collapse */
   min-height: 84px;
   padding: 14px;
   border-radius: 18px;
   flex-wrap: wrap;
 }
-.variant-card .asb-glyph { font-size: 32px; }
+.variant-card .asb-glyph { font-size: clamp(28px, 8vw, 32px); }
 .variant-card .asb-name { font-size: clamp(0.72rem, 1.6vh, 0.85rem); }
 .variant-card .asb-word { font-size: clamp(1.6rem, 7.5vw, 2.1rem); }
 .variant-card .asb-sub { font-size: clamp(0.78rem, 2vh, 0.95rem); }
@@ -195,7 +196,7 @@ const accessibleText = computed(() => `${props.agentName}: ${glyph.value.word}. 
 /* Landscape phones: slim the card so the shortcuts keep their room. */
 @media (max-height: 480px) {
   .variant-card { min-height: 56px; padding: 8px 12px; border-radius: 14px; }
-  .variant-card .asb-glyph { font-size: 24px; }
+  .variant-card .asb-glyph { font-size: clamp(22px, 6vh, 24px); }
   .variant-card .asb-word { font-size: 1.3rem; }
 }
 

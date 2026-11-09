@@ -186,7 +186,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
   justify-content: center;
   gap: 4px;
   flex: none;
-  min-height: max(64px, calc(56px * var(--touch-multiplier, 1)));
+  min-height: max(64px, calc(56px * min(var(--touch-multiplier, 1), 1.5)));
   padding: 8px 4px;
   border-radius: 12px;
 }

@@ -31,7 +31,7 @@ import type { AgentViewMode } from '@/composables/useAgentSceneView'
 
 /**
  * DL-166: Groups / All switch for an AI coding scene. Two segments, each at
- * least 44px tall; the labels drop to icon-only on narrow desktop windows
+ * least 44px tall; the labels drop to icon-only below 1400px (the bar is crowded there)
  * (aria-label and title stay), and always show on the phone console.
  */
 
@@ -62,7 +62,7 @@ const OPTIONS: Array<{ mode: AgentViewMode; label: string; icon: string; title: 
   justify-content: center;
   gap: 8px;
   min-width: 44px;
-  min-height: max(44px, calc(36px * var(--touch-multiplier, 1)));
+  min-height: max(44px, calc(36px * min(var(--touch-multiplier, 1), 1.5)));
   padding: 0 12px;
   border: 0;
   border-radius: 11px;
@@ -84,7 +84,7 @@ const OPTIONS: Array<{ mode: AgentViewMode; label: string; icon: string; title: 
   outline-offset: 1px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
   .agent-view-toggle:not(.always-labels) .avt-label { display: none; }
   .agent-view-toggle:not(.always-labels) .avt-seg { padding: 0 12px; }
 }
