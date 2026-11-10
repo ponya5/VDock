@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useSettingsStore } from '@/stores/settings'
-import { useClockFormat } from '@/composables/useClockFormat'
+import { pickDayPeriod, useClockFormat } from '@/composables/useClockFormat'
 
 // Regression: `clock24h` was declared inside the store but never returned, so
 // `settings.clock24h` was undefined — the toggle did nothing and every clock
@@ -30,5 +30,20 @@ describe('24-hour clock setting', () => {
     settings.clock24h = true
     expect(settings.$state).toBeDefined()
     expect(JSON.stringify(settings.clock24h)).toBe('true')
+  })
+})
+
+describe('pickDayPeriod', () => {
+  const partsWithPeriod = [
+    { type: 'hour', value: '08' },
+    { type: 'dayPeriod', value: 'AM' },
+  ] as Intl.DateTimeFormatPart[]
+
+  it('hides AM/PM when 24-hour clocks is on, even if Intl emitted it', () => {
+    expect(pickDayPeriod(partsWithPeriod, true)).toBe('')
+  })
+
+  it('keeps AM/PM when following the device locale', () => {
+    expect(pickDayPeriod(partsWithPeriod, false)).toBe('AM')
   })
 })

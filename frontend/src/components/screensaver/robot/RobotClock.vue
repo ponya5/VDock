@@ -8,8 +8,10 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useClockFormat } from '@/composables/useClockFormat'
+import { pickDayPeriod, useClockFormat } from '@/composables/useClockFormat'
+import { useSettingsStore } from '@/stores/settings'
 
+const settings = useSettingsStore()
 const clockFmt = useClockFormat()
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
@@ -20,7 +22,7 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 const parts = computed(() => new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value }).formatToParts(now.value))
 const hh = computed(() => parts.value.find(p => p.type === 'hour')?.value ?? '')
 const mm = computed(() => parts.value.find(p => p.type === 'minute')?.value ?? '')
-const ampm = computed(() => parts.value.find(p => p.type === 'dayPeriod')?.value ?? '')
+const ampm = computed(() => pickDayPeriod(parts.value, settings.clock24h))
 const dateText = computed(() => now.value.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }))
 </script>
 

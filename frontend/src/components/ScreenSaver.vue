@@ -362,7 +362,7 @@ import {
 } from '@/services/newsService'
 import { useMarket } from '@/composables/useMarket'
 import { useSettingsStore } from '@/stores/settings'
-import { useClockFormat } from '@/composables/useClockFormat'
+import { pickDayPeriod, useClockFormat } from '@/composables/useClockFormat'
 import { resolveBackground, DEFAULT_BACKGROUND_ID, DEFAULT_SCREENSAVER_BACKGROUND_ID } from '@/data/backgrounds'
 import { backgroundClassFor, backgroundStyleFor } from '@/utils/backgroundStyle'
 import BackgroundHost from '@/components/backgrounds/BackgroundHost.vue'
@@ -456,7 +456,7 @@ const clockParts = computed(() =>
   new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', ...clockFmt.value }).formatToParts(time.value))
 const hourStr = computed(() => clockParts.value.find(p => p.type === 'hour')?.value ?? '')
 const minuteStr = computed(() => clockParts.value.find(p => p.type === 'minute')?.value ?? '')
-const dayPeriodStr = computed(() => clockParts.value.find(p => p.type === 'dayPeriod')?.value ?? '')
+const dayPeriodStr = computed(() => pickDayPeriod(clockParts.value, settingsStore.clock24h))
 const dateStr = computed(() => {
   const d = time.value
   const weekday = d.toLocaleDateString([], { weekday: 'long' })
