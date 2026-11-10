@@ -208,9 +208,10 @@ now_playing.set_emitter(lambda event, payload: socketio.emit(event, payload))
 now_playing.set_spawner(socketio.start_background_task)
 audio_spectrum.set_emitter(lambda event, payload: socketio.emit(event, payload))
 audio_spectrum.set_spawner(socketio.start_background_task)
-# WASAPI loopback capture is a Windows-only feature today; elsewhere the
-# service stays inert and the widget shows its honest unavailable state.
-audio_spectrum.set_enabled(sys.platform == 'win32')
+# Windows taps WASAPI loopback, macOS a Core Audio process tap (14.2+); on
+# other platforms the service stays inert and the widget shows its honest
+# unavailable state.
+audio_spectrum.set_enabled(sys.platform in ('win32', 'darwin'))
 # Triggers run headless: time/app/agent/webhook events fire deck actions,
 # scene navigations and panel notifications.
 triggers_service.set_emitter(lambda event, payload: socketio.emit(event, payload))

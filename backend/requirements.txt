@@ -52,6 +52,8 @@ winrt-Windows.Storage.Streams==3.2.1; sys_platform == 'win32'
 # older Pythons there skip the (optional) spectrum instead of failing setup.
 soundcard==0.4.6; sys_platform == 'win32' and (platform_machine != 'ARM64' or python_version >= '3.11')
 numpy>=1.26,<3; sys_platform == 'win32' and (platform_machine != 'ARM64' or python_version >= '3.11')
+# macOS: the spectrum reads a Core Audio tap (native/vdock_audio_tap.swift), no soundcard.
+numpy>=1.26,<3; sys_platform == 'darwin'
 
 # Optional: only needed for the "Ask Claude (API)" action, which calls the
 # Anthropic Messages API directly. The Claude Code CLI actions do not need it,

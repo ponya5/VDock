@@ -23,6 +23,11 @@ datas = [
     ('scripts/remove_agent_hooks.py', 'scripts'),
 ]
 
+if sys.platform == 'darwin':
+    # Pre-built by scripts/build-backend.sh: end users have no swiftc, and
+    # services/macos_audio_tap.py finds it at native/bin/ inside the bundle.
+    datas.append(('native/bin/vdock-audio-tap', 'native/bin'))
+
 binaries = []
 hiddenimports = (
     # Integration packs are discovered at runtime via

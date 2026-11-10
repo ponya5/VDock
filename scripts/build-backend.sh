@@ -20,6 +20,13 @@ if [ ! -x "$VENV_PYTHON" ]; then
     exit 1
 fi
 
+if [ "$(uname -s)" = "Darwin" ]; then
+    echo "[0/2] Building the macOS system-audio tap helper (spectrum)..."
+    mkdir -p "$BACKEND_DIR/native/bin"
+    swiftc -O "$BACKEND_DIR/native/vdock_audio_tap.swift" \
+        -o "$BACKEND_DIR/native/bin/vdock-audio-tap"
+fi
+
 echo "[1/2] Installing build dependencies..."
 "$VENV_PYTHON" -m pip install -q -r "$BACKEND_DIR/requirements-build.txt"
 

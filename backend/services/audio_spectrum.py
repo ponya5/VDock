@@ -1,7 +1,8 @@
 """Broadcasts a live output-audio spectrum for the screensaver widget.
 
 The panel has a volume mirror (DL-115) but nothing that shows the machine
-*sounding*. This captures the default speaker's WASAPI loopback — the mixed
+*sounding*. On Windows this captures the default speaker's WASAPI loopback (on macOS,
+a Core Audio process tap via services/macos_audio_tap.py) — the mixed
 output stream, no microphone involved — FFTs each chunk into 20 log-spaced
 bands (30 Hz–16 kHz) and emits::
 
@@ -30,6 +31,7 @@ optional deps.
 """
 import logging
 import math
+import sys
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -491,6 +493,44 @@ def _next_capture_mic(sc: Any, np: Any, current: Any) -> Any:
     return None
 
 
+class _ChunkProcessor:
+    """Per-chunk DSP state shared by every capture source.
+
+    One instance lives for one capture session: it owns the AGC envelopes,
+    bar smoothing, live hold-over and emit throttling, so the Windows
+    loopback and the macOS tap produce identical frames from the same audio.
+    """
+
+    def __init__(self, np: Any) -> None:
+        self._np = np
+        self._emit_state: Dict[str, Any] = {}
+        self._live_state: Dict[str, float] = {}
+        self._prev_bands = [0] * NUM_BANDS
+        self._band_ref: Optional[float] = None
+        self._peak_ref: Optional[float] = None
+        self._per_band_refs: Optional[List[float]] = None
+
+    def process(self, frames: Any, samplerate: float = SAMPLE_RATE) -> float:
+        """Analyse one chunk, emit a frame if due, return its raw peak."""
+        band_amps, peak = chunk_band_amps(self._np, frames, samplerate)
+        self._band_ref = agc_reference(max(band_amps), self._band_ref)
+        self._per_band_refs = agc_band_refs(band_amps, self._per_band_refs)
+        self._peak_ref = agc_reference(peak, self._peak_ref)
+        values = [amp_to_value(a) for a in agc_apply_bands(
+            band_amps, self._band_ref, self._per_band_refs)]
+        self._prev_bands = bands_envelope(values, self._prev_bands)
+        level = amp_to_value(
+            agc_apply([peak], self._peak_ref, LEVEL_TARGET_DB)[0])
+        now = time.time()
+        # Silence detection runs on the raw (unboosted) level.
+        live = update_live(amp_to_value(peak), now, self._live_state)
+        payload = decide_emit(self._prev_bands, level, live, now,
+                              self._emit_state)
+        if payload is not None:
+            _emit_payload(payload)
+        return peak
+
+
 def _emit_payload(payload: Dict[str, Any]) -> None:
     global _last_payload
     _last_payload = payload
@@ -502,8 +542,78 @@ def _emit_payload(payload: Dict[str, Any]) -> None:
         logger.error('Could not broadcast spectrum: %s', e)
 
 
+_active_tap: Any = None
+
+
+def _replace_active_tap(tap: Any) -> None:
+    """Make `tap` the live one, killing any predecessor.
+
+    A hung loop is abandoned by the watchdog, not stopped; closing its tap
+    here is what unblocks its read so it can notice it was superseded.
+    """
+    global _active_tap
+    previous, _active_tap = _active_tap, tap
+    if previous is not None:
+        previous.close()
+
+
+def _mac_capture_loop(gen: int) -> None:
+    """macOS source: a Core Audio process tap via the Swift helper."""
+    global _last_chunk_at, _loop_running
+    try:
+        import numpy as np
+        from services import macos_audio_tap
+    except Exception:
+        logger.info('Audio spectrum idle: numpy not installed')
+        return
+    processor = _ChunkProcessor(np)
+    last_error: Optional[str] = None
+    while gen == _generation:
+        if not _enabled.is_set():
+            _enabled.wait(DISABLED_POLL_SECONDS)
+            continue
+        # First run may compile the helper (~30 s). The watchdog is only
+        # armed afterwards, or it would read the build as a stalled capture.
+        try:
+            helper = macos_audio_tap.ensure_helper()
+        except Exception as e:
+            if str(e) != last_error:
+                logger.warning('Audio spectrum: macOS tap unavailable: %s', e)
+                last_error = str(e)
+            time.sleep(CAPTURE_RETRY_SECONDS)
+            continue
+        _loop_running = True
+        _last_chunk_at = time.time()
+        tap = macos_audio_tap.MacAudioTap(helper)
+        _replace_active_tap(tap)
+        try:
+            samplerate = tap.open()
+            logger.info('Audio spectrum capturing system audio (macOS tap, '
+                        '%d Hz)', samplerate)
+            last_error = None
+            while _enabled.is_set() and gen == _generation:
+                frames = tap.read_samples(np, CHUNK_FRAMES)
+                if gen != _generation:
+                    return  # superseded while blocked in read
+                _last_chunk_at = time.time()
+                processor.process(frames, samplerate)
+        except Exception as e:
+            if gen != _generation:
+                return
+            # Same failure logs once, not every retry.
+            if str(e) != last_error:
+                logger.warning('Audio spectrum: macOS tap failed: %s', e)
+                last_error = str(e)
+            time.sleep(CAPTURE_RETRY_SECONDS)
+        finally:
+            tap.close()
+
+
 def _capture_loop(gen: int = 0) -> None:
     global _last_chunk_at, _loop_running
+    if sys.platform == 'darwin':
+        _mac_capture_loop(gen)
+        return
     np, sc = _import_deps()
     if np is None:
         logger.info('Audio spectrum idle: numpy/soundcard not installed')
@@ -511,12 +621,7 @@ def _capture_loop(gen: int = 0) -> None:
     _patch_soundcard_propvariant(sc)
     _loop_running = True
     _last_chunk_at = time.time()
-    emit_state: Dict[str, Any] = {}
-    live_state: Dict[str, float] = {}
-    prev_bands = [0] * NUM_BANDS
-    band_ref: Optional[float] = None
-    peak_ref: Optional[float] = None
-    per_band_refs: Optional[List[float]] = None
+    processor = _ChunkProcessor(np)
     last_device_error: Optional[str] = None
     mic: Any = None
     while gen == _generation:
@@ -547,22 +652,8 @@ def _capture_loop(gen: int = 0) -> None:
                     if gen != _generation:
                         return  # superseded while blocked in record()
                     _last_chunk_at = time.time()
-                    band_amps, peak = chunk_band_amps(np, frames)
-                    band_ref = agc_reference(max(band_amps), band_ref)
-                    per_band_refs = agc_band_refs(band_amps, per_band_refs)
-                    peak_ref = agc_reference(peak, peak_ref)
-                    values = [amp_to_value(a) for a in agc_apply_bands(
-                        band_amps, band_ref, per_band_refs)]
-                    prev_bands = bands_envelope(values, prev_bands)
-                    level = amp_to_value(
-                        agc_apply([peak], peak_ref, LEVEL_TARGET_DB)[0])
+                    peak = processor.process(frames)
                     now = time.time()
-                    # Silence detection runs on the raw (unboosted) level.
-                    live = update_live(amp_to_value(peak), now, live_state)
-                    payload = decide_emit(prev_bands, level, live, now,
-                                          emit_state)
-                    if payload is not None:
-                        _emit_payload(payload)
                     if peak > PROBE_QUIET_PEAK:
                         last_loud_at = now
                     elif now - max(last_loud_at, last_probe_at) \

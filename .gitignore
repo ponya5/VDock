@@ -244,3 +244,4 @@ backend/test-scripts/
 /NUL
 
 .boost/
+backend/native/bin/

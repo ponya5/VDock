@@ -99,7 +99,8 @@
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "VDock controls apps such as Music, Spotify, Terminal and System Events when you press their buttons."
+        "NSAppleEventsUsageDescription": "VDock controls apps such as Music, Spotify, Terminal and System Events when you press their buttons.",
+        "NSAudioCaptureUsageDescription": "VDock listens to your Mac's audio output to draw the music spectrum on the screensaver. Nothing is recorded or stored."
       }
     },
     "linux": {
