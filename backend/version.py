@@ -4,4 +4,4 @@ Bump this together with ``frontend/package.json`` and
 ``frontend/electron/package.json`` -- ``tests/test_version_consistency.py``
 fails when they drift. See ``docs/RELEASING.md``.
 """
-__version__ = '3.1.0'
+__version__ = '3.2.0'
