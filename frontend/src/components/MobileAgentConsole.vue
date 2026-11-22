@@ -1,10 +1,12 @@
 <template>
   <section
     class="mobile-agent-console"
-    :class="[`state-${displayState}`, { 'is-linked': !!linkAccent }]"
-    :style="linkAccent ? { '--link-accent': linkAccent } : undefined"
+    :class="[`state-${displayState}`, { 'is-linked': !!linkAccent, 'no-actions': !showsActions }]"
+    :style="consoleStyle"
     :aria-label="`${agentName} console`"
   >
+    <!-- DL-166 layout: three blocks. Portrait stacks them; landscape puts the
+         status panel (.mac-side) on the left and every control on the right. -->
     <div class="mac-side">
     <AgentStatusBanner
       variant="card"
@@ -41,16 +43,38 @@
         {{ projectName }}
       </span>
     </AgentStatusBanner>
+    <span v-if="linked && showsActions" class="mac-actions-for" data-testid="actions-for">
+      <FontAwesomeIcon :icon="['fas', 'link']" /> acts on {{ linked.label }}
+    </span>
+    <!-- What the agent is on / what it last said - plain text, tap to expand.
+         A one-glance recap, not a conversation card (no history, no composer). -->
+    <button
+      v-if="recap"
+      type="button"
+      class="mac-recap"
+      :class="{ expanded: recapOpen }"
+      :aria-expanded="recapOpen ? 'true' : 'false'"
+      data-testid="agent-recap"
+      @click="recapOpen = !recapOpen"
+    >
+      <span class="mac-recap-label">
+        <FontAwesomeIcon :icon="['fas', recap.icon]" /> {{ recap.label }}
+      </span>
+      <span class="mac-recap-text">{{ recap.text }}</span>
+    </button>
+    </div>
 
     <div
-      v-if="isAgentPossiblyRunning && visibleActions.length > 0"
+      v-if="showsActions"
+      :key="displayState"
       class="mac-actions"
       :class="{ 'emphasizes-primary': emphasizesPrimaryAction }"
-      :style="{ '--secondary-action-count': Math.max(visibleActions.length - 1, 1), '--action-count': visibleActions.length }"
+      :style="{
+        '--secondary-action-count': Math.max(visibleActions.length - 1, 1),
+        '--action-count': visibleActions.length,
+        '--action-slots': visibleActions.length + (emphasizesPrimaryAction ? 1 : 0),
+      }"
     >
-      <span v-if="linked" class="mac-actions-for" data-testid="actions-for">
-        <FontAwesomeIcon :icon="['fas', 'link']" /> acts on {{ linked.label }}
-      </span>
       <button
         v-for="action in visibleActions"
         :key="action.id"
@@ -67,7 +91,6 @@
         />
         <span>{{ action.label }}</span>
       </button>
-    </div>
     </div>
 
     <div class="mac-main">
@@ -92,7 +115,13 @@
       ref="tilesEl"
       class="mac-shortcuts"
       :style="fitStyle"
-      :class="{ 'in-groups': showsGroups, compact: (fit?.rowH ?? 99) < 64 }"
+      :class="{
+        'in-groups': showsGroups,
+        compact: (fit?.rowH ?? 99) < 64,
+        narrow: (fit?.tileW ?? 999) < 150,
+        'more-below': moreBelow,
+      }"
+      @scroll.passive="updateMoreBelow"
       :role="showsGroups ? 'tabpanel' : undefined"
       :aria-labelledby="showsGroups && selectedId ? `agent-cat-tab-${selectedId}` : undefined"
       aria-label="Shortcuts"
@@ -161,6 +190,7 @@ import { selectedCategoryId, useAgentSceneView } from '@/composables/useAgentSce
 import { useAgentStateSince } from '@/composables/useAgentStateSince'
 import { AGENT_CATEGORIES, PAGE_NAVIGATION_ACTIONS, resolveButtonCategory, type CategoryGroup } from '@/utils/agentCategories'
 import { summarizeOtherSessions, toAgentState } from '@/utils/agentSessionSummary'
+import { fitTiles, MAX_TILE_W, type TileFit } from '@/utils/consoleTileFit'
 
 /**
  * Mobile agent console (DL-065): a portrait phone surface for driving a
@@ -170,8 +200,9 @@ import { summarizeOtherSessions, toAgentState } from '@/utils/agentSessionSummar
  * There is deliberately no free-text composer and no conversation card: a
  * phone's on-screen keyboard eats most of the screen for a control surface
  * that's meant to be a quick tap away (DL-069 follow-up), and nobody reads
- * agent replies on the deck — the hook's detail line ("needs permission to
- * use Bash") shows in the status card instead. Free-text prompting stays a
+ * a transcript on the deck — the hook's detail line ("needs permission to
+ * use Bash") shows in the status card, and a clamped recap (the prompt being
+ * worked on, or the last reply, DL-166 layout) sits under it. Free-text prompting stays a
  * desktop-only affordance, driven from the scene's own buttons via
  * `runShortcut` below.
  */
@@ -277,6 +308,26 @@ const statusLine = computed(() => {
 })
 
 const displayState = computed(() => (isAgentPossiblyRunning.value ? currentState.value : 'offline'))
+const showsActions = computed(() => isAgentPossiblyRunning.value && visibleActions.value.length > 0)
+// The scene's brand colour tints the status card (DL-166 layout); the linked session's colour marks the link.
+const consoleStyle = computed(() => ({
+  '--mac-brand': props.scene?.color || undefined,
+  '--link-accent': linkAccent.value || undefined,
+}))
+
+/** DL-166 layout: what the agent is on (working) or last said (otherwise). A permission
+    prompt shows nothing here - the card's detail line carries the ask. */
+const recap = computed<{ label: string; icon: string; text: string } | null>(() => {
+  const entry = stateEntry.value
+  const state = displayState.value
+  if (!entry || state === 'permission' || state === 'offline') return null
+  const clip = (text: string | undefined) => (text ?? '').trim().slice(0, 2000)
+  if (state === 'working' && clip(entry.prompt)) return { label: 'Working on', icon: 'bolt', text: clip(entry.prompt) }
+  if (clip(entry.reply)) return { label: 'Last reply', icon: 'quote-left', text: clip(entry.reply) }
+  return null
+})
+const recapOpen = ref(false)
+watch(displayState, () => { recapOpen.value = false })
 const sinceMs = useAgentStateSince(
   computed(() => `${profile.value?.status_source ?? 'agent'}:${linked.value?.pid ?? 'all'}`),
   displayState,
@@ -371,36 +422,21 @@ async function runShortcut(shortcut: ConsoleShortcut): Promise<void> {
 // scrolling, with a readable minimum size; only when even that cannot fit does
 // the region scroll. Rows get an explicit height so tiles never balloon.
 const tilesEl = ref<HTMLElement | null>(null)
-const fit = ref<{ cols: number; rowH: number } | null>(null)
-const FIT_GAP = 8
+const fit = ref<TileFit | null>(null)
 function computeFit(): void {
   const el = tilesEl.value
   const n = visibleShortcuts.value.length
-  if (!el || n === 0) { fit.value = null; return }
-  const landscape = window.innerWidth > window.innerHeight
-  const W = el.clientWidth
-  const H = el.clientHeight
-  const minW = landscape ? 96 : 84
-  const minH = 48
-  const maxH = 92
-  let best: { cols: number; rowH: number; score: number } | null = null
-  for (let cols = 1; cols <= n; cols++) {
-    const rows = Math.ceil(n / cols)
-    const tw = (W - FIT_GAP * (cols - 1)) / cols
-    const th = (H - FIT_GAP * (rows - 1)) / rows
-    if (tw < minW || th < minH) continue
-    const score = Math.min(tw, 170) * Math.min(th, maxH)
-    if (!best || score > best.score) best = { cols, rowH: Math.min(th, maxH), score }
-  }
-  if (!best) {
-    // Cannot fit: most columns that still respect the minimum width; scroll vertically.
-    const cols = Math.max(1, Math.min(n, Math.floor((W + FIT_GAP) / (minW + FIT_GAP))))
-    best = { cols, rowH: minH, score: 0 }
-  }
-  fit.value = { cols: best.cols, rowH: Math.floor(best.rowH) }
+  fit.value = el && n > 0 ? fitTiles(n, el.clientWidth, el.clientHeight) : null
+  void nextTick(updateMoreBelow)
+}
+/** More tiles below the fold: the grid's bottom edge fades so the scroll is discoverable. */
+const moreBelow = ref(false)
+function updateMoreBelow(): void {
+  const el = tilesEl.value
+  moreBelow.value = !!el && el.scrollTop + el.clientHeight < el.scrollHeight - 2
 }
 const fitStyle = computed(() => fit.value
-  ? { gridTemplateColumns: `repeat(${fit.value.cols}, minmax(0, 1fr))`, gridAutoRows: `${fit.value.rowH}px` }
+  ? { gridTemplateColumns: `repeat(${fit.value.cols}, minmax(0, ${MAX_TILE_W}px))`, gridAutoRows: `${fit.value.rowH}px` }
   : undefined)
 let fitObserver: ResizeObserver | null = null
 onMounted(() => {
@@ -464,11 +500,78 @@ trackAgentSurfaceVisibility(
 .mobile-agent-console.state-offline { --agent-accent: #64748b; }
 
 /* --- Status card: see AgentStatusBanner (DL-166) -------------------------------- */
+/* DL-166 layout: the scene's brand colour washes in from the top-right corner; a permission
+   prompt keeps its solid amber (it must read as urgent, not as branding). */
+.mac-side > .agent-status-banner:not(.state-permission) {
+  background:
+    radial-gradient(130% 150% at 100% 0%, color-mix(in srgb, var(--mac-brand, transparent) 26%, transparent) 0%, transparent 62%),
+    var(--asb-fill);
+}
+/* READY = waiting for you: a slow breathing ring, so an idle agent is noticed without a glare. */
+.mobile-agent-console.state-ready .mac-side > .agent-status-banner {
+  animation: mac-breathe 3.2s ease-in-out infinite;
+}
+@keyframes mac-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22), 0 0 22px rgba(34, 197, 94, 0.16); }
+}
+
+/* --- Recap: the prompt being worked on / the last reply (DL-166 layout) -------- */
+.mac-recap {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 20, 28, 0.62);
+  color: rgba(226, 232, 240, 0.9);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mac-recap-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--agent-accent) 70%, #ffffff);
+}
+.mac-recap-text {
+  min-height: 0;
+  font-size: clamp(0.8rem, 0.76rem + 0.25vw, 0.92rem);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.mac-recap.expanded .mac-recap-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  max-height: 40vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  white-space: pre-line;
+}
+
 .mac-project {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  max-width: 40%;
+  /* Fixed, not %: inside the card's content-sized slot a % width collapsed to the icon. */
+  max-width: 220px;
   padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
@@ -486,6 +589,9 @@ trackAgentSurfaceVisibility(
 .mac-target {
   margin-left: auto;
 }
+/* The card gives the chip its own line when it needs one: let it use it, or the "waiting"
+   tag squeezed the session name down to a single letter on a phone. */
+.mac-target :deep(.agent-target-chip) { max-width: min(100%, 320px); }
 
 /* --- State actions ------------------------------------------------------------ */
 /* One compact row of icon-over-label buttons; an urgent primary action
@@ -495,7 +601,23 @@ trackAgentSurfaceVisibility(
   display: grid;
   grid-template-columns: repeat(var(--action-count, 3), minmax(0, 1fr));
   gap: 8px;
+  /* Re-keyed on every state change: the new state's actions slide in. */
+  animation: mac-actions-in 0.22s ease-out both;
 }
+@keyframes mac-actions-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Pressed feedback on every control: a quick scale (per-control :active rules) plus a brighten. */
+.mac-action, .mac-shortcut, .mac-link, .mac-recap {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, filter 0.12s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.mac-action:active:not(:disabled),
+.mac-shortcut:active:not(:disabled),
+.mac-link:active:not(:disabled),
+.mac-recap:active { filter: brightness(1.18); }
 
 .mac-action {
   min-width: 0;
@@ -540,6 +662,15 @@ trackAgentSurfaceVisibility(
   background: var(--agent-accent);
   border-color: transparent;
   color: #0b1015;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--agent-accent) 32%, transparent);
+}
+/* A permission prompt is the one thing to press: Approve pulses until it is answered. */
+.mobile-agent-console.state-permission .mac-action.primary {
+  animation: mac-primary-pulse 1.4s ease-out infinite;
+}
+@keyframes mac-primary-pulse {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--agent-accent) 60%, transparent); }
+  to { box-shadow: 0 0 0 12px transparent; }
 }
 
 .mac-actions.emphasizes-primary {
@@ -572,9 +703,15 @@ trackAgentSurfaceVisibility(
   grid-auto-rows: 68px;
   align-content: start;
   gap: 8px;
+  /* At least two rows of tiles stay on screen; a short portrait scrolls the console instead. */
+  min-height: 96px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* computeFit sizes rows to fill the box exactly when it must scroll; snapping per row
+     means a resting scroll never leaves a half-cut tile (DL-166 layout). */
+  scroll-snap-type: y mandatory;
 }
+.mac-shortcuts > * { scroll-snap-align: start; }
 
 .mac-shortcut {
   -webkit-user-select: none;
@@ -616,6 +753,19 @@ trackAgentSurfaceVisibility(
 }
 .mac-shortcuts.compact .mac-shortcut { flex-direction: row; gap: 8px; padding: 4px 10px; }
 .mac-shortcuts.compact .mac-shortcut-icon { flex: none; }
+/* Short AND narrow tiles: an icon beside the label left ~50px and split words mid-way
+   ("Contin|ue"); stack them instead, one line, ellipsis rather than a broken word. */
+.mac-shortcuts.compact.narrow .mac-shortcut { flex-direction: column; gap: 2px; padding: 4px 6px; }
+.mac-shortcuts.compact.narrow .mac-shortcut-icon { font-size: 1.1em; }
+.mac-shortcuts.compact.narrow .mac-shortcut-label {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mac-shortcuts.more-below {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+}
 
 .mac-shortcut.highlighted {
   border-color: var(--agent-accent);
@@ -626,21 +776,27 @@ trackAgentSurfaceVisibility(
 .mac-shortcut:disabled { opacity: 0.6; cursor: default; }
 
 /* --- DL-166: Groups / All header and the grouped tile region ---------------------- */
+/* One row: the chips scroll sideways (with their fade) rather than wrapping the toggle onto a
+   second line that costs ~50px of tile room. */
 .mac-nav {
   flex: none;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
-.mac-nav > .agent-cat-chips { order: 1; flex: 1 1 230px; min-width: 0; }
+.mac-nav > .agent-cat-chips { order: 1; flex: 1 1 0; min-width: 0; }
 .mac-shortcuts-head {
   order: 2;
   flex: none;
   margin-left: auto;
   display: flex;
   align-items: center;
+}
+/* A portrait phone: the toggle goes icon-only (its aria-label / title stay) so the chip strip
+   shows more than one category - with labels it hid every chip after the first. */
+@media (orientation: portrait) and (max-width: 480px) {
+  .mac-shortcuts-head :deep(.avt-label) { display: none; }
 }
 /* Links inside the tile grid keep their pill look, centred. */
 .mac-shortcuts .mac-link {
@@ -679,32 +835,68 @@ trackAgentSurfaceVisibility(
 .mac-link:active:not(:disabled) { transform: scale(0.96); }
 .mac-link:disabled { opacity: 0.6; cursor: default; }
 
-/* Landscape phones: status + actions on the left, shortcuts on the right. */
-@media (orientation: landscape) and (max-height: 520px) {
+/* Landscape (DL-166 layout; the console only mounts on compact-touch screens, so this is
+   phones and the panel): the status panel fills the left column, every control sits on
+   the right - one row of state actions, then the category row, then the tiles. */
+@media (orientation: landscape) {
   .mobile-agent-console {
-    flex-direction: row;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: clamp(220px, 30%, 320px) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "side actions" "side main";
+    gap: 8px 12px;
     overflow: hidden;
-    padding: 6px calc(10px + env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
+    padding: 8px calc(12px + env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
   }
+  .mobile-agent-console.no-actions { grid-template-areas: "side main" "side main"; }
   .mac-side {
-    flex: 0 0 clamp(230px, 36%, 340px);
+    grid-area: side;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .mac-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mac-action { min-height: 44px; flex-direction: row; gap: 6px; padding: 6px; }
-  .emphasizes-primary .mac-action.primary { min-height: 52px; }
-  .mac-actions.emphasizes-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* The card is the panel: it takes the spare height, content centred; the recap below it
+     gets more lines than in portrait (tap still expands it). */
+  .mac-side > .agent-status-banner { flex: 1 0 auto; align-content: center; }
+  .mac-side > .agent-status-banner :deep(.asb-word) { font-size: clamp(1.5rem, 6.5vh, 2.2rem); }
+  .mac-side > .agent-status-banner :deep(.asb-glyph) { font-size: clamp(26px, 8vh, 38px); }
+  .mac-recap-text { -webkit-line-clamp: 4; line-clamp: 4; }
+  .mac-actions,
+  .mac-actions.emphasizes-primary {
+    grid-area: actions;
+    grid-template-columns: repeat(var(--action-slots, 3), minmax(0, 1fr));
+  }
+  .emphasizes-primary .mac-action.primary { grid-column: span 2; min-height: 52px; }
+  /* Icon over label: five slots in a phone's right column leave ~100px each, and a side-by-side
+     icon split "Background" mid-word. The wide primary keeps its row layout (base rule). */
+  .mac-action { min-height: 52px; gap: 3px; padding: 4px 6px; }
+  .mac-main { grid-area: main; }
+}
+
+/* The header-reveal FAB (panel-class screens) owns the bottom-right corner: keep tiles out of it. */
+html.reveal-fab-visible .mobile-agent-console { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 600px), (max-height: 460px) {
+  html.reveal-fab-visible .mobile-agent-console { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (orientation: landscape) {
+  html.reveal-fab-visible .mobile-agent-console { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  html.reveal-fab-visible .mac-main { padding-bottom: 80px; }
+}
+@media (orientation: landscape) and (max-height: 460px) {
+  html.reveal-fab-visible .mac-main { padding-bottom: 50px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mac-session.waiting { animation: none; }
+  .mac-actions,
+  .mobile-agent-console.state-ready .mac-side > .agent-status-banner,
+  .mobile-agent-console.state-permission .mac-action.primary { animation: none; }
+  .mac-action, .mac-shortcut, .mac-link, .mac-recap { transition: none; }
 }
 /* DL-165: the link to a session - badge, edge and a caption over the actions, in the session's colour. */
 .mobile-agent-console.is-linked { border-left: 4px solid var(--link-accent); }
 .mac-actions-for {
-  grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
   padding: 1px 10px; border-radius: 8px; background: var(--link-accent); color: #0b1220; font-weight: 700;
   font-size: clamp(0.62rem, 0.8vw + 0.34rem, 0.82rem); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }

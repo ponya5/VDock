@@ -83,16 +83,19 @@ export const agentStates = readonly(statesBySource)
  * stands down for these: the bar already shows the state and the Approve/Deny
  * buttons, and the overlay would cover them on a small panel.
  */
-const sourcesWithVisibleBar = reactive(new Set<string>())
+// Keyed per surface ("source\nsurface"): on a scene switch between two scenes of the same agent
+// the new surface mounts before the old one unmounts, and a per-source flag let the old one's
+// "hidden" win - the alert then covered the new surface's own Approve (DL-166 layout).
+const visibleBars = reactive(new Set<string>())
 
-export function setAgentBarVisible(source: string, isVisible: boolean): void {
-  if (isVisible) {
-    sourcesWithVisibleBar.add(source)
-    return
-  }
-  sourcesWithVisibleBar.delete(source)
+export function setAgentBarVisible(source: string, isVisible: boolean, surface = 'default'): void {
+  const key = `${source}\n${surface}`
+  if (isVisible) visibleBars.add(key)
+  else visibleBars.delete(key)
 }
 
 export function isAgentBarVisible(source: string | null | undefined): boolean {
-  return source ? sourcesWithVisibleBar.has(source) : false
+  if (!source) return false
+  for (const key of visibleBars) if (key.startsWith(`${source}\n`)) return true
+  return false
 }
