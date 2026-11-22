@@ -272,6 +272,34 @@ describe('MobileAgentConsole', () => {
     expect(wrapper.find('.asb-word').text()).toBe('Working')
   })
 
+  // --- DL-166 layout: recap (what it is on / what it last said) --------------
+
+  it('recaps the prompt while working and the last reply (as plain text) when ready', async () => {
+    sessionState.currentState.value = 'working'
+    sessionState.stateEntry.value = { prompt: 'Fix the login bug', reply: '<b>done</b>', project: 'VDock2', message: '' }
+    const working = mountConsole()
+    expect(working.find('[data-testid="agent-recap"]').text()).toContain('Working on')
+    expect(working.find('.mac-recap-text').text()).toBe('Fix the login bug')
+
+    sessionState.currentState.value = 'ready'
+    const ready = mountConsole()
+    const recap = ready.find('[data-testid="agent-recap"]')
+    expect(recap.text()).toContain('Last reply')
+    expect(ready.find('.mac-recap-text').text()).toBe('<b>done</b>')
+    expect(ready.find('.mac-recap-text b').exists()).toBe(false)
+    expect(recap.attributes('aria-expanded')).toBe('false')
+    await recap.trigger('click')
+    expect(recap.attributes('aria-expanded')).toBe('true')
+  })
+
+  it('shows no recap on a permission prompt or with nothing to say', () => {
+    sessionState.currentState.value = 'permission'
+    expect(mountConsole().find('[data-testid="agent-recap"]').exists()).toBe(false)
+    sessionState.currentState.value = 'ready'
+    sessionState.stateEntry.value = { prompt: '', reply: '   ', project: 'VDock2', message: '' }
+    expect(mountConsole().find('[data-testid="agent-recap"]').exists()).toBe(false)
+  })
+
   // --- DL-071: session target picker ---------------------------------------
 
   const TWO_SESSIONS = [

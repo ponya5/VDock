@@ -190,6 +190,8 @@ export function useAgentSession(scene: Ref<Scene | null>, stateOverride?: Ref<Ag
   }
 }
 
+let surfaceSeq = 0
+
 /**
  * Tells the alert overlay that a surface already shows this agent's state
  * and Approve/Deny, so the overlay doesn't cover it.
@@ -198,17 +200,18 @@ export function trackAgentSurfaceVisibility(
   source: ComputedRef<string | null | undefined>,
   isVisible: ComputedRef<boolean>,
 ): void {
+  const surface = String(++surfaceSeq)
   watch(
     () => [source.value, isVisible.value] as const,
     ([currentSource, visible], previous) => {
       const previousSource = previous?.[0]
-      if (previousSource && previousSource !== currentSource) setAgentBarVisible(previousSource, false)
-      if (currentSource) setAgentBarVisible(currentSource, visible)
+      if (previousSource && previousSource !== currentSource) setAgentBarVisible(previousSource, false, surface)
+      if (currentSource) setAgentBarVisible(currentSource, visible, surface)
     },
     { immediate: true },
   )
 
   onUnmounted(() => {
-    if (source.value) setAgentBarVisible(source.value, false)
+    if (source.value) setAgentBarVisible(source.value, false, surface)
   })
 }

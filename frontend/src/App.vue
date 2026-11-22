@@ -81,8 +81,11 @@ const isStandaloneSettings = computed(() => isStandaloneSettingsRoute(route))
 
 // Settings and the guide already show the version in their own footer.
 const DECK_ROUTE_PATHS = ['/', '/edit', '/profiles']
+// DL-166 layout: on phones and the panel the corner mark sat on top of the bottom-left control;
+// there the version lives at the bottom of the mobile chrome's menu instead.
+const { isCompactTouch } = useDeviceClass()
 const showVersionWatermark = computed(
-  () => !isStandaloneSettings.value && DECK_ROUTE_PATHS.includes(route.path),
+  () => !isStandaloneSettings.value && !isCompactTouch.value && DECK_ROUTE_PATHS.includes(route.path),
 )
 
 watch(isStandaloneSettings, (standalone) => {

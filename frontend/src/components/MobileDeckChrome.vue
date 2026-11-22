@@ -229,6 +229,8 @@
           <FontAwesomeIcon :icon="['fas', 'power-off']" />
           <span>Exit VDock</span>
         </button>
+        <!-- The corner watermark is off on touch screens (it covered controls). -->
+        <p class="mc-menu-version" data-testid="mc-menu-version">VDock v{{ appVersion }}</p>
       </div>
     </div>
 
@@ -277,6 +279,7 @@ import { supportsFullscreenApi, isRunningStandalone } from '@/utils/fullscreenSu
 import { IOS_FULLSCREEN_CALLOUT } from '@/utils/installCopy'
 import InstallSheet from '@/components/InstallSheet.vue'
 import type { Scene } from '@/types'
+import { version as appVersion } from '../../package.json'
 
 interface Props {
   scenes: Scene[]
@@ -773,15 +776,6 @@ onUnmounted(() => {
   padding: 6px 8px;
   box-sizing: border-box;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Short landscape phones: a slimmer bar to give the deck its height back. */
-@media (orientation: landscape) and (max-height: 520px) {
-  .mobile-chrome { height: 46px; padding: 3px 8px; }
-  .mc-scene-rail { padding: 3px; border-radius: 14px; }
-  .mc-seg { min-height: 36px; padding: 4px 12px; }
-  .mc-glider { top: 3px; bottom: 3px; }
-  .mc-fullscreen-btn, .mc-more-btn, .mc-reveal-btn, .mc-page-btn { width: 40px; height: 40px; }
 }
 
 /* Idle countdown: a thin line under the bar that drains until it folds away. */
@@ -1370,5 +1364,26 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .mc-fullscreen-btn.mc-suggest { animation: none !important; }
   .mc-fullscreen-callout { animation: none !important; opacity: 1; }
+}
+
+.mc-menu-version {
+  margin: 4px 0 0;
+  padding: 8px 12px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Short landscape phones: a slimmer bar that still keeps 44px targets (DL-166 layout).
+   Must stay after the base .mc-seg rules - same specificity, so source order decides
+   (it used to sit above them and never applied: 48px segments overflowed a 46px bar).
+   560px leaves the 1024x600 panel on the standard bar. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mobile-chrome { height: 52px; padding: 2px 8px; }
+  .mc-scene-rail { padding: 0 3px; border-radius: 14px; }
+  .mc-seg { min-height: 44px; padding: 4px 12px; }
+  .mc-seg.is-compact { min-width: 44px; }
+  .mc-glider { top: 3px; bottom: 3px; }
 }
 </style>
