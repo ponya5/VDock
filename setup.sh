@@ -476,6 +476,8 @@ configure_ports() {
 build_frontend() {
   echo ""
   echo "  Building the frontend..."
+  echo "  This takes a minute or two and can sit on one line for a while."
+  echo "  Please wait - pressing Ctrl+C stops the build."
   export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
   ( cd "$ROOT/frontend" && npm run build ) || { err "Frontend build failed. See the output above."; return 1; }
   ok "Frontend built (frontend/dist)"

@@ -894,7 +894,12 @@ html.reveal-fab-visible .mobile-agent-console { padding-bottom: calc(88px + env(
   .mac-action, .mac-shortcut, .mac-link, .mac-recap { transition: none; }
 }
 /* DL-165: the link to a session - badge, edge and a caption over the actions, in the session's colour. */
-.mobile-agent-console.is-linked { border-left: 4px solid var(--link-accent); }
+/* DL-170: a soft inset line + glow - a solid border read as a stray line on phones. */
+.mobile-agent-console.is-linked {
+  box-shadow:
+    inset 2px 0 0 color-mix(in srgb, var(--link-accent) 55%, transparent),
+    inset 14px 0 14px -14px color-mix(in srgb, var(--link-accent) 40%, transparent);
+}
 .mac-actions-for {
   align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
   padding: 1px 10px; border-radius: 8px; background: var(--link-accent); color: #0b1220; font-weight: 700;

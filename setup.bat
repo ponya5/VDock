@@ -461,18 +461,35 @@ exit /b 0
 :build_frontend
 echo.
 echo   Building the frontend...
+echo   This takes a minute or two and can sit on one line for a while.
+echo   Please wait - pressing Ctrl+C stops the build.
 REM VDock serves frontend\dist, which git does not track - without this
 REM step a pull or reinstall keeps showing the previously built UI. Runs
 REM after :configure_ports because the ports in frontend\.env are baked
 REM into the bundle.
 set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%APPDATA%\npm;%PATH%"
+set "BUILD_ATTEMPT=0"
 pushd "%ROOT%\frontend"
+:build_frontend_attempt
+set /a BUILD_ATTEMPT+=1
 call npm run build
-if errorlevel 1 (
-    popd
-    echo   [ERROR] Frontend build failed. See the output above.
-    exit /b 1
-)
+if not errorlevel 1 goto :build_frontend_ok
+echo   [ERROR] Frontend build failed or was interrupted. See the output above.
+REM Ctrl+C answered with N at "Terminate batch job" still kills the build,
+REM so offer a retry instead of failing the whole setup. Capped, so a real
+REM build error with no keyboard (empty answer = yes) cannot loop forever.
+if !BUILD_ATTEMPT! GEQ 3 goto :build_frontend_failed
+set "BUILD_ANSWER="
+set /p "BUILD_ANSWER=  Retry the build? [Y/n]: "
+call :is_yes_answer "!BUILD_ANSWER!"
+if errorlevel 1 goto :build_frontend_failed
+echo.
+echo   Building the frontend ^(attempt !BUILD_ATTEMPT! failed, retrying^)...
+goto :build_frontend_attempt
+:build_frontend_failed
+popd
+exit /b 1
+:build_frontend_ok
 popd
 echo   [OK]    Frontend built ^(frontend\dist^)
 exit /b 0
