@@ -82,3 +82,15 @@ export function reflowPage(page: Page, options: ReflowOptions): ReflowResult {
     cellPx: scrolls ? minCell : Math.floor(fitCell),
   }
 }
+
+/**
+ * DL-167 - render a hand-authored portrait page as is (no re-pack). Same scroll
+ * rule as the auto reflow: rows below `minCell` tall scroll vertically instead of shrinking.
+ */
+export function layoutPortraitPage(page: Page, options: ReflowOptions): ReflowResult {
+  const { rows, cols } = page.grid_config
+  const { width, height, minCell } = options
+  const fitCell = Math.min(width / cols, height / rows)
+  const scrolls = height / rows < minCell
+  return { page, reflowed: true, scroll: scrolls ? 'y' : 'none', cellPx: scrolls ? minCell : Math.floor(fitCell) }
+}

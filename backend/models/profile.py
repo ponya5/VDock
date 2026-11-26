@@ -14,16 +14,21 @@ class Page:
         default_factory=lambda: {'rows': 3, 'cols': 5}
     )
     background: Optional[Dict[str, Any]] = None
+    # DL-167: hand-authored portrait grid {rows, cols}; None = auto-reflow.
+    portrait_grid: Optional[Dict[str, int]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        result = {
             'id': self.id,
             'name': self.name,
             'buttons': [btn.to_dict() for btn in self.buttons],
             'grid_config': self.grid_config,
             'background': self.background
         }
+        if self.portrait_grid is not None:
+            result['portrait_grid'] = self.portrait_grid
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Page':
@@ -34,7 +39,8 @@ class Page:
             name=data['name'],
             buttons=buttons,
             grid_config=data.get('grid_config', {'rows': 3, 'cols': 5}),
-            background=data.get('background')
+            background=data.get('background'),
+            portrait_grid=data.get('portrait_grid') or None
         )
 
 

@@ -199,6 +199,8 @@ export interface Button {
   confirm?: 'default' | 'always' | 'never'
   /** DL-166: agent-scene category override; absent or '' = auto-resolve from the action (utils/agentCategories). */
   category?: AgentCategoryId | ''
+  /** DL-167: hand-authored portrait placement; absent = auto-placed after the authored ones. */
+  portrait?: { position: ButtonPosition; size: ButtonSize }
 }
 
 export interface GridConfig {
@@ -223,6 +225,8 @@ export interface Page {
   name: string
   buttons: Button[]
   grid_config: GridConfig
+  /** DL-167: hand-authored portrait grid; present = phones in portrait use it instead of the auto reflow. */
+  portrait_grid?: GridConfig
   background?: Background
 }
 

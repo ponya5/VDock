@@ -124,7 +124,8 @@ import { vibrate } from '@/utils/haptics'
 import { useMobileViewport } from '@/utils/mobileViewport'
 import { useDeviceClass, type DeviceClass } from '@/composables/useDeviceClass'
 import { useDevicePrefs } from '@/services/devicePrefs'
-import { reflowPage } from '@/utils/gridReflow'
+import { reflowPage, layoutPortraitPage } from '@/utils/gridReflow'
+import { projectPortrait } from '@/utils/portraitLayout'
 
 interface Props {
   page: Page
@@ -228,12 +229,19 @@ const GRID_GAP = 8
 const REFLOW_MIN_CELL: Partial<Record<DeviceClass, number>> = { phone: 72, tablet: 96 }
 const { layoutClass } = useDeviceClass()
 const devicePrefs = useDevicePrefs()
-const reflow = computed(() => reflowPage(renderedPage.value, {
-  width: hostSize.value.w,
-  height: hostSize.value.h,
-  minCell: REFLOW_MIN_CELL[layoutClass.value] ?? 0,
-  enabled: layoutClass.value in REFLOW_MIN_CELL && !props.isEditMode && devicePrefs.layout === 'fit',
-}))
+const reflow = computed(() => {
+  const options = {
+    width: hostSize.value.w,
+    height: hostSize.value.h,
+    minCell: REFLOW_MIN_CELL[layoutClass.value] ?? 0,
+    enabled: layoutClass.value in REFLOW_MIN_CELL && !props.isEditMode && devicePrefs.layout === 'fit',
+  }
+  // DL-167: a hand-authored portrait layout wins over the auto fold.
+  if (options.enabled && options.height > options.width && renderedPage.value.portrait_grid) {
+    return layoutPortraitPage(projectPortrait(renderedPage.value), options)
+  }
+  return reflowPage(renderedPage.value, options)
+})
 const deckPage = computed(() => reflow.value.page)
 
 const cellMetrics = computed(() => {

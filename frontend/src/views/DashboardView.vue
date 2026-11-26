@@ -44,6 +44,7 @@
       @navigate-profiles="router.push('/profiles')"
       @set-scene="setScene"
       @add-scene="addScene"
+      @move-scene="dashboardStore.moveScene"
       @edit-scene="editScene"
       @import-scene="importScene"
       @set-page="setPage"
@@ -98,7 +99,7 @@
                 @button-release="handleButtonRelease"
                 @double-tap="handleButtonClick"
               />
-              <div v-else class="deck-grid-host">
+              <div v-else class="deck-grid-host" :class="{ 'portrait-frame': isEditMode && dashboardStore.editOrientation === 'portrait' }">
                 <DeckGrid
                   :page="currentPage"
                   :is-edit-mode="isEditMode"
@@ -1590,6 +1591,19 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* DL-167: portrait layout editing on a wide screen - a phone-shaped frame, fitted to the pane height. */
+.deck-grid-host.portrait-frame {
+  flex: 0 1 auto;
+  align-self: center;
+  height: 100%;
+  aspect-ratio: 9 / 19.5;
+  max-width: 100%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* DL-147: notch / home-indicator padding. The root takes top and sides; the

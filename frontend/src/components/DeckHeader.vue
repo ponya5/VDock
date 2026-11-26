@@ -36,6 +36,7 @@
             :is-edit-mode="isEditMode"
             @scene-change="emit('setScene', $event)"
             @add-scene="emit('addScene')"
+            @move-scene="(id, delta) => emit('moveScene', id, delta)"
             @edit-scene="emit('editScene', $event)"
             class="enhanced-scene-nav"
           />
@@ -62,6 +63,17 @@
                  mobile upstream, so the button would be dead. -->
             <button class="btn-icon-circle animate-tap" @click="emit('navigateProfiles')" title="Profiles" aria-label="Profiles">
               <FontAwesomeIcon :icon="['fas', 'users']" />
+            </button>
+            <!-- DL-167: edit the portrait (phone) layout from here; each orientation keeps its own placement. -->
+            <button
+              v-if="isEditMode && !isMobileViewport"
+              :class="['btn-icon-circle animate-tap', { 'edit-active': dashboardStore.editOrientation === 'portrait' }]"
+              @click="dashboardStore.setEditOrientation(dashboardStore.editOrientation === 'portrait' ? 'landscape' : 'portrait')"
+              :title="dashboardStore.editOrientation === 'portrait' ? 'Editing portrait layout - switch to landscape' : 'Editing landscape layout - switch to portrait'"
+              :aria-label="dashboardStore.editOrientation === 'portrait' ? 'Switch to landscape layout' : 'Switch to portrait layout'"
+              :aria-pressed="dashboardStore.editOrientation === 'portrait'"
+            >
+              <FontAwesomeIcon :icon="['fas', dashboardStore.editOrientation === 'portrait' ? 'mobile-screen' : 'desktop']" />
             </button>
             <button
               v-if="!isMobileViewport"
@@ -166,6 +178,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import GlassPillSceneSelector from './GlassPillSceneSelector.vue'
 import PageNavigation from './PageNavigation.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useDashboardStore } from '@/stores/dashboard'
 import { useElectron } from '@/composables/useElectron'
 import { useSwipe } from '@/composables/useGestures'
 import { refreshVdock } from '@/composables/useVdockRefresh'
@@ -187,6 +200,7 @@ const emit = defineEmits<{
   navigateProfiles: []
   setScene: [sceneId: string]
   addScene: []
+  moveScene: [sceneId: string, delta: -1 | 1]
   editScene: [scene: Scene]
   setPage: [index: number]
   previousPage: []
@@ -194,6 +208,7 @@ const emit = defineEmits<{
 }>()
 
 const settingsStore = useSettingsStore()
+const dashboardStore = useDashboardStore()
 // Phones hide the config entries (profiles / edit mode / settings) — the
 // deck is a pure control surface on small screens.
 const { isMobileViewport } = useMobileViewport()

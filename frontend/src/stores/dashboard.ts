@@ -14,6 +14,7 @@ import {
   FACTORY_SEED_SCENES
 } from '@/utils/defaultProfile'
 import { useMobileViewport } from '@/utils/mobileViewport'
+import { swapOrientation, stripPortrait } from '@/utils/portraitLayout'
 import timerButtons from '@/services/timerButtons'
 
 export const LAST_PROFILE_STORAGE_KEY = 'vdock_last_profile'
@@ -90,6 +91,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const currentSceneIndex = ref(0)
   const currentPageIndex = ref(0)
   const isEditMode = ref(false)
+  // DL-167: which orientation's placement the edit mode shows. Portrait is an in-memory
+  // swap of landscape/portrait placement (utils/portraitLayout); saveProfile swaps back.
+  const editOrientation = ref<'landscape' | 'portrait'>('landscape')
+  let peekedPageIds = new Set<string>()
+  let portraitDirty = false
   const history = ref<Profile[]>([])
   const historyIndex = ref(-1)
   const maxHistory = 50
@@ -164,6 +170,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     migratedProfile.factorySeedsApplied = [...applied]
 
     currentProfile.value = migratedProfile
+    editOrientation.value = 'landscape'
     currentSceneIndex.value = 0
     currentPageIndex.value = 0
     // Reset history when loading a new profile. Loading never writes — the
@@ -570,7 +577,24 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // button, long-press gestures, and any future caller. Toggling OFF is
     // always allowed in case a session was already in edit mode.
     if (!isEditMode.value && useMobileViewport().isMobileViewport.value) return
+    if (isEditMode.value) setEditOrientation('landscape')
     isEditMode.value = !isEditMode.value
+  }
+
+  /** DL-167: switch the edited layout. Undo history restarts (its snapshots are orientation-specific). */
+  function setEditOrientation(next: 'landscape' | 'portrait') {
+    const profile = currentProfile.value
+    if (!profile || next === editOrientation.value) return
+    if (next === 'portrait') {
+      peekedPageIds = new Set(profile.scenes.flatMap(s => s.pages).filter(p => !p.portrait_grid).map(p => p.id))
+      portraitDirty = false
+    }
+    swapOrientation(profile, next === 'portrait')
+    // Looked at portrait but never saved anything there: do not persist the seeded layout.
+    if (next === 'landscape' && !portraitDirty) stripPortrait(profile, peekedPageIds)
+    editOrientation.value = next
+    history.value = [JSON.parse(JSON.stringify(profile))]
+    historyIndex.value = 0
   }
 
   // Last save failure, surfaced by callers that report save errors — the
@@ -583,7 +607,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
     lastProfileSaveError.value = null
     try {
             const profileId = currentProfile.value.id
-            const response = await apiClient.put(`/profiles/${profileId}`, currentProfile.value)
+            let payload: Profile = currentProfile.value
+            if (editOrientation.value === 'portrait') {
+              portraitDirty = true
+              payload = JSON.parse(JSON.stringify(payload)) as Profile
+              swapOrientation(payload, false)
+            }
+            const response = await apiClient.put(`/profiles/${profileId}`, payload)
             if (!response.data.success) {
               lastProfileSaveError.value = response.data.error || 'The server reported the save as failed.'
             } else {
@@ -1027,6 +1057,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     currentSceneIndex,
     currentPageIndex,
     isEditMode,
+    editOrientation,
+    setEditOrientation,
     canUndo,
     canRedo,
     setProfile,

@@ -72,6 +72,28 @@
       </button>
     </div>
 
+    <!-- DL-167: reorder the active scene without leaving the dashboard. -->
+    <div v-if="isEditMode && scenes.length > 1" class="scene-move-group">
+      <button
+        class="edit-btn add-btn"
+        :disabled="currentSceneIndex === 0"
+        :aria-label="`Move ${scenes[currentSceneIndex]?.name} left`"
+        title="Move scene left"
+        @click="$emit('move-scene', scenes[currentSceneIndex].id, -1)"
+      >
+        <FontAwesomeIcon :icon="['fas', 'chevron-left']" />
+      </button>
+      <button
+        class="edit-btn add-btn"
+        :disabled="currentSceneIndex === scenes.length - 1"
+        :aria-label="`Move ${scenes[currentSceneIndex]?.name} right`"
+        title="Move scene right"
+        @click="$emit('move-scene', scenes[currentSceneIndex].id, 1)"
+      >
+        <FontAwesomeIcon :icon="['fas', 'chevron-right']" />
+      </button>
+    </div>
+
     <button v-if="isEditMode" class="edit-btn add-btn" @click="$emit('add-scene')" aria-label="Add scene">
       <FontAwesomeIcon :icon="['fas', 'plus']" />
     </button>
@@ -114,6 +136,7 @@ const emit = defineEmits<{
   'scene-change': [sceneId: string]
   'add-scene': []
   'edit-scene': [scene: Scene]
+  'move-scene': [sceneId: string, delta: -1 | 1]
 }>()
 
 // The waiting-state feed is wired up here too (both calls are idempotent):
@@ -515,6 +538,17 @@ watch(() => sceneSwipe.dragging, (dragging) => {
   border-radius: 14px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.scene-move-group {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.edit-btn.add-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .edit-btn.add-btn:hover {

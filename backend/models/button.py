@@ -183,6 +183,9 @@ class Button:
     confirm: str = 'default'
     # DL-166: optional agent-scene category override ('' = auto-resolve on the client).
     category: str = ''
+    # DL-167: optional portrait placement {position:{row,col}, size:{rows,cols}};
+    # absent = the page has no hand-authored portrait layout for this button.
+    portrait: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -190,6 +193,8 @@ class Button:
         data['shape'] = enum_value(self.shape)
         if self.action:
             data['action'] = self.action.to_dict()
+        if self.portrait is None:
+            del data['portrait']
         return data
     
     @classmethod
@@ -218,6 +223,7 @@ class Button:
             enabled=data.get('enabled', True),
             rules=data.get('rules') or [],
             confirm=data.get('confirm') if data.get('confirm') in ('always', 'never') else 'default',
-            category=data.get('category') or ''
+            category=data.get('category') or '',
+            portrait=data.get('portrait') or None
         )
 
